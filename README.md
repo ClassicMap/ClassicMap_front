@@ -1,71 +1,171 @@
-# Clerk Auth Template
+# 클래식 입문자용 통합 앱: B2B 중심 경험 포털 (Project Overture)
 
-This is a [React Native](https://reactnative.dev) project built with [Expo](https://expo.dev), [Clerk](https://go.clerk.com/gjgxNgT), and [React Native Reusables](https://reactnativereusables.com).
-
-It was initialized using the following command:
-
-```bash
-npx @react-native-reusables/cli@latest init -t ClassicMap_front
-```
-
-## Getting Started
-
-Before running the app, make sure to:
-
-1. [Set up your Clerk account](https://go.clerk.com/blVsQlm)
-2. In the instance setup, leave the default option selected: **Email, phone, username**
-3. Enable Apple, GitHub, and Google as sign-in options under SSO Connections
-4. Rename `.env.example` to `.env.local` and paste your `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` from [your API keys](https://go.clerk.com/u8KAui7)
-
-Then start the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-This will launch the Expo Go Server. You can open the app with:
-
-- **iOS**: press `i` to launch in the iOS simulator (Mac only)
-- **Android**: press `a` to launch in the Android emulator
-- **Web**: press `w` to run in a browser
-
-Or scan the QR code with the [Expo Go](https://expo.dev/go) app to test on your device.
-
-## Included Screens and Features
-
-- Protected routes using Clerk authentication
-- Sign in screen
-- OAuth with Apple, GitHub, and Google
-- Forgot password screen
-- Reset password screen
-- Verify email screen
-- User profile button
-- Sign out screen
-
-## Project Features
-
-- ⚛️ Built with [Expo Router](https://expo.dev/router)
-- 🔐 Authentication powered by [Clerk](https://go.clerk.com/Q1MKAz0)
-- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Nativewind](https://www.nativewind.dev/)
-- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
-- 🚀 New Architecture enabled
-- 🔥 Edge to Edge enabled
-- 📱 Runs on iOS, Android, and Web
-
-## Learn More
-
-- [Clerk Docs](https://go.clerk.com/Q1MKAz0)
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Nativewind Docs](https://www.nativewind.dev/)
-- [React Native Reusables](https://reactnativereusables.com)
+> 디지털 발견에서 실제 공연 관람으로 이어지는 클래식 음악의 전체 여정을 연결하고, 독점적인 공연장 및 아티스트 파트너십을 기반으로 구동되는 유일한 플랫폼입니다.
 
 ---
 
-If this template helps you move faster, consider giving [React Native Reusables](https://github.com/founded-labs/react-native-reusables) a ⭐ on GitHub. It helps a lot!
+## I. Executive Summary: 프로젝트 비전 및 핵심 전략
+
+본 프로젝트는 클래식 음악 입문자를 위한 '올인원(all-in-one)' 경험 포털 앱입니다.
+
+핵심 가치는 오디오 스트리밍이 아닌, 사용자의 **디지털 발견(학습, 비교)**과 **실제 공연 관람(예매)** 사이의 중대한 간극을 메우는 데 있습니다.
+
+### 🎯 핵심 전략 방향
+
+1. **스트리밍 시장 회피:** Apple Music Classical, Idagio 등 포화 상태의 오디오 스트리밍 시장(Red Ocean)에서 직접 경쟁을 피합니다.
+2. **B2B 수익화:** 소비자 구독(B2C)이 아닌, 공연장 및 기업 스폰서(B2B)를 핵심 수익 모델로 합니다.
+3. **핵심 기능 우선:** 입문자에게 '해석의 차이'를 직관적으로 교육하는 **'연주 영상 비교'** 기능을 킬러 콘텐츠로 활용합니다.
+4. **단계적 출시:** 잠재고객 확보(1단계) → B2B 파트너십(2단계) → 수익 확장(3단계)의 체계적인 로드맵을 따릅니다.
+
+---
+
+## II. 핵심 가치 제안: '경험 포털'
+
+### A. The Problem: 파편화된 입문자 여정
+
+클래식 입문자는 '무엇부터 들어야 할지' 모르는 **'발견의 불안(discovery anxiety)'**을 겪으며, 현재 사용자 여정은 극도로 파편화되어 있습니다.
+
+- **감상:** Apple Music, Spotify
+- **예매:** 인터파크, Yes24, 개별 공연장
+- **학습:** YouTube, Reddit, Naxos
+- **평가:** Reddit, 커뮤니티
+
+이러한 분절된 경험은 입문자의 시장 진입을 가로막는 높은 장벽입니다.
+
+### B. The Solution: 선순환 참여 루프 (Closed Loop)
+
+본 앱은 파편화된 경험을 '포털'로 통합하여, 사용자를 '호기심 많은 입문자'에서 '비용을 지불하는 관객'으로 전환시키는 마케팅 퍼널 역할을 수행합니다.
+
+1. **[학습]** 작곡가 타임라인(기능 D)을 탐색합니다.
+2. **[발견]** 아티스트 DB(기능 A)에서 연주자를 발견합니다.
+3. **[이해]** 영상 비교(기능 C)를 통해 '해석의 차이'를 직관적으로 이해합니다.
+4. **[참여]** 맥락적 커뮤니티(기능 E)에서 토론합니다.
+5. **[행동]** 해당 아티스트의 내한 공연을 발견하고 통합 예매(기능 B)로 구매합니다.
+
+---
+
+## III. 시장성 및 경쟁 환경
+
+### A. Red Ocean: 스트리밍 시장 (전략: 회피)
+
+- **주요 경쟁자:** Apple Music Classical, Idagio, Presto Music
+- **분석:** 막대한 자본력, 방대한 카탈로그, 고유의 메타데이터로 이미 포화 상태입니다.
+- **전략:** 오디오 스트리밍 라이선스 경쟁을 피하고, YouTube API(영상) 및 Spotify/Apple API(연계)를 활용하는 '메타 레이어(Meta-layer)'로 작동합니다.
+
+### B. Blue Ocean: '경험' 시장 (전략: 집중)
+
+시장의 가장 큰 공백은 **디지털 감상**과 **오프라인 공연 예매** 사이의 단절입니다.
+
+- **티켓 예매:** 스트리밍 앱은 예매 기능이 없고, 예매 앱(인터파크)은 학습/커뮤니티 기능이 없습니다.
+- **커뮤니티:** Reddit 등 범용 플랫폼에 분산되어 있습니다. (Letterboxd의 클래식 버전 부재)
+- **교육:** 제안된 '연주 영상 비교'는 경쟁 앱의 단순 정보 제공을 넘어서는 독보적인 능동적 학습 도구입니다.
+
+### C. 경쟁 기능 매트릭스
+
+| 핵심 사용자 요구               | 제안 앱  | Apple Music Classical | Idagio | Presto Music | 인터파크/NOL | Reddit |
+| :----------------------------- | :------: | :-------------------: | :----: | :----------: | :----------: | :----: |
+| 1. 오디오 스트리밍(카탈로그)   | △ (연계) |       ◎ (최대)        |   ○    |      ○       |      ✘       |   ✘    |
+| 2. 클래식 특화 메타데이터/검색 |    ○     |           ◎           |   ◎    |      ○       |      ✘       |   △    |
+| 3. 입문자용 교육 콘텐츠        |    ◎     |           ○           |   ○    |      △       |      ✘       |   △    |
+| 4. UGC 평점/리뷰               |    ◎     |           ✘           |   ✘    |      ✘       |      ✘       |   ○    |
+| 5. 연주 영상 발견 및 비교      |    ◎     |           ✘           |   ✘    |      ✘       |      ✘       |   △    |
+| 6. **통합 공연 티켓 예매**     |  **◎**   |         **✘**         | **✘**  |    **✘**     |    **◎**     | **✘**  |
+| 7. **통합 커뮤니티 포럼**      |  **◎**   |         **✘**         | **✘**  |    **✘**     |    **✘**     | **◎**  |
+
+(◎: 핵심 기능, ○: 기능 제공, △: 일부/간접 제공, ✘: 기능 없음)
+
+---
+
+## IV. 핵심 기능 (Core Features)
+
+### A. 기능 1: 아티스트 DB 및 '티어' 시스템
+
+- **가치:** 'S급 피아니스트', '필수 레코딩' 등 명확한 가이드를 제공합니다. (Gamification)
+- **전략:** 편집자(권위) + UGC(참여)의 **'하이브리드 신뢰 모델'**을 채택합니다.
+  - `레이어 1 (편집자)`: '명예의 전당', '라이징 스타' 등 핵심 티어 설정.
+  - `레이어 2 (UGC)`: 사용자가 레코딩/공연에 5점 만점 평점 부여.
+
+### B. 기능 2: 통합 티켓 예매
+
+- **가치:** 앱의 핵심 유틸리티이자 B2B 수익화 엔진입니다.
+- **난관:** 인터파크, Yes24 등 기존 사업자의 '폐쇄적 생태계(Walled Garden)'.
+- **전략:** 3단계 구현 전략
+  - `1단계 (MVP)`: KOPIS 등 공공 API로 정보 수집 후, 예매처로 **딥 링크(Deep Link)** 연결.
+  - `2단계 (B2B)`: 1단계의 잠재고객을 기반으로 핵심 공연장(예: 롯데콘서트홀)과 제휴, **최초의 API 직접 연동** 확보.
+  - `3단계 (확장)`: 성공 사례를 바탕으로 타 예매처로 파트너십 확대.
+
+### C. 기능 3: 연주 영상 비교 도구 (MVP 킬러 기능)
+
+- **가치:** "왜 똑같은 곡의 음반이 100개인가?"라는 입문자의 근본적인 질문에 대한 직관적 해답을 제공합니다.
+- **전략:** **YouTube IFrame Player API**를 활용합니다. (저비용, 고가치)
+  - 앱이 "비교 감상 포인트 (예: 8:15~8:45)"를 미리 정의합니다.
+  - `startSeconds`와 `endSeconds` 파라미터를 제어하여 해당 하이라이트 구간만 교차 재생시킵니다.
+
+### D. 기능 4: 인터랙티브 작곡가 타임라인
+
+- **가치:** 사용자를 앱의 다른 기능(아티스트 DB, 영상 비교)으로 유도하는 '퍼널'의 입구 역할을 합니다.
+- **전략:** 퍼블릭 도메인 정보를 활용하여 쉽고 빠르게 구현합니다.
+
+### E. 기능 5: '맥락적' 커뮤니티
+
+- **가치:** 서비스의 '끈끈함(Stickiness)'과 '해자(Moat)'를 구축합니다.
+- **난관:** 신생 커뮤니티의 '유령 도시' 문제.
+- **전략:** 전통적인 "자유 게시판" 구성을 피하고, **핵심 유틸리티 기능에 커뮤니티를 직접 통합**합니다.
+  - 아티스트(기능 A) 페이지 하단 → "이 아티스트 토론" 탭
+  - 영상 비교(기능 C) 하단 → "어떤 버전이 최고인가요?" 댓글
+  - 티켓 예매(기능 B) 완료 시 → "콘서트 리뷰/후기" 스레드 자동 생성
+
+---
+
+## V. B2B 비즈니스 모델 (핵심 수익 전략)
+
+본 앱의 핵심 수익 엔진은 B2C 구독이 아닌, 이미 시장에서 검증된(현대차-예술의전당, 아시아나-국립심포니 등) **B2B 파트너십**입니다. 앱은 이 아날로그 후원 생태계에 '데이터'와 '디지털 타겟팅'을 제공합니다.
+
+### B2B 모델 1: 프로모션 및 데이터 파트너 (vs 공연장/기획사)
+
+- **제안 (예: 롯데콘서트홀):** "귀사의 마케팅은 '샷건' 방식입니다. 저희는 '스캘펠'을 제공합니다. 저희 앱에는 말러(Mahler)를 '즐겨찾기'한 서울 거주 사용자 5,000명이 있습니다. 이들에게만 타겟 푸시 알림을 보낼 수 있습니다."
+- **거래:**
+  - **앱 제공:** 타겟 프로모션 (푸시, 배너), 잠재고객 데이터.
+  - **파트너 제공 (핵심):** 프로모션 비용(현금) 또는 **티켓 예매 API 직접 연동 (현물)**.
+
+### B2B 모델 2: 기업 스폰서십 채널 (vs 일반 기업)
+
+- **제안 (예: 현대/제네시스, 하이엔드 오디오):** "기존의 아날로그 후원에 '디지털 참여'와 '데이터(ROI)'를 더해 드립니다."
+- **거래 (스폰서십 콘텐츠):**
+  - "이달의 아티스트, 후원: [현대 H.art]" (기능 A)
+  - "[제네시스]가 제공하는 작곡가 타임라인" (기능 D)
+  - "이 연주 비교는 [하이엔드 오디오]의 후원으로 제공됩니다." (기능 C)
+
+### B2B 모델 3: 화이트 라벨(White-Label) 플랫폼 (Long-term)
+
+- **제안 (예: 예술의전당):** "저희 플랫폼 기술(커뮤니티, DB, 비교툴)을 라이선스하여 '예술의전당 공식 커뮤니티 앱'을 구축해 드립니다."
+- **거래:** SaaS(Software as a Service) 라이선스 방식의 지속적인 고수익 모델.
+
+---
+
+## VI. 전략적 로드맵 (3-Stage Rollout)
+
+### 🏛️ 1단계 (0~12개월): '교회' 건설 (잠재고객 확보)
+
+- **초점:** 사용자 참여, 데이터 축적 (수익 0).
+- **핵심 기능 (MVP):**
+  - 기능 C (연주 영상 비교)
+  - 기능 A (아티스트 DB)
+  - 기능 E (맥락적 커뮤니티)
+  - 기능 D (타임라인)
+  - 기능 B - **Lite** (KOPIS 기반 **딥 링크** 정보 수집기)
+- **목표:** '가치 있는 틈새 잠재고객'이라는 자산 구축.
+
+### 🏰 2단계 (12~24개월): '성' 확보 (B2B 모델 검증)
+
+- **초점:** B2B 모델 1 검증, USP 확보.
+- **핵심 실행:** 1단계의 사용자 데이터를 활용, **단 하나의 상징적인 파트너**(예: 롯데콘서트홀)와 접촉.
+- **핵심 거래:** 앱의 프로모션 접근권 ↔ 파트너의 **티켓 예매 API 접근권** 교환.
+- **결과:** '진정한 통합 티켓 예매' 기능을 갖춘 유일한 플랫폼(USP)으로 도약.
+
+### 👑 3단계 (24개월~): '왕국'의 수익화 (규모 확장)
+
+- **초점:** 수익 극대화.
+- **실행 1:** 2단계 성공 사례를 바탕으로 더 많은 공연장/예매처 파트너 확보.
+- **실행 2:** 검증된 잠재고객을 바탕으로 B2B 모델 2 (기업 스폰서십) 판매.
+- **실행 3 (장기):** B2B 모델 3 (화이트 라벨 SaaS) 탐색.
