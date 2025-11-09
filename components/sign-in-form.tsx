@@ -57,20 +57,27 @@ export function SignInForm() {
 
   return (
     <View className="gap-6">
+      <View className="mb-4 gap-2">
+        <Text className="text-center text-4xl font-bold">🎼</Text>
+        <Text className="text-center text-3xl font-bold">클래식 음악의 세계로</Text>
+        <Text className="text-center text-base text-muted-foreground">
+          다시 만나서 반갑습니다
+        </Text>
+      </View>
       <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
         <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Sign in to ClassicMap_front</CardTitle>
+          <CardTitle className="text-center text-xl sm:text-left">로그인</CardTitle>
           <CardDescription className="text-center sm:text-left">
-            Welcome back! Please sign in to continue
+            클래식 음악 여정을 계속하세요
           </CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
           <View className="gap-6">
             <View className="gap-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">이메일</Label>
               <Input
                 id="email"
-                placeholder="m@example.com"
+                placeholder="your@email.com"
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -85,13 +92,13 @@ export function SignInForm() {
             </View>
             <View className="gap-1.5">
               <View className="flex-row items-center">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">비밀번호</Label>
                 <Link asChild href={`/(auth)/forgot-password?email=${email}`}>
                   <Button
                     variant="link"
                     size="sm"
                     className="ml-auto h-4 px-1 py-0 web:h-fit sm:h-4">
-                    <Text className="font-normal leading-4">Forgot your password?</Text>
+                    <Text className="font-normal leading-4">비밀번호를 잊으셨나요?</Text>
                   </Button>
                 </Link>
               </View>
@@ -108,18 +115,18 @@ export function SignInForm() {
               ) : null}
             </View>
             <Button className="w-full" onPress={onSubmit}>
-              <Text>Continue</Text>
+              <Text>로그인</Text>
             </Button>
           </View>
           <Text className="text-center text-sm">
-            Don&apos;t have an account?{' '}
+            아직 계정이 없으신가요?{' '}
             <Link href="/(auth)/sign-up" className="text-sm underline underline-offset-4">
-              Sign up
+              회원가입
             </Link>
           </Text>
           <View className="flex-row items-center">
             <Separator className="flex-1" />
-            <Text className="px-4 text-sm text-muted-foreground">or</Text>
+            <Text className="px-4 text-sm text-muted-foreground">또는</Text>
             <Separator className="flex-1" />
           </View>
           <SocialConnections />

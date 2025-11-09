@@ -68,15 +68,15 @@ export function VerifyEmailForm() {
     <View className="gap-6">
       <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
         <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Verify your email</CardTitle>
+          <CardTitle className="text-center text-xl sm:text-left">이메일 인증</CardTitle>
           <CardDescription className="text-center sm:text-left">
-            Enter the verification code sent to {email || 'your email'}
+            {email || '입력하신 이메일'}로 발송된 인증 코드를 입력해주세요
           </CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
           <View className="gap-6">
             <View className="gap-1.5">
-              <Label htmlFor="code">Verification code</Label>
+              <Label htmlFor="code">인증 코드</Label>
               <Input
                 id="code"
                 autoCapitalize="none"
@@ -92,7 +92,7 @@ export function VerifyEmailForm() {
               )}
               <Button variant="link" size="sm" disabled={countdown > 0} onPress={onResendCode}>
                 <Text className="text-center text-xs">
-                  Didn&apos;t receive the code? Resend{' '}
+                  코드를 받지 못하셨나요? 재발송{' '}
                   {countdown > 0 ? (
                     <Text className="text-xs" style={TABULAR_NUMBERS_STYLE}>
                       ({countdown})
@@ -103,10 +103,10 @@ export function VerifyEmailForm() {
             </View>
             <View className="gap-3">
               <Button className="w-full" onPress={onSubmit}>
-                <Text>Continue</Text>
+                <Text>계속하기</Text>
               </Button>
               <Button variant="link" className="mx-auto" onPress={router.back}>
-                <Text>Cancel</Text>
+                <Text>취소</Text>
               </Button>
             </View>
           </View>
