@@ -4,26 +4,29 @@ import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
 import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
 import type { TriggerRef } from '@rn-primitives/popover';
 import { LogOutIcon, PlusIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View } from 'react-native';
 
-export function UserMenu() {
+export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const { user } = useUser();
   const { signOut } = useAuth();
+  const router = useRouter();
   const popoverTriggerRef = React.useRef<TriggerRef>(null);
 
   async function onSignOut() {
     popoverTriggerRef.current?.close();
     await signOut();
+    router.replace('/(auth)/sign-in');
   }
 
   return (
     <Popover>
       <PopoverTrigger asChild ref={popoverTriggerRef}>
         <Button variant="ghost" size="icon" className="size-8 rounded-full">
-          <UserAvatar />
+          <UserAvatar iconColor={iconColor} />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" side="bottom" className="w-80 p-0">
@@ -76,8 +79,9 @@ export function UserMenu() {
   );
 }
 
-function UserAvatar(props: Omit<React.ComponentProps<typeof Avatar>, 'alt'>) {
+function UserAvatar(props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { iconColor?: string }) {
   const { user } = useUser();
+  const { iconColor, ...avatarProps } = props;
 
   const { initials, imageSource, userName } = React.useMemo(() => {
     const userName = user?.fullName || user?.emailAddresses[0]?.emailAddress || 'Unknown';
@@ -91,10 +95,10 @@ function UserAvatar(props: Omit<React.ComponentProps<typeof Avatar>, 'alt'>) {
   }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress]);
 
   return (
-    <Avatar alt={`${userName}'s avatar`} {...props}>
+    <Avatar alt={`${userName}'s avatar`} {...avatarProps}>
       <AvatarImage source={imageSource} />
       <AvatarFallback>
-        <Text>{initials}</Text>
+        <Text style={iconColor ? { color: iconColor } : undefined}>{initials}</Text>
       </AvatarFallback>
     </Avatar>
   );

@@ -52,16 +52,16 @@ export function ResetPasswordForm() {
     <View className="gap-6">
       <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
         <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Reset password</CardTitle>
+          <CardTitle className="text-center text-xl sm:text-left">비밀번호 재설정</CardTitle>
           <CardDescription className="text-center sm:text-left">
-            Enter the code sent to your email and set a new password
+            이메일로 받은 인증 코드를 입력하고 새 비밀번호를 설정하세요
           </CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
           <View className="gap-6">
             <View className="gap-1.5">
               <View className="flex-row items-center">
-                <Label htmlFor="password">New password</Label>
+                <Label htmlFor="password">새 비밀번호</Label>
               </View>
               <Input
                 id="password"
@@ -76,7 +76,7 @@ export function ResetPasswordForm() {
               ) : null}
             </View>
             <View className="gap-1.5">
-              <Label htmlFor="code">Verification code</Label>
+              <Label htmlFor="code">인증 코드</Label>
               <Input
                 id="code"
                 autoCapitalize="none"
@@ -92,7 +92,7 @@ export function ResetPasswordForm() {
               ) : null}
             </View>
             <Button className="w-full" onPress={onSubmit}>
-              <Text>Reset Password</Text>
+              <Text>비밀번호 변경</Text>
             </Button>
           </View>
         </CardContent>

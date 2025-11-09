@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
 
   const onSubmit = async () => {
     if (!email) {
-      setError({ email: 'Email is required' });
+      setError({ email: '이메일을 입력해주세요' });
       return;
     }
     if (!isLoaded) {
@@ -45,19 +45,19 @@ export function ForgotPasswordForm() {
     <View className="gap-6">
       <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
         <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">Forgot password?</CardTitle>
+          <CardTitle className="text-center text-xl sm:text-left">비밀번호 재설정</CardTitle>
           <CardDescription className="text-center sm:text-left">
-            Enter your email to reset your password
+            이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다
           </CardDescription>
         </CardHeader>
         <CardContent className="gap-6">
           <View className="gap-6">
             <View className="gap-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">이메일</Label>
               <Input
                 id="email"
                 defaultValue={email}
-                placeholder="m@example.com"
+                placeholder="your@email.com"
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -70,7 +70,7 @@ export function ForgotPasswordForm() {
               ) : null}
             </View>
             <Button className="w-full" onPress={onSubmit}>
-              <Text>Reset your password</Text>
+              <Text>비밀번호 재설정</Text>
             </Button>
           </View>
         </CardContent>

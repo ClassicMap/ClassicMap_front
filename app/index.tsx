@@ -2,31 +2,19 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/components/user-menu';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { useUserProfile } from '@/lib/hooks/useUserProfile';
 import { useUser } from '@clerk/clerk-expo';
-import { Link, Stack } from 'expo-router';
-import { MoonStarIcon, XIcon, SunIcon } from 'lucide-react-native';
+import { Stack, Redirect } from 'expo-router';
+import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { Image, type ImageStyle, View } from 'react-native';
-
-const LOGO = {
-  light: require('@/assets/images/react-native-reusables-light.png'),
-  dark: require('@/assets/images/react-native-reusables-dark.png'),
-};
-
-const CLERK_LOGO = {
-  light: require('@/assets/images/clerk-logo-light.png'),
-  dark: require('@/assets/images/clerk-logo-dark.png'),
-};
-
-const LOGO_STYLE: ImageStyle = {
-  height: 36,
-  width: 40,
-};
+import { View, ActivityIndicator } from 'react-native';
+import type { UserPreferences } from '@/lib/api/mock-db';
 
 const SCREEN_OPTIONS = {
   header: () => (
-    <View className="top-safe absolute left-0 right-0 flex-row justify-between px-4 py-2 web:mx-2">
+    <View className="top-safe absolute left-0 right-0 flex-row justify-between px-4 py-2 web:mx-2 z-10">
       <ThemeToggle />
       <UserMenu />
     </View>
@@ -34,40 +22,37 @@ const SCREEN_OPTIONS = {
 };
 
 export default function Screen() {
-  const { colorScheme } = useColorScheme();
   const { user } = useUser();
+  const { profile, isFirstLogin, loading, completeOnboarding, updatePreferences } = useUserProfile();
 
-  return (
-    <>
-      <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="flex-1 items-center justify-center gap-8 p-4">
-        <View className="flex-row items-center justify-center gap-3.5">
-          <Image
-            source={CLERK_LOGO[colorScheme ?? 'light']}
-            resizeMode="contain"
-            style={LOGO_STYLE}
-          />
-          <Icon as={XIcon} className="mr-1 size-5" />
-          <Image source={LOGO[colorScheme ?? 'light']} style={LOGO_STYLE} resizeMode="contain" />
-        </View>
-        <View className="max-w-sm gap-2 px-4">
-          <Text variant="h1" className="text-3xl font-medium">
-            Make it yours{user?.firstName ? `, ${user.firstName}` : ''}.
-          </Text>
-          <Text className="ios:text-foreground text-center font-mono text-sm text-muted-foreground">
-            Update the screens and components to match your design and logic.
-          </Text>
-        </View>
-        <View className="gap-2">
-          <Link href="https://go.clerk.com/8e6CCee" asChild>
-            <Button size="sm">
-              <Text>Explore Clerk Docs</Text>
-            </Button>
-          </Link>
-        </View>
+  const handleOnboardingComplete = async (preferences: Partial<UserPreferences>) => {
+    await updatePreferences(preferences);
+    await completeOnboarding();
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
       </View>
-    </>
-  );
+    );
+  }
+
+  // 로그인 후 홈 탭으로 리다이렉트
+  if (user) {
+    return (
+      <>
+        <Stack.Screen options={SCREEN_OPTIONS} />
+        <OnboardingModal 
+          visible={isFirstLogin} 
+          onComplete={handleOnboardingComplete}
+        />
+        <Redirect href="/(tabs)/home" />
+      </>
+    );
+  }
+
+  return null;
 }
 
 const THEME_ICONS = {
