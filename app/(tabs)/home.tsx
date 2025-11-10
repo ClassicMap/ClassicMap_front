@@ -4,56 +4,42 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, FlatList, Image, Pressable } from 'react-native';
+import { View, ScrollView, FlatList, Image, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
 import { StarIcon, TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
-import { MOCK_ARTISTS } from '@/lib/data/mockDatabase';
-import { getPopularComparisons, getAllPeriods } from '@/lib/data/mockDTO';
+import { ArtistAPI, ConcertAPI, ComposerAPI } from '@/lib/api/client';
+import { getAllPeriods } from '@/lib/data/mockDTO';
+import type { Artist } from '@/lib/types/models';
+import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
+import { getImageUrl } from '@/lib/utils/image';
 
-// 레거시 형식으로 변환
-const ARTISTS = MOCK_ARTISTS.slice(0, 5).map(artist => ({
-  id: String(artist.id),
-  name: artist.name,
-  category: artist.category,
-  tier: artist.tier as 'S' | 'Rising',
-  rating: artist.rating,
-  image: artist.imageUrl || '',
-}));
+// 레거시 형식으로 변환 (타입 호환성 유지)
+interface LegacyArtist {
+  id: string;
+  name: string;
+  category: string;
+  tier: 'S' | 'Rising';
+  rating: number;
+  image: string;
+}
 
-const UPCOMING_CONCERTS = [
-  { 
-    id: '1', 
-    title: '조성진 피아노 리사이틀', 
-    date: '2025.03.15', 
-    venue: '롯데콘서트홀',
-    poster: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=800&h=1200&fit=crop'
-  },
-  { 
-    id: '2', 
-    title: '베를린 필하모닉', 
-    date: '2025.04.20', 
-    venue: '예술의전당',
-    poster: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=800&h=1200&fit=crop'
-  },
-  { 
-    id: '3', 
-    title: '임윤찬과 서울시향', 
-    date: '2025.05.10', 
-    venue: '롯데콘서트홀',
-    poster: 'https://images.unsplash.com/photo-1519683109079-d5f539e1542f?w=800&h=1200&fit=crop'
-  },
-  { 
-    id: '4', 
-    title: '빈 필하모닉', 
-    date: '2025.06.01', 
-    venue: '예술의전당',
-    poster: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&h=1200&fit=crop'
-  },
-];
+interface LegacyConcert {
+  id: string;
+  title: string;
+  date: string;
+  venue: string;
+  poster: string;
+}
 
-const POPULAR_COMPARISONS = getPopularComparisons();
+interface LegacyComparison {
+  id: string;
+  piece: string;
+  artists: string;
+  composerId: number;
+  pieceId: number;
+}
 
 const RECOMMENDED_PERIODS = getAllPeriods().map(era => ({
   id: era.id,
@@ -65,19 +51,209 @@ const RECOMMENDED_PERIODS = getAllPeriods().map(era => ({
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const waveAnim = React.useRef(new Animated.Value(0)).current;
+  const [showGreeting, setShowGreeting] = React.useState(true);
+  
+  const [artists, setArtists] = React.useState<LegacyArtist[]>([]);
+  const [concerts, setConcerts] = React.useState<LegacyConcert[]>([]);
+  const [composers, setComposers] = React.useState<any[]>([]);
+  
+  const [loadingArtists, setLoadingArtists] = React.useState(true);
+  const [loadingConcerts, setLoadingConcerts] = React.useState(true);
+  const [loadingComposers, setLoadingComposers] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  
+  const [errorArtists, setErrorArtists] = React.useState<string | null>(null);
+  const [errorConcerts, setErrorConcerts] = React.useState<string | null>(null);
+  const [errorComposers, setErrorComposers] = React.useState<string | null>(null);
+
+  const loadAllData = React.useCallback(() => {
+    // 아티스트 데이터 로드
+    ArtistAPI.getAll()
+      .then((data) => {
+        const legacyArtists = data.slice(0, 5).map(artist => ({
+          id: String(artist.id),
+          name: artist.name,
+          category: artist.category,
+          tier: artist.tier as 'S' | 'Rising',
+          rating: artist.rating,
+          image: artist.imageUrl || '',
+        }));
+        setArtists(legacyArtists);
+        prefetchImages(data.slice(0, 5).map(a => a.imageUrl));
+        setLoadingArtists(false);
+      })
+      .catch((err) => {
+        setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
+        setLoadingArtists(false);
+      });
+
+    // 공연 데이터 로드
+    ConcertAPI.getAll()
+      .then((data) => {
+        const legacyConcerts = data.slice(0, 5).map(concert => ({
+          id: String(concert.id),
+          title: concert.title,
+          date: concert.concertDate,
+          venue: '공연장', // TODO: venue API 연동 후 실제 데이터 사용
+          poster: concert.posterUrl || '',
+        }));
+        setConcerts(legacyConcerts);
+        prefetchImages(data.slice(0, 5).map(c => c.posterUrl));
+        setLoadingConcerts(false);
+      })
+      .catch((err) => {
+        setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
+        setLoadingConcerts(false);
+      });
+
+    // 작곡가 데이터 로드 (인기 비교용)
+    ComposerAPI.getAll()
+      .then((data) => {
+        setComposers(data);
+        setLoadingComposers(false);
+      })
+      .catch((err) => {
+        setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
+        setLoadingComposers(false);
+      });
+  }, []);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    Promise.all([
+      ArtistAPI.getAll(),
+      ConcertAPI.getAll(),
+      ComposerAPI.getAll()
+    ])
+      .then(([artistData, concertData, composerData]) => {
+        const legacyArtists = artistData.slice(0, 5).map(artist => ({
+          id: String(artist.id),
+          name: artist.name,
+          category: artist.category,
+          tier: artist.tier as 'S' | 'Rising',
+          rating: artist.rating,
+          image: artist.imageUrl || '',
+        }));
+        setArtists(legacyArtists);
+
+        const legacyConcerts = concertData.slice(0, 5).map(concert => ({
+          id: String(concert.id),
+          title: concert.title,
+          date: concert.concertDate,
+          venue: '공연장',
+          poster: concert.posterUrl || '',
+        }));
+        setConcerts(legacyConcerts);
+
+        setComposers(composerData);
+        
+        prefetchImages([
+          ...artistData.slice(0, 5).map(a => a.imageUrl),
+          ...concertData.slice(0, 5).map(c => c.posterUrl)
+        ]);
+        
+        setErrorArtists(null);
+        setErrorConcerts(null);
+        setErrorComposers(null);
+        setRefreshing(false);
+      })
+      .catch((err) => {
+        setRefreshing(false);
+      });
+  }, []);
+
+  React.useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
+
+  React.useEffect(() => {
+    // 페이드 인
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+
+    // 손 흔드는 애니메이션 (반복)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(waveAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.delay(400),
+      ])
+    ).start();
+
+    // 3초 후 페이드 아웃
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowGreeting(false);
+      });
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const getFullName = () => {
+    if (!user) return '';
+    const lastName = user.lastName || '';
+    const firstName = user.firstName || '';
+    return lastName || firstName ? ` ${firstName}${lastName}님` : '';
+  };
+
+  const waveRotation = waveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '20deg'],
+  });
 
   return (
-    <ScrollView className="flex-1 bg-background">
+    <ScrollView 
+      className="flex-1 bg-background"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View className="gap-6 p-4 pb-20">
         {/* Header */}
-        <View className="gap-2">
-          <Text variant="h1" className="text-3xl font-bold">
-            안녕하세요{user?.firstName ? `, ${user.firstName}님` : ''}! 👋
-          </Text>
-          <Text className="text-muted-foreground">
-            오늘도 클래식과 함께하세요
-          </Text>
-        </View>
+        {showGreeting && (
+          <Animated.View style={{ opacity: fadeAnim }} className="flex-row items-center justify-center gap-2 py-4">
+            <Text variant="h1" className="text-3xl font-bold">
+              안녕하세요{getFullName()}!
+            </Text>
+            <Animated.Text 
+              style={{ 
+                fontSize: 30,
+                transform: [{ rotate: waveRotation }],
+                transformOrigin: 'bottom center',
+              }}
+            >
+              👋
+            </Animated.Text>
+          </Animated.View>
+        )}
 
         {/* 추천 아티스트 */}
         <View className="gap-3">
@@ -91,15 +267,53 @@ export default function HomeScreen() {
               <Text className="text-sm text-primary">전체보기</Text>
             </Button>
           </View>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={ARTISTS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ArtistCard artist={item} />}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            contentContainerClassName="pr-4"
-          />
+          {loadingArtists ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+            </View>
+          ) : errorArtists ? (
+            <View className="py-8">
+              <Text className="text-center text-destructive">{errorArtists}</Text>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4 mx-auto"
+                onPress={() => {
+                  setLoadingArtists(true);
+                  setErrorArtists(null);
+                  ArtistAPI.getAll()
+                    .then((data) => {
+                      const legacyArtists = data.slice(0, 5).map(artist => ({
+                        id: String(artist.id),
+                        name: artist.name,
+                        category: artist.category,
+                        tier: artist.tier as 'S' | 'Rising',
+                        rating: artist.rating,
+                        image: artist.imageUrl || '',
+                      }));
+                      setArtists(legacyArtists);
+                      setLoadingArtists(false);
+                    })
+                    .catch((err) => {
+                      setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
+                      setLoadingArtists(false);
+                    });
+                }}
+              >
+                <Text>다시 시도</Text>
+              </Button>
+            </View>
+          ) : (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={artists}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ArtistCard artist={item} />}
+              ItemSeparatorComponent={() => <View className="w-3" />}
+              contentContainerClassName="pr-4"
+            />
+          )}
         </View>
 
         {/* 다가오는 공연 */}
@@ -114,15 +328,52 @@ export default function HomeScreen() {
               <Text className="text-sm text-primary">전체보기</Text>
             </Button>
           </View>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={UPCOMING_CONCERTS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ConcertCard concert={item} />}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            contentContainerClassName="pr-4"
-          />
+          {loadingConcerts ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+            </View>
+          ) : errorConcerts ? (
+            <View className="py-8">
+              <Text className="text-center text-destructive">{errorConcerts}</Text>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4 mx-auto"
+                onPress={() => {
+                  setLoadingConcerts(true);
+                  setErrorConcerts(null);
+                  ConcertAPI.getAll()
+                    .then((data) => {
+                      const legacyConcerts = data.slice(0, 5).map(concert => ({
+                        id: String(concert.id),
+                        title: concert.title,
+                        date: concert.concertDate,
+                        venue: '공연장',
+                        poster: getImageUrl(concert.posterUrl) || '',
+                      }));
+                      setConcerts(legacyConcerts);
+                      setLoadingConcerts(false);
+                    })
+                    .catch((err) => {
+                      setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
+                      setLoadingConcerts(false);
+                    });
+                }}
+              >
+                <Text>다시 시도</Text>
+              </Button>
+            </View>
+          ) : (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={concerts}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ConcertCard concert={item} />}
+              ItemSeparatorComponent={() => <View className="w-3" />}
+              contentContainerClassName="pr-4"
+            />
+          )}
         </View>
 
         {/* 인기 비교 */}
@@ -137,38 +388,55 @@ export default function HomeScreen() {
               <Text className="text-sm text-primary">전체보기</Text>
             </Button>
           </View>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={POPULAR_COMPARISONS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ComparisonCard comparison={item} />}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            contentContainerClassName="pr-4"
-          />
-        </View>
-
-        {/* 시대별 탐험 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">시대별 탐험</Text>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onPress={() => router.push('/(tabs)/timeline')}
-            >
-              <Text className="text-sm text-primary">전체보기</Text>
-            </Button>
-          </View>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={RECOMMENDED_PERIODS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <PeriodCard period={item} />}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            contentContainerClassName="pr-4"
-          />
+          {loadingComposers ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+            </View>
+          ) : errorComposers ? (
+            <View className="py-8">
+              <Text className="text-center text-destructive">{errorComposers}</Text>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4 mx-auto"
+                onPress={() => {
+                  setLoadingComposers(true);
+                  setErrorComposers(null);
+                  ComposerAPI.getAll()
+                    .then((data) => {
+                      setComposers(data);
+                      setLoadingComposers(false);
+                    })
+                    .catch((err) => {
+                      setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
+                      setLoadingComposers(false);
+                    });
+                }}
+              >
+                <Text>다시 시도</Text>
+              </Button>
+            </View>
+          ) : composers.length > 0 ? (
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={composers.slice(0, 5).map((composer, idx) => ({
+                id: String(idx),
+                piece: `${composer.name} 대표곡`,
+                artists: '다양한 연주자',
+                composerId: composer.id,
+                pieceId: 1,
+              }))}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => <ComparisonCard comparison={item} />}
+              ItemSeparatorComponent={() => <View className="w-3" />}
+              contentContainerClassName="pr-4"
+            />
+          ) : (
+            <View className="py-8">
+              <Text className="text-center text-muted-foreground">비교 데이터가 없습니다.</Text>
+            </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -176,7 +444,7 @@ export default function HomeScreen() {
 }
 
 // 아티스트 카드
-function ArtistCard({ artist }: { artist: typeof ARTISTS[0] }) {
+function ArtistCard({ artist }: { artist: LegacyArtist }) {
   const router = useRouter();
   
   const handlePress = () => {
@@ -188,7 +456,7 @@ function ArtistCard({ artist }: { artist: typeof ARTISTS[0] }) {
       <Card className="w-[160px] p-3">
         <View className="gap-2">
           <Avatar alt={artist.name} className="size-16 self-center">
-            <AvatarImage source={{ uri: artist.image }} />
+            <AvatarImage source={{ uri: getImageUrl(artist.image) }} />
             <AvatarFallback>
               <Text>{artist.name[0]}</Text>
             </AvatarFallback>
@@ -221,39 +489,53 @@ function ArtistCard({ artist }: { artist: typeof ARTISTS[0] }) {
 }
 
 // 공연 카드
-function ConcertCard({ concert }: { concert: typeof UPCOMING_CONCERTS[0] }) {
+function ConcertCard({ concert }: { concert: LegacyConcert }) {
+  const router = useRouter();
+  
+  const handlePress = () => {
+    router.push(`/concert/${concert.id}`);
+  };
+  
   return (
-    <Card className="w-[200px] overflow-hidden p-0">
-      <View className="aspect-[3/4] bg-muted">
-        <Image 
-          source={{ uri: concert.poster }} 
-          className="h-full w-full"
-          resizeMode="cover"
-        />
-      </View>
-      <View className="gap-3 p-3">
-        <View className="gap-1">
-          <Text className="font-semibold" numberOfLines={2}>
-            {concert.title}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
-            <Text className="text-xs text-muted-foreground">{concert.date}</Text>
-          </View>
-          <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-            {concert.venue}
-          </Text>
+    <Pressable onPress={handlePress}>
+      <Card className="w-[200px] overflow-hidden p-0">
+        <View className="aspect-[3/4] bg-muted">
+          {concert.poster ? (
+            <OptimizedImage 
+              uri={concert.poster}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="h-full w-full items-center justify-center">
+              <Icon as={CalendarIcon} size={32} className="text-muted-foreground" />
+            </View>
+          )}
         </View>
-        <Button size="sm">
-          <Text className="text-xs">예매</Text>
-        </Button>
-      </View>
-    </Card>
+        <View className="gap-3 p-3">
+          <View className="gap-1">
+            <Text className="font-semibold" numberOfLines={2}>
+              {concert.title}
+            </Text>
+            <View className="flex-row items-center gap-1">
+              <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
+              <Text className="text-xs text-muted-foreground">{concert.date}</Text>
+            </View>
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {concert.venue}
+            </Text>
+          </View>
+          <Button size="sm">
+            <Text className="text-xs">예매</Text>
+          </Button>
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 
 // 비교 카드
-function ComparisonCard({ comparison }: { comparison: typeof POPULAR_COMPARISONS[0] }) {
+function ComparisonCard({ comparison }: { comparison: LegacyComparison }) {
   const router = useRouter();
   
   const handlePress = () => {
@@ -284,26 +566,4 @@ function ComparisonCard({ comparison }: { comparison: typeof POPULAR_COMPARISONS
   );
 }
 
-// 시대 카드
-function PeriodCard({ period }: { period: typeof RECOMMENDED_PERIODS[0] }) {
-  const colors = {
-    '바로크': 'bg-purple-500',
-    '고전': 'bg-blue-500',
-    '낭만': 'bg-pink-500',
-    '근현대': 'bg-green-500',
-  };
 
-  return (
-    <Card className="w-[140px] overflow-hidden p-0">
-      <View className={`${colors[period.period as keyof typeof colors]} p-4`}>
-        <Text className="text-center text-4xl">{period.emoji}</Text>
-      </View>
-      <View className="gap-1 p-3">
-        <Text className="text-center font-semibold">{period.period}</Text>
-        <Text className="text-center text-xs text-muted-foreground">
-          대표: {period.composer}
-        </Text>
-      </View>
-    </Card>
-  );
-}

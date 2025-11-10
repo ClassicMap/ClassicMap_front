@@ -1,8 +1,9 @@
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Animated } from 'react-native';
 import { 
   ArrowLeftIcon, 
   CalendarIcon,
@@ -10,14 +11,26 @@ import {
   BookOpenIcon,
   MusicIcon,
   MoonStarIcon,
-  SunIcon
+  SunIcon,
+  TrashIcon,
+  PlusIcon,
+  EditIcon
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { getComposerDTO, getPieceDTO } from '@/lib/data/mockDTO';
-import { MOCK_COMPOSERS } from '@/lib/data/mockDatabase';
+import { ComposerAPI } from '@/lib/api/client';
+import { AdminComposerAPI, AdminPieceAPI } from '@/lib/api/admin';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { PieceFormModal } from '@/components/admin/PieceFormModal';
+import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
+import type { Composer, Piece } from '@/lib/types/models';
+import { getImageUrl } from '@/lib/utils/image';
+
+interface ComposerWithPieces extends Composer {
+  majorPieces?: Piece[];
+}
 
 // 시대별 색상 매핑
 const ERA_COLORS: Record<string, string> = {
@@ -557,53 +570,156 @@ export default function ComposerDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  
-  const composerId = Number(id);
-  const composerDTO = getComposerDTO(composerId);
-  
-  // 레거시 데이터에서 이미지 등 가져오기 (나중에 통합 데이터에 추가)
-  const legacyComposer = COMPOSER_DETAILS[id as string];
+  const [composer, setComposer] = React.useState<ComposerWithPieces | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [showPieceFormModal, setShowPieceFormModal] = React.useState(false);
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
+  const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
+  const { canEdit } = useAuth();
 
-  const handlePieceClick = (pieceId: number, pieceTitle: string) => {
-    // 실제로 연주 데이터가 있는지 확인
-    const piece = getPieceDTO(pieceId);
-    
-    if (!piece || !piece.performances || piece.performances.length === 0) {
-      Alert.alert(
-        '비교 영상이 없습니다',
-        `"${pieceTitle}"의 연주 비교 영상이 아직 준비되지 않았습니다.\n\n다른 곡을 선택해주세요.`,
-        [{ text: '확인', style: 'default' }]
-      );
-      return;
+  React.useEffect(() => {
+    if (id) {
+      loadComposer();
     }
-    
-    router.push(`/(tabs)/compare?pieceId=${pieceId}&composerId=${composerId}`);
+  }, [id]);
+
+  const loadComposer = () => {
+    setLoading(true);
+    setError(null);
+    ComposerAPI.getById(Number(id))
+      .then((data) => {
+        setComposer(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load composer:', err);
+        setError('작곡가 정보를 불러오는데 실패했습니다.');
+        setLoading(false);
+      });
   };
 
-  if (!composerDTO || !legacyComposer) {
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    ComposerAPI.getById(Number(id))
+      .then((data) => {
+        setComposer(data);
+        setError(null);
+        setRefreshing(false);
+      })
+      .catch((err) => {
+        console.error('Failed to refresh composer:', err);
+        setError('작곡가 정보를 불러오는데 실패했습니다.');
+        setRefreshing(false);
+      });
+  }, [id]);
+
+  const handlePieceClick = (pieceId: number, pieceTitle: string) => {
+    router.push(`/(tabs)/compare?pieceId=${pieceId}&composerId=${id}`);
+  };
+
+  const handleDeletePiece = (pieceId: number, title: string) => {
+    Alert.alert(
+      '작품 삭제',
+      `${title}을(를) 삭제하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminPieceAPI.delete(pieceId);
+              Alert.alert('성공', '작품이 삭제되었습니다.');
+              loadComposer();
+            } catch (error) {
+              Alert.alert('오류', '삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCoverImageLoad = () => {
+    setCoverImageLoaded(true);
+    Animated.timing(coverImageOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleDeleteComposer = () => {
+    if (!composer) return;
+    Alert.alert(
+      '작곡가 삭제',
+      `${composer.name}을(를) 삭제하시겠습니까? 모든 작품도 함께 삭제됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminComposerAPI.delete(composer.id);
+              Alert.alert('성공', '작곡가가 삭제되었습니다.');
+              router.back();
+            } catch (error) {
+              Alert.alert('오류', '삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text>작곡가를 찾을 수 없습니다</Text>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  const composer = {
-    ...legacyComposer,
-    ...composerDTO,
-    // majorWorks는 통합 데이터 사용
-    majorWorks: composerDTO.majorPieces || [],
-  };
+  if (error || !composer) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="p-8 w-full max-w-md">
+          <Text className="text-center text-destructive mb-4">
+            {error || '작곡가를 찾을 수 없습니다'}
+          </Text>
+          <Button variant="outline" onPress={() => router.back()}>
+            <Text>뒤로 가기</Text>
+          </Button>
+        </Card>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1">
+      <ScrollView 
+        className="flex-1"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Cover Image with overlays */}
         <View className="relative h-64">
-          <Image 
-            source={{ uri: composer.coverImage }} 
+          {!coverImageLoaded && (
+            <View className="h-full w-full bg-muted items-center justify-center">
+              <ActivityIndicator size="large" />
+            </View>
+          )}
+          <Animated.Image 
+            source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }} 
             className="h-full w-full"
+            style={{ opacity: coverImageOpacity }}
             resizeMode="cover"
+            onLoad={handleCoverImageLoad}
           />
           <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
           
@@ -633,7 +749,7 @@ export default function ComposerDetailScreen() {
           {/* Profile Section */}
           <View className="items-center gap-3 -mt-12">
             <Avatar alt={composer.name} className="size-24 border-4 border-background">
-              <AvatarImage source={{ uri: composer.avatar }} />
+              <AvatarImage source={{ uri: getImageUrl(composer.avatarUrl) }} />
               <AvatarFallback>
                 <Text className="text-2xl">{composer.name[0]}</Text>
               </AvatarFallback>
@@ -674,57 +790,124 @@ export default function ComposerDetailScreen() {
                 <Text className="text-sm">{composer.nationality}</Text>
               </View>
             </View>
+            {canEdit && (
+              <View className="flex-row gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onPress={() => setEditModalVisible(true)}
+                >
+                  <Icon as={EditIcon} size={16} className="mr-2" />
+                  <Text>수정</Text>
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1"
+                  onPress={handleDeleteComposer}
+                >
+                  <Icon as={TrashIcon} size={16} className="mr-2" />
+                  <Text>삭제</Text>
+                </Button>
+              </View>
+            )}
           </Card>
 
           {/* Bio */}
-          <View className="gap-3">
-            <Text className="text-xl font-bold">소개</Text>
+          {composer.bio && (
             <Card className="p-4">
+              <Text className="mb-2 text-lg font-bold">소개</Text>
               <Text className="leading-6 text-muted-foreground">{composer.bio}</Text>
             </Card>
-          </View>
+          )}
 
           {/* Style */}
-          <View className="gap-3">
-            <Text className="text-xl font-bold">음악 스타일</Text>
+          {composer.style && (
             <Card className="p-4">
+              <Text className="mb-2 text-lg font-bold">음악 스타일</Text>
               <Text className="leading-6 text-muted-foreground">{composer.style}</Text>
             </Card>
-          </View>
-
-          {/* Major Works */}
-          <View className="gap-3">
-            <Text className="text-xl font-bold">주요 작품</Text>
-            <View className="gap-2">
-              {composer.majorWorks.map((work: any, index: number) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => handlePieceClick(work.id, work.title)}
-                  activeOpacity={0.7}
-                >
-                  <Card className="p-4">
-                    <View className="flex-row items-center gap-3">
-                      <Icon as={MusicIcon} size={20} className="text-primary" />
-                      <Text className="flex-1 font-medium">{work.title}</Text>
-                      <Icon as={ArrowLeftIcon} size={16} className="text-muted-foreground rotate-180" />
-                    </View>
-                  </Card>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          )}
 
           {/* Influence */}
-          <View className="gap-3">
-            <Text className="text-xl font-bold">영향력</Text>
+          {composer.influence && (
             <Card className="p-4">
-              <View className="flex-row items-start gap-3">
-                <Icon as={BookOpenIcon} size={20} className="text-muted-foreground mt-0.5" />
-                <Text className="flex-1 leading-6 text-muted-foreground">{composer.influence}</Text>
-              </View>
+              <Text className="mb-2 text-lg font-bold">음악사적 영향</Text>
+              <Text className="leading-6 text-muted-foreground">{composer.influence}</Text>
             </Card>
-          </View>
+          )}
+
+          {/* Major Works */}
+          {composer.majorPieces && composer.majorPieces.length > 0 && (
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xl font-bold">주요 작품</Text>
+                {canEdit && (
+                  <Button size="sm" onPress={() => setShowPieceFormModal(true)}>
+                    <Icon as={PlusIcon} size={14} className="text-primary-foreground mr-1" />
+                    <Text className="text-sm">작품 추가</Text>
+                  </Button>
+                )}
+              </View>
+              <View className="gap-2">
+                {composer.majorPieces.map((work, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handlePieceClick(work.id, work.title)}
+                    activeOpacity={0.7}
+                  >
+                    <Card className="p-4">
+                      <View className="flex-row items-center gap-3">
+                        <Icon as={MusicIcon} size={20} className="text-primary" />
+                        <View className="flex-1">
+                          <Text className="font-medium">{work.title}</Text>
+                          {work.opusNumber && (
+                            <Text className="text-sm text-muted-foreground">{work.opusNumber}</Text>
+                          )}
+                        </View>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleDeletePiece(work.id, work.title);
+                            }}
+                          >
+                            <Icon as={TrashIcon} size={16} className="text-destructive" />
+                          </Button>
+                        )}
+                        <Icon as={ArrowLeftIcon} size={16} className="text-muted-foreground rotate-180" />
+                      </View>
+                    </Card>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
+
+        {showPieceFormModal && (
+          <PieceFormModal
+            visible={showPieceFormModal}
+            composerId={Number(id)}
+            onClose={() => setShowPieceFormModal(false)}
+            onSuccess={loadComposer}
+          />
+        )}
+
+        {/* Edit Modal */}
+        {composer && (
+          <ComposerFormModal
+            visible={editModalVisible}
+            composer={composer}
+            onClose={() => setEditModalVisible(false)}
+            onSuccess={() => {
+              loadComposer();
+            }}
+          />
+        )}
       </ScrollView>
     </View>
   );

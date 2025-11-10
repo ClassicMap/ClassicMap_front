@@ -9,7 +9,7 @@ export interface Composer {
   englishName: string;
   period: '바로크' | '고전주의' | '낭만주의' | '근현대';
   birthYear: number;
-  deathYear: number;
+  deathYear: number | null;
   nationality: string;
   imageUrl?: string;
   avatarUrl?: string;
@@ -62,6 +62,17 @@ export interface Artist {
   updatedAt?: Date;
 }
 
+export interface Recording {
+  id: number;
+  artistId: number;
+  title: string;
+  year: string;
+  label?: string;
+  coverUrl?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface Performance {
   id: number;
   pieceId: number;
@@ -89,7 +100,7 @@ export interface ComposerDTO {
   englishName: string;
   period: string;
   birthYear: number;
-  deathYear: number;
+  deathYear: number | null;
   nationality: string;
   imageUrl?: string;
   avatarUrl?: string;

@@ -1,10 +1,9 @@
-// app/artist/[id].tsx
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, FlatList, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Image, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Animated } from 'react-native';
 import { 
   ArrowLeftIcon, 
   StarIcon, 
@@ -14,12 +13,23 @@ import {
   TrendingUpIcon,
   MusicIcon,
   MoonStarIcon,
-  SunIcon
+  SunIcon,
+  TrashIcon,
+  EditIcon,
+  Disc3Icon,
+  PlusIcon
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { ArtistAPI, RecordingAPI } from '@/lib/api/client';
+import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
+import { useAuth } from '@/lib/hooks/useAuth';
+import type { Artist, Recording } from '@/lib/types/models';
+import { getImageUrl } from '@/lib/utils/image';
+import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
+import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 
 // Mock 데이터
 const ARTIST_DETAILS: Record<string, any> = {
@@ -306,25 +316,170 @@ export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const artist = ARTIST_DETAILS[id as string];
+  const [artist, setArtist] = React.useState<Artist | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
+  const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
+  const { canEdit } = useAuth();
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [recordings, setRecordings] = React.useState<Recording[]>([]);
+  const [recordingFormVisible, setRecordingFormVisible] = React.useState(false);
+  const [selectedRecording, setSelectedRecording] = React.useState<Recording | undefined>();
 
-  if (!artist) {
+  React.useEffect(() => {
+    if (id) {
+      loadArtist();
+    }
+  }, [id]);
+
+  const loadArtist = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await ArtistAPI.getById(Number(id));
+      setArtist(data);
+      
+      // 녹음 목록 로드
+      try {
+        const recordingData = await RecordingAPI.getByArtist(Number(id));
+        setRecordings(recordingData);
+      } catch (error) {
+        console.error('Failed to fetch recordings:', error);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load artist:', err);
+      setError('아티스트 정보를 불러오는데 실패했습니다.');
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await ArtistAPI.getById(Number(id));
+      setArtist(data);
+      
+      // 녹음 목록 새로고침
+      try {
+        const recordingData = await RecordingAPI.getByArtist(Number(id));
+        setRecordings(recordingData);
+      } catch (error) {
+        console.error('Failed to fetch recordings:', error);
+      }
+      
+      setError(null);
+      setRefreshing(false);
+    } catch (err) {
+      console.error('Failed to refresh artist:', err);
+      setError('아티스트 정보를 불러오는데 실패했습니다.');
+      setRefreshing(false);
+    }
+  }, [id]);
+
+  const handleCoverImageLoad = () => {
+    setCoverImageLoaded(true);
+    Animated.timing(coverImageOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleDeleteArtist = () => {
+    if (!artist) return;
+    Alert.alert(
+      '아티스트 삭제',
+      `${artist.name}을(를) 삭제하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminArtistAPI.delete(artist.id);
+              Alert.alert('성공', '아티스트가 삭제되었습니다.');
+              router.back();
+            } catch (error) {
+              Alert.alert('오류', '삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteRecording = (recordingId: number) => {
+    Alert.alert(
+      '앨범 삭제',
+      '정말 이 앨범을 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminRecordingAPI.delete(recordingId);
+              Alert.alert('성공', '앨범이 삭제되었습니다.');
+              loadArtist();
+            } catch (error) {
+              Alert.alert('오류', '앨범 삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text>아티스트를 찾을 수 없습니다</Text>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error || !artist) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="p-8 w-full max-w-md">
+          <Text className="text-center text-destructive mb-4">
+            {error || '아티스트를 찾을 수 없습니다'}
+          </Text>
+          <Button variant="outline" onPress={() => router.back()}>
+            <Text>뒤로 가기</Text>
+          </Button>
+        </Card>
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1">
+      <ScrollView 
+        className="flex-1"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Cover Image with overlays */}
         <View className="relative h-64">
-          <Image 
-            source={{ uri: artist.coverImage }} 
+          {!coverImageLoaded && (
+            <View className="h-full w-full bg-muted items-center justify-center">
+              <ActivityIndicator size="large" />
+            </View>
+          )}
+          <Animated.Image 
+            source={{ uri: getImageUrl(artist.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }} 
             className="h-full w-full"
+            style={{ opacity: coverImageOpacity }}
             resizeMode="cover"
+            onLoad={handleCoverImageLoad}
           />
           <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
           
@@ -354,7 +509,7 @@ export default function ArtistDetailScreen() {
         {/* Profile Section */}
         <View className="items-center gap-3 -mt-12">
           <Avatar alt={artist.name} className="size-24 border-4 border-background">
-            <AvatarImage source={{ uri: artist.image }} />
+            <AvatarImage source={{ uri: getImageUrl(artist.imageUrl) }} />
             <AvatarFallback>
               <Text className="text-2xl">{artist.name[0]}</Text>
             </AvatarFallback>
@@ -367,11 +522,11 @@ export default function ArtistDetailScreen() {
                 <View className="rounded bg-amber-500 px-2 py-1">
                   <Text className="text-xs font-bold text-white">S</Text>
                 </View>
-              ) : (
+              ) : artist.tier === 'Rising' ? (
                 <View className="rounded bg-blue-500 px-2 py-1">
                   <Icon as={TrendingUpIcon} size={14} color="white" />
                 </View>
-              )}
+              ) : null}
             </View>
             <Text className="text-muted-foreground">{artist.englishName}</Text>
             <View className="flex-row items-center gap-1">
@@ -392,137 +547,169 @@ export default function ArtistDetailScreen() {
               <Icon as={MapPinIcon} size={16} className="text-muted-foreground" />
               <Text className="text-sm">{artist.nationality}</Text>
             </View>
-            <View className="flex-row items-center gap-2">
-              <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
-              <Text className="text-sm">{artist.birthYear}년생</Text>
-            </View>
+            {artist.birthYear && (
+              <View className="flex-row items-center gap-2">
+                <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
+                <Text className="text-sm">{artist.birthYear}년생</Text>
+              </View>
+            )}
           </View>
+          {canEdit && (
+            <View className="flex-row gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onPress={() => setEditModalVisible(true)}
+              >
+                <Icon as={EditIcon} size={16} className="mr-2" />
+                <Text>수정</Text>
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1"
+                onPress={handleDeleteArtist}
+              >
+                <Icon as={TrashIcon} size={16} className="mr-2" />
+                <Text>삭제</Text>
+              </Button>
+            </View>
+          )}
         </Card>
 
         {/* Stats */}
         <View className="flex-row gap-3">
           <Card className="flex-1 items-center gap-1 p-4">
-            <Text className="text-2xl font-bold">{artist.stats.concerts}+</Text>
+            <Text className="text-2xl font-bold">{artist.concertCount}+</Text>
             <Text className="text-xs text-muted-foreground">공연</Text>
           </Card>
           <Card className="flex-1 items-center gap-1 p-4">
-            <Text className="text-2xl font-bold">{artist.stats.countries}+</Text>
+            <Text className="text-2xl font-bold">{artist.countryCount}+</Text>
             <Text className="text-xs text-muted-foreground">국가</Text>
           </Card>
           <Card className="flex-1 items-center gap-1 p-4">
-            <Text className="text-2xl font-bold">{artist.stats.albums}+</Text>
+            <Text className="text-2xl font-bold">{artist.albumCount}+</Text>
             <Text className="text-xs text-muted-foreground">앨범</Text>
           </Card>
         </View>
 
-        {/* Bio */}
-        <View className="gap-3">
-          <Text className="text-xl font-bold">소개</Text>
+        {/* Biography */}
+        {artist.bio && (
           <Card className="p-4">
+            <Text className="mb-2 text-lg font-bold">소개</Text>
             <Text className="leading-6 text-muted-foreground">{artist.bio}</Text>
           </Card>
-        </View>
-
-        {/* Specialty */}
-        <View className="gap-3">
-          <Text className="text-xl font-bold">전문 레퍼토리</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {artist.specialty.map((item: string, index: number) => (
-              <View key={index} className="rounded-full border border-border bg-muted px-3 py-1.5">
-                <Text className="text-sm">{item}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        )}
 
         {/* Style */}
-        <View className="gap-3">
-          <Text className="text-xl font-bold">연주 스타일</Text>
+        {artist.style && (
           <Card className="p-4">
+            <Text className="mb-2 text-lg font-bold">연주 스타일</Text>
             <Text className="leading-6 text-muted-foreground">{artist.style}</Text>
           </Card>
-        </View>
+        )}
 
-        {/* Awards */}
+        {/* Recordings/Albums */}
         <View className="gap-3">
-          <Text className="text-xl font-bold">주요 수상</Text>
-          <View className="gap-2">
-            {artist.awards.map((award: any, index: number) => (
-              <Card key={index} className="p-4">
-                <View className="flex-row items-center gap-3">
-                  <Icon as={AwardIcon} size={20} className="text-amber-500" />
-                  <View className="flex-1">
-                    <Text className="font-semibold">{award.name}</Text>
-                    <Text className="text-sm text-muted-foreground">{award.year}</Text>
-                  </View>
-                </View>
-              </Card>
-            ))}
-          </View>
-        </View>
-
-        {/* Recordings */}
-        <View className="gap-3">
-          <Text className="text-xl font-bold">대표 음반</Text>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={artist.recordings}
-            keyExtractor={(item: any) => item.id}
-            renderItem={({ item }: any) => (
-              <Card className="w-[160px] overflow-hidden p-0">
-                <View className="aspect-square bg-muted">
-                  <Image 
-                    source={{ uri: item.cover }} 
-                    className="h-full w-full"
-                    resizeMode="cover"
-                  />
-                </View>
-                <View className="gap-1 p-3">
-                  <Text className="text-sm font-semibold" numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {item.year} • {item.label}
-                  </Text>
-                </View>
-              </Card>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              <Icon as={Disc3Icon} size={20} className="text-primary" />
+              <Text className="text-lg font-bold">앨범</Text>
+            </View>
+            {canEdit && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                onPress={() => {
+                  setSelectedRecording(undefined);
+                  setRecordingFormVisible(true);
+                }}
+              >
+                <Icon as={PlusIcon} size={16} />
+              </Button>
             )}
-            ItemSeparatorComponent={() => <View className="w-3" />}
-            contentContainerClassName="pr-4"
-          />
+          </View>
+          
+          {recordings.length === 0 ? (
+            <Card className="p-6">
+              <Text className="text-center text-muted-foreground">
+                아직 등록된 앨범이 없습니다.
+              </Text>
+            </Card>
+          ) : (
+            <View className="gap-3">
+              {recordings.map((recording) => (
+                <Card key={recording.id} className="p-4">
+                  <View className="flex-row gap-3">
+                    {recording.coverUrl ? (
+                      <Image
+                        source={{ uri: getImageUrl(recording.coverUrl) }}
+                        className="w-20 h-20 rounded"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View className="w-20 h-20 bg-muted rounded items-center justify-center">
+                        <Icon as={Disc3Icon} size={32} className="text-muted-foreground" />
+                      </View>
+                    )}
+                    <View className="flex-1 gap-1">
+                      <Text className="font-semibold">{recording.title}</Text>
+                      <Text className="text-sm text-muted-foreground">{recording.year}</Text>
+                      {recording.label && (
+                        <Text className="text-xs text-muted-foreground">{recording.label}</Text>
+                      )}
+                    </View>
+                    {canEdit && (
+                      <View className="gap-2">
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedRecording(recording);
+                            setRecordingFormVisible(true);
+                          }}
+                        >
+                          <Icon as={EditIcon} size={18} className="text-primary" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDeleteRecording(recording.id)}
+                        >
+                          <Icon as={TrashIcon} size={18} className="text-destructive" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                </Card>
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* Upcoming Concerts */}
-        <View className="gap-3">
-          <Text className="text-xl font-bold">다가오는 공연</Text>
-          <View className="gap-2">
-            {artist.upcomingConcerts.map((concert: any) => (
-              <Card key={concert.id} className="p-4">
-                <View className="gap-2">
-                  <Text className="text-lg font-semibold">{concert.title}</Text>
-                  <View className="flex-row items-center gap-2">
-                    <Icon as={CalendarIcon} size={14} className="text-muted-foreground" />
-                    <Text className="text-sm text-muted-foreground">{concert.date}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Icon as={MapPinIcon} size={14} className="text-muted-foreground" />
-                    <Text className="text-sm text-muted-foreground">{concert.venue}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Icon as={MusicIcon} size={14} className="text-muted-foreground" />
-                    <Text className="text-sm text-muted-foreground">{concert.program}</Text>
-                  </View>
-                  <Button size="sm" className="mt-2">
-                    <Text className="text-sm">예매하기</Text>
-                  </Button>
-                </View>
-              </Card>
-            ))}
-          </View>
-        </View>
       </View>
       </ScrollView>
+
+      {/* Edit Modal */}
+      {artist && (
+        <ArtistFormModal
+          visible={editModalVisible}
+          artist={artist}
+          onClose={() => setEditModalVisible(false)}
+          onSuccess={() => {
+            loadArtist();
+          }}
+        />
+      )}
+
+      {/* Recording Form Modal */}
+      <RecordingFormModal
+        visible={recordingFormVisible}
+        artistId={Number(id)}
+        recording={selectedRecording}
+        onClose={() => setRecordingFormVisible(false)}
+        onSuccess={() => {
+          setRecordingFormVisible(false);
+          loadArtist();
+        }}
+      />
     </View>
   );
 }

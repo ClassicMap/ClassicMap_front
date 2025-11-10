@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
-import { View, ScrollView, TouchableOpacity, Dimensions, Image, TextInput, Modal, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, ScrollView, TouchableOpacity, Dimensions, Image, TextInput, Modal, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { useState, useRef } from 'react';
 import Animated, {
@@ -16,9 +16,17 @@ import Animated, {
   SlideOutDown,
 } from 'react-native-reanimated';
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-import { XIcon } from 'lucide-react-native';
+import { XIcon, RefreshCw, Plus } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
-import { getTimelineComposers, getAllPeriods, type PeriodInfo } from '@/lib/data/mockDTO';
+import { ComposerAPI } from '@/lib/api/client';
+import { getAllPeriods, type PeriodInfo } from '@/lib/data/mockDTO';
+import type { Composer } from '@/lib/types/models';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
+import { prefetchImages } from '@/components/optimized-image';
+import { getImageUrl } from '@/lib/utils/image';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TIMELINE_HEIGHT = SCREEN_HEIGHT * 0.4;
@@ -28,15 +36,96 @@ const VERTICAL_LANES = 4;
 
 export default function TimelineScreen() {
   const router = useRouter();
+  const { canEdit } = useAuth();
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentEraIndex, setCurrentEraIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEra, setSelectedEra] = useState<PeriodInfo | null>(null);
   const [showEraModal, setShowEraModal] = useState(false);
+  const [composers, setComposers] = useState<Composer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showComposerForm, setShowComposerForm] = useState(false);
 
-  const COMPOSERS = React.useMemo(() => getTimelineComposers(), []);
   const ERAS = React.useMemo(() => getAllPeriods(), []);
+
+  const loadComposers = React.useCallback(() => {
+    ComposerAPI.getAll()
+      .then((data) => {
+        setComposers(data);
+        prefetchImages(data.map(c => c.avatarUrl));
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('작곡가 정보를 불러오는데 실패했습니다.');
+        setLoading(false);
+      });
+  }, []);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    ComposerAPI.getAll()
+      .then((data) => {
+        setComposers(data);
+        prefetchImages(data.map(c => c.avatarUrl));
+        setError(null);
+        setRefreshing(false);
+      })
+      .catch((err) => {
+        setError('작곡가 정보를 불러오는데 실패했습니다.');
+        setRefreshing(false);
+      });
+  }, []);
+
+  React.useEffect(() => {
+    loadComposers();
+  }, [loadComposers]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadComposers();
+    }, [loadComposers])
+  );
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="p-8 w-full max-w-md">
+          <Text className="text-center text-destructive mb-4">{error}</Text>
+          <Button 
+            variant="outline" 
+            onPress={loadComposers}
+          >
+            <Text>다시 시도</Text>
+          </Button>
+        </Card>
+      </View>
+    );
+  }
+
+  const COMPOSERS = composers.map(c => {
+    const imageUrl = c.avatarUrl || c.imageUrl || c.coverImageUrl;
+    return {
+      id: c.id,
+      name: c.name,
+      fullName: c.fullName || c.name,
+      birthYear: c.birthYear || 0,
+      deathYear: c.deathYear ?? null,
+      period: c.period,
+      nationality: c.nationality || '',
+      image: imageUrl,
+    };
+  });
 
   const handleComposerPress = (composer: any) => {
     router.push(`/composer/${composer.id}`);
@@ -341,7 +430,7 @@ export default function TimelineScreen() {
                     >
                       {composer.image ? (
                         <Image
-                          source={{ uri: composer.image }}
+                          source={{ uri: getImageUrl(composer.image) }}
                           style={{ width: '100%', height: '100%' }}
                           resizeMode="cover"
                         />
@@ -529,13 +618,39 @@ export default function TimelineScreen() {
         {/* Composer List */}
         <ScrollView className="flex-1">
           <View className="gap-6 p-6">
-            <View className="gap-2">
-              <Text variant="h1" className="text-2xl font-bold">
-                작곡가 목록
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                시대별로 정리된 작곡가들을 탐험하세요
-              </Text>
+            <View className="flex-row items-center">
+              <View className="flex-1" />
+              <View className="items-center gap-2">
+                <Text variant="h1" className="text-2xl font-bold text-center">
+                  작곡가 목록
+                </Text>
+                <Text className="text-sm text-muted-foreground text-center">
+                  시대별로 정리된 작곡가들을 탐험하세요
+                </Text>
+              </View>
+              <View className="flex-1 items-end flex-row gap-2 justify-end">
+                {canEdit && (
+                  <TouchableOpacity
+                    onPress={() => setShowComposerForm(true)}
+                    className="rounded-full bg-primary p-2"
+                    activeOpacity={0.7}
+                  >
+                    <Icon as={Plus} size={18} color="white" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={onRefresh}
+                  disabled={refreshing}
+                  className="rounded-full bg-card border border-border p-2"
+                  activeOpacity={0.7}
+                >
+                  <Icon 
+                    as={RefreshCw} 
+                    size={18} 
+                    className={`text-foreground ${refreshing ? 'opacity-50' : ''}`}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View className="gap-2">
@@ -604,7 +719,7 @@ export default function TimelineScreen() {
                         >
                           {composer.image ? (
                             <Image
-                              source={{ uri: composer.image }}
+                              source={{ uri: getImageUrl(composer.image) }}
                               style={{ width: '100%', height: '100%' }}
                               resizeMode="cover"
                             />
@@ -618,9 +733,9 @@ export default function TimelineScreen() {
                         </View>
 
                         <View className="flex-1">
-                          <Text className="font-bold">{composer.fullName}</Text>
+                          <Text className="font-bold">{composer.name}</Text>
                           <Text className="text-xs text-muted-foreground">
-                            {composer.birthYear} - {composer.deathYear} • {composer.nationality}
+                            {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'} · {composer.nationality}
                           </Text>
                         </View>
                       </TouchableOpacity>
@@ -631,6 +746,17 @@ export default function TimelineScreen() {
             })}
           </View>
         </ScrollView>
+
+        {/* Composer Form Modal */}
+        {canEdit && (
+          <ComposerFormModal
+            visible={showComposerForm}
+            onClose={() => setShowComposerForm(false)}
+            onSuccess={() => {
+              loadComposers();
+            }}
+          />
+        )}
       </View>
     </GestureHandlerRootView>
   );

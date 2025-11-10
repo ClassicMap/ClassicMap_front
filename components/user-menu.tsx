@@ -9,6 +9,7 @@ import type { TriggerRef } from '@rn-primitives/popover';
 import { LogOutIcon, PlusIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View } from 'react-native';
+import { getImageUrl } from '@/lib/utils/image';
 
 export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const { user } = useUser();
@@ -90,7 +91,7 @@ function UserAvatar(props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { 
       .map((name) => name[0])
       .join('');
 
-    const imageSource = user?.imageUrl ? { uri: user.imageUrl } : undefined;
+    const imageSource = user?.imageUrl ? { uri: getImageUrl(user.imageUrl) } : undefined;
     return { initials, imageSource, userName };
   }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress]);
 
