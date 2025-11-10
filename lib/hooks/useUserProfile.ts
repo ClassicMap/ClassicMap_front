@@ -26,7 +26,6 @@ export function useUserProfile() {
 
         if (!userProfile) {
           // 첫 로그인! DB에 사용자 생성
-          console.log('🎉 첫 로그인! 사용자 생성:', user.emailAddresses[0].emailAddress);
           userProfile = await MockDB.createUser(user);
           setIsFirstLogin(true);
         } else {
@@ -35,7 +34,7 @@ export function useUserProfile() {
 
         setProfile(userProfile);
       } catch (error) {
-        console.error('프로필 로드 실패:', error);
+        // 프로필 로드 실패
       } finally {
         setLoading(false);
       }

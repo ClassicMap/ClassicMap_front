@@ -1,35 +1,155 @@
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, FlatList, TouchableOpacity, Animated } from 'react-native';
-import { PlayCircleIcon, PlusIcon, CheckIcon } from 'lucide-react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { View, ScrollView, FlatList, TouchableOpacity, Animated, ActivityIndicator, RefreshControl, Alert, Image } from 'react-native';
+import { PlayCircleIcon, PlusIcon, CheckIcon, EditIcon, TrashIcon } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import WebView from 'react-native-webview';
-import { 
-  getAllComposerDTOs,
-  getComparisonData,
-  type ComparisonData 
-} from '@/lib/data/mockDTO';
-import type { ComposerDTO, PieceDTO, PerformanceDTO } from '@/lib/types/models';
+import YoutubePlayer from 'react-native-youtube-iframe';
+import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI } from '@/lib/api/client';
+import { AdminPerformanceAPI } from '@/lib/api/admin';
+import { useAuth } from '@/lib/hooks/useAuth';
+import type { Composer, Piece, Performance, Artist } from '@/lib/types/models';
+import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
+import { getImageUrl } from '@/lib/utils/image';
+
+interface ComposerWithPieces extends Composer {
+  majorPieces?: Piece[];
+}
 
 export default function CompareScreen() {
   const params = useLocalSearchParams();
-  const composers = getAllComposerDTOs();
+  const router = useRouter();
+  const { canEdit } = useAuth();
+  const [composers, setComposers] = React.useState<ComposerWithPieces[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   
-  const [selectedComposer, setSelectedComposer] = React.useState<ComposerDTO>(composers[3]); // 쇼팽 (id: 4)
-  const [selectedPiece, setSelectedPiece] = React.useState<PieceDTO | null>(null);
+  const [selectedComposer, setSelectedComposer] = React.useState<ComposerWithPieces | null>(null);
+  const [selectedPiece, setSelectedPiece] = React.useState<Piece | null>(null);
   const [showComposerList, setShowComposerList] = React.useState(false);
   const [showPieceList, setShowPieceList] = React.useState(false);
   const [noPieceFound, setNoPieceFound] = React.useState(false);
+  
+  // 연주 관련 state
+  const [performances, setPerformances] = React.useState<Performance[]>([]);
+  const [artists, setArtists] = React.useState<{ [key: number]: Artist }>({});
+  const [performanceFormVisible, setPerformanceFormVisible] = React.useState(false);
+  const [selectedPerformance, setSelectedPerformance] = React.useState<Performance | undefined>();
+  const [currentPerformanceIndex, setCurrentPerformanceIndex] = React.useState(0);
+  const [piecePerformanceCounts, setPiecePerformanceCounts] = React.useState<{ [key: number]: number }>({});
   
   // 애니메이션 값
   const composerAnimation = React.useRef(new Animated.Value(0)).current;
   const pieceAnimation = React.useRef(new Animated.Value(0)).current;
 
+  // FlatList viewable items 변경 핸들러
+  const onViewableItemsChanged = React.useCallback(({ viewableItems }: any) => {
+    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+      setCurrentPerformanceIndex(viewableItems[0].index);
+    }
+  }, []);
+
+  const viewabilityConfig = React.useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  // 작곡가 데이터 로드
+  React.useEffect(() => {
+    loadComposers();
+  }, []);
+
+  const loadComposers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const composersData = await ComposerAPI.getAll();
+      // 각 작곡가의 곡 정보 로드
+      const composersWithPieces = await Promise.all(
+        composersData.map(async (composer) => {
+          try {
+            const pieces = await PieceAPI.getByComposer(composer.id);
+            return { ...composer, majorPieces: pieces };
+          } catch {
+            return { ...composer, majorPieces: [] };
+          }
+        })
+      );
+      setComposers(composersWithPieces);
+
+      // 각 곡의 연주 개수 로드
+      const counts: { [key: number]: number } = {};
+      await Promise.all(
+        composersWithPieces.flatMap((composer) =>
+          (composer.majorPieces || []).map(async (piece) => {
+            try {
+              const performances = await PerformanceAPI.getByPiece(piece.id);
+              counts[piece.id] = performances.length;
+            } catch {
+              counts[piece.id] = 0;
+            }
+          })
+        )
+      );
+      setPiecePerformanceCounts(counts);
+
+      if (composersWithPieces.length > 0) {
+        setSelectedComposer(composersWithPieces[0]);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load composers:', err);
+      setError('작곡가 정보를 불러오는데 실패했습니다.');
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const composersData = await ComposerAPI.getAll();
+      const composersWithPieces = await Promise.all(
+        composersData.map(async (composer) => {
+          try {
+            const pieces = await PieceAPI.getByComposer(composer.id);
+            return { ...composer, majorPieces: pieces };
+          } catch {
+            return { ...composer, majorPieces: [] };
+          }
+        })
+      );
+      setComposers(composersWithPieces);
+
+      // 각 곡의 연주 개수 로드
+      const counts: { [key: number]: number } = {};
+      await Promise.all(
+        composersWithPieces.flatMap((composer) =>
+          (composer.majorPieces || []).map(async (piece) => {
+            try {
+              const performances = await PerformanceAPI.getByPiece(piece.id);
+              counts[piece.id] = performances.length;
+            } catch {
+              counts[piece.id] = 0;
+            }
+          })
+        )
+      );
+      setPiecePerformanceCounts(counts);
+
+      setError(null);
+      setRefreshing(false);
+    } catch (err) {
+      console.error('Failed to refresh composers:', err);
+      setError('작곡가 정보를 불러오는데 실패했습니다.');
+      setRefreshing(false);
+    }
+  }, []);
+
   // 초기화: 작곡가 선택 시 첫 번째 곡 자동 선택
   React.useEffect(() => {
-    if (selectedComposer.majorPieces && selectedComposer.majorPieces.length > 0) {
+    if (selectedComposer && selectedComposer.majorPieces && selectedComposer.majorPieces.length > 0) {
       setSelectedPiece(selectedComposer.majorPieces[0]);
       setNoPieceFound(false);
     } else {
@@ -38,11 +158,60 @@ export default function CompareScreen() {
     }
   }, [selectedComposer]);
 
+  // 곡 선택 시 연주 목록 로드
+  React.useEffect(() => {
+    if (selectedPiece) {
+      loadPerformances(selectedPiece.id);
+      setCurrentPerformanceIndex(0);
+    } else {
+      setPerformances([]);
+      setCurrentPerformanceIndex(0);
+    }
+  }, [selectedPiece]);
+
+  const loadPerformances = async (pieceId: number) => {
+    try {
+      const performanceData = await PerformanceAPI.getByPiece(pieceId);
+      setPerformances(performanceData);
+
+      // 연주 개수 업데이트
+      setPiecePerformanceCounts(prev => ({
+        ...prev,
+        [pieceId]: performanceData.length
+      }));
+
+      // 연주자 정보 로드
+      const artistIds = [...new Set(performanceData.map(p => p.artistId))];
+      const artistData: { [key: number]: Artist } = {};
+      await Promise.all(
+        artistIds.map(async (artistId) => {
+          try {
+            const artist = await ArtistAPI.getById(artistId);
+            if (artist) {
+              artistData[artistId] = artist;
+            }
+          } catch (error) {
+            console.error(`Failed to load artist ${artistId}:`, error);
+          }
+        })
+      );
+      setArtists(artistData);
+    } catch (error) {
+      console.error('Failed to load performances:', error);
+      setPerformances([]);
+      setPiecePerformanceCounts(prev => ({
+        ...prev,
+        [pieceId]: 0
+      }));
+    }
+  };
+
   // URL 파라미터로 작곡가/곡 선택
   React.useEffect(() => {
+    if (!composers.length) return;
+    
     if (params.pieceId) {
       const pieceId = Number(params.pieceId);
-      // 모든 작곡가의 곡에서 pieceId로 검색
       for (const composer of composers) {
         const piece = composer.majorPieces?.find(p => p.id === pieceId);
         if (piece) {
@@ -64,7 +233,7 @@ export default function CompareScreen() {
         }
       }
     }
-  }, [params.composerId, params.pieceId]);
+  }, [params.composerId, params.pieceId, composers]);
 
   // 작곡가 리스트 애니메이션
   React.useEffect(() => {
@@ -94,7 +263,7 @@ export default function CompareScreen() {
     }
   }, [showPieceList]);
 
-  const handleComposerSelect = (composer: ComposerDTO) => {
+  const handleComposerSelect = (composer: ComposerWithPieces) => {
     setSelectedComposer(composer);
     if (composer.majorPieces && composer.majorPieces.length > 0) {
       setSelectedPiece(composer.majorPieces[0]);
@@ -106,10 +275,64 @@ export default function CompareScreen() {
     setShowComposerList(false);
   };
 
-  const handlePieceSelect = (piece: PieceDTO) => {
+  const handlePieceSelect = (piece: Piece) => {
     setSelectedPiece(piece);
     setShowPieceList(false);
   };
+
+  const handleDeletePerformance = (performanceId: number) => {
+    Alert.alert(
+      '연주 삭제',
+      '정말 이 연주를 삭제하시겠습니까?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminPerformanceAPI.delete(performanceId);
+              Alert.alert('성공', '연주가 삭제되었습니다.');
+              if (selectedPiece) {
+                loadPerformances(selectedPiece.id);
+              }
+            } catch (error) {
+              Alert.alert('오류', '연주 삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="p-8 w-full max-w-md">
+          <Text className="text-center text-destructive mb-4">{error}</Text>
+          <Button variant="outline" onPress={loadComposers}>
+            <Text>다시 시도</Text>
+          </Button>
+        </Card>
+      </View>
+    );
+  }
+
+  if (!selectedComposer) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Text className="text-muted-foreground">작곡가를 선택해주세요.</Text>
+      </View>
+    );
+  }
 
   const getPeriodEmoji = (period: string): string => {
     const emojiMap: { [key: string]: string } = {
@@ -121,8 +344,13 @@ export default function CompareScreen() {
     return emojiMap[period] || '🎵';
   };
 
-  return (
-    <ScrollView className="flex-1 bg-background">
+  return (<>
+    <ScrollView 
+      className="flex-1 bg-background"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View className="gap-6 p-4 pb-20">
         {/* 작곡가 선택 */}
         <View className="gap-3">
@@ -252,7 +480,7 @@ export default function CompareScreen() {
                 <View className="gap-1">
                   <Text className="text-lg font-semibold">{selectedPiece.title}</Text>
                   <Text className="text-sm text-muted-foreground">
-                    {selectedPiece.performances?.length || 0}개의 연주 비교 가능
+                    {piecePerformanceCounts[selectedPiece.id] || 0}개의 연주 비교 가능
                   </Text>
                 </View>
               </Card>
@@ -293,7 +521,7 @@ export default function CompareScreen() {
                         <View className="flex-1">
                           <Text className="text-base font-semibold">{piece.title}</Text>
                           <Text className="text-sm text-muted-foreground">
-                            {piece.performances?.length || 0}개의 연주 비교 가능
+                            {piecePerformanceCounts[piece.id] || 0}개의 연주 비교 가능
                           </Text>
                         </View>
                         {selectedPiece?.id === piece.id && (
@@ -339,68 +567,174 @@ export default function CompareScreen() {
             </Card>
 
             {/* 연주 비교 */}
-            {selectedPiece.performances && selectedPiece.performances.length > 0 ? (
+            {selectedPiece && (
               <View className="gap-3">
-                <Text className="text-xl font-bold">연주자별 비교</Text>
-                <FlatList
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  data={selectedPiece.performances}
-                  keyExtractor={(item) => String(item.id)}
-                  renderItem={({ item }) => (
-                    <PerformanceCard performance={item} />
-                  )}
-                  ItemSeparatorComponent={() => <View className="w-4" />}
-                  contentContainerClassName="pr-4"
-                />
-              </View>
-            ) : (
-              <Card className="p-8 bg-muted/50">
-                <View className="gap-4 items-center">
-                  <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
-                  <View className="gap-2 items-center">
-                    <Text className="text-xl font-bold text-center">연주 영상 준비 중</Text>
-                    <Text className="text-sm text-muted-foreground text-center">
-                      이 곡의 연주 비교 영상이 아직 준비되지 않았습니다.
-                    </Text>
+                <View className="flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-xl font-bold">연주 비교</Text>
+                    {performances.length > 0 && (
+                      <Text className="text-sm text-muted-foreground mt-1">
+                        {currentPerformanceIndex + 1} / {performances.length}개 연주
+                      </Text>
+                    )}
                   </View>
+                  {canEdit && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onPress={() => {
+                        setSelectedPerformance(undefined);
+                        setPerformanceFormVisible(true);
+                      }}
+                    >
+                      <Icon as={PlusIcon} size={16} />
+                      <Text className="ml-1">추가</Text>
+                    </Button>
+                  )}
                 </View>
-              </Card>
+
+                {performances.length === 0 ? (
+                  <Card className="p-8 bg-muted/50">
+                    <View className="gap-4 items-center">
+                      <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
+                      <View className="gap-2 items-center">
+                        <Text className="text-xl font-bold text-center">연주 영상 준비 중</Text>
+                        <Text className="text-sm text-muted-foreground text-center">
+                          이 곡의 연주 비교 영상이 아직 준비되지 않았습니다.
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                ) : (
+                  <FlatList
+                    data={performances}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    pagingEnabled
+                    snapToInterval={350}
+                    decelerationRate="fast"
+                    contentContainerStyle={{ paddingRight: 16 }}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    renderItem={({ item: performance }) => {
+                      const artist = artists[performance.artistId];
+
+                      return (
+                        <Card className="overflow-hidden mr-4" style={{ width: 340 }}>
+                          {/* 연주자 정보 */}
+                          <View className="p-4 flex-row items-center justify-between bg-muted/30">
+                            <TouchableOpacity
+                              className="flex-row items-center gap-3 flex-1"
+                              onPress={() => artist && router.push(`/artist/${artist.id}`)}
+                            >
+                              {artist?.imageUrl ? (
+                                <Image
+                                  source={{ uri: getImageUrl(artist.imageUrl) }}
+                                  className="w-12 h-12 rounded-full"
+                                />
+                              ) : (
+                                <View className="w-12 h-12 rounded-full bg-muted items-center justify-center">
+                                  <Text className="text-lg font-bold">
+                                    {artist?.name?.[0] || '?'}
+                                  </Text>
+                                </View>
+                              )}
+                              <View className="flex-1">
+                                <Text className="font-bold">{artist?.name || '알 수 없음'}</Text>
+                                <Text className="text-xs text-muted-foreground">
+                                  {Math.floor(performance.startTime / 60)}:{(performance.startTime % 60).toString().padStart(2, '0')} - {Math.floor(performance.endTime / 60)}:{(performance.endTime % 60).toString().padStart(2, '0')}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+
+                            {canEdit && (
+                              <View className="flex-row gap-2">
+                                <TouchableOpacity
+                                  onPress={() => {
+                                    setSelectedPerformance(performance);
+                                    setPerformanceFormVisible(true);
+                                  }}
+                                  className="p-2"
+                                >
+                                  <Icon as={EditIcon} size={18} className="text-primary" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => handleDeletePerformance(performance.id)}
+                                  className="p-2"
+                                >
+                                  <Icon as={TrashIcon} size={18} className="text-destructive" />
+                                </TouchableOpacity>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* YouTube Player */}
+                          <View style={{ width: '100%', height: 250 }}>
+                            <YoutubePlayer
+                              videoId={performance.videoId}
+                              height={250}
+                              play={false}
+                              initialPlayerParams={{
+                                start: performance.startTime,
+                                end: performance.endTime,
+                                controls: true,
+                                modestbranding: true,
+                                rel: false,
+                              }}
+                            />
+                          </View>
+
+                          {/* 연주 특징 */}
+                          {performance.characteristic && (
+                            <View className="p-4 bg-background">
+                              <Text className="text-sm leading-5 text-muted-foreground">
+                                {performance.characteristic}
+                              </Text>
+                            </View>
+                          )}
+                        </Card>
+                      );
+                    }}
+                    keyExtractor={(item) => item.id.toString()}
+                  />
+                )}
+
+                {/* 페이지 인디케이터 */}
+                {performances.length > 1 && (
+                  <View className="flex-row justify-center gap-2 mt-3">
+                    {performances.map((_, index) => (
+                      <View
+                        key={index}
+                        className={`h-2 rounded-full ${
+                          index === currentPerformanceIndex
+                            ? 'bg-primary w-6'
+                            : 'bg-muted w-2'
+                        }`}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
             )}
           </>
         )}
       </View>
     </ScrollView>
-  );
-}
 
-function PerformanceCard({ performance }: { performance: PerformanceDTO }) {
-  const embedUrl = `https://www.youtube.com/embed/${performance.videoId}?start=${performance.startTime}&end=${performance.endTime}&autoplay=0&controls=1`;
-
-  return (
-    <Card className="w-[340px] overflow-hidden p-0">
-      <View className="aspect-video bg-black">
-        <WebView
-          source={{ uri: embedUrl }}
-          allowsFullscreenVideo
-          allowsInlineMediaPlayback
-          mediaPlaybackRequiresUserAction={false}
-          javaScriptEnabled
-          domStorageEnabled
-        />
-      </View>
-      <View className="gap-2 p-4">
-        <Text className="text-lg font-semibold">{performance.artist.name}</Text>
-        <Text className="text-sm text-muted-foreground leading-5">
-          {performance.characteristic}
-        </Text>
-        <View className="flex-row items-center gap-2">
-          <Icon as={PlayCircleIcon} size={16} className="text-muted-foreground" />
-          <Text className="text-xs text-muted-foreground">
-            {Math.floor(performance.startTime / 60)}:{String(performance.startTime % 60).padStart(2, '0')} - {Math.floor(performance.endTime / 60)}:{String(performance.endTime % 60).padStart(2, '0')}
-          </Text>
-        </View>
-      </View>
-    </Card>
+    {/* Performance Form Modal */}
+    <PerformanceFormModal
+      visible={performanceFormVisible}
+      performance={selectedPerformance}
+      composerId={selectedComposer?.id}
+      pieceId={selectedPiece?.id}
+      onClose={() => setPerformanceFormVisible(false)}
+      onSuccess={() => {
+        setPerformanceFormVisible(false);
+        if (selectedPiece) {
+          loadPerformances(selectedPiece.id);
+        }
+      }}
+    />
+  </>
   );
 }

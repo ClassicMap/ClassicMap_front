@@ -12,10 +12,15 @@ import { TextInput, View } from 'react-native';
 
 export function SignUpForm() {
   const { signUp, isLoaded } = useSignUp();
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const firstNameInputRef = React.useRef<TextInput>(null);
+  const lastNameInputRef = React.useRef<TextInput>(null);
+  const emailInputRef = React.useRef<TextInput>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
-  const [error, setError] = React.useState<{ email?: string; password?: string }>({});
+  const [error, setError] = React.useState<{ firstName?: string; lastName?: string; email?: string; password?: string }>({});
 
   async function onSubmit() {
     if (!isLoaded) return;
@@ -23,6 +28,8 @@ export function SignUpForm() {
     // Start sign-up process using email and password provided
     try {
       await signUp.create({
+        firstName,
+        lastName,
         emailAddress: email,
         password,
       });
@@ -37,11 +44,31 @@ export function SignUpForm() {
         const isEmailMessage =
           err.message.toLowerCase().includes('identifier') ||
           err.message.toLowerCase().includes('email');
-        setError(isEmailMessage ? { email: err.message } : { password: err.message });
+        const isPasswordMessage = err.message.toLowerCase().includes('password');
+        const isFirstNameMessage = err.message.toLowerCase().includes('first');
+        const isLastNameMessage = err.message.toLowerCase().includes('last');
+        
+        if (isFirstNameMessage) {
+          setError({ firstName: err.message });
+        } else if (isLastNameMessage) {
+          setError({ lastName: err.message });
+        } else if (isEmailMessage) {
+          setError({ email: err.message });
+        } else if (isPasswordMessage) {
+          setError({ password: err.message });
+        }
         return;
       }
       console.error(JSON.stringify(err, null, 2));
     }
+  }
+
+  function onFirstNameSubmitEditing() {
+    lastNameInputRef.current?.focus();
+  }
+
+  function onLastNameSubmitEditing() {
+    emailInputRef.current?.focus();
   }
 
   function onEmailSubmitEditing() {
@@ -67,8 +94,42 @@ export function SignUpForm() {
         <CardContent className="gap-6">
           <View className="gap-6">
             <View className="gap-1.5">
+              <Label htmlFor="firstName">이름</Label>
+              <Input
+                id="firstName"
+                placeholder="길동"
+                autoComplete="name-given"
+                autoCapitalize="words"
+                onChangeText={setFirstName}
+                onSubmitEditing={onFirstNameSubmitEditing}
+                returnKeyType="next"
+                submitBehavior="submit"
+              />
+              {error.firstName ? (
+                <Text className="text-sm font-medium text-destructive">{error.firstName}</Text>
+              ) : null}
+            </View>
+            <View className="gap-1.5">
+              <Label htmlFor="lastName">성</Label>
+              <Input
+                ref={lastNameInputRef}
+                id="lastName"
+                placeholder="김"
+                autoComplete="name-family"
+                autoCapitalize="words"
+                onChangeText={setLastName}
+                onSubmitEditing={onLastNameSubmitEditing}
+                returnKeyType="next"
+                submitBehavior="submit"
+              />
+              {error.lastName ? (
+                <Text className="text-sm font-medium text-destructive">{error.lastName}</Text>
+              ) : null}
+            </View>
+            <View className="gap-1.5">
               <Label htmlFor="email">이메일</Label>
               <Input
+                ref={emailInputRef}
                 id="email"
                 placeholder="your@email.com"
                 keyboardType="email-address"
