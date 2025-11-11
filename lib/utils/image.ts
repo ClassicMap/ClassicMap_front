@@ -4,12 +4,17 @@ export function getImageUrl(path: string | undefined | null, defaultImage: strin
   if (!path) {
     return defaultImage;
   }
-  
+
+  // 로컬 파일 경로인 경우 (file://, content://, blob: 등)
+  if (path.startsWith('file://') || path.startsWith('content://') || path.startsWith('blob:')) {
+    return path;
+  }
+
   // 이미 완전한 URL인 경우
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
-  
+
   // 상대 경로인 경우 서버 URL과 결합
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const fullUrl = `${API_BASE}${cleanPath}`;

@@ -27,6 +27,7 @@ import type {
   PieceWithPerformances,
   PerformanceWithArtist,
   Recording,
+  Venue,
 } from '../types/models';
 
 // API 응답 타입 정의
@@ -88,6 +89,15 @@ interface APIConcert {
   ticketUrl?: string;
   isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+}
+
+interface APIVenue {
+  id: number;
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  capacity?: number;
 }
 
 interface Concert {
@@ -409,6 +419,38 @@ export const RecordingAPI = {
       const response = await fetch(`${API_BASE_URL}/recordings/${id}`);
       if (!response.ok) throw new Error('Failed to fetch recording');
       const data: Recording = await response.json();
+      return data;
+    }
+    return Promise.resolve(null);
+  },
+};
+
+/**
+ * 공연장 API
+ */
+export const VenueAPI = {
+  /**
+   * 모든 공연장 조회
+   */
+  async getAll(): Promise<Venue[]> {
+    if (USE_REAL_API) {
+      const response = await fetch(`${API_BASE_URL}/venues`);
+      if (!response.ok) throw new Error('Failed to fetch venues');
+      const data: APIVenue[] = await response.json();
+      return data;
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
+   * 공연장 ID로 조회
+   */
+  async getById(id: number): Promise<Venue | null> {
+    if (USE_REAL_API) {
+      const response = await fetch(`${API_BASE_URL}/venues/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch venue');
+      const data: APIVenue = await response.json();
+      if (!data) return null;
       return data;
     }
     return Promise.resolve(null);

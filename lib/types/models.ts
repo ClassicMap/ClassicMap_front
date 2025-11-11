@@ -176,3 +176,18 @@ export interface Period {
   characteristics: string[];
   keyComposers: string[];
 }
+
+// ============================================
+// 공연장
+// ============================================
+
+export interface Venue {
+  id: number;
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  capacity?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
