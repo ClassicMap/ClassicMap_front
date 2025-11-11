@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
 import { XIcon, ImageIcon, UploadIcon, CalendarIcon } from 'lucide-react-native';
 import { AdminConcertAPI } from '@/lib/api/admin';
+import { VenueAPI } from '@/lib/api/client';
 import * as ImagePicker from 'expo-image-picker';
-import type { Concert } from '@/lib/types/models';
+import type { Concert, Venue } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
 
 interface ConcertFormModalProps {
@@ -20,9 +21,10 @@ interface ConcertFormModalProps {
 }
 
 export function ConcertFormModal({ visible, concert, onClose, onSuccess }: ConcertFormModalProps) {
+  const [venues, setVenues] = React.useState<Venue[]>([]);
   const [title, setTitle] = React.useState('');
   const [composerInfo, setComposerInfo] = React.useState('');
-  const [venueId, setVenueId] = React.useState('1');
+  const [venueId, setVenueId] = React.useState<number | null>(null);
   const [concertDate, setConcertDate] = React.useState('');
   const [concertTime, setConcertTime] = React.useState('');
   const [priceInfo, setPriceInfo] = React.useState('');
@@ -32,33 +34,64 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const [selectedPoster, setSelectedPoster] = React.useState<string | null>(null);
   const [posterUrl, setPosterUrl] = React.useState<string | null>(null);
   const [ticketUrl, setTicketUrl] = React.useState('');
+  const [showVenuePicker, setShowVenuePicker] = React.useState(false);
+  const [venueSearch, setVenueSearch] = React.useState('');
 
+  // 초기 데이터 로드
   React.useEffect(() => {
-    if (concert) {
-      setTitle(concert.title);
-      setComposerInfo(concert.composerInfo || '');
-      setVenueId(String(concert.venueId));
-      setConcertDate(concert.concertDate);
-      setConcertTime(concert.concertTime || '');
-      setPriceInfo(concert.priceInfo || '');
-      setIsRecommended(concert.isRecommended);
-      setStatus(concert.status);
-      setPosterUrl(concert.posterUrl || null);
-      setTicketUrl(concert.ticketUrl || '');
-    } else if (!visible) {
-      setTitle('');
-      setComposerInfo('');
-      setVenueId('1');
-      setConcertDate('');
-      setConcertTime('');
-      setPriceInfo('');
-      setIsRecommended(false);
-      setStatus('upcoming');
-      setSelectedPoster(null);
-      setPosterUrl(null);
-      setTicketUrl('');
+    if (visible) {
+      loadVenues();
+      setShowVenuePicker(false);
+      setVenueSearch('');
+
+      if (concert) {
+        setTitle(concert.title);
+        setComposerInfo(concert.composerInfo || '');
+        setVenueId(concert.venueId);
+        setConcertDate(concert.concertDate);
+        setConcertTime(concert.concertTime || '');
+        setPriceInfo(concert.priceInfo || '');
+        setIsRecommended(concert.isRecommended);
+        setStatus(concert.status);
+        setPosterUrl(concert.posterUrl || null);
+        setTicketUrl(concert.ticketUrl || '');
+      } else {
+        setTitle('');
+        setComposerInfo('');
+        setVenueId(null);
+        setConcertDate('');
+        setConcertTime('');
+        setPriceInfo('');
+        setIsRecommended(false);
+        setStatus('upcoming');
+        setSelectedPoster(null);
+        setPosterUrl(null);
+        setTicketUrl('');
+      }
     }
   }, [visible, concert]);
+
+  const loadVenues = async () => {
+    try {
+      const data = await VenueAPI.getAll();
+      setVenues(data);
+    } catch (error) {
+      console.error('Failed to load venues:', error);
+    }
+  };
+
+  // 공연장 필터링
+  const filteredVenues = React.useMemo(() => {
+    if (!venueSearch.trim()) {
+      return venues;
+    }
+    const searchLower = venueSearch.toLowerCase();
+    return venues.filter(venue =>
+      venue.name.toLowerCase().includes(searchLower) ||
+      venue.city?.toLowerCase().includes(searchLower) ||
+      venue.country?.toLowerCase().includes(searchLower)
+    );
+  }, [venues, venueSearch]);
 
   const pickPoster = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -139,8 +172,8 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
       return;
     }
 
-    if (!venueId || isNaN(parseInt(venueId))) {
-      Alert.alert('오류', '유효한 공연장 ID를 입력해주세요.');
+    if (!venueId) {
+      Alert.alert('오류', '공연장을 선택해주세요.');
       return;
     }
 
@@ -156,7 +189,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
       const data = {
         title,
         composerInfo: composerInfo || undefined,
-        venueId: parseInt(venueId),
+        venueId: venueId,
         concertDate: concertDate,
         concertTime: concertTime || undefined,
         priceInfo: priceInfo || undefined,
@@ -258,9 +291,58 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
                 </Text>
               </View>
 
+              {/* 공연장 선택 */}
               <View>
-                <Label>공연장 ID *</Label>
-                <Input value={venueId} onChangeText={setVenueId} placeholder="1" keyboardType="numeric" />
+                <Label>공연장 선택 *</Label>
+                <TouchableOpacity
+                  onPress={() => setShowVenuePicker(!showVenuePicker)}
+                  className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <Text className={venueId ? "text-base" : "text-base text-muted-foreground"}>
+                    {venueId ? venues.find(v => v.id === venueId)?.name : '공연장을 선택하세요'}
+                  </Text>
+                  <Text className="text-muted-foreground">▼</Text>
+                </TouchableOpacity>
+
+                {showVenuePicker && (
+                  <View className="border border-border rounded-md mt-1 bg-background">
+                    {/* 검색 필드 */}
+                    <View className="p-2 border-b border-border">
+                      <Input
+                        placeholder="공연장 검색..."
+                        value={venueSearch}
+                        onChangeText={setVenueSearch}
+                        className="h-9"
+                      />
+                    </View>
+
+                    {/* 공연장 목록 */}
+                    <ScrollView className="max-h-48">
+                      {filteredVenues.length === 0 ? (
+                        <View className="p-4 items-center">
+                          <Text className="text-sm text-muted-foreground">검색 결과가 없습니다</Text>
+                        </View>
+                      ) : (
+                        filteredVenues.map((venue) => (
+                          <TouchableOpacity
+                            key={venue.id}
+                            onPress={() => {
+                              setVenueId(venue.id);
+                              setShowVenuePicker(false);
+                              setVenueSearch('');
+                            }}
+                            className={`p-3 border-b border-border ${venueId === venue.id ? 'bg-primary/10' : ''}`}
+                          >
+                            <Text className="text-base font-medium">{venue.name}</Text>
+                            {venue.city && venue.country && (
+                              <Text className="text-sm text-muted-foreground">{venue.city}, {venue.country}</Text>
+                            )}
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
               <View>
