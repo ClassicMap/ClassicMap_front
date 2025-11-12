@@ -11,6 +11,7 @@ export interface Composer {
   birthYear: number;
   deathYear: number | null;
   nationality: string;
+  tier?: 'S' | 'A' | 'B' | 'C';
   imageUrl?: string;
   avatarUrl?: string;
   coverImageUrl?: string;
@@ -30,6 +31,9 @@ export interface Piece {
   compositionYear?: number;
   difficultyLevel?: number;
   durationMinutes?: number;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
+  youtubeMusicUrl?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -69,6 +73,10 @@ export interface Recording {
   year: string;
   label?: string;
   coverUrl?: string;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
+  youtubeMusicUrl?: string;
+  externalUrl?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -188,6 +196,28 @@ export interface Venue {
   city?: string;
   country?: string;
   capacity?: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// ============================================
+// 공연
+// ============================================
+
+export interface Concert {
+  id: number;
+  title: string;
+  composerInfo?: string;
+  venueId: number;
+  concertDate: string;
+  concertTime?: string;
+  priceInfo?: string;
+  posterUrl?: string;
+  ticketUrl?: string;
+  isRecommended: boolean;
+  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  rating: number;
+  ratingCount: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -5,6 +5,36 @@ import { toRelativePath } from '../utils/image';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
+// 인증 토큰 저장소
+let authToken: string | null = null;
+
+/**
+ * 인증 토큰 설정 (client.ts와 동일한 토큰 사용)
+ */
+export const setAdminAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
+/**
+ * 인증된 fetch 요청
+ */
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // 인증 토큰이 있으면 Authorization 헤더 추가
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};
+
 // Composer CRUD
 export const AdminComposerAPI = {
   async create(data: {
@@ -30,7 +60,7 @@ export const AdminComposerAPI = {
       coverImageUrl: toRelativePath(data.coverImageUrl),
     };
     
-    const response = await fetch(`${API_BASE_URL}/composers`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/composers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -62,7 +92,7 @@ export const AdminComposerAPI = {
       coverImageUrl: toRelativePath(data.coverImageUrl),
     };
     
-    const response = await fetch(`${API_BASE_URL}/composers/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -71,7 +101,7 @@ export const AdminComposerAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/composers/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete composer');
@@ -92,6 +122,9 @@ export const AdminArtistAPI = {
     birthYear?: string;
     bio?: string;
     style?: string;
+    concertCount?: number;
+    countryCount?: number;
+    albumCount?: number;
   }): Promise<number> {
     // 이미지 URL을 상대 경로로 변환
     const processedData = {
@@ -100,7 +133,7 @@ export const AdminArtistAPI = {
       coverImageUrl: toRelativePath(data.coverImageUrl),
     };
     
-    const response = await fetch(`${API_BASE_URL}/artists`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/artists`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -132,7 +165,7 @@ export const AdminArtistAPI = {
       coverImageUrl: toRelativePath(data.coverImageUrl),
     };
     
-    const response = await fetch(`${API_BASE_URL}/artists/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -141,7 +174,7 @@ export const AdminArtistAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/artists/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete artist');
@@ -159,7 +192,7 @@ export const AdminPieceAPI = {
     difficulty_level?: number;
     duration_minutes?: number;
   }): Promise<number> {
-    const response = await fetch(`${API_BASE_URL}/pieces`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/pieces`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -169,7 +202,7 @@ export const AdminPieceAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/pieces/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete piece');
@@ -188,7 +221,7 @@ export const AdminConcertAPI = {
     isRecommended: boolean;
     status: string;
   }): Promise<number> {
-    const response = await fetch(`${API_BASE_URL}/concerts`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/concerts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -215,7 +248,7 @@ export const AdminConcertAPI = {
       posterUrl: toRelativePath(data.posterUrl),
     };
     
-    const response = await fetch(`${API_BASE_URL}/concerts/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -224,7 +257,7 @@ export const AdminConcertAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/concerts/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete concert');
@@ -246,7 +279,7 @@ export const AdminRecordingAPI = {
       coverUrl: toRelativePath(data.coverUrl),
     };
 
-    const response = await fetch(`${API_BASE_URL}/recordings`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/recordings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -267,7 +300,7 @@ export const AdminRecordingAPI = {
       coverUrl: toRelativePath(data.coverUrl),
     };
 
-    const response = await fetch(`${API_BASE_URL}/recordings/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(processedData),
@@ -276,7 +309,7 @@ export const AdminRecordingAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/recordings/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete recording');
@@ -297,7 +330,7 @@ export const AdminPerformanceAPI = {
     viewCount?: number;
     rating?: number;
   }): Promise<number> {
-    const response = await fetch(`${API_BASE_URL}/performances`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/performances`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -318,7 +351,7 @@ export const AdminPerformanceAPI = {
     viewCount?: number;
     rating?: number;
   }): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/performances/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/performances/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -327,7 +360,7 @@ export const AdminPerformanceAPI = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/performances/${id}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/performances/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete performance');

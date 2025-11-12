@@ -3,7 +3,8 @@ import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Linking, Animated } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Animated, Platform } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
 import { 
   ArrowLeftIcon, 
   CalendarIcon,
@@ -26,6 +27,7 @@ import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getImageUrl } from '@/lib/utils/image';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
+import { prefetchImages } from '@/components/optimized-image';
 
 interface Concert {
   id: number;
@@ -39,6 +41,8 @@ interface Concert {
   ticketUrl?: string;
   isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  rating?: number;
+  ratingCount?: number;
 }
 
 const STATUS_INFO = {
@@ -54,6 +58,7 @@ export default function ConcertDetailScreen() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const [concert, setConcert] = React.useState<Concert | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = React.useState(false);
@@ -76,32 +81,43 @@ export default function ConcertDetailScreen() {
     }).start();
   };
 
-  const loadConcert = () => {
+  const loadConcert = async () => {
     setLoading(true);
+    setImagesLoaded(false);
     setError(null);
-    ConcertAPI.getById(Number(id))
-      .then((data) => {
-        setConcert(data as Concert);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError('공연 정보를 불러오는데 실패했습니다.');
-        setLoading(false);
-      });
+    try {
+      const data = await ConcertAPI.getById(Number(id));
+      setConcert(data as Concert);
+
+      // 이미지 프리페치
+      if (data.posterUrl) {
+        await prefetchImages([data.posterUrl]);
+      }
+      setImagesLoaded(true);
+      setLoading(false);
+    } catch (err) {
+      setError('공연 정보를 불러오는데 실패했습니다.');
+      setLoading(false);
+      setImagesLoaded(true);
+    }
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    ConcertAPI.getById(Number(id))
-      .then((data) => {
-        setConcert(data as Concert);
-        setError(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        setError('공연 정보를 불러오는데 실패했습니다.');
-        setRefreshing(false);
-      });
+    try {
+      const data = await ConcertAPI.getById(Number(id));
+      setConcert(data as Concert);
+
+      if (data.posterUrl) {
+        await prefetchImages([data.posterUrl]);
+      }
+
+      setError(null);
+      setRefreshing(false);
+    } catch (err) {
+      setError('공연 정보를 불러오는데 실패했습니다.');
+      setRefreshing(false);
+    }
   }, [id]);
 
   const handleDeleteConcert = () => {
@@ -150,10 +166,13 @@ export default function ConcertDetailScreen() {
     return `${year}년 ${month}월 ${day}일 (${weekday})`;
   };
 
-  if (loading) {
+  if (loading || !imagesLoaded) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
+        <Text className="text-center text-muted-foreground mt-4">
+          {loading ? '공연 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+        </Text>
       </View>
     );
   }
@@ -241,13 +260,23 @@ export default function ConcertDetailScreen() {
                 <ActivityIndicator size="large" style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -20, marginTop: -20 }} />
               </View>
             )}
-            <Animated.Image 
-              source={{ uri: getImageUrl(concert.posterUrl) || 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&h=900&fit=crop' }} 
-              className="w-full"
-              style={{ aspectRatio: 2/3, opacity: imageOpacity }}
-              resizeMode="cover"
-              onLoad={handleImageLoad}
-            />
+            {Platform.OS === 'web' ? (
+              <Image
+                source={{ uri: getImageUrl(concert.posterUrl) || 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&h=900&fit=crop' }}
+                className="w-full"
+                style={{ aspectRatio: 2/3, opacity: imageLoaded ? 1 : 0 }}
+                resizeMode="cover"
+                onLoad={handleImageLoad}
+              />
+            ) : (
+              <Animated.Image
+                source={{ uri: getImageUrl(concert.posterUrl) || 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&h=900&fit=crop' }}
+                className="w-full"
+                style={{ aspectRatio: 2/3, opacity: imageOpacity }}
+                resizeMode="cover"
+                onLoad={handleImageLoad}
+              />
+            )}
           </Card>
 
           {/* Concert Info */}
@@ -288,6 +317,31 @@ export default function ConcertDetailScreen() {
                   </View>
                 </View>
               )}
+            </View>
+          </Card>
+
+          {/* Rating Section */}
+          <Card className="p-4">
+            <View className="gap-3">
+              <Text className="text-lg font-bold">공연 평점</Text>
+              {concert.rating !== undefined && concert.rating > 0 ? (
+                <View className="items-center gap-2">
+                  <View className="flex-row items-center gap-2">
+                    <Icon as={StarIcon} size={32} className="text-amber-500" />
+                    <Text className="text-4xl font-bold">{concert.rating.toFixed(1)}</Text>
+                  </View>
+                  {concert.ratingCount && concert.ratingCount > 0 && (
+                    <Text className="text-sm text-muted-foreground">
+                      {concert.ratingCount}명이 평가했습니다
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <Text className="text-center text-muted-foreground py-4">
+                  아직 평가가 없습니다
+                </Text>
+              )}
+              {/* 평점 입력 UI는 향후 사용자 인증 후 추가 예정 */}
             </View>
           </Card>
 

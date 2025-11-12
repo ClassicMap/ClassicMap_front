@@ -4,7 +4,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
 import { StarIcon, TrendingUpIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
@@ -86,8 +87,11 @@ export default function ArtistsScreen() {
   const filteredArtists = React.useMemo(() => {
     return artists.filter((artist) => {
       const matchesSearch = artist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           artist.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = selectedFilter === 'all' || 
+                           artist.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           artist.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           artist.nationality.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (artist.style && artist.style.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesFilter = selectedFilter === 'all' ||
                            (selectedFilter === 'S' && artist.tier === 'S') ||
                            (selectedFilter === 'Rising' && artist.tier === 'Rising');
       return matchesSearch && matchesFilter;
@@ -244,10 +248,7 @@ function ArtistCard({
               ) : null}
             </View>
             <Text className="text-sm text-muted-foreground">{artist.category}</Text>
-            <View className="flex-row items-center gap-1">
-              <Icon as={StarIcon} size={14} className="text-amber-500" />
-              <Text className="text-sm font-medium">{artist.rating}</Text>
-            </View>
+            <Text className="text-sm text-muted-foreground">{artist.nationality}</Text>
           </View>
           {canEdit && (
             <Button

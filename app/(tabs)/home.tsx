@@ -62,106 +62,106 @@ export default function HomeScreen() {
   const [loadingArtists, setLoadingArtists] = React.useState(true);
   const [loadingConcerts, setLoadingConcerts] = React.useState(true);
   const [loadingComposers, setLoadingComposers] = React.useState(true);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
-  
+
   const [errorArtists, setErrorArtists] = React.useState<string | null>(null);
   const [errorConcerts, setErrorConcerts] = React.useState<string | null>(null);
   const [errorComposers, setErrorComposers] = React.useState<string | null>(null);
 
-  const loadAllData = React.useCallback(() => {
-    // 아티스트 데이터 로드
-    ArtistAPI.getAll()
-      .then((data) => {
-        const legacyArtists = data.slice(0, 5).map(artist => ({
-          id: String(artist.id),
-          name: artist.name,
-          category: artist.category,
-          tier: artist.tier as 'S' | 'Rising',
-          rating: artist.rating,
-          image: artist.imageUrl || '',
-        }));
-        setArtists(legacyArtists);
-        prefetchImages(data.slice(0, 5).map(a => a.imageUrl));
-        setLoadingArtists(false);
-      })
-      .catch((err) => {
-        setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
-        setLoadingArtists(false);
-      });
+  const loadAllData = React.useCallback(async () => {
+    setImagesLoaded(false);
+    try {
+      // 아티스트 데이터 로드
+      const artistData = await ArtistAPI.getAll();
+      const legacyArtists = artistData.slice(0, 5).map(artist => ({
+        id: String(artist.id),
+        name: artist.name,
+        category: artist.category,
+        tier: artist.tier as 'S' | 'Rising',
+        rating: artist.rating,
+        image: artist.imageUrl || '',
+      }));
+      setArtists(legacyArtists);
+      setLoadingArtists(false);
 
-    // 공연 데이터 로드
-    ConcertAPI.getAll()
-      .then((data) => {
-        const legacyConcerts = data.slice(0, 5).map(concert => ({
-          id: String(concert.id),
-          title: concert.title,
-          date: concert.concertDate,
-          venue: '공연장', // TODO: venue API 연동 후 실제 데이터 사용
-          poster: concert.posterUrl || '',
-        }));
-        setConcerts(legacyConcerts);
-        prefetchImages(data.slice(0, 5).map(c => c.posterUrl));
-        setLoadingConcerts(false);
-      })
-      .catch((err) => {
-        setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
-        setLoadingConcerts(false);
-      });
+      // 공연 데이터 로드
+      const concertData = await ConcertAPI.getAll();
+      const legacyConcerts = concertData.slice(0, 5).map(concert => ({
+        id: String(concert.id),
+        title: concert.title,
+        date: concert.concertDate,
+        venue: '공연장',
+        poster: concert.posterUrl || '',
+      }));
+      setConcerts(legacyConcerts);
+      setLoadingConcerts(false);
 
-    // 작곡가 데이터 로드 (인기 비교용)
-    ComposerAPI.getAll()
-      .then((data) => {
-        setComposers(data);
-        setLoadingComposers(false);
-      })
-      .catch((err) => {
-        setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
-        setLoadingComposers(false);
-      });
+      // 작곡가 데이터 로드
+      const composerData = await ComposerAPI.getAll();
+      setComposers(composerData);
+      setLoadingComposers(false);
+
+      // 모든 이미지 로딩 대기
+      await prefetchImages([
+        ...artistData.slice(0, 5).map(a => a.imageUrl),
+        ...concertData.slice(0, 5).map(c => c.posterUrl)
+      ]);
+      setImagesLoaded(true);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
+      setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
+      setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
+      setLoadingArtists(false);
+      setLoadingConcerts(false);
+      setLoadingComposers(false);
+      setImagesLoaded(true);
+    }
   }, []);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    Promise.all([
-      ArtistAPI.getAll(),
-      ConcertAPI.getAll(),
-      ComposerAPI.getAll()
-    ])
-      .then(([artistData, concertData, composerData]) => {
-        const legacyArtists = artistData.slice(0, 5).map(artist => ({
-          id: String(artist.id),
-          name: artist.name,
-          category: artist.category,
-          tier: artist.tier as 'S' | 'Rising',
-          rating: artist.rating,
-          image: artist.imageUrl || '',
-        }));
-        setArtists(legacyArtists);
+    try {
+      const [artistData, concertData, composerData] = await Promise.all([
+        ArtistAPI.getAll(),
+        ConcertAPI.getAll(),
+        ComposerAPI.getAll()
+      ]);
 
-        const legacyConcerts = concertData.slice(0, 5).map(concert => ({
-          id: String(concert.id),
-          title: concert.title,
-          date: concert.concertDate,
-          venue: '공연장',
-          poster: concert.posterUrl || '',
-        }));
-        setConcerts(legacyConcerts);
+      const legacyArtists = artistData.slice(0, 5).map(artist => ({
+        id: String(artist.id),
+        name: artist.name,
+        category: artist.category,
+        tier: artist.tier as 'S' | 'Rising',
+        rating: artist.rating,
+        image: artist.imageUrl || '',
+      }));
+      setArtists(legacyArtists);
 
-        setComposers(composerData);
-        
-        prefetchImages([
-          ...artistData.slice(0, 5).map(a => a.imageUrl),
-          ...concertData.slice(0, 5).map(c => c.posterUrl)
-        ]);
-        
-        setErrorArtists(null);
-        setErrorConcerts(null);
-        setErrorComposers(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        setRefreshing(false);
-      });
+      const legacyConcerts = concertData.slice(0, 5).map(concert => ({
+        id: String(concert.id),
+        title: concert.title,
+        date: concert.concertDate,
+        venue: '공연장',
+        poster: concert.posterUrl || '',
+      }));
+      setConcerts(legacyConcerts);
+
+      setComposers(composerData);
+
+      await prefetchImages([
+        ...artistData.slice(0, 5).map(a => a.imageUrl),
+        ...concertData.slice(0, 5).map(c => c.posterUrl)
+      ]);
+
+      setErrorArtists(null);
+      setErrorConcerts(null);
+      setErrorComposers(null);
+      setRefreshing(false);
+    } catch (err) {
+      setRefreshing(false);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -239,19 +239,29 @@ export default function HomeScreen() {
       <View className="gap-6 p-4 pb-20">
         {/* Header */}
         {showGreeting && (
-          <Animated.View style={{ opacity: fadeAnim }} className="flex-row items-center justify-center gap-2 py-4">
-            <Text variant="h1" className="text-3xl font-bold">
-              안녕하세요{getFullName()}!
-            </Text>
-            <Animated.Text 
-              style={{ 
-                fontSize: 30,
-                transform: [{ rotate: waveRotation }],
-                transformOrigin: 'bottom center',
-              }}
-            >
-              👋
-            </Animated.Text>
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              paddingVertical: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Text variant="h1" className="text-3xl font-bold" style={{ display: 'flex' }}>
+                안녕하세요{getFullName()}!
+              </Text>
+              <Animated.Text
+                style={{
+                  fontSize: 30,
+                  marginLeft: 8,
+                  display: 'flex',
+                  transform: [{ rotate: waveRotation }],
+                }}
+              >
+                👋
+              </Animated.Text>
+            </View>
           </Animated.View>
         )}
 
@@ -274,34 +284,19 @@ export default function HomeScreen() {
           ) : errorArtists ? (
             <View className="py-8">
               <Text className="text-center text-destructive">{errorArtists}</Text>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="mt-4 mx-auto"
-                onPress={() => {
-                  setLoadingArtists(true);
-                  setErrorArtists(null);
-                  ArtistAPI.getAll()
-                    .then((data) => {
-                      const legacyArtists = data.slice(0, 5).map(artist => ({
-                        id: String(artist.id),
-                        name: artist.name,
-                        category: artist.category,
-                        tier: artist.tier as 'S' | 'Rising',
-                        rating: artist.rating,
-                        image: artist.imageUrl || '',
-                      }));
-                      setArtists(legacyArtists);
-                      setLoadingArtists(false);
-                    })
-                    .catch((err) => {
-                      setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
-                      setLoadingArtists(false);
-                    });
-                }}
+                onPress={loadAllData}
               >
                 <Text>다시 시도</Text>
               </Button>
+            </View>
+          ) : !imagesLoaded ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
             </View>
           ) : (
             <FlatList
@@ -335,33 +330,19 @@ export default function HomeScreen() {
           ) : errorConcerts ? (
             <View className="py-8">
               <Text className="text-center text-destructive">{errorConcerts}</Text>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="mt-4 mx-auto"
-                onPress={() => {
-                  setLoadingConcerts(true);
-                  setErrorConcerts(null);
-                  ConcertAPI.getAll()
-                    .then((data) => {
-                      const legacyConcerts = data.slice(0, 5).map(concert => ({
-                        id: String(concert.id),
-                        title: concert.title,
-                        date: concert.concertDate,
-                        venue: '공연장',
-                        poster: getImageUrl(concert.posterUrl) || '',
-                      }));
-                      setConcerts(legacyConcerts);
-                      setLoadingConcerts(false);
-                    })
-                    .catch((err) => {
-                      setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
-                      setLoadingConcerts(false);
-                    });
-                }}
+                onPress={loadAllData}
               >
                 <Text>다시 시도</Text>
               </Button>
+            </View>
+          ) : !imagesLoaded ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
             </View>
           ) : (
             <FlatList
@@ -395,26 +376,19 @@ export default function HomeScreen() {
           ) : errorComposers ? (
             <View className="py-8">
               <Text className="text-center text-destructive">{errorComposers}</Text>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="mt-4 mx-auto"
-                onPress={() => {
-                  setLoadingComposers(true);
-                  setErrorComposers(null);
-                  ComposerAPI.getAll()
-                    .then((data) => {
-                      setComposers(data);
-                      setLoadingComposers(false);
-                    })
-                    .catch((err) => {
-                      setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
-                      setLoadingComposers(false);
-                    });
-                }}
+                onPress={loadAllData}
               >
                 <Text>다시 시도</Text>
               </Button>
+            </View>
+          ) : !imagesLoaded ? (
+            <View className="py-8">
+              <ActivityIndicator size="large" />
+              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
             </View>
           ) : composers.length > 0 ? (
             <FlatList

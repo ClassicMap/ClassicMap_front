@@ -207,6 +207,9 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
           coverImageUrl: coverImageUrl || undefined,
           bio: bio || undefined,
           style: style || undefined,
+          concertCount: parseInt(concertCount),
+          countryCount: parseInt(countryCount),
+          albumCount: parseInt(albumCount),
         });
         Alert.alert('성공', '아티스트가 추가되었습니다.');
       }

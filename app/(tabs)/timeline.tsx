@@ -1,5 +1,16 @@
 import { Text } from '@/components/ui/text';
-import { View, ScrollView, TouchableOpacity, Dimensions, Image, TextInput, Modal, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Image,
+  TextInput,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as React from 'react';
 import { useState, useRef } from 'react';
@@ -55,7 +66,7 @@ export default function TimelineScreen() {
     ComposerAPI.getAll()
       .then((data) => {
         setComposers(data);
-        prefetchImages(data.map(c => c.avatarUrl));
+        prefetchImages(data.map((c) => c.avatarUrl));
         setLoading(false);
       })
       .catch((err) => {
@@ -69,7 +80,7 @@ export default function TimelineScreen() {
     ComposerAPI.getAll()
       .then((data) => {
         setComposers(data);
-        prefetchImages(data.map(c => c.avatarUrl));
+        prefetchImages(data.map((c) => c.avatarUrl));
         setError(null);
         setRefreshing(false);
       })
@@ -100,12 +111,9 @@ export default function TimelineScreen() {
   if (error) {
     return (
       <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="p-8 w-full max-w-md">
-          <Text className="text-center text-destructive mb-4">{error}</Text>
-          <Button 
-            variant="outline" 
-            onPress={loadComposers}
-          >
+        <Card className="w-full max-w-md p-8">
+          <Text className="mb-4 text-center text-destructive">{error}</Text>
+          <Button variant="outline" onPress={loadComposers}>
             <Text>다시 시도</Text>
           </Button>
         </Card>
@@ -113,7 +121,7 @@ export default function TimelineScreen() {
     );
   }
 
-  const COMPOSERS = composers.map(c => {
+  const COMPOSERS = composers.map((c) => {
     const imageUrl = c.avatarUrl || c.imageUrl || c.coverImageUrl;
     return {
       id: c.id,
@@ -134,35 +142,35 @@ export default function TimelineScreen() {
   const renderTimelineGraph = () => {
     // 각 시대별 작곡가들을 그룹화하고 정렬
     const composersByEra: { [key: string]: typeof COMPOSERS } = {};
-    ERAS.forEach(era => {
-      composersByEra[era.id] = COMPOSERS.filter(c => {
+    ERAS.forEach((era) => {
+      composersByEra[era.id] = COMPOSERS.filter((c) => {
         const periodMap: { [key: string]: string } = {
-          '바로크': 'baroque',
-          '고전주의': 'classical',
-          '낭만주의': 'romantic',
-          '근현대': 'modern',
+          바로크: 'baroque',
+          고전주의: 'classical',
+          낭만주의: 'romantic',
+          근현대: 'modern',
         };
         return periodMap[c.period] === era.id;
       }).sort((a, b) => a.birthYear - b.birthYear);
     });
-    
+
     // 전체 연도 범위 계산
-    const globalMinYear = Math.min(...ERAS.map(e => e.startYear));
-    const globalMaxYear = Math.max(...ERAS.map(e => e.endYear));
-    
+    const globalMinYear = Math.min(...ERAS.map((e) => e.startYear));
+    const globalMaxYear = Math.max(...ERAS.map((e) => e.endYear));
+
     // 각 시대의 작곡가 밀도를 고려한 픽셀 계산
     const basePixelPerYear = 4;
     const emptyPixelPerYear = 1;
     const composerDensityFactor = 100;
-    
+
     // 각 연도별로 작곡가가 있는지 확인
     const hasComposerInYear: { [year: number]: boolean } = {};
-    COMPOSERS.forEach(composer => {
+    COMPOSERS.forEach((composer) => {
       for (let year = composer.birthYear; year <= composer.deathYear; year++) {
         hasComposerInYear[year] = true;
       }
     });
-    
+
     // 각 연도별로 최대 픽셀 밀도 계산
     const pixelPerYearMap: { [year: number]: number } = {};
     for (let year = globalMinYear; year <= globalMaxYear; year++) {
@@ -170,10 +178,10 @@ export default function TimelineScreen() {
         pixelPerYearMap[year] = emptyPixelPerYear;
         continue;
       }
-      
+
       let maxPixelPerYear = basePixelPerYear;
-      
-      ERAS.forEach(era => {
+
+      ERAS.forEach((era) => {
         if (year >= era.startYear && year <= era.endYear) {
           const yearSpan = era.endYear - era.startYear;
           const composerCount = composersByEra[era.id].length;
@@ -182,59 +190,59 @@ export default function TimelineScreen() {
           maxPixelPerYear = Math.max(maxPixelPerYear, pixelForThisEra);
         }
       });
-      
+
       pixelPerYearMap[year] = maxPixelPerYear;
     }
-    
+
     // 각 시대의 실제 위치와 넓이 계산
     const eraPositions: { [key: string]: { start: number; width: number } } = {};
-    
-    ERAS.forEach(era => {
+
+    ERAS.forEach((era) => {
       let width = 0;
       for (let year = era.startYear; year < era.endYear; year++) {
         width += pixelPerYearMap[year] || basePixelPerYear;
       }
-      
+
       let start = 0;
       for (let year = globalMinYear; year < era.startYear; year++) {
         start += pixelPerYearMap[year] || basePixelPerYear;
       }
-      
+
       eraPositions[era.id] = { start, width };
     });
-    
+
     // 전체 너비 계산
     let totalWidth = 0;
     for (let year = globalMinYear; year < globalMaxYear; year++) {
       totalWidth += pixelPerYearMap[year] || basePixelPerYear;
     }
-    
+
     // 각 작곡가의 위치 및 레인 계산
     const composerPositions: { [key: number]: { x: number; lane: number; crowded: boolean } } = {};
-    
-    ERAS.forEach(era => {
+
+    ERAS.forEach((era) => {
       const composers = composersByEra[era.id];
       const eraStart = eraPositions[era.id].start;
       const eraWidth = eraPositions[era.id].width;
-      
-      const composersWithX: Array<{ composer: typeof COMPOSERS[0]; x: number }> = [];
-      composers.forEach(composer => {
+
+      const composersWithX: Array<{ composer: (typeof COMPOSERS)[0]; x: number }> = [];
+      composers.forEach((composer) => {
         const yearRatio = (composer.birthYear - era.startYear) / (era.endYear - era.startYear);
         const x = eraStart + eraWidth * yearRatio;
         composersWithX.push({ composer, x });
       });
-      
+
       composersWithX.sort((a, b) => a.x - b.x);
-      
+
       const collisionRange = 100;
-      
+
       composersWithX.forEach(({ composer, x }) => {
         const nearbyComposers = Object.entries(composerPositions).filter(([id, pos]) => {
           return Math.abs(pos.x - x) < collisionRange;
         });
-        
+
         const usedLanes = new Set(nearbyComposers.map(([id, pos]) => pos.lane));
-        
+
         let lane = 0;
         while (usedLanes.has(lane) && lane < VERTICAL_LANES) {
           lane++;
@@ -242,7 +250,7 @@ export default function TimelineScreen() {
         if (lane >= VERTICAL_LANES) {
           lane = 0;
         }
-        
+
         const isCrowded = nearbyComposers.length > 0;
         composerPositions[composer.id] = { x, lane, crowded: isCrowded };
       });
@@ -250,23 +258,22 @@ export default function TimelineScreen() {
 
     return (
       <View style={{ height: TIMELINE_HEIGHT }}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => {
             setSelectedEra(ERAS[currentEraIndex]);
             setShowEraModal(true);
           }}
-          activeOpacity={0.8}
-        >
-          <View className="items-center justify-center py-4 bg-card/50 border-b border-border">
+          activeOpacity={0.8}>
+          <View className="items-center justify-center border-b border-border bg-card/50 py-4">
             <Text className="text-2xl font-bold" style={{ color: ERAS[currentEraIndex].color }}>
               {ERAS[currentEraIndex].name}
             </Text>
-            <Text className="text-sm font-semibold" style={{ color: ERAS[currentEraIndex].color, opacity: 0.7 }}>
+            <Text
+              className="text-sm font-semibold"
+              style={{ color: ERAS[currentEraIndex].color, opacity: 0.7 }}>
               {ERAS[currentEraIndex].period}
             </Text>
-            <Text className="text-xs text-muted-foreground mt-1">
-              탭하여 자세히 보기
-            </Text>
+            <Text className="mt-1 text-xs text-muted-foreground">탭하여 자세히 보기</Text>
           </View>
         </TouchableOpacity>
 
@@ -279,24 +286,31 @@ export default function TimelineScreen() {
           onScroll={(e) => {
             scrollX.value = e.nativeEvent.contentOffset.x;
             const offsetX = e.nativeEvent.contentOffset.x;
-            
+
             ERAS.forEach((era, index) => {
               const { start, width } = eraPositions[era.id];
               const eraEnd = start + width;
               const viewCenter = offsetX + SCREEN_WIDTH / 2;
-              
+
               if (viewCenter >= start && viewCenter <= eraEnd) {
                 setCurrentEraIndex(index);
               }
             });
-          }}
-        >
+          }}>
           <View style={{ width: totalWidth, paddingHorizontal: TIMELINE_PADDING }}>
             {/* Era backgrounds */}
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: TIMELINE_HEIGHT - 60, flexDirection: 'row' }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: TIMELINE_HEIGHT - 60,
+                flexDirection: 'row',
+              }}>
               {ERAS.map((era) => {
                 const { start, width } = eraPositions[era.id];
-                
+
                 return (
                   <View
                     key={era.id}
@@ -329,25 +343,31 @@ export default function TimelineScreen() {
             />
 
             {/* Year markers */}
-            <View style={{ position: 'absolute', top: (TIMELINE_HEIGHT - 60) / 2 + 10, left: 0, right: 0 }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: (TIMELINE_HEIGHT - 60) / 2 + 10,
+                left: 0,
+                right: 0,
+              }}>
               {(() => {
                 const interval = 20;
                 const allMarkers: React.ReactNode[] = [];
                 const renderedYears = new Set<number>();
-                
+
                 ERAS.forEach((era) => {
                   const { start, width } = eraPositions[era.id];
                   const startYear = Math.floor(era.startYear / interval) * interval;
                   const endYear = Math.ceil(era.endYear / interval) * interval;
-                  
+
                   for (let year = startYear; year <= endYear; year += interval) {
                     if (year < era.startYear || year > era.endYear) continue;
                     if (renderedYears.has(year)) continue;
-                    
+
                     renderedYears.add(year);
                     const yearRatio = (year - era.startYear) / (era.endYear - era.startYear);
                     const x = start + width * yearRatio;
-                    
+
                     allMarkers.push(
                       <View
                         key={`${year}`}
@@ -355,8 +375,7 @@ export default function TimelineScreen() {
                           position: 'absolute',
                           left: x,
                           alignItems: 'center',
-                        }}
-                      >
+                        }}>
                         <View
                           style={{
                             width: 2,
@@ -372,15 +391,14 @@ export default function TimelineScreen() {
                             opacity: 0.9,
                             fontWeight: '700',
                             marginTop: 3,
-                          }}
-                        >
+                          }}>
                           {year}
                         </Text>
                       </View>
                     );
                   }
                 });
-                
+
                 return allMarkers;
               })()}
             </View>
@@ -388,13 +406,13 @@ export default function TimelineScreen() {
             {/* Composers on timeline */}
             {COMPOSERS.map((composer) => {
               const periodMap: { [key: string]: string } = {
-                '바로크': 'baroque',
-                '고전주의': 'classical',
-                '낭만주의': 'romantic',
-                '근현대': 'modern',
+                바로크: 'baroque',
+                고전주의: 'classical',
+                낭만주의: 'romantic',
+                근현대: 'modern',
               };
               const eraId = periodMap[composer.period];
-              const era = ERAS.find(e => e.id === eraId);
+              const era = ERAS.find((e) => e.id === eraId);
               if (!era) return null;
 
               const position = composerPositions[composer.id];
@@ -402,7 +420,8 @@ export default function TimelineScreen() {
 
               const { x, lane, crowded } = position;
               const laneHeight = (TIMELINE_HEIGHT - 60) / VERTICAL_LANES;
-              const verticalOffset = lane * laneHeight + (laneHeight / 2) - ((TIMELINE_HEIGHT - 60) / 2);
+              const verticalOffset =
+                lane * laneHeight + laneHeight / 2 - (TIMELINE_HEIGHT - 60) / 2;
 
               return (
                 <TouchableOpacity
@@ -414,9 +433,14 @@ export default function TimelineScreen() {
                     left: x - COMPOSER_AVATAR_SIZE / 2,
                     top: (TIMELINE_HEIGHT - 60) / 2 - COMPOSER_AVATAR_SIZE / 2 + verticalOffset,
                     zIndex: 10,
-                  }}
-                >
-                  <View style={{ flexDirection: crowded ? 'row' : 'column', alignItems: 'center', gap: 8, zIndex: 10 }}>
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: crowded ? 'row' : 'column',
+                      alignItems: 'center',
+                      gap: 8,
+                      zIndex: 10,
+                    }}>
                     <View
                       style={{
                         width: COMPOSER_AVATAR_SIZE,
@@ -426,8 +450,7 @@ export default function TimelineScreen() {
                         borderColor: era.color,
                         overflow: 'hidden',
                         backgroundColor: '#fff',
-                      }}
-                    >
+                      }}>
                       {composer.image ? (
                         <Image
                           source={{ uri: getImageUrl(composer.image) }}
@@ -437,16 +460,15 @@ export default function TimelineScreen() {
                       ) : (
                         <View
                           className="size-full items-center justify-center"
-                          style={{ backgroundColor: era.color + '30' }}
-                        >
+                          style={{ backgroundColor: era.color + '30' }}>
                           <Text className="text-lg font-bold" style={{ color: era.color }}>
                             {composer.name[0]}
                           </Text>
                         </View>
                       )}
                     </View>
-                    <View 
-                      className="rounded-lg bg-card/95 px-2 py-1 shadow-xl border border-border/20"
+                    <View
+                      className="rounded-lg border border-border/20 bg-card/95 px-2 py-1 shadow-xl"
                       style={{
                         alignItems: crowded ? 'flex-start' : 'center',
                         shadowColor: '#000',
@@ -454,8 +476,7 @@ export default function TimelineScreen() {
                         shadowOpacity: 0.3,
                         shadowRadius: 4,
                         elevation: 10,
-                      }}
-                    >
+                      }}>
                       <Text className="text-[10px] font-bold">{composer.name}</Text>
                       <Text className="text-[9px] text-muted-foreground">{composer.birthYear}</Text>
                     </View>
@@ -477,27 +498,29 @@ export default function TimelineScreen() {
 
   const getComposersForEra = (eraId: string) => {
     const periodMap: { [key: string]: string[] } = {
-      'baroque': ['바로크'],
-      'classical': ['고전주의'],
-      'romantic': ['낭만주의'],
-      'modern': ['근현대'],
+      baroque: ['바로크'],
+      classical: ['고전주의'],
+      romantic: ['낭만주의'],
+      modern: ['근현대'],
     };
     const periodNames = periodMap[eraId] || [];
-    return COMPOSERS.filter(c => periodNames.includes(c.period))
-      .sort((a, b) => a.birthYear - b.birthYear);
+    return COMPOSERS.filter((c) => periodNames.includes(c.period)).sort(
+      (a, b) => a.birthYear - b.birthYear
+    );
   };
 
   const filterComposers = (composers: typeof COMPOSERS) => {
     if (!searchQuery.trim()) return composers;
-    
+
     const query = searchQuery.toLowerCase();
-    return composers.filter(composer =>
-      composer.name.toLowerCase().includes(query) ||
-      composer.fullName.toLowerCase().includes(query) ||
-      composer.nationality.toLowerCase().includes(query)
+    return composers.filter(
+      (composer) =>
+        composer.name.toLowerCase().includes(query) ||
+        composer.fullName.toLowerCase().includes(query) ||
+        composer.nationality.toLowerCase().includes(query)
     );
   };
-  
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View className="flex-1 bg-background">
@@ -508,53 +531,42 @@ export default function TimelineScreen() {
           visible={showEraModal}
           transparent={true}
           animationType="none"
-          onRequestClose={() => setShowEraModal(false)}
-        >
-          <Pressable 
-            className="flex-1 bg-black/50 justify-end"
-            onPress={() => setShowEraModal(false)}
-          >
+          onRequestClose={() => setShowEraModal(false)}>
+          <Pressable
+            className="flex-1 justify-end bg-black/50"
+            onPress={() => setShowEraModal(false)}>
             <Pressable onPress={(e) => e.stopPropagation()}>
               <Animated.View
                 entering={SlideInDown.duration(300).springify()}
                 exiting={SlideOutDown.duration(200)}
-                className="bg-background rounded-t-3xl"
+                className="rounded-t-3xl bg-background"
                 style={{
                   maxHeight: SCREEN_HEIGHT * 0.7,
-                }}
-              >
+                }}>
                 {selectedEra && (
                   <View className="gap-4 p-6 pb-10">
                     <View className="flex-row items-center justify-between">
                       <View className="flex-1">
-                        <Text 
-                          className="text-3xl font-bold"
-                          style={{ color: selectedEra.color }}
-                        >
+                        <Text className="text-3xl font-bold" style={{ color: selectedEra.color }}>
                           {selectedEra.name}
                         </Text>
-                        <Text 
-                          className="text-sm font-semibold mt-1"
-                          style={{ color: selectedEra.color, opacity: 0.7 }}
-                        >
+                        <Text
+                          className="mt-1 text-sm font-semibold"
+                          style={{ color: selectedEra.color, opacity: 0.7 }}>
                           {selectedEra.period}
                         </Text>
                       </View>
                       <TouchableOpacity
                         onPress={() => setShowEraModal(false)}
-                        className="rounded-full p-2 bg-muted"
-                      >
+                        className="rounded-full bg-muted p-2">
                         <Icon as={XIcon} size={24} className="text-foreground" />
                       </TouchableOpacity>
                     </View>
 
-                    <View 
+                    <View
                       className="rounded-xl p-4"
-                      style={{ backgroundColor: selectedEra.color + '15' }}
-                    >
-                      <Text className="text-base leading-6">
-                        {selectedEra.description}
-                      </Text>
+                      style={{ backgroundColor: selectedEra.color + '15' }}>
+                      <Text className="text-base leading-6">{selectedEra.description}</Text>
                     </View>
 
                     {selectedEra.characteristics && (
@@ -569,9 +581,8 @@ export default function TimelineScreen() {
                               style={{
                                 borderLeftWidth: 3,
                                 borderLeftColor: selectedEra.color,
-                              }}
-                            >
-                              <View 
+                              }}>
+                              <View
                                 className="size-2 rounded-full"
                                 style={{ backgroundColor: selectedEra.color }}
                               />
@@ -595,12 +606,8 @@ export default function TimelineScreen() {
                                 backgroundColor: selectedEra.color + '20',
                                 borderWidth: 1,
                                 borderColor: selectedEra.color,
-                              }}
-                            >
-                              <Text 
-                                className="font-semibold"
-                                style={{ color: selectedEra.color }}
-                              >
+                              }}>
+                              <Text className="font-semibold" style={{ color: selectedEra.color }}>
                                 {composer}
                               </Text>
                             </Animated.View>
@@ -621,32 +628,30 @@ export default function TimelineScreen() {
             <View className="flex-row items-center">
               <View className="flex-1" />
               <View className="items-center gap-2">
-                <Text variant="h1" className="text-2xl font-bold text-center">
+                <Text variant="h1" className="text-center text-2xl font-bold">
                   작곡가 목록
                 </Text>
-                <Text className="text-sm text-muted-foreground text-center">
+                <Text className="text-center text-sm text-muted-foreground">
                   시대별로 정리된 작곡가들을 탐험하세요
                 </Text>
               </View>
-              <View className="flex-1 items-end flex-row gap-2 justify-end">
+              <View className="flex-1 flex-row items-end justify-end gap-2">
                 {canEdit && (
                   <TouchableOpacity
                     onPress={() => setShowComposerForm(true)}
                     className="rounded-full bg-primary p-2"
-                    activeOpacity={0.7}
-                  >
+                    activeOpacity={0.7}>
                     <Icon as={Plus} size={18} color="white" />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   onPress={onRefresh}
                   disabled={refreshing}
-                  className="rounded-full bg-card border border-border p-2"
-                  activeOpacity={0.7}
-                >
-                  <Icon 
-                    as={RefreshCw} 
-                    size={18} 
+                  className="rounded-full border border-border bg-card p-2"
+                  activeOpacity={0.7}>
+                  <Icon
+                    as={RefreshCw}
+                    size={18}
                     className={`text-foreground ${refreshing ? 'opacity-50' : ''}`}
                   />
                 </TouchableOpacity>
@@ -655,7 +660,7 @@ export default function TimelineScreen() {
 
             <View className="gap-2">
               <TextInput
-                className="rounded-xl bg-card border border-border px-4 py-3 text-base"
+                className="rounded-xl border border-border bg-card px-4 py-3 text-base"
                 placeholder="작곡가 검색 (이름, 국적)"
                 placeholderTextColor="#888"
                 value={searchQuery}
@@ -666,8 +671,7 @@ export default function TimelineScreen() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setSearchQuery('')}
-                  className="absolute right-3 top-3"
-                >
+                  className="absolute right-3 top-3">
                   <View className="rounded-full bg-muted p-1">
                     <Text className="text-xs text-muted-foreground">✕</Text>
                   </View>
@@ -678,20 +682,17 @@ export default function TimelineScreen() {
             {ERAS.map((era) => {
               const composers = getComposersForEra(era.id);
               const filteredComposers = filterComposers(composers);
-              
+
               if (filteredComposers.length === 0) return null;
-              
+
               return (
                 <View key={era.id} className="gap-3">
-                  <View
-                    className="rounded-xl p-4"
-                    style={{ backgroundColor: era.color + '20' }}
-                  >
+                  <View className="rounded-xl p-4" style={{ backgroundColor: era.color + '20' }}>
                     <Text className="text-xl font-bold" style={{ color: era.color }}>
                       {era.name} ({era.period})
                     </Text>
                     {searchQuery.length > 0 && (
-                      <Text className="text-xs mt-1" style={{ color: era.color, opacity: 0.7 }}>
+                      <Text className="mt-1 text-xs" style={{ color: era.color, opacity: 0.7 }}>
                         {filteredComposers.length}명
                       </Text>
                     )}
@@ -706,8 +707,7 @@ export default function TimelineScreen() {
                         style={{
                           borderLeftWidth: 4,
                           borderLeftColor: era.color,
-                        }}
-                      >
+                        }}>
                         <View
                           style={{
                             width: 50,
@@ -715,8 +715,7 @@ export default function TimelineScreen() {
                             borderRadius: 25,
                             overflow: 'hidden',
                             backgroundColor: era.color + '20',
-                          }}
-                        >
+                          }}>
                           {composer.image ? (
                             <Image
                               source={{ uri: getImageUrl(composer.image) }}
@@ -735,7 +734,8 @@ export default function TimelineScreen() {
                         <View className="flex-1">
                           <Text className="font-bold">{composer.name}</Text>
                           <Text className="text-xs text-muted-foreground">
-                            {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'} · {composer.nationality}
+                            {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'}{' '}
+                            · {composer.nationality}
                           </Text>
                         </View>
                       </TouchableOpacity>

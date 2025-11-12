@@ -41,7 +41,8 @@ export function useUserProfile() {
     }
 
     loadOrCreateProfile();
-  }, [user, isLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, isLoaded]); // user 대신 user?.id 사용
 
   const completeOnboarding = async () => {
     if (user) {

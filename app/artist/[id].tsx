@@ -3,7 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Animated } from 'react-native';
+import { View, ScrollView, Image, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Animated, Platform, Linking } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
 import { 
   ArrowLeftIcon, 
   StarIcon, 
@@ -30,6 +31,7 @@ import type { Artist, Recording } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
+import { prefetchImages } from '@/components/optimized-image';
 
 // Mock 데이터
 const ARTIST_DETAILS: Record<string, any> = {
@@ -318,6 +320,7 @@ export default function ArtistDetailScreen() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const [artist, setArtist] = React.useState<Artist | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
@@ -336,24 +339,35 @@ export default function ArtistDetailScreen() {
 
   const loadArtist = async () => {
     setLoading(true);
+    setImagesLoaded(false);
     setError(null);
     try {
       const data = await ArtistAPI.getById(Number(id));
       setArtist(data);
-      
+
       // 녹음 목록 로드
+      let recordingData: Recording[] = [];
       try {
-        const recordingData = await RecordingAPI.getByArtist(Number(id));
+        recordingData = await RecordingAPI.getByArtist(Number(id));
         setRecordings(recordingData);
       } catch (error) {
         console.error('Failed to fetch recordings:', error);
       }
-      
+
+      // 이미지 프리페치
+      const imagesToLoad = [
+        data.imageUrl,
+        data.coverImageUrl,
+        ...recordingData.map(r => r.coverUrl)
+      ].filter(Boolean);
+      await prefetchImages(imagesToLoad);
+      setImagesLoaded(true);
       setLoading(false);
     } catch (err) {
       console.error('Failed to load artist:', err);
       setError('아티스트 정보를 불러오는데 실패했습니다.');
       setLoading(false);
+      setImagesLoaded(true);
     }
   };
 
@@ -362,15 +376,24 @@ export default function ArtistDetailScreen() {
     try {
       const data = await ArtistAPI.getById(Number(id));
       setArtist(data);
-      
+
       // 녹음 목록 새로고침
+      let recordingData: Recording[] = [];
       try {
-        const recordingData = await RecordingAPI.getByArtist(Number(id));
+        recordingData = await RecordingAPI.getByArtist(Number(id));
         setRecordings(recordingData);
       } catch (error) {
         console.error('Failed to fetch recordings:', error);
       }
-      
+
+      // 이미지 프리페치
+      const imagesToLoad = [
+        data.imageUrl,
+        data.coverImageUrl,
+        ...recordingData.map(r => r.coverUrl)
+      ].filter(Boolean);
+      await prefetchImages(imagesToLoad);
+
       setError(null);
       setRefreshing(false);
     } catch (err) {
@@ -436,10 +459,13 @@ export default function ArtistDetailScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || !imagesLoaded) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
+        <Text className="text-center text-muted-foreground mt-4">
+          {loading ? '아티스트 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+        </Text>
       </View>
     );
   }
@@ -474,13 +500,23 @@ export default function ArtistDetailScreen() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          <Animated.Image 
-            source={{ uri: getImageUrl(artist.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }} 
-            className="h-full w-full"
-            style={{ opacity: coverImageOpacity }}
-            resizeMode="cover"
-            onLoad={handleCoverImageLoad}
-          />
+          {Platform.OS === 'web' ? (
+            <Image
+              source={{ uri: getImageUrl(artist.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
+              className="h-full w-full"
+              style={{ opacity: coverImageLoaded ? 1 : 0 }}
+              resizeMode="cover"
+              onLoad={handleCoverImageLoad}
+            />
+          ) : (
+            <Animated.Image
+              source={{ uri: getImageUrl(artist.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
+              className="h-full w-full"
+              style={{ opacity: coverImageOpacity }}
+              resizeMode="cover"
+              onLoad={handleCoverImageLoad}
+            />
+          )}
           <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
           
           {/* Theme and User Menu overlay at top */}
@@ -529,10 +565,7 @@ export default function ArtistDetailScreen() {
               ) : null}
             </View>
             <Text className="text-muted-foreground">{artist.englishName}</Text>
-            <View className="flex-row items-center gap-1">
-              <Icon as={StarIcon} size={16} className="text-amber-500" />
-              <Text className="text-lg font-semibold">{artist.rating}</Text>
-            </View>
+            <Text className="text-sm text-muted-foreground">{artist.category}</Text>
           </View>
         </View>
 
@@ -602,11 +635,38 @@ export default function ArtistDetailScreen() {
           </Card>
         )}
 
-        {/* Style */}
+        {/* Style Keywords */}
         {artist.style && (
           <Card className="p-4">
-            <Text className="mb-2 text-lg font-bold">연주 스타일</Text>
-            <Text className="leading-6 text-muted-foreground">{artist.style}</Text>
+            <Text className="mb-3 text-lg font-bold">연주 스타일</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {artist.style.split(',').map((keyword, index) => (
+                <View key={index} className="rounded-full bg-primary/10 px-3 py-1.5">
+                  <Text className="text-sm text-primary">{keyword.trim()}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
+
+        {/* Awards */}
+        {artist.awards && (
+          <Card className="p-4">
+            <Text className="mb-3 text-lg font-bold">주요 수상</Text>
+            <View className="gap-3">
+              {artist.awards.split('|').map((award, index) => {
+                const [year, name] = award.split(':');
+                return (
+                  <View key={index} className="flex-row items-start gap-3">
+                    <Icon as={AwardIcon} size={18} className="text-amber-500 mt-1" />
+                    <View className="flex-1">
+                      <Text className="font-semibold">{name}</Text>
+                      <Text className="text-sm text-muted-foreground">{year}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </Card>
         )}
 
@@ -659,6 +719,38 @@ export default function ArtistDetailScreen() {
                       {recording.label && (
                         <Text className="text-xs text-muted-foreground">{recording.label}</Text>
                       )}
+                      {(recording.spotifyUrl || recording.appleMusicUrl || recording.youtubeMusicUrl || recording.externalUrl) && (
+                        <View className="flex-row gap-2 mt-1">
+                          {recording.spotifyUrl && (
+                            <TouchableOpacity onPress={() => Linking.openURL(recording.spotifyUrl!)}>
+                              <View className="rounded bg-green-600 px-2 py-1">
+                                <Text className="text-xs text-white font-medium">Spotify</Text>
+                              </View>
+                            </TouchableOpacity>
+                          )}
+                          {recording.appleMusicUrl && (
+                            <TouchableOpacity onPress={() => Linking.openURL(recording.appleMusicUrl!)}>
+                              <View className="rounded bg-pink-600 px-2 py-1">
+                                <Text className="text-xs text-white font-medium">Apple</Text>
+                              </View>
+                            </TouchableOpacity>
+                          )}
+                          {recording.youtubeMusicUrl && (
+                            <TouchableOpacity onPress={() => Linking.openURL(recording.youtubeMusicUrl!)}>
+                              <View className="rounded bg-red-600 px-2 py-1">
+                                <Text className="text-xs text-white font-medium">YouTube</Text>
+                              </View>
+                            </TouchableOpacity>
+                          )}
+                          {recording.externalUrl && (
+                            <TouchableOpacity onPress={() => Linking.openURL(recording.externalUrl!)}>
+                              <View className="rounded bg-blue-600 px-2 py-1">
+                                <Text className="text-xs text-white font-medium">링크</Text>
+                              </View>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      )}
                     </View>
                     {canEdit && (
                       <View className="gap-2">
@@ -682,6 +774,12 @@ export default function ArtistDetailScreen() {
               ))}
             </View>
           )}
+        </View>
+
+        {/* Recent Concerts */}
+        <View className="gap-3">
+          <Text className="text-lg font-bold">최근 공연</Text>
+          {/* TODO: Implement concert fetching */}
         </View>
 
       </View>
