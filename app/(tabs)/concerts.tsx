@@ -2,8 +2,10 @@ import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, ActivityIndicator, Alert, RefreshControl, TouchableOpacity, Linking } from 'react-native';
-import { CalendarIcon, MapPinIcon, TicketIcon, TrashIcon, PlusIcon } from 'lucide-react-native';
+import { Input } from '@/components/ui/input';
+import { View, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity, Linking } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
+import { CalendarIcon, MapPinIcon, TicketIcon, TrashIcon, PlusIcon, SearchIcon, StarIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { useRouter } from 'expo-router';
 import { ConcertAPI } from '@/lib/api/client';
@@ -24,14 +26,18 @@ interface Concert {
   ticketUrl?: string;
   isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  rating?: number;
+  ratingCount?: number;
 }
 
 export default function ConcertsScreen() {
   const [concerts, setConcerts] = React.useState<Concert[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [filter, setFilter] = React.useState<'all' | 'month' | 'recommended'>('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filter, setFilter] = React.useState<'all' | 'month' | 'recommended' | 'highRating'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
   const { canEdit } = useAuth();
 
@@ -39,36 +45,38 @@ export default function ConcertsScreen() {
     loadConcerts();
   }, []);
 
-  const loadConcerts = () => {
+  const loadConcerts = async () => {
     setLoading(true);
+    setImagesLoaded(false);
     setError(null);
-    ConcertAPI.getAll()
-      .then((data) => {
-        setConcerts(data as any);
-        prefetchImages(data.map(c => c.posterUrl));
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load concerts:', err);
-        setError('공연 정보를 불러오는데 실패했습니다.');
-        setLoading(false);
-      });
+    try {
+      const data = await ConcertAPI.getAll();
+      setConcerts(data as any);
+      // 이미지 로딩 완료 대기
+      await prefetchImages(data.map(c => c.posterUrl));
+      setImagesLoaded(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load concerts:', err);
+      setError('공연 정보를 불러오는데 실패했습니다.');
+      setLoading(false);
+      setImagesLoaded(true);
+    }
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    ConcertAPI.getAll()
-      .then((data) => {
-        setConcerts(data as any);
-        prefetchImages(data.map(c => c.posterUrl));
-        setError(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        console.error('Failed to refresh concerts:', err);
-        setError('공연 정보를 불러오는데 실패했습니다.');
-        setRefreshing(false);
-      });
+    try {
+      const data = await ConcertAPI.getAll();
+      setConcerts(data as any);
+      await prefetchImages(data.map(c => c.posterUrl));
+      setError(null);
+      setRefreshing(false);
+    } catch (err) {
+      console.error('Failed to refresh concerts:', err);
+      setError('공연 정보를 불러오는데 실패했습니다.');
+      setRefreshing(false);
+    }
   }, []);
 
   const handleDelete = (id: number, title: string) => {
@@ -95,18 +103,32 @@ export default function ConcertsScreen() {
   };
 
   const filteredConcerts = React.useMemo(() => {
-    if (filter === 'all') return concerts;
-    if (filter === 'recommended') return concerts.filter(c => c.isRecommended);
-    if (filter === 'month') {
+    let filtered = concerts;
+
+    // 검색 필터
+    if (searchQuery) {
+      filtered = filtered.filter(concert =>
+        concert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (concert.composerInfo && concert.composerInfo.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // 카테고리 필터
+    if (filter === 'recommended') {
+      filtered = filtered.filter(c => c.isRecommended);
+    } else if (filter === 'month') {
       const now = new Date();
       const currentMonth = now.getMonth();
-      return concerts.filter(c => {
+      filtered = filtered.filter(c => {
         const concertDate = new Date(c.concertDate);
         return concertDate.getMonth() === currentMonth;
       });
+    } else if (filter === 'highRating') {
+      filtered = filtered.filter(c => (c.rating || 0) >= 4.0);
     }
-    return concerts;
-  }, [concerts, filter]);
+
+    return filtered;
+  }, [concerts, filter, searchQuery]);
   return (
     <ScrollView 
       className="flex-1 bg-background"
@@ -132,6 +154,19 @@ export default function ConcertsScreen() {
           </Text>
         </View>
 
+        {/* Search Bar */}
+        <View className="relative">
+          <Input
+            placeholder="공연명, 작곡가로 검색"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            className="pl-10"
+          />
+          <View className="absolute left-3 top-3.5">
+            <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
+          </View>
+        </View>
+
         {/* Filter */}
         <View className="flex-row gap-2">
           <Button 
@@ -150,21 +185,32 @@ export default function ConcertsScreen() {
           >
             <Text className="text-sm">이번 달</Text>
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant={filter === 'recommended' ? 'default' : 'outline'}
             className="rounded-full"
             onPress={() => setFilter('recommended')}
           >
             <Text className="text-sm">추천</Text>
           </Button>
+          <Button
+            size="sm"
+            variant={filter === 'highRating' ? 'default' : 'outline'}
+            className="rounded-full"
+            onPress={() => setFilter('highRating')}
+          >
+            <Text className="text-sm">평점 4.0+</Text>
+          </Button>
         </View>
 
         {/* Concert List */}
         <View className="gap-4">
-          {loading ? (
+          {loading || !imagesLoaded ? (
             <View className="py-12">
               <ActivityIndicator size="large" />
+              <Text className="text-center text-muted-foreground mt-4">
+                {loading ? '공연 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+              </Text>
             </View>
           ) : error ? (
             <Card className="p-8">
@@ -255,6 +301,15 @@ function ConcertCard({
             </View>
             {concert.composerInfo && (
               <Text className="text-muted-foreground">{concert.composerInfo}</Text>
+            )}
+            {concert.rating !== undefined && concert.rating > 0 && (
+              <View className="flex-row items-center gap-1">
+                <Icon as={StarIcon} size={14} className="text-amber-500" />
+                <Text className="text-sm font-medium">{concert.rating.toFixed(1)}</Text>
+                {concert.ratingCount && concert.ratingCount > 0 && (
+                  <Text className="text-xs text-muted-foreground">({concert.ratingCount})</Text>
+                )}
+              </View>
             )}
           </View>
 

@@ -26,6 +26,10 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   const [year, setYear] = React.useState('');
   const [label, setLabel] = React.useState('');
   const [coverUrl, setCoverUrl] = React.useState('');
+  const [spotifyUrl, setSpotifyUrl] = React.useState('');
+  const [appleMusicUrl, setAppleMusicUrl] = React.useState('');
+  const [youtubeMusicUrl, setYoutubeMusicUrl] = React.useState('');
+  const [externalUrl, setExternalUrl] = React.useState('');
   const [selectedCover, setSelectedCover] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -36,12 +40,20 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
         setYear(recording.year);
         setLabel(recording.label || '');
         setCoverUrl(recording.coverUrl || '');
+        setSpotifyUrl(recording.spotifyUrl || '');
+        setAppleMusicUrl(recording.appleMusicUrl || '');
+        setYoutubeMusicUrl(recording.youtubeMusicUrl || '');
+        setExternalUrl(recording.externalUrl || '');
         setSelectedCover(recording.coverUrl || null);
       } else {
         setTitle('');
         setYear('');
         setLabel('');
         setCoverUrl('');
+        setSpotifyUrl('');
+        setAppleMusicUrl('');
+        setYoutubeMusicUrl('');
+        setExternalUrl('');
         setSelectedCover(null);
       }
     }
@@ -130,6 +142,10 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           year,
           label: label || undefined,
           coverUrl: coverUrl || undefined,
+          spotifyUrl: spotifyUrl || undefined,
+          appleMusicUrl: appleMusicUrl || undefined,
+          youtubeMusicUrl: youtubeMusicUrl || undefined,
+          externalUrl: externalUrl || undefined,
         });
         Alert.alert('성공', '앨범이 수정되었습니다.');
       } else {
@@ -139,6 +155,10 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           year,
           label: label || undefined,
           coverUrl: coverUrl || undefined,
+          spotifyUrl: spotifyUrl || undefined,
+          appleMusicUrl: appleMusicUrl || undefined,
+          youtubeMusicUrl: youtubeMusicUrl || undefined,
+          externalUrl: externalUrl || undefined,
         });
         Alert.alert('성공', '앨범이 추가되었습니다.');
       }
@@ -155,7 +175,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 bg-background">
         {/* Header */}
-        <View className="flex-row items-center justify-between p-4 border-b border-border">
+        <View className="flex-row items-center justify-between px-4 pt-12 pb-4 border-b border-border">
           <Text className="text-lg font-bold">
             {recording ? '앨범 수정' : '앨범 추가'}
           </Text>
@@ -213,11 +233,66 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           {/* Label */}
           <View className="gap-2 mb-4">
             <Label nativeID="label">레이블</Label>
-            <Input 
-              placeholder="레이블 입력" 
+            <Input
+              placeholder="레이블 입력"
               value={label}
               onChangeText={setLabel}
               aria-labelledby="label"
+            />
+          </View>
+
+          {/* Streaming Links Section */}
+          <Text className="text-lg font-bold mb-3">스트리밍 링크</Text>
+
+          {/* Spotify URL */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="spotifyUrl">Spotify URL</Label>
+            <Input
+              placeholder="https://open.spotify.com/..."
+              value={spotifyUrl}
+              onChangeText={setSpotifyUrl}
+              aria-labelledby="spotifyUrl"
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
+
+          {/* Apple Music URL */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="appleMusicUrl">Apple Music URL</Label>
+            <Input
+              placeholder="https://music.apple.com/..."
+              value={appleMusicUrl}
+              onChangeText={setAppleMusicUrl}
+              aria-labelledby="appleMusicUrl"
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
+
+          {/* YouTube Music URL */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="youtubeMusicUrl">YouTube Music URL</Label>
+            <Input
+              placeholder="https://music.youtube.com/..."
+              value={youtubeMusicUrl}
+              onChangeText={setYoutubeMusicUrl}
+              aria-labelledby="youtubeMusicUrl"
+              autoCapitalize="none"
+              keyboardType="url"
+            />
+          </View>
+
+          {/* External URL */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="externalUrl">기타 링크</Label>
+            <Input
+              placeholder="https://..."
+              value={externalUrl}
+              onChangeText={setExternalUrl}
+              aria-labelledby="externalUrl"
+              autoCapitalize="none"
+              keyboardType="url"
             />
           </View>
         </ScrollView>

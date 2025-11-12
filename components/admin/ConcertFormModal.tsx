@@ -6,10 +6,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
-import { XIcon, ImageIcon, UploadIcon, CalendarIcon } from 'lucide-react-native';
+import { XIcon, ImageIcon, UploadIcon, CalendarIcon, ClockIcon } from 'lucide-react-native';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { VenueAPI } from '@/lib/api/client';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Concert, Venue } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
 
@@ -37,6 +38,12 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const [showVenuePicker, setShowVenuePicker] = React.useState(false);
   const [venueSearch, setVenueSearch] = React.useState('');
 
+  // DateTimePicker states
+  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [selectedTime, setSelectedTime] = React.useState(new Date());
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const [showTimePicker, setShowTimePicker] = React.useState(false);
+
   // 초기 데이터 로드
   React.useEffect(() => {
     if (visible) {
@@ -55,6 +62,17 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setStatus(concert.status);
         setPosterUrl(concert.posterUrl || null);
         setTicketUrl(concert.ticketUrl || '');
+
+        // Date picker 초기화
+        if (concert.concertDate) {
+          setSelectedDate(new Date(concert.concertDate));
+        }
+        if (concert.concertTime) {
+          const [hours, minutes] = concert.concertTime.split(':');
+          const timeDate = new Date();
+          timeDate.setHours(parseInt(hours), parseInt(minutes));
+          setSelectedTime(timeDate);
+        }
       } else {
         setTitle('');
         setComposerInfo('');
@@ -67,9 +85,31 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setSelectedPoster(null);
         setPosterUrl(null);
         setTicketUrl('');
+        setSelectedDate(new Date());
+        setSelectedTime(new Date());
       }
     }
   }, [visible, concert]);
+
+  // Date/Time handlers
+  const handleDateChange = (event: any, date?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (date) {
+      setSelectedDate(date);
+      const formattedDate = date.toISOString().split('T')[0];
+      setConcertDate(formattedDate);
+    }
+  };
+
+  const handleTimeChange = (event: any, time?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (time) {
+      setSelectedTime(time);
+      const hours = String(time.getHours()).padStart(2, '0');
+      const minutes = String(time.getMinutes()).padStart(2, '0');
+      setConcertTime(`${hours}:${minutes}:00`);
+    }
+  };
 
   const loadVenues = async () => {
     try {
@@ -268,27 +308,45 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
               </View>
 
               <View>
-                <Label>공연일 * (YYYY-MM-DD)</Label>
-                <Input 
-                  value={concertDate} 
-                  onChangeText={setConcertDate} 
-                  placeholder="2025-12-25"
-                />
-                <Text className="text-xs text-muted-foreground mt-1">
-                  예: 2025-12-25
-                </Text>
+                <Label>공연일 *</Label>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <Text className={concertDate ? "text-base" : "text-base text-muted-foreground"}>
+                    {concertDate || '날짜를 선택하세요'}
+                  </Text>
+                  <Icon as={CalendarIcon} size={18} className="text-muted-foreground" />
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={selectedDate}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                  />
+                )}
               </View>
 
               <View>
-                <Label>공연 시간 (HH:MM)</Label>
-                <Input 
-                  value={concertTime} 
-                  onChangeText={setConcertTime} 
-                  placeholder="19:30"
-                />
-                <Text className="text-xs text-muted-foreground mt-1">
-                  예: 19:30
-                </Text>
+                <Label>공연 시간</Label>
+                <TouchableOpacity
+                  onPress={() => setShowTimePicker(true)}
+                  className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <Text className={concertTime ? "text-base" : "text-base text-muted-foreground"}>
+                    {concertTime ? concertTime.substring(0, 5) : '시간을 선택하세요'}
+                  </Text>
+                  <Icon as={ClockIcon} size={18} className="text-muted-foreground" />
+                </TouchableOpacity>
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={selectedTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleTimeChange}
+                  />
+                )}
               </View>
 
               {/* 공연장 선택 */}

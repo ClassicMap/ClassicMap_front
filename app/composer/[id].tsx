@@ -3,7 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Animated } from 'react-native';
+import { View, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Animated, Platform, Linking } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
 import { 
   ArrowLeftIcon, 
   CalendarIcon,
@@ -27,6 +28,7 @@ import { PieceFormModal } from '@/components/admin/PieceFormModal';
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import type { Composer, Piece } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
+import { prefetchImages } from '@/components/optimized-image';
 
 interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];
@@ -572,6 +574,7 @@ export default function ComposerDetailScreen() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const [composer, setComposer] = React.useState<ComposerWithPieces | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPieceFormModal, setShowPieceFormModal] = React.useState(false);
@@ -586,34 +589,43 @@ export default function ComposerDetailScreen() {
     }
   }, [id]);
 
-  const loadComposer = () => {
+  const loadComposer = async () => {
     setLoading(true);
+    setImagesLoaded(false);
     setError(null);
-    ComposerAPI.getById(Number(id))
-      .then((data) => {
-        setComposer(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load composer:', err);
-        setError('작곡가 정보를 불러오는데 실패했습니다.');
-        setLoading(false);
-      });
+    try {
+      const data = await ComposerAPI.getById(Number(id));
+      setComposer(data);
+
+      // 이미지 프리페치
+      const imagesToLoad = [data.avatarUrl, data.coverImageUrl].filter(Boolean);
+      await prefetchImages(imagesToLoad);
+      setImagesLoaded(true);
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to load composer:', err);
+      setError('작곡가 정보를 불러오는데 실패했습니다.');
+      setLoading(false);
+      setImagesLoaded(true);
+    }
   };
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    ComposerAPI.getById(Number(id))
-      .then((data) => {
-        setComposer(data);
-        setError(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        console.error('Failed to refresh composer:', err);
-        setError('작곡가 정보를 불러오는데 실패했습니다.');
-        setRefreshing(false);
-      });
+    try {
+      const data = await ComposerAPI.getById(Number(id));
+      setComposer(data);
+
+      const imagesToLoad = [data.avatarUrl, data.coverImageUrl].filter(Boolean);
+      await prefetchImages(imagesToLoad);
+
+      setError(null);
+      setRefreshing(false);
+    } catch (err) {
+      console.error('Failed to refresh composer:', err);
+      setError('작곡가 정보를 불러오는데 실패했습니다.');
+      setRefreshing(false);
+    }
   }, [id]);
 
   const handlePieceClick = (pieceId: number, pieceTitle: string) => {
@@ -676,10 +688,13 @@ export default function ComposerDetailScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || !imagesLoaded) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
+        <Text className="text-center text-muted-foreground mt-4">
+          {loading ? '작곡가 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+        </Text>
       </View>
     );
   }
@@ -714,13 +729,23 @@ export default function ComposerDetailScreen() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          <Animated.Image 
-            source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }} 
-            className="h-full w-full"
-            style={{ opacity: coverImageOpacity }}
-            resizeMode="cover"
-            onLoad={handleCoverImageLoad}
-          />
+          {Platform.OS === 'web' ? (
+            <Image
+              source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
+              className="h-full w-full"
+              style={{ opacity: coverImageLoaded ? 1 : 0 }}
+              resizeMode="cover"
+              onLoad={handleCoverImageLoad}
+            />
+          ) : (
+            <Animated.Image
+              source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
+              className="h-full w-full"
+              style={{ opacity: coverImageOpacity }}
+              resizeMode="cover"
+              onLoad={handleCoverImageLoad}
+            />
+          )}
           <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
           
           {/* Theme and User Menu overlay at top */}
@@ -758,20 +783,36 @@ export default function ComposerDetailScreen() {
             <View className="items-center gap-2">
               <Text className="text-2xl font-bold">{composer.fullName}</Text>
               <Text className="text-muted-foreground">{composer.englishName}</Text>
-              <View 
-                className="rounded-full px-4 py-2"
-                style={{ 
-                  backgroundColor: (ERA_COLORS[composer.period] || '#888') + '20',
-                  borderWidth: 2,
-                  borderColor: ERA_COLORS[composer.period] || '#888'
-                }}
-              >
-                <Text 
-                  className="text-sm font-bold"
-                  style={{ color: ERA_COLORS[composer.period] || '#888' }}
+              <View className="flex-row items-center gap-2">
+                <View
+                  className="rounded-full px-4 py-2"
+                  style={{
+                    backgroundColor: (ERA_COLORS[composer.period] || '#888') + '20',
+                    borderWidth: 2,
+                    borderColor: ERA_COLORS[composer.period] || '#888'
+                  }}
                 >
-                  {composer.period}
-                </Text>
+                  <Text
+                    className="text-sm font-bold"
+                    style={{ color: ERA_COLORS[composer.period] || '#888' }}
+                  >
+                    {composer.period}
+                  </Text>
+                </View>
+                {composer.tier && (
+                  <View
+                    className="rounded-full px-3 py-1.5"
+                    style={{
+                      backgroundColor: composer.tier === 'S' ? '#fbbf24' : composer.tier === 'A' ? '#a78bfa' : '#60a5fa',
+                      borderWidth: 2,
+                      borderColor: composer.tier === 'S' ? '#f59e0b' : composer.tier === 'A' ? '#8b5cf6' : '#3b82f6'
+                    }}
+                  >
+                    <Text className="text-sm font-bold text-white">
+                      Tier {composer.tier}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -839,17 +880,17 @@ export default function ComposerDetailScreen() {
           )}
 
           {/* Major Works */}
-          {composer.majorPieces && composer.majorPieces.length > 0 && (
-            <View className="gap-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xl font-bold">주요 작품</Text>
-                {canEdit && (
-                  <Button size="sm" onPress={() => setShowPieceFormModal(true)}>
-                    <Icon as={PlusIcon} size={14} className="text-primary-foreground mr-1" />
-                    <Text className="text-sm">작품 추가</Text>
-                  </Button>
-                )}
-              </View>
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold">주요 작품</Text>
+              {canEdit && (
+                <Button size="sm" onPress={() => setShowPieceFormModal(true)}>
+                  <Icon as={PlusIcon} size={14} className="text-primary-foreground mr-1" />
+                  <Text className="text-sm">작품 추가</Text>
+                </Button>
+              )}
+            </View>
+            {composer.majorPieces && composer.majorPieces.length > 0 ? (
               <View className="gap-2">
                 {composer.majorPieces.map((work, index) => (
                   <TouchableOpacity
@@ -864,6 +905,43 @@ export default function ComposerDetailScreen() {
                           <Text className="font-medium">{work.title}</Text>
                           {work.opusNumber && (
                             <Text className="text-sm text-muted-foreground">{work.opusNumber}</Text>
+                          )}
+                          {(work.spotifyUrl || work.appleMusicUrl || work.youtubeMusicUrl) && (
+                            <View className="flex-row gap-2 mt-2">
+                              {work.spotifyUrl && (
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    Linking.openURL(work.spotifyUrl!);
+                                  }}
+                                  className="rounded bg-green-600 px-2 py-1"
+                                >
+                                  <Text className="text-xs text-white font-medium">Spotify</Text>
+                                </TouchableOpacity>
+                              )}
+                              {work.appleMusicUrl && (
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    Linking.openURL(work.appleMusicUrl!);
+                                  }}
+                                  className="rounded bg-pink-600 px-2 py-1"
+                                >
+                                  <Text className="text-xs text-white font-medium">Apple Music</Text>
+                                </TouchableOpacity>
+                              )}
+                              {work.youtubeMusicUrl && (
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    Linking.openURL(work.youtubeMusicUrl!);
+                                  }}
+                                  className="rounded bg-red-600 px-2 py-1"
+                                >
+                                  <Text className="text-xs text-white font-medium">YouTube</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           )}
                         </View>
                         {canEdit && (
@@ -884,8 +962,14 @@ export default function ComposerDetailScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
-          )}
+            ) : (
+              <Card className="p-6">
+                <Text className="text-center text-muted-foreground">
+                  {canEdit ? '작품을 추가해주세요.' : '아직 등록된 주요 작품이 없습니다.'}
+                </Text>
+              </Card>
+            )}
+          </View>
         </View>
 
         {showPieceFormModal && (

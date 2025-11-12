@@ -57,6 +57,9 @@ interface APIPiece {
   compositionYear?: number;
   difficultyLevel?: number;
   durationMinutes?: number;
+  spotifyUrl?: string;
+  appleMusicUrl?: string;
+  youtubeMusicUrl?: string;
 }
 
 interface APIArtist {
@@ -86,9 +89,12 @@ interface APIConcert {
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
+  program?: string;
   ticketUrl?: string;
   isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  rating?: number;
+  ratingCount?: number;
 }
 
 interface APIVenue {
@@ -109,9 +115,12 @@ interface Concert {
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
+  program?: string;
   ticketUrl?: string;
   isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  rating?: number;
+  ratingCount?: number;
 }
 
 // Performance API 타입
@@ -140,9 +149,9 @@ const mapComposer = (api: any): Composer => {
     birthYear: api.birthYear,
     deathYear: api.deathYear,
     nationality: api.nationality,
-    imageUrl: api.imageUrl ? `http://34.60.221.92:1028${api.imageUrl}` : undefined,
-    avatarUrl: api.avatarUrl ? `http://34.60.221.92:1028${api.avatarUrl}` : undefined,
-    coverImageUrl: api.coverImageUrl ? `http://34.60.221.92:1028${api.coverImageUrl}` : undefined,
+    imageUrl: api.imageUrl ? api.imageUrl : undefined,
+    avatarUrl: api.avatarUrl ? api.avatarUrl : undefined,
+    coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
     bio: api.bio,
     style: api.style,
     influence: api.influence,
@@ -159,6 +168,9 @@ const mapPiece = (api: APIPiece): Piece => ({
   compositionYear: api.compositionYear,
   difficultyLevel: api.difficultyLevel,
   durationMinutes: api.durationMinutes,
+  spotifyUrl: api.spotifyUrl,
+  appleMusicUrl: api.appleMusicUrl,
+  youtubeMusicUrl: api.youtubeMusicUrl,
 });
 
 const mapArtist = (api: APIArtist): Artist => ({
@@ -168,8 +180,8 @@ const mapArtist = (api: APIArtist): Artist => ({
   category: api.category,
   tier: api.tier,
   rating: api.rating,
-  imageUrl: api.imageUrl ? `http://34.60.221.92:1028${api.imageUrl}` : undefined,
-  coverImageUrl: api.coverImageUrl ? `http://34.60.221.92:1028${api.coverImageUrl}` : undefined,
+  imageUrl: api.imageUrl ? api.imageUrl : undefined,
+  coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
   birthYear: api.birthYear,
   nationality: api.nationality,
   bio: api.bio,
@@ -187,10 +199,13 @@ const mapConcert = (api: APIConcert): Concert => ({
   concertDate: api.concertDate,
   concertTime: api.concertTime,
   priceInfo: api.priceInfo,
-  posterUrl: api.posterUrl ? `http://34.60.221.92:1028${api.posterUrl}` : undefined,
+  posterUrl: api.posterUrl ? api.posterUrl : undefined,
+  program: api.program,
   ticketUrl: api.ticketUrl,
   isRecommended: api.isRecommended,
   status: api.status,
+  rating: api.rating,
+  ratingCount: api.ratingCount,
 });
 
 // API Base URL
@@ -198,6 +213,36 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:102
 
 // 실제 API 사용 여부
 const USE_REAL_API = true;
+
+// 인증 토큰 저장소 (Clerk에서 가져온 토큰)
+let authToken: string | null = null;
+
+/**
+ * 인증 토큰 설정 (useAuth 훅에서 호출)
+ */
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
+/**
+ * 인증된 fetch 요청
+ */
+const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // 인증 토큰이 있으면 Authorization 헤더 추가
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+};
 
 /**
  * 작곡가 API
@@ -208,9 +253,10 @@ export const ComposerAPI = {
    */
   async getAll(): Promise<Composer[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/composers`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/composers`);
       if (!response.ok) throw new Error('Failed to fetch composers');
       const data: APIComposer[] = await response.json();
+      console.log('Raw API data:', JSON.stringify(data, null, 2));
       const mapped = data.map(mapComposer);
       return mapped;
     }
@@ -222,21 +268,22 @@ export const ComposerAPI = {
    */
   async getById(id: number): Promise<ComposerWithPieces | null> {
     if (USE_REAL_API) {
-      const [composerRes, piecesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/composers/${id}`),
-        fetch(`${API_BASE_URL}/composers/${id}/pieces`),
-      ]);
-      
-      if (!composerRes.ok) throw new Error('Failed to fetch composer');
-      
-      const composerData: APIComposer = await composerRes.json();
+      const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch composer');
+
+      const composerData: any = await response.json();
       if (!composerData) return null;
-      
-      const piecesData: APIPiece[] = piecesRes.ok ? await piecesRes.json() : [];
-      
+
+      const majorPieces = composerData.majorPieces
+        ? composerData.majorPieces.split('|').map((p: string) => {
+            const [id, title] = p.split(':');
+            return { id: parseInt(id, 10), title };
+          })
+        : [];
+
       return {
         ...mapComposer(composerData),
-        majorPieces: piecesData.map(mapPiece),
+        majorPieces,
       };
     }
     const composer = getComposerById(id);
@@ -250,12 +297,10 @@ export const ComposerAPI = {
    */
   async getByPeriod(period: string): Promise<Composer[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/composers`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/composers`);
       if (!response.ok) throw new Error('Failed to fetch composers');
       const data: APIComposer[] = await response.json();
-      return data
-        .filter((c) => c.period === period)
-        .map(mapComposer);
+      return data.filter((c) => c.period === period).map(mapComposer);
     }
     return Promise.resolve(getComposersByPeriod(period));
   },
@@ -270,19 +315,26 @@ export const PieceAPI = {
    */
   async getById(id: number): Promise<PieceWithPerformances | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/pieces/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`);
       if (!response.ok) throw new Error('Failed to fetch piece');
       const pieceData: APIPiece = await response.json();
       if (!pieceData) return null;
 
-      const composerRes = await fetch(`${API_BASE_URL}/composers/${pieceData.composerId}`);
+      const composerRes = await authenticatedFetch(
+        `${API_BASE_URL}/composers/${pieceData.composerId}`
+      );
       if (!composerRes.ok) throw new Error('Failed to fetch composer');
       const composerData: APIComposer = await composerRes.json();
+
+      const performancesRes = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}/performances`);
+      const performancesData: APIPerformance[] = performancesRes.ok
+        ? await performancesRes.json()
+        : [];
 
       return {
         ...mapPiece(pieceData),
         composer: mapComposer(composerData),
-        performances: [], // TODO: Performance API 연동 후 추가
+        performances: performancesData,
       };
     }
     const piece = getPieceById(id);
@@ -301,7 +353,7 @@ export const PieceAPI = {
    */
   async getByComposer(composerId: number): Promise<Piece[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/composers/${composerId}/pieces`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/composers/${composerId}/pieces`);
       if (!response.ok) throw new Error('Failed to fetch pieces');
       const data: APIPiece[] = await response.json();
       return data.map(mapPiece);
@@ -319,7 +371,7 @@ export const ArtistAPI = {
    */
   async getAll(): Promise<Artist[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/artists`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists`);
       if (!response.ok) throw new Error('Failed to fetch artists');
       const data: APIArtist[] = await response.json();
       return data.map(mapArtist);
@@ -332,7 +384,7 @@ export const ArtistAPI = {
    */
   async getById(id: number): Promise<Artist | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/artists/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`);
       if (!response.ok) throw new Error('Failed to fetch artist');
       const data: APIArtist = await response.json();
       if (!data) return null;
@@ -341,8 +393,6 @@ export const ArtistAPI = {
     return Promise.resolve(getArtistById(id) || null);
   },
 };
-
-
 
 /**
  * 시대 정보 API
@@ -369,7 +419,7 @@ export const ConcertAPI = {
    */
   async getAll(): Promise<Concert[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/concerts`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts`);
       if (!response.ok) throw new Error('Failed to fetch concerts');
       const data: APIConcert[] = await response.json();
       const mapped = data.map(mapConcert);
@@ -383,7 +433,7 @@ export const ConcertAPI = {
    */
   async getById(id: number): Promise<Concert | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/concerts/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`);
       if (!response.ok) throw new Error('Failed to fetch concert');
       const data: APIConcert = await response.json();
       if (!data) return null;
@@ -403,7 +453,7 @@ export const RecordingAPI = {
    */
   async getByArtist(artistId: number): Promise<Recording[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/artists/${artistId}/recordings`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/recordings`);
       if (!response.ok) throw new Error('Failed to fetch recordings');
       const data: Recording[] = await response.json();
       return data;
@@ -416,7 +466,7 @@ export const RecordingAPI = {
    */
   async getById(id: number): Promise<Recording | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/recordings/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`);
       if (!response.ok) throw new Error('Failed to fetch recording');
       const data: Recording = await response.json();
       return data;
@@ -434,7 +484,7 @@ export const VenueAPI = {
    */
   async getAll(): Promise<Venue[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/venues`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/venues`);
       if (!response.ok) throw new Error('Failed to fetch venues');
       const data: APIVenue[] = await response.json();
       return data;
@@ -447,7 +497,7 @@ export const VenueAPI = {
    */
   async getById(id: number): Promise<Venue | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/venues/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/venues/${id}`);
       if (!response.ok) throw new Error('Failed to fetch venue');
       const data: APIVenue = await response.json();
       if (!data) return null;
@@ -466,7 +516,7 @@ export const PerformanceAPI = {
    */
   async getByPiece(pieceId: number): Promise<Performance[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/pieces/${pieceId}/performances`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${pieceId}/performances`);
       if (!response.ok) throw new Error('Failed to fetch performances');
       const data: APIPerformance[] = await response.json();
       return data;
@@ -479,7 +529,7 @@ export const PerformanceAPI = {
    */
   async getByArtist(artistId: number): Promise<Performance[]> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/artists/${artistId}/performances`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/performances`);
       if (!response.ok) throw new Error('Failed to fetch performances');
       const data: APIPerformance[] = await response.json();
       return data;
@@ -492,7 +542,7 @@ export const PerformanceAPI = {
    */
   async getById(id: number): Promise<Performance | null> {
     if (USE_REAL_API) {
-      const response = await fetch(`${API_BASE_URL}/performances/${id}`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/performances/${id}`);
       if (!response.ok) throw new Error('Failed to fetch performance');
       const data: APIPerformance = await response.json();
       return data;

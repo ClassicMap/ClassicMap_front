@@ -12,19 +12,6 @@ export function OptimizedImage({ uri, fallbackUri, style, ...props }: OptimizedI
   const [error, setError] = React.useState(false);
   const imageUrl = getImageUrl(uri) || fallbackUri || '';
 
-  React.useEffect(() => {
-    if (imageUrl) {
-      setLoading(true);
-      setError(false);
-      Image.prefetch(imageUrl)
-        .then(() => setLoading(false))
-        .catch(() => {
-          setError(true);
-          setLoading(false);
-        });
-    }
-  }, [imageUrl]);
-
   if (!imageUrl) {
     return <View style={style} />;
   }
@@ -32,14 +19,15 @@ export function OptimizedImage({ uri, fallbackUri, style, ...props }: OptimizedI
   return (
     <View style={style}>
       {loading && (
-        <View style={[style, { position: 'absolute', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }]}>
+        <View style={[style, { position: 'absolute', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', zIndex: 1 }]}>
           <ActivityIndicator size="small" />
         </View>
       )}
       <Image
         {...props}
         source={{ uri: imageUrl }}
-        style={style}
+        style={[style, { opacity: loading ? 0 : 1 }]}
+        onLoadStart={() => setLoading(true)}
         onLoadEnd={() => setLoading(false)}
         onError={() => {
           setError(true);

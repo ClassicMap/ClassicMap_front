@@ -2,8 +2,26 @@ import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, FlatList, TouchableOpacity, Animated, ActivityIndicator, RefreshControl, Alert, Image } from 'react-native';
-import { PlayCircleIcon, PlusIcon, CheckIcon, EditIcon, TrashIcon } from 'lucide-react-native';
+import { Input } from '@/components/ui/input';
+import {
+  View,
+  ScrollView,
+  FlatList,
+  TouchableOpacity,
+  Animated,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
+} from 'react-native';
+import { Alert } from '@/lib/utils/alert';
+import {
+  PlayCircleIcon,
+  PlusIcon,
+  CheckIcon,
+  EditIcon,
+  TrashIcon,
+  SearchIcon,
+} from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import YoutubePlayer from 'react-native-youtube-iframe';
@@ -26,21 +44,28 @@ export default function CompareScreen() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  
+
   const [selectedComposer, setSelectedComposer] = React.useState<ComposerWithPieces | null>(null);
   const [selectedPiece, setSelectedPiece] = React.useState<Piece | null>(null);
   const [showComposerList, setShowComposerList] = React.useState(false);
   const [showPieceList, setShowPieceList] = React.useState(false);
   const [noPieceFound, setNoPieceFound] = React.useState(false);
-  
+
+  // 검색 및 필터 state
+  const [composerSearchQuery, setComposerSearchQuery] = React.useState('');
+  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
+  const [pieceSearchQuery, setPieceSearchQuery] = React.useState('');
+
   // 연주 관련 state
   const [performances, setPerformances] = React.useState<Performance[]>([]);
   const [artists, setArtists] = React.useState<{ [key: number]: Artist }>({});
   const [performanceFormVisible, setPerformanceFormVisible] = React.useState(false);
   const [selectedPerformance, setSelectedPerformance] = React.useState<Performance | undefined>();
   const [currentPerformanceIndex, setCurrentPerformanceIndex] = React.useState(0);
-  const [piecePerformanceCounts, setPiecePerformanceCounts] = React.useState<{ [key: number]: number }>({});
-  
+  const [piecePerformanceCounts, setPiecePerformanceCounts] = React.useState<{
+    [key: number]: number;
+  }>({});
+
   // 애니메이션 값
   const composerAnimation = React.useRef(new Animated.Value(0)).current;
   const pieceAnimation = React.useRef(new Animated.Value(0)).current;
@@ -55,6 +80,49 @@ export default function CompareScreen() {
   const viewabilityConfig = React.useRef({
     itemVisiblePercentThreshold: 50,
   }).current;
+
+  // 작곡가 필터링
+  const filteredComposers = React.useMemo(() => {
+    let filtered = composers;
+
+    // 검색 필터
+    if (composerSearchQuery.trim()) {
+      const searchLower = composerSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (composer) =>
+          composer.name.toLowerCase().includes(searchLower) ||
+          composer.fullName.toLowerCase().includes(searchLower) ||
+          composer.englishName.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // 시대 필터
+    if (periodFilter !== 'all') {
+      filtered = filtered.filter((composer) => composer.period === periodFilter);
+    }
+
+    return filtered;
+  }, [composers, composerSearchQuery, periodFilter]);
+
+  // 곡 필터링
+  const filteredPieces = React.useMemo(() => {
+    if (!selectedComposer?.majorPieces) return [];
+
+    let filtered = selectedComposer.majorPieces;
+
+    // 검색 필터
+    if (pieceSearchQuery.trim()) {
+      const searchLower = pieceSearchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (piece) =>
+          piece.title.toLowerCase().includes(searchLower) ||
+          (piece.description && piece.description.toLowerCase().includes(searchLower)) ||
+          (piece.opusNumber && piece.opusNumber.toLowerCase().includes(searchLower))
+      );
+    }
+
+    return filtered;
+  }, [selectedComposer, pieceSearchQuery]);
 
   // 작곡가 데이터 로드
   React.useEffect(() => {
@@ -149,7 +217,11 @@ export default function CompareScreen() {
 
   // 초기화: 작곡가 선택 시 첫 번째 곡 자동 선택
   React.useEffect(() => {
-    if (selectedComposer && selectedComposer.majorPieces && selectedComposer.majorPieces.length > 0) {
+    if (
+      selectedComposer &&
+      selectedComposer.majorPieces &&
+      selectedComposer.majorPieces.length > 0
+    ) {
       setSelectedPiece(selectedComposer.majorPieces[0]);
       setNoPieceFound(false);
     } else {
@@ -175,13 +247,13 @@ export default function CompareScreen() {
       setPerformances(performanceData);
 
       // 연주 개수 업데이트
-      setPiecePerformanceCounts(prev => ({
+      setPiecePerformanceCounts((prev) => ({
         ...prev,
-        [pieceId]: performanceData.length
+        [pieceId]: performanceData.length,
       }));
 
       // 연주자 정보 로드
-      const artistIds = [...new Set(performanceData.map(p => p.artistId))];
+      const artistIds = [...new Set(performanceData.map((p) => p.artistId))];
       const artistData: { [key: number]: Artist } = {};
       await Promise.all(
         artistIds.map(async (artistId) => {
@@ -199,9 +271,9 @@ export default function CompareScreen() {
     } catch (error) {
       console.error('Failed to load performances:', error);
       setPerformances([]);
-      setPiecePerformanceCounts(prev => ({
+      setPiecePerformanceCounts((prev) => ({
         ...prev,
-        [pieceId]: 0
+        [pieceId]: 0,
       }));
     }
   };
@@ -209,11 +281,11 @@ export default function CompareScreen() {
   // URL 파라미터로 작곡가/곡 선택
   React.useEffect(() => {
     if (!composers.length) return;
-    
+
     if (params.pieceId) {
       const pieceId = Number(params.pieceId);
       for (const composer of composers) {
-        const piece = composer.majorPieces?.find(p => p.id === pieceId);
+        const piece = composer.majorPieces?.find((p) => p.id === pieceId);
         if (piece) {
           setSelectedComposer(composer);
           setSelectedPiece(piece);
@@ -224,7 +296,7 @@ export default function CompareScreen() {
       setNoPieceFound(true);
     } else if (params.composerId) {
       const composerId = Number(params.composerId);
-      const composer = composers.find(c => c.id === composerId);
+      const composer = composers.find((c) => c.id === composerId);
       if (composer) {
         setSelectedComposer(composer);
         if (composer.majorPieces && composer.majorPieces.length > 0) {
@@ -281,28 +353,24 @@ export default function CompareScreen() {
   };
 
   const handleDeletePerformance = (performanceId: number) => {
-    Alert.alert(
-      '연주 삭제',
-      '정말 이 연주를 삭제하시겠습니까?',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AdminPerformanceAPI.delete(performanceId);
-              Alert.alert('성공', '연주가 삭제되었습니다.');
-              if (selectedPiece) {
-                loadPerformances(selectedPiece.id);
-              }
-            } catch (error) {
-              Alert.alert('오류', '연주 삭제에 실패했습니다.');
+    Alert.alert('연주 삭제', '정말 이 연주를 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AdminPerformanceAPI.delete(performanceId);
+            Alert.alert('성공', '연주가 삭제되었습니다.');
+            if (selectedPiece) {
+              loadPerformances(selectedPiece.id);
             }
-          },
+          } catch (error) {
+            Alert.alert('오류', '연주 삭제에 실패했습니다.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
@@ -316,8 +384,8 @@ export default function CompareScreen() {
   if (error) {
     return (
       <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="p-8 w-full max-w-md">
-          <Text className="text-center text-destructive mb-4">{error}</Text>
+        <Card className="w-full max-w-md p-8">
+          <Text className="mb-4 text-center text-destructive">{error}</Text>
           <Button variant="outline" onPress={loadComposers}>
             <Text>다시 시도</Text>
           </Button>
@@ -336,405 +404,479 @@ export default function CompareScreen() {
 
   const getPeriodEmoji = (period: string): string => {
     const emojiMap: { [key: string]: string } = {
-      '바로크': '🎻',
-      '고전주의': '🎹',
-      '낭만주의': '🎼',
-      '근현대': '🎵',
+      바로크: '🎻',
+      고전주의: '🎹',
+      낭만주의: '🎼',
+      근현대: '🎵',
     };
     return emojiMap[period] || '🎵';
   };
 
-  return (<>
-    <ScrollView 
-      className="flex-1 bg-background"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <View className="gap-6 p-4 pb-20">
-        {/* 작곡가 선택 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">작곡가 선택</Text>
-            <TouchableOpacity
-              onPress={() => setShowComposerList(!showComposerList)}
-              className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent"
-            >
-              <Icon as={showComposerList ? CheckIcon : PlusIcon} size={20} className={showComposerList ? 'text-primary' : ''} />
-            </TouchableOpacity>
-          </View>
+  return (
+    <>
+      <ScrollView
+        className="flex-1 bg-background"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <View className="gap-6 p-4 pb-20">
+          {/* 작곡가 선택 */}
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold">작곡가 선택</Text>
+              <TouchableOpacity
+                onPress={() => setShowComposerList(!showComposerList)}
+                className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent">
+                <Icon
+                  as={showComposerList ? CheckIcon : PlusIcon}
+                  size={20}
+                  className={showComposerList ? 'text-primary' : ''}
+                />
+              </TouchableOpacity>
+            </View>
 
-          <Animated.View
-            style={{
-              opacity: composerAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0],
-              }),
-              maxHeight: composerAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [200, 0],
-              }),
-            }}
-            pointerEvents={showComposerList ? 'none' : 'auto'}
-          >
-            {!showComposerList && (
-              <Card className="p-4">
-                <View className="flex-row items-center gap-3">
-                  <Text className="text-3xl">{getPeriodEmoji(selectedComposer.period)}</Text>
-                  <View className="flex-1">
-                    <Text className="text-lg font-semibold">{selectedComposer.name}</Text>
-                    <Text className="text-sm text-muted-foreground">{selectedComposer.period}</Text>
+            {/* 작곡가 검색 및 필터 */}
+            {showComposerList && (
+              <>
+                <View className="relative">
+                  <Input
+                    placeholder="작곡가 검색..."
+                    value={composerSearchQuery}
+                    onChangeText={setComposerSearchQuery}
+                    className="pl-10"
+                  />
+                  <View className="absolute left-3 top-3.5">
+                    <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
                   </View>
                 </View>
-              </Card>
-            )}
-          </Animated.View>
 
-          <Animated.View
-            style={{
-              opacity: composerAnimation,
-              maxHeight: composerAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 500],
-              }),
-            }}
-          >
-            {showComposerList && (
-              <Card className="p-3 overflow-hidden">
-                <View className="flex-row flex-wrap gap-3">
-                  {composers.map((composer) => (
-                    <Animated.View
-                      key={composer.id}
-                      style={{
-                        width: '48%',
-                        opacity: composerAnimation,
-                        transform: [
-                          {
-                            translateY: composerAnimation.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [-20, 0],
-                            }),
-                          },
-                        ],
-                      }}
-                    >
-                      <TouchableOpacity
-                        onPress={() => handleComposerSelect(composer)}
-                        className={`p-3 rounded-lg border ${selectedComposer.id === composer.id ? 'border-primary bg-primary/5' : 'border-border'} active:bg-accent`}
-                      >
-                        <View className="gap-2">
-                          <View className="flex-row items-center justify-between">
-                            <Text className="text-2xl">{getPeriodEmoji(composer.period)}</Text>
-                            {selectedComposer.id === composer.id && (
-                              <Icon as={CheckIcon} size={18} className="text-primary" />
-                            )}
-                          </View>
-                          <View>
-                            <Text className="text-sm font-semibold" numberOfLines={1}>
-                              {composer.name}
-                            </Text>
-                            <Text className="text-xs text-muted-foreground">
-                              {composer.period}
-                            </Text>
-                            <Text className="text-xs text-muted-foreground">
-                              {composer.majorPieces?.length || 0}곡
-                            </Text>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  ))}
+                <View className="flex-row gap-2">
+                  <Button
+                    size="sm"
+                    variant={periodFilter === 'all' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('all')}>
+                    <Text className="text-xs">전체</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '바로크' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('바로크')}>
+                    <Text className="text-xs">바로크</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '고전주의' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('고전주의')}>
+                    <Text className="text-xs">고전주의</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '낭만주의' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('낭만주의')}>
+                    <Text className="text-xs">낭만주의</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '근현대' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('근현대')}>
+                    <Text className="text-xs">근현대</Text>
+                  </Button>
                 </View>
-              </Card>
+              </>
             )}
-          </Animated.View>
-        </View>
 
-        {/* 곡 선택 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">곡 선택</Text>
-            <TouchableOpacity
-              onPress={() => setShowPieceList(!showPieceList)}
-              className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent"
-            >
-              <Icon as={showPieceList ? CheckIcon : PlusIcon} size={20} className={showPieceList ? 'text-primary' : ''} />
-            </TouchableOpacity>
-          </View>
+            <Animated.View
+              style={{
+                opacity: composerAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0],
+                }),
+                maxHeight: composerAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [200, 0],
+                }),
+              }}
+              pointerEvents={showComposerList ? 'none' : 'auto'}>
+              {!showComposerList && (
+                <Card className="p-4">
+                  <View className="flex-row items-center gap-3">
+                    {selectedComposer.avatarUrl ? (
+                      <Image
+                        source={{ uri: getImageUrl(selectedComposer.avatarUrl) }}
+                        className="h-16 w-16 rounded-full"
+                      />
+                    ) : (
+                      <View className="h-16 w-16 items-center justify-center rounded-full bg-muted">
+                        <Text className="text-2xl">{selectedComposer.name[0]}</Text>
+                      </View>
+                    )}
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold">{selectedComposer.name}</Text>
+                      <Text className="text-sm text-muted-foreground">
+                        {selectedComposer.period}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              )}
+            </Animated.View>
 
-          <Animated.View
-            style={{
-              opacity: pieceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [1, 0],
-              }),
-              maxHeight: pieceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [200, 0],
-              }),
-            }}
-            pointerEvents={showPieceList ? 'none' : 'auto'}
-          >
-            {!showPieceList && selectedPiece && (
-              <Card className="p-4">
-                <View className="gap-1">
-                  <Text className="text-lg font-semibold">{selectedPiece.title}</Text>
-                  <Text className="text-sm text-muted-foreground">
-                    {piecePerformanceCounts[selectedPiece.id] || 0}개의 연주 비교 가능
-                  </Text>
-                </View>
-              </Card>
-            )}
-          </Animated.View>
-
-          <Animated.View
-            style={{
-              opacity: pieceAnimation,
-              maxHeight: pieceAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 400],
-              }),
-            }}
-          >
-            {showPieceList && selectedComposer.majorPieces && (
-              <Card className="p-3 gap-3 overflow-hidden">
-                {selectedComposer.majorPieces.map((piece) => (
-                  <Animated.View
-                    key={piece.id}
-                    style={{
-                      opacity: pieceAnimation,
-                      transform: [
-                        {
-                          translateY: pieceAnimation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [-20, 0],
-                          }),
-                        },
-                      ],
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => handlePieceSelect(piece)}
-                      className={`p-3 rounded-lg border ${selectedPiece?.id === piece.id ? 'border-primary bg-primary/5' : 'border-border'} active:bg-accent`}
-                    >
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-1">
-                          <Text className="text-base font-semibold">{piece.title}</Text>
+            <Animated.View
+              style={{
+                opacity: composerAnimation,
+                maxHeight: composerAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 500],
+                }),
+              }}>
+              {showComposerList && (
+                <ScrollView style={{ maxHeight: 500 }}>
+                  <Card className="overflow-hidden p-3">
+                    <View className="gap-3">
+                      {filteredComposers.length === 0 ? (
+                        <View className="items-center p-4">
                           <Text className="text-sm text-muted-foreground">
-                            {piecePerformanceCounts[piece.id] || 0}개의 연주 비교 가능
+                            검색 결과가 없습니다
                           </Text>
                         </View>
-                        {selectedPiece?.id === piece.id && (
-                          <Icon as={CheckIcon} size={20} className="text-primary" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  </Animated.View>
-                ))}
-              </Card>
-            )}
-          </Animated.View>
-        </View>
-
-        {/* 선택된 곡 정보 */}
-        {noPieceFound || !selectedPiece ? (
-          <Card className="p-8 bg-muted/50">
-            <View className="gap-4 items-center">
-              <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
-              <View className="gap-2 items-center">
-                <Text className="text-xl font-bold text-center">비교 영상이 없습니다</Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  해당 곡의 연주 비교 영상이 아직 준비되지 않았습니다.{'\n'}
-                  다른 곡을 선택해주세요.
-                </Text>
-              </View>
-            </View>
-          </Card>
-        ) : (
-          <>
-            <Card className="p-4 bg-primary/5">
-              <View className="gap-2">
-                <Text className="text-2xl font-bold">
-                  {getPeriodEmoji(selectedComposer.period)} {selectedPiece.title}
-                </Text>
-                <Text className="text-sm text-muted-foreground">
-                  {selectedComposer.fullName} • {selectedComposer.period}
-                </Text>
-                <Text className="text-sm leading-6 mt-2">
-                  {selectedPiece.description}
-                </Text>
-              </View>
-            </Card>
-
-            {/* 연주 비교 */}
-            {selectedPiece && (
-              <View className="gap-3">
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-xl font-bold">연주 비교</Text>
-                    {performances.length > 0 && (
-                      <Text className="text-sm text-muted-foreground mt-1">
-                        {currentPerformanceIndex + 1} / {performances.length}개 연주
-                      </Text>
-                    )}
-                  </View>
-                  {canEdit && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onPress={() => {
-                        setSelectedPerformance(undefined);
-                        setPerformanceFormVisible(true);
-                      }}
-                    >
-                      <Icon as={PlusIcon} size={16} />
-                      <Text className="ml-1">추가</Text>
-                    </Button>
-                  )}
-                </View>
-
-                {performances.length === 0 ? (
-                  <Card className="p-8 bg-muted/50">
-                    <View className="gap-4 items-center">
-                      <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
-                      <View className="gap-2 items-center">
-                        <Text className="text-xl font-bold text-center">연주 영상 준비 중</Text>
-                        <Text className="text-sm text-muted-foreground text-center">
-                          이 곡의 연주 비교 영상이 아직 준비되지 않았습니다.
-                        </Text>
-                      </View>
-                    </View>
-                  </Card>
-                ) : (
-                  <FlatList
-                    data={performances}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    pagingEnabled
-                    snapToInterval={350}
-                    decelerationRate="fast"
-                    contentContainerStyle={{ paddingRight: 16 }}
-                    onViewableItemsChanged={onViewableItemsChanged}
-                    viewabilityConfig={viewabilityConfig}
-                    renderItem={({ item: performance }) => {
-                      const artist = artists[performance.artistId];
-
-                      return (
-                        <Card className="overflow-hidden mr-4" style={{ width: 340 }}>
-                          {/* 연주자 정보 */}
-                          <View className="p-4 flex-row items-center justify-between bg-muted/30">
-                            <TouchableOpacity
-                              className="flex-row items-center gap-3 flex-1"
-                              onPress={() => artist && router.push(`/artist/${artist.id}`)}
-                            >
-                              {artist?.imageUrl ? (
+                      ) : (
+                        filteredComposers.map((composer) => (
+                          <TouchableOpacity
+                            key={composer.id}
+                            onPress={() => handleComposerSelect(composer)}
+                            className={`rounded-lg border p-3 ${selectedComposer.id === composer.id ? 'border-primary bg-primary/5' : 'border-border'} active:bg-accent`}>
+                            <View className="flex-row items-center gap-3">
+                              {composer.avatarUrl ? (
                                 <Image
-                                  source={{ uri: getImageUrl(artist.imageUrl) }}
-                                  className="w-12 h-12 rounded-full"
+                                  source={{ uri: getImageUrl(composer.avatarUrl) }}
+                                  className="h-12 w-12 rounded-full"
                                 />
                               ) : (
-                                <View className="w-12 h-12 rounded-full bg-muted items-center justify-center">
-                                  <Text className="text-lg font-bold">
-                                    {artist?.name?.[0] || '?'}
-                                  </Text>
+                                <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
+                                  <Text className="text-xl">{composer.name[0]}</Text>
                                 </View>
                               )}
                               <View className="flex-1">
-                                <Text className="font-bold">{artist?.name || '알 수 없음'}</Text>
+                                <Text className="text-base font-semibold">{composer.name}</Text>
                                 <Text className="text-xs text-muted-foreground">
-                                  {Math.floor(performance.startTime / 60)}:{(performance.startTime % 60).toString().padStart(2, '0')} - {Math.floor(performance.endTime / 60)}:{(performance.endTime % 60).toString().padStart(2, '0')}
+                                  {composer.period}
+                                </Text>
+                                <Text className="text-xs text-muted-foreground">
+                                  {`${composer.majorPieces?.length || 0}곡`}
                                 </Text>
                               </View>
-                            </TouchableOpacity>
-
-                            {canEdit && (
-                              <View className="flex-row gap-2">
-                                <TouchableOpacity
-                                  onPress={() => {
-                                    setSelectedPerformance(performance);
-                                    setPerformanceFormVisible(true);
-                                  }}
-                                  className="p-2"
-                                >
-                                  <Icon as={EditIcon} size={18} className="text-primary" />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => handleDeletePerformance(performance.id)}
-                                  className="p-2"
-                                >
-                                  <Icon as={TrashIcon} size={18} className="text-destructive" />
-                                </TouchableOpacity>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* YouTube Player */}
-                          <View style={{ width: '100%', height: 250 }}>
-                            <YoutubePlayer
-                              videoId={performance.videoId}
-                              height={250}
-                              play={false}
-                              initialPlayerParams={{
-                                start: performance.startTime,
-                                end: performance.endTime,
-                                controls: true,
-                                modestbranding: true,
-                                rel: false,
-                              }}
-                            />
-                          </View>
-
-                          {/* 연주 특징 */}
-                          {performance.characteristic && (
-                            <View className="p-4 bg-background">
-                              <Text className="text-sm leading-5 text-muted-foreground">
-                                {performance.characteristic}
-                              </Text>
+                              {selectedComposer.id === composer.id && (
+                                <Icon as={CheckIcon} size={20} className="text-primary" />
+                              )}
                             </View>
-                          )}
-                        </Card>
-                      );
-                    }}
-                    keyExtractor={(item) => item.id.toString()}
-                  />
-                )}
+                          </TouchableOpacity>
+                        ))
+                      )}
+                    </View>
+                  </Card>
+                </ScrollView>
+              )}
+            </Animated.View>
+          </View>
 
-                {/* 페이지 인디케이터 */}
-                {performances.length > 1 && (
-                  <View className="flex-row justify-center gap-2 mt-3">
-                    {performances.map((_, index) => (
-                      <View
-                        key={index}
-                        className={`h-2 rounded-full ${
-                          index === currentPerformanceIndex
-                            ? 'bg-primary w-6'
-                            : 'bg-muted w-2'
-                        }`}
-                      />
-                    ))}
-                  </View>
-                )}
+          {/* 곡 선택 */}
+          <View className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold">곡 선택</Text>
+              <TouchableOpacity
+                onPress={() => setShowPieceList(!showPieceList)}
+                className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent">
+                <Icon
+                  as={showPieceList ? CheckIcon : PlusIcon}
+                  size={20}
+                  className={showPieceList ? 'text-primary' : ''}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* 곡 검색 */}
+            {showPieceList && (
+              <View className="relative">
+                <Input
+                  placeholder="곡 검색..."
+                  value={pieceSearchQuery}
+                  onChangeText={setPieceSearchQuery}
+                  className="pl-10"
+                />
+                <View className="absolute left-3 top-3.5">
+                  <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
+                </View>
               </View>
             )}
-          </>
-        )}
-      </View>
-    </ScrollView>
 
-    {/* Performance Form Modal */}
-    <PerformanceFormModal
-      visible={performanceFormVisible}
-      performance={selectedPerformance}
-      composerId={selectedComposer?.id}
-      pieceId={selectedPiece?.id}
-      onClose={() => setPerformanceFormVisible(false)}
-      onSuccess={() => {
-        setPerformanceFormVisible(false);
-        if (selectedPiece) {
-          loadPerformances(selectedPiece.id);
-        }
-      }}
-    />
-  </>
+            <Animated.View
+              style={{
+                opacity: pieceAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0],
+                }),
+                maxHeight: pieceAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [200, 0],
+                }),
+              }}
+              pointerEvents={showPieceList ? 'none' : 'auto'}>
+              {!showPieceList && selectedPiece && (
+                <Card className="p-4">
+                  <View className="gap-1">
+                    <Text className="text-lg font-semibold">{selectedPiece.title}</Text>
+                    <Text className="text-sm text-muted-foreground">
+                      {piecePerformanceCounts[selectedPiece.id] || 0}개의 연주 비교 가능
+                    </Text>
+                  </View>
+                </Card>
+              )}
+            </Animated.View>
+
+            <Animated.View
+              style={{
+                opacity: pieceAnimation,
+                maxHeight: pieceAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 400],
+                }),
+              }}>
+              {showPieceList && (
+                <ScrollView style={{ maxHeight: 400 }}>
+                  <Card className="gap-3 overflow-hidden p-3">
+                    {filteredPieces.length === 0 ? (
+                      <View className="items-center p-4">
+                        <Text className="text-sm text-muted-foreground">검색 결과가 없습니다</Text>
+                      </View>
+                    ) : (
+                      filteredPieces.map((piece) => (
+                        <TouchableOpacity
+                          key={piece.id}
+                          onPress={() => handlePieceSelect(piece)}
+                          className={`rounded-lg border p-3 ${selectedPiece?.id === piece.id ? 'border-primary bg-primary/5' : 'border-border'} active:bg-accent`}>
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-1">
+                              <Text className="text-base font-semibold">{piece.title}</Text>
+                              {piece.opusNumber && (
+                                <Text className="text-xs text-muted-foreground">
+                                  {piece.opusNumber}
+                                </Text>
+                              )}
+                              <Text className="text-sm text-muted-foreground">
+                                {piecePerformanceCounts[piece.id] || 0}개의 연주 비교 가능
+                              </Text>
+                            </View>
+                            {selectedPiece?.id === piece.id && (
+                              <Icon as={CheckIcon} size={20} className="text-primary" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </Card>
+                </ScrollView>
+              )}
+            </Animated.View>
+          </View>
+
+          {/* 선택된 곡 정보 */}
+          {noPieceFound || !selectedPiece ? (
+            <Card className="bg-muted/50 p-8">
+              <View className="items-center gap-4">
+                <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
+                <View className="items-center gap-2">
+                  <Text className="text-center text-xl font-bold">비교 영상이 없습니다</Text>
+                  <Text className="text-center text-sm text-muted-foreground">
+                    해당 곡의 연주 비교 영상이 아직 준비되지 않았습니다.{'\n'}
+                    다른 곡을 선택해주세요.
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          ) : (
+            <>
+              <Card className="bg-primary/5 p-4">
+                <View className="gap-2">
+                  <Text className="text-2xl font-bold">
+                    {getPeriodEmoji(selectedComposer.period)} {selectedPiece.title}
+                  </Text>
+                  <Text className="text-sm text-muted-foreground">
+                    {selectedComposer.fullName} • {selectedComposer.period}
+                  </Text>
+                  <Text className="mt-2 text-sm leading-6">{selectedPiece.description}</Text>
+                </View>
+              </Card>
+
+              {/* 연주 비교 */}
+              {selectedPiece && (
+                <View className="gap-3">
+                  <View className="flex-row items-center justify-between">
+                    <View>
+                      <Text className="text-xl font-bold">연주 비교</Text>
+                      {performances.length > 0 && (
+                        <Text className="mt-1 text-sm text-muted-foreground">
+                          {currentPerformanceIndex + 1} / {performances.length}개 연주
+                        </Text>
+                      )}
+                    </View>
+                    {canEdit && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onPress={() => {
+                          setSelectedPerformance(undefined);
+                          setPerformanceFormVisible(true);
+                        }}>
+                        <Icon as={PlusIcon} size={16} />
+                        <Text className="ml-1">추가</Text>
+                      </Button>
+                    )}
+                  </View>
+
+                  {performances.length === 0 ? (
+                    <Card className="bg-muted/50 p-8">
+                      <View className="items-center gap-4">
+                        <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
+                        <View className="items-center gap-2">
+                          <Text className="text-center text-xl font-bold">연주 영상 준비 중</Text>
+                          <Text className="text-center text-sm text-muted-foreground">
+                            이 곡의 연주 비교 영상이 아직 준비되지 않았습니다.
+                          </Text>
+                        </View>
+                      </View>
+                    </Card>
+                  ) : (
+                    <FlatList
+                      data={performances}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      pagingEnabled
+                      snapToInterval={350}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingRight: 16 }}
+                      onViewableItemsChanged={onViewableItemsChanged}
+                      viewabilityConfig={viewabilityConfig}
+                      renderItem={({ item: performance }) => {
+                        const artist = artists[performance.artistId];
+
+                        return (
+                          <Card className="mr-4 overflow-hidden" style={{ width: 340 }}>
+                            {/* 연주자 정보 */}
+                            <View className="flex-row items-center justify-between bg-muted/30 p-4">
+                              <TouchableOpacity
+                                className="flex-1 flex-row items-center gap-3"
+                                onPress={() => artist && router.push(`/artist/${artist.id}`)}>
+                                {artist?.imageUrl ? (
+                                  <Image
+                                    source={{ uri: getImageUrl(artist.imageUrl) }}
+                                    className="h-12 w-12 rounded-full"
+                                  />
+                                ) : (
+                                  <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
+                                    <Text className="text-lg font-bold">
+                                      {artist?.name?.[0] || '?'}
+                                    </Text>
+                                  </View>
+                                )}
+                                <View className="flex-1">
+                                  <Text className="font-bold">{artist?.name || '알 수 없음'}</Text>
+                                  <Text className="text-xs text-muted-foreground">
+                                    {Math.floor(performance.startTime / 60)}:
+                                    {(performance.startTime % 60).toString().padStart(2, '0')} -{' '}
+                                    {Math.floor(performance.endTime / 60)}:
+                                    {(performance.endTime % 60).toString().padStart(2, '0')}
+                                  </Text>
+                                </View>
+                              </TouchableOpacity>
+
+                              {canEdit && (
+                                <View className="flex-row gap-2">
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      setSelectedPerformance(performance);
+                                      setPerformanceFormVisible(true);
+                                    }}
+                                    className="p-2">
+                                    <Icon as={EditIcon} size={18} className="text-primary" />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    onPress={() => handleDeletePerformance(performance.id)}
+                                    className="p-2">
+                                    <Icon as={TrashIcon} size={18} className="text-destructive" />
+                                  </TouchableOpacity>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* YouTube Player */}
+                            <View style={{ width: '100%', height: 250 }}>
+                              <YoutubePlayer
+                                videoId={performance.videoId}
+                                height={250}
+                                play={false}
+                                initialPlayerParams={{
+                                  start: performance.startTime,
+                                  end: performance.endTime,
+                                  controls: true,
+                                  modestbranding: true,
+                                  rel: false,
+                                }}
+                              />
+                            </View>
+
+                            {/* 연주 특징 */}
+                            {performance.characteristic && (
+                              <View className="bg-background p-4">
+                                <Text className="text-sm leading-5 text-muted-foreground">
+                                  {performance.characteristic}
+                                </Text>
+                              </View>
+                            )}
+                          </Card>
+                        );
+                      }}
+                      keyExtractor={(item) => item.id.toString()}
+                    />
+                  )}
+
+                  {/* 페이지 인디케이터 */}
+                  {performances.length > 1 && (
+                    <View className="mt-3 flex-row justify-center gap-2">
+                      {performances.map((_, index) => (
+                        <View
+                          key={index}
+                          className={`h-2 rounded-full ${
+                            index === currentPerformanceIndex ? 'w-6 bg-primary' : 'w-2 bg-muted'
+                          }`}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Performance Form Modal */}
+      <PerformanceFormModal
+        visible={performanceFormVisible}
+        performance={selectedPerformance}
+        composerId={selectedComposer?.id}
+        pieceId={selectedPiece?.id}
+        onClose={() => setPerformanceFormVisible(false)}
+        onSuccess={() => {
+          setPerformanceFormVisible(false);
+          if (selectedPiece) {
+            loadPerformances(selectedPiece.id);
+          }
+        }}
+      />
+    </>
   );
 }
+

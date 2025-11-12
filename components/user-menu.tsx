@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/text';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import type { TriggerRef } from '@rn-primitives/popover';
-import { LogOutIcon, PlusIcon, SettingsIcon } from 'lucide-react-native';
+import { LogOutIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View } from 'react-native';
 import { getImageUrl } from '@/lib/utils/image';
@@ -21,6 +21,11 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
     popoverTriggerRef.current?.close();
     await signOut();
     router.replace('/(auth)/sign-in');
+  }
+
+  function onManageAccount() {
+    popoverTriggerRef.current?.close();
+    router.push('/settings');
   }
 
   return (
@@ -49,32 +54,16 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
             <Button
               variant="outline"
               size="sm"
-              onPress={() => {
-                // TODO: Navigate to account settings screen
-              }}>
+              onPress={onManageAccount}>
               <Icon as={SettingsIcon} className="size-4" />
-              <Text>Manage Account</Text>
+              <Text>계정 관리</Text>
             </Button>
             <Button variant="outline" size="sm" className="flex-1" onPress={onSignOut}>
               <Icon as={LogOutIcon} className="size-4" />
-              <Text>Sign Out</Text>
+              <Text>로그아웃</Text>
             </Button>
           </View>
         </View>
-        <Button
-          variant="ghost"
-          size="lg"
-          className="h-16 justify-start gap-3 rounded-none rounded-b-md px-3 sm:h-14"
-          onPress={() => {
-            // TODO: Navigate to add account screen
-          }}>
-          <View className="size-10 items-center justify-center">
-            <View className="size-7 items-center justify-center rounded-full border border-dashed border-border bg-muted/50">
-              <Icon as={PlusIcon} className="size-5" />
-            </View>
-          </View>
-          <Text>Add account</Text>
-        </Button>
       </PopoverContent>
     </Popover>
   );
