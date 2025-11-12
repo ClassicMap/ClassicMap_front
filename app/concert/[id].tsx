@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { View, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Animated, Platform } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
-import { 
-  ArrowLeftIcon, 
+import {
+  ArrowLeftIcon,
   CalendarIcon,
   MapPinIcon,
   TicketIcon,
@@ -22,12 +22,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { ConcertAPI } from '@/lib/api/client';
+import { ConcertAPI, VenueAPI } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getImageUrl } from '@/lib/utils/image';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { prefetchImages } from '@/components/optimized-image';
+import { StarRating } from '@/components/StarRating';
 
 interface Concert {
   id: number;
@@ -63,16 +64,82 @@ export default function ConcertDetailScreen() {
   const [error, setError] = React.useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const imageOpacity = React.useRef(new Animated.Value(0)).current;
-  const { canEdit } = useAuth();
+  const { canEdit, isSignedIn } = useAuth();
   const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [userRating, setUserRating] = React.useState<number>(0);
+  const [hasWatched, setHasWatched] = React.useState(false);
+  const [venueName, setVenueName] = React.useState<string>('');
 
   React.useEffect(() => {
     if (id) {
       loadConcert();
+      if (isSignedIn) {
+        loadUserRating();
+      }
     }
-  }, [id]);
+  }, [id, isSignedIn]);
+
+  const loadUserRating = async () => {
+    try {
+      const rating = await ConcertAPI.getUserRating(Number(id));
+      if (rating != null) {
+        setUserRating(Number(rating));
+        setHasWatched(true);
+      }
+    } catch (error) {
+      console.error('Failed to load user rating:', error);
+    }
+  };
+
+  const handleRatingPress = () => {
+    if (!isSignedIn) {
+      Alert.alert('로그인 필요', '평점을 입력하려면 로그인이 필요합니다.');
+      return;
+    }
+
+    if (!hasWatched) {
+      Alert.alert(
+        '공연 관람 확인',
+        '이 평점은 공연을 관람한 후에 매기는 평점입니다. 공연을 보셨나요?',
+        [
+          { text: '취소', style: 'cancel' },
+          {
+            text: '네, 봤습니다',
+            onPress: () => setHasWatched(true),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleRatingChange = async (rating: number) => {
+    if (!hasWatched) {
+      handleRatingPress();
+      return;
+    }
+
+    setUserRating(rating);
+    try {
+      await ConcertAPI.submitRating(Number(id), rating);
+      Alert.alert('성공', '평점이 등록되었습니다.');
+      // Reload concert to show updated average rating
+      loadConcert();
+    } catch (error) {
+      Alert.alert('오류', '평점 등록에 실패했습니다.');
+      console.error('Failed to submit rating:', error);
+    }
+  };
 
   const handleImageLoad = () => {
+    setImageLoaded(true);
+    Animated.timing(imageOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleImageError = () => {
     setImageLoaded(true);
     Animated.timing(imageOpacity, {
       toValue: 1,
@@ -88,6 +155,18 @@ export default function ConcertDetailScreen() {
     try {
       const data = await ConcertAPI.getById(Number(id));
       setConcert(data as Concert);
+
+      // 공연장 정보 로드
+      if (data?.venueId) {
+        try {
+          const venue = await VenueAPI.getById(data.venueId);
+          if (venue) {
+            setVenueName(venue.name);
+          }
+        } catch (err) {
+          console.error('Failed to load venue:', err);
+        }
+      }
 
       // 이미지 프리페치
       if (data.posterUrl) {
@@ -107,6 +186,18 @@ export default function ConcertDetailScreen() {
     try {
       const data = await ConcertAPI.getById(Number(id));
       setConcert(data as Concert);
+
+      // 공연장 정보 로드
+      if (data?.venueId) {
+        try {
+          const venue = await VenueAPI.getById(data.venueId);
+          if (venue) {
+            setVenueName(venue.name);
+          }
+        } catch (err) {
+          console.error('Failed to load venue:', err);
+        }
+      }
 
       if (data.posterUrl) {
         await prefetchImages([data.posterUrl]);
@@ -256,26 +347,38 @@ export default function ConcertDetailScreen() {
           {/* Poster Image */}
           <Card className="overflow-hidden p-0 mx-auto" style={{ width: '80%', maxWidth: 320 }}>
             {!imageLoaded && (
-              <View className="w-full bg-muted" style={{ aspectRatio: 2/3 }}>
-                <ActivityIndicator size="large" style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -20, marginTop: -20 }} />
+              <View className="w-full bg-muted items-center justify-center" style={{ aspectRatio: 2/3 }}>
+                <ActivityIndicator size="large" />
               </View>
             )}
-            {Platform.OS === 'web' ? (
-              <Image
-                source={{ uri: getImageUrl(concert.posterUrl) || 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&h=900&fit=crop' }}
-                className="w-full"
-                style={{ aspectRatio: 2/3, opacity: imageLoaded ? 1 : 0 }}
-                resizeMode="cover"
-                onLoad={handleImageLoad}
-              />
+            {concert.posterUrl ? (
+              Platform.OS === 'web' ? (
+                <Image
+                  source={{ uri: getImageUrl(concert.posterUrl) }}
+                  className="w-full"
+                  style={{ aspectRatio: 2/3, opacity: imageLoaded ? 1 : 0 }}
+                  resizeMode="cover"
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              ) : (
+                <Animated.Image
+                  source={{ uri: getImageUrl(concert.posterUrl) }}
+                  className="w-full"
+                  style={{ aspectRatio: 2/3, opacity: imageOpacity }}
+                  resizeMode="cover"
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                />
+              )
             ) : (
-              <Animated.Image
-                source={{ uri: getImageUrl(concert.posterUrl) || 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=600&h=900&fit=crop' }}
-                className="w-full"
-                style={{ aspectRatio: 2/3, opacity: imageOpacity }}
-                resizeMode="cover"
-                onLoad={handleImageLoad}
-              />
+              <View
+                className="w-full bg-muted items-center justify-center"
+                style={{ aspectRatio: 2/3 }}
+                onLayout={handleImageLoad}
+              >
+                <Icon as={CalendarIcon} size={64} className="text-muted-foreground" />
+              </View>
             )}
           </Card>
 
@@ -304,7 +407,9 @@ export default function ConcertDetailScreen() {
                 <Icon as={MapPinIcon} size={20} className="text-primary mt-0.5" />
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">장소</Text>
-                  <Text className="text-base font-medium">공연장 ID: {concert.venueId || 'N/A'}</Text>
+                  <Text className="text-base font-medium">
+                    {venueName || '공연장 정보 없음'}
+                  </Text>
                 </View>
               </View>
 
@@ -322,13 +427,15 @@ export default function ConcertDetailScreen() {
 
           {/* Rating Section */}
           <Card className="p-4">
-            <View className="gap-3">
+            <View className="gap-4">
               <Text className="text-lg font-bold">공연 평점</Text>
-              {concert.rating !== undefined && concert.rating > 0 ? (
+
+              {/* Average Rating */}
+              {concert.rating != null && Number(concert.rating) > 0 ? (
                 <View className="items-center gap-2">
                   <View className="flex-row items-center gap-2">
                     <Icon as={StarIcon} size={32} className="text-amber-500" />
-                    <Text className="text-4xl font-bold">{concert.rating.toFixed(1)}</Text>
+                    <Text className="text-4xl font-bold">{Number(concert.rating).toFixed(1)}</Text>
                   </View>
                   {concert.ratingCount && concert.ratingCount > 0 && (
                     <Text className="text-sm text-muted-foreground">
@@ -337,11 +444,36 @@ export default function ConcertDetailScreen() {
                   )}
                 </View>
               ) : (
-                <Text className="text-center text-muted-foreground py-4">
+                <Text className="text-center text-muted-foreground py-2">
                   아직 평가가 없습니다
                 </Text>
               )}
-              {/* 평점 입력 UI는 향후 사용자 인증 후 추가 예정 */}
+
+              {/* User Rating Input */}
+              <View className="border-t border-border pt-4">
+                <TouchableOpacity onPress={handleRatingPress} activeOpacity={hasWatched ? 1 : 0.7}>
+                  <View className="gap-2">
+                    <Text className="text-sm font-medium">내 평점</Text>
+                    <View className="items-center">
+                      <StarRating
+                        rating={userRating}
+                        onRatingChange={hasWatched ? handleRatingChange : undefined}
+                        size={32}
+                      />
+                    </View>
+                    {!hasWatched && isSignedIn && (
+                      <Text className="text-xs text-muted-foreground text-center">
+                        평점을 입력하려면 탭하세요
+                      </Text>
+                    )}
+                    {!isSignedIn && (
+                      <Text className="text-xs text-muted-foreground text-center">
+                        로그인 후 평점을 입력할 수 있습니다
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           </Card>
 

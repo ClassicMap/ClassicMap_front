@@ -5,14 +5,18 @@ import { getImageUrl } from '@/lib/utils/image';
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   uri?: string | null;
   fallbackUri?: string;
+  fallbackComponent?: React.ReactNode;
 }
 
-export function OptimizedImage({ uri, fallbackUri, style, ...props }: OptimizedImageProps) {
+export function OptimizedImage({ uri, fallbackUri, fallbackComponent, style, ...props }: OptimizedImageProps) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
   const imageUrl = getImageUrl(uri) || fallbackUri || '';
 
-  if (!imageUrl) {
+  if (!imageUrl || error) {
+    if (fallbackComponent) {
+      return <View style={style}>{fallbackComponent}</View>;
+    }
     return <View style={style} />;
   }
 

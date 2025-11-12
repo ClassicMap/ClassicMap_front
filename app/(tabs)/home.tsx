@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { View, ScrollView, FlatList, Image, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
-import { StarIcon, TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
+import { TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
@@ -21,7 +21,6 @@ interface LegacyArtist {
   name: string;
   category: string;
   tier: 'S' | 'Rising';
-  rating: number;
   image: string;
 }
 
@@ -79,7 +78,6 @@ export default function HomeScreen() {
         name: artist.name,
         category: artist.category,
         tier: artist.tier as 'S' | 'Rising',
-        rating: artist.rating,
         image: artist.imageUrl || '',
       }));
       setArtists(legacyArtists);
@@ -134,7 +132,6 @@ export default function HomeScreen() {
         name: artist.name,
         category: artist.category,
         tier: artist.tier as 'S' | 'Rising',
-        rating: artist.rating,
         image: artist.imageUrl || '',
       }));
       setArtists(legacyArtists);
@@ -451,10 +448,6 @@ function ArtistCard({ artist }: { artist: LegacyArtist }) {
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {artist.category}
             </Text>
-            <View className="flex-row items-center gap-1">
-              <Icon as={StarIcon} size={10} className="text-amber-500" />
-              <Text className="text-xs font-medium">{artist.rating}</Text>
-            </View>
           </View>
         </View>
       </Card>

@@ -660,7 +660,7 @@ export default function TimelineScreen() {
 
             <View className="gap-2">
               <TextInput
-                className="rounded-xl border border-border bg-card px-4 py-3 text-base"
+                className="rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground"
                 placeholder="작곡가 검색 (이름, 국적)"
                 placeholderTextColor="#888"
                 value={searchQuery}
