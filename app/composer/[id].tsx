@@ -664,6 +664,15 @@ export default function ComposerDetailScreen() {
     }).start();
   };
 
+  const handleCoverImageError = () => {
+    setCoverImageLoaded(true);
+    Animated.timing(coverImageOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const handleDeleteComposer = () => {
     if (!composer) return;
     Alert.alert(
@@ -729,22 +738,33 @@ export default function ComposerDetailScreen() {
               <ActivityIndicator size="large" />
             </View>
           )}
-          {Platform.OS === 'web' ? (
-            <Image
-              source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
-              className="h-full w-full"
-              style={{ opacity: coverImageLoaded ? 1 : 0 }}
-              resizeMode="cover"
-              onLoad={handleCoverImageLoad}
-            />
+          {composer.coverImageUrl ? (
+            Platform.OS === 'web' ? (
+              <Image
+                source={{ uri: getImageUrl(composer.coverImageUrl) }}
+                className="h-full w-full"
+                style={{ opacity: coverImageLoaded ? 1 : 0 }}
+                resizeMode="cover"
+                onLoad={handleCoverImageLoad}
+                onError={handleCoverImageError}
+              />
+            ) : (
+              <Animated.Image
+                source={{ uri: getImageUrl(composer.coverImageUrl) }}
+                className="h-full w-full"
+                style={{ opacity: coverImageOpacity }}
+                resizeMode="cover"
+                onLoad={handleCoverImageLoad}
+                onError={handleCoverImageError}
+              />
+            )
           ) : (
-            <Animated.Image
-              source={{ uri: getImageUrl(composer.coverImageUrl) || 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop' }}
-              className="h-full w-full"
-              style={{ opacity: coverImageOpacity }}
-              resizeMode="cover"
-              onLoad={handleCoverImageLoad}
-            />
+            <View
+              className="h-full w-full bg-muted items-center justify-center"
+              onLayout={handleCoverImageLoad}
+            >
+              <Icon as={MusicIcon} size={64} className="text-muted-foreground" />
+            </View>
           )}
           <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
           

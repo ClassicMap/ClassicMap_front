@@ -85,11 +85,13 @@ export function useAuth() {
   const isAdmin = profile?.role === 'admin';
   const isModerator = profile?.role === 'moderator';
   const canEdit = isAdmin || isModerator;
+  const isSignedIn = isLoaded && !!user;
 
   return {
     user,
     profile,
     loading,
+    isSignedIn,
     isAdmin,
     isModerator,
     canEdit,

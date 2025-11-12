@@ -31,6 +31,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import type { Composer, Piece, Performance, Artist } from '@/lib/types/models';
 import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
 import { getImageUrl } from '@/lib/utils/image';
+import { getAllPeriods } from '@/lib/data/mockDTO';
 
 interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];
@@ -412,6 +413,19 @@ export default function CompareScreen() {
     return emojiMap[period] || '🎵';
   };
 
+  const getPeriodColor = (period: string): string => {
+    const ERAS = getAllPeriods();
+    const periodMap: { [key: string]: string } = {
+      바로크: 'baroque',
+      고전주의: 'classical',
+      낭만주의: 'romantic',
+      근현대: 'modern',
+    };
+    const eraId = periodMap[period];
+    const era = ERAS.find((e) => e.id === eraId);
+    return era?.color || '#888888';
+  };
+
   return (
     <>
       <ScrollView
@@ -503,16 +517,36 @@ export default function CompareScreen() {
               {!showComposerList && (
                 <Card className="p-4">
                   <View className="flex-row items-center gap-3">
-                    {selectedComposer.avatarUrl ? (
-                      <Image
-                        source={{ uri: getImageUrl(selectedComposer.avatarUrl) }}
-                        className="h-16 w-16 rounded-full"
-                      />
-                    ) : (
-                      <View className="h-16 w-16 items-center justify-center rounded-full bg-muted">
-                        <Text className="text-2xl">{selectedComposer.name[0]}</Text>
-                      </View>
-                    )}
+                    <View
+                      style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 32,
+                        borderWidth: 3,
+                        borderColor: getPeriodColor(selectedComposer.period),
+                        overflow: 'hidden',
+                        backgroundColor: '#fff',
+                      }}>
+                      {selectedComposer.avatarUrl ? (
+                        <Image
+                          source={{ uri: getImageUrl(selectedComposer.avatarUrl) }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View
+                          className="size-full items-center justify-center"
+                          style={{
+                            backgroundColor: getPeriodColor(selectedComposer.period) + '30',
+                          }}>
+                          <Text
+                            className="text-2xl font-bold"
+                            style={{ color: getPeriodColor(selectedComposer.period) }}>
+                            {selectedComposer.name[0]}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                     <View className="flex-1">
                       <Text className="text-lg font-semibold">{selectedComposer.name}</Text>
                       <Text className="text-sm text-muted-foreground">
@@ -549,16 +583,36 @@ export default function CompareScreen() {
                             onPress={() => handleComposerSelect(composer)}
                             className={`rounded-lg border p-3 ${selectedComposer.id === composer.id ? 'border-primary bg-primary/5' : 'border-border'} active:bg-accent`}>
                             <View className="flex-row items-center gap-3">
-                              {composer.avatarUrl ? (
-                                <Image
-                                  source={{ uri: getImageUrl(composer.avatarUrl) }}
-                                  className="h-12 w-12 rounded-full"
-                                />
-                              ) : (
-                                <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
-                                  <Text className="text-xl">{composer.name[0]}</Text>
-                                </View>
-                              )}
+                              <View
+                                style={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 24,
+                                  borderWidth: 3,
+                                  borderColor: getPeriodColor(composer.period),
+                                  overflow: 'hidden',
+                                  backgroundColor: '#fff',
+                                }}>
+                                {composer.avatarUrl ? (
+                                  <Image
+                                    source={{ uri: getImageUrl(composer.avatarUrl) }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <View
+                                    className="size-full items-center justify-center"
+                                    style={{
+                                      backgroundColor: getPeriodColor(composer.period) + '30',
+                                    }}>
+                                    <Text
+                                      className="text-xl font-bold"
+                                      style={{ color: getPeriodColor(composer.period) }}>
+                                      {composer.name[0]}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
                               <View className="flex-1">
                                 <Text className="text-base font-semibold">{composer.name}</Text>
                                 <Text className="text-xs text-muted-foreground">

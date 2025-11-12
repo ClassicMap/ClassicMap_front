@@ -256,7 +256,6 @@ export const ComposerAPI = {
       const response = await authenticatedFetch(`${API_BASE_URL}/composers`);
       if (!response.ok) throw new Error('Failed to fetch composers');
       const data: APIComposer[] = await response.json();
-      console.log('Raw API data:', JSON.stringify(data, null, 2));
       const mapped = data.map(mapComposer);
       return mapped;
     }
@@ -439,6 +438,45 @@ export const ConcertAPI = {
       if (!data) return null;
       const mapped = mapConcert(data);
       return mapped;
+    }
+    return Promise.resolve(null);
+  },
+
+  /**
+   * 아티스트의 모든 공연 조회
+   */
+  async getByArtist(artistId: number): Promise<Concert[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/concerts`);
+      if (!response.ok) throw new Error('Failed to fetch concerts for artist');
+      const data: APIConcert[] = await response.json();
+      return data.map(mapConcert);
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
+   * 공연 평점 제출
+   */
+  async submitRating(concertId: number, rating: number): Promise<void> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/rating`, {
+        method: 'POST',
+        body: JSON.stringify({ rating }),
+      });
+      if (!response.ok) throw new Error('Failed to submit rating');
+    }
+  },
+
+  /**
+   * 사용자의 공연 평점 조회
+   */
+  async getUserRating(concertId: number): Promise<number | null> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/user-rating`);
+      if (!response.ok) throw new Error('Failed to get user rating');
+      const rating = await response.json();
+      return rating ? Number(rating) : null;
     }
     return Promise.resolve(null);
   },
