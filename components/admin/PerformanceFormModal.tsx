@@ -1,6 +1,6 @@
 // components/admin/PerformanceFormModal.tsx
 import * as React from 'react';
-import { View, Modal, ScrollView, Alert, TextInput, TouchableOpacity } from 'react-native';
+import { View, Modal, ScrollView, Alert, TextInput, TouchableOpacity, Platform } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -325,8 +325,9 @@ export function PerformanceFormModal({ visible, performance, composerId, pieceId
           <View className="gap-2 mb-4">
             <Label nativeID="characteristic">연주 특징</Label>
             <TextInput
-              className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
               placeholder="이 연주의 특징을 입력하세요"
+              placeholderTextColor={Platform.select({ ios: '#999999', android: '#999999', default: undefined })}
               value={characteristic}
               onChangeText={setCharacteristic}
               multiline

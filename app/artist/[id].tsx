@@ -44,292 +44,6 @@ import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 
-// Mock 데이터
-const ARTIST_DETAILS: Record<string, any> = {
-  '1': {
-    id: '1',
-    name: '조성진',
-    englishName: 'Seong-Jin Cho',
-    category: '피아니스트',
-    tier: 'S',
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    coverImage:
-      'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=1200&h=400&fit=crop',
-    birthYear: '1994',
-    nationality: '대한민국',
-    bio: '2015년 쇼팽 콩쿠르 우승자로, 섬세하고 깊이 있는 해석으로 전 세계 클래식 음악 팬들의 사랑을 받고 있습니다. 특히 쇼팽, 드뷔시 작품에서 탁월한 연주를 선보입니다.',
-    specialty: ['쇼팽', '드뷔시', '라벨', '모차르트'],
-    awards: [
-      { year: '2015', name: '쇼팽 국제 피아노 콩쿠르 1위' },
-      { year: '2011', name: '차이콥스키 국제 콩쿠르 3위' },
-      { year: '2009', name: '하마마쓰 국제 피아노 콩쿠르 1위' },
-    ],
-    upcomingConcerts: [
-      {
-        id: '1',
-        title: '조성진 피아노 리사이탈',
-        date: '2025.03.15',
-        venue: '롯데콘서트홀',
-        program: '쇼팽 발라드 전곡',
-      },
-      {
-        id: '2',
-        title: '조성진 & 서울시향',
-        date: '2025.05.20',
-        venue: '예술의전당',
-        program: '라흐마니노프 피아노 협주곡 2번',
-      },
-    ],
-    recordings: [
-      {
-        id: '1',
-        title: '쇼팽: 발라드 전곡',
-        year: '2016',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=400&h=400&fit=crop',
-      },
-      {
-        id: '2',
-        title: '드뷔시: 전주곡집',
-        year: '2019',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop',
-      },
-      {
-        id: '3',
-        title: '모차르트: 피아노 협주곡',
-        year: '2018',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
-      },
-    ],
-    style: '섬세하고 시적인 표현, 명료한 터치, 깊이 있는 음악성',
-    stats: {
-      concerts: 120,
-      countries: 35,
-      albums: 8,
-    },
-  },
-  '2': {
-    id: '2',
-    name: '임윤찬',
-    englishName: 'Yunchan Lim',
-    category: '피아니스트',
-    tier: 'Rising Star',
-    rating: 4.8,
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop',
-    coverImage:
-      'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=1200&h=400&fit=crop',
-    birthYear: '2004',
-    nationality: '대한민국',
-    bio: '2022년 반 클라이번 콩쿠르 최연소 우승자. 압도적인 테크닉과 성숙한 음악성으로 클래식 음악계의 새로운 전설을 쓰고 있습니다.',
-    specialty: ['라흐마니노프', '리스트', '베토벤', '쇼팽'],
-    awards: [
-      { year: '2022', name: '반 클라이번 국제 피아노 콩쿠르 1위' },
-      { year: '2018', name: '클리블랜드 국제 피아노 콩쿠르 주니어 1위' },
-    ],
-    upcomingConcerts: [
-      {
-        id: '1',
-        title: '임윤찬과 서울시향',
-        date: '2025.05.10',
-        venue: '롯데콘서트홀',
-        program: '라흐마니노프 피아노 협주곡 3번',
-      },
-    ],
-    recordings: [
-      {
-        id: '1',
-        title: '반 클라이번 콩쿠르 실황',
-        year: '2022',
-        label: 'Harmonia Mundi',
-        cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=400&h=400&fit=crop',
-      },
-      {
-        id: '2',
-        title: '리스트: 초절기교 연습곡',
-        year: '2023',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop',
-      },
-    ],
-    style: '압도적인 테크닉, 열정적인 표현, 드라마틱한 해석',
-    stats: {
-      concerts: 85,
-      countries: 22,
-      albums: 3,
-    },
-  },
-  '3': {
-    id: '3',
-    name: '안네-소피 무터',
-    englishName: 'Anne-Sophie Mutter',
-    category: '바이올리니스트',
-    tier: 'S',
-    rating: 5.0,
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop',
-    coverImage:
-      'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=400&fit=crop',
-    birthYear: '1963',
-    nationality: '독일',
-    bio: '세계 최고의 바이올리니스트 중 한 명. 카라얀의 인정을 받아 13세에 데뷔한 이후 50년 가까이 정상급 연주를 이어가고 있습니다.',
-    specialty: ['베토벤', '브람스', '모차르트', '현대음악'],
-    awards: [
-      { year: '2019', name: '그래미상 평생 공로상' },
-      { year: '1998', name: '그래미상 (베스트 솔로이스트)' },
-      { year: '2008', name: '에른스트 폰 지멘스 음악상' },
-    ],
-    upcomingConcerts: [
-      {
-        id: '1',
-        title: '무터 & 베를린 필',
-        date: '2025.04.20',
-        venue: '예술의전당',
-        program: '베토벤 바이올린 협주곡',
-      },
-    ],
-    recordings: [
-      {
-        id: '1',
-        title: '베토벤: 바이올린 협주곡',
-        year: '2019',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=400&h=400&fit=crop',
-      },
-      {
-        id: '2',
-        title: '브람스: 바이올린 소나타',
-        year: '2020',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop',
-      },
-    ],
-    style: '완벽한 테크닉, 깊이 있는 음악성, 우아하고 강렬한 표현',
-    stats: {
-      concerts: 450,
-      countries: 60,
-      albums: 50,
-    },
-  },
-  '4': {
-    id: '4',
-    name: '요요 마',
-    englishName: 'Yo-Yo Ma',
-    category: '첼리스트',
-    tier: 'S',
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop',
-    coverImage:
-      'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=1200&h=400&fit=crop',
-    birthYear: '1955',
-    nationality: '미국 (중국계)',
-    bio: '세계에서 가장 유명한 첼리스트. 클래식을 넘어 다양한 장르를 넘나들며 음악의 경계를 허물고 있습니다.',
-    specialty: ['바흐', '드보르작', '엘가', '월드뮤직'],
-    awards: [
-      { year: '2011', name: '그래미상 (19회 수상)' },
-      { year: '2006', name: '아비뉴상' },
-      { year: '2001', name: '내셔널 메달 오브 아츠' },
-    ],
-    upcomingConcerts: [
-      {
-        id: '1',
-        title: '요요 마 첼로 리사이탈',
-        date: '2025.06.15',
-        venue: '롯데콘서트홀',
-        program: '바흐 무반주 첼로 모음곡',
-      },
-    ],
-    recordings: [
-      {
-        id: '1',
-        title: '바흐: 무반주 첼로 모음곡',
-        year: '2018',
-        label: 'Sony',
-        cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=400&h=400&fit=crop',
-      },
-      {
-        id: '2',
-        title: '드보르작: 첼로 협주곡',
-        year: '2017',
-        label: 'Sony',
-        cover: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop',
-      },
-    ],
-    style: '따뜻하고 인간적인 소리, 폭넓은 레퍼토리, 소통하는 음악',
-    stats: {
-      concerts: 600,
-      countries: 75,
-      albums: 90,
-    },
-  },
-  '5': {
-    id: '5',
-    name: '다니엘 바렌보임',
-    englishName: 'Daniel Barenboim',
-    category: '피아니스트',
-    tier: 'S',
-    rating: 4.9,
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop',
-    coverImage:
-      'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=1200&h=400&fit=crop',
-    birthYear: '1942',
-    nationality: '아르헨티나/이스라엘',
-    bio: '20세기 후반부터 현재까지 활동하는 전설적인 피아니스트이자 지휘자. 베토벤, 모차르트, 브람스 해석의 대가로 알려져 있으며, 베를린 슈타츠카펠레의 음악감독을 역임했습니다.',
-    specialty: ['베토벤', '모차르트', '브람스', '바그너'],
-    awards: [
-      { year: '2002', name: '에른스트 폰 지멘스 음악상' },
-      { year: '2007', name: '울프 예술상' },
-      { year: '2012', name: '빌바오 음악상' },
-    ],
-    upcomingConcerts: [
-      {
-        id: '1',
-        title: '바렌보임 베토벤 소나타',
-        date: '2025.07.10',
-        venue: '예술의전당',
-        program: '베토벤 후기 소나타',
-      },
-      {
-        id: '2',
-        title: '바렌보임 & 베를린 슈타츠카펠레',
-        date: '2025.09.05',
-        venue: '롯데콘서트홀',
-        program: '브람스 피아노 협주곡 2번',
-      },
-    ],
-    recordings: [
-      {
-        id: '1',
-        title: '베토벤: 피아노 소나타 전곡',
-        year: '2020',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=400&h=400&fit=crop',
-      },
-      {
-        id: '2',
-        title: '모차르트: 피아노 협주곡',
-        year: '2018',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=400&fit=crop',
-      },
-      {
-        id: '3',
-        title: '브람스: 피아노 작품집',
-        year: '2019',
-        label: 'DG',
-        cover: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
-      },
-    ],
-    style: '웅장하고 지적인 해석, 깊이 있는 구조적 이해, 서정성과 드라마의 균형',
-    stats: {
-      concerts: 800,
-      countries: 85,
-      albums: 120,
-    },
-  },
-};
-
 // Recording Cover Component with error handling (small)
 function RecordingCover({ coverUrl }: { coverUrl?: string | null }) {
   const [imageError, setImageError] = React.useState(false);
@@ -429,6 +143,11 @@ export default function ArtistDetailScreen() {
     setError(null);
     try {
       const data = await ArtistAPI.getById(Number(id));
+      console.log('=== Artist Data Loaded ===');
+      console.log('Full artist data:', JSON.stringify(data, null, 2));
+      console.log('Awards field:', data.awards);
+      console.log('Awards type:', typeof data.awards);
+      console.log('==========================');
       setArtist(data);
 
       // 녹음 목록 로드
@@ -471,6 +190,10 @@ export default function ArtistDetailScreen() {
     setRefreshing(true);
     try {
       const data = await ArtistAPI.getById(Number(id));
+      console.log('=== Artist Data Refreshed ===');
+      console.log('Full artist data:', JSON.stringify(data, null, 2));
+      console.log('Awards field:', data.awards);
+      console.log('=============================');
       setArtist(data);
 
       // 녹음 목록 새로고침
@@ -745,6 +468,24 @@ export default function ArtistDetailScreen() {
             </Card>
           )}
 
+          {/* Awards */}
+          {artist.awards && artist.awards.length > 0 && (
+            <Card className="p-4">
+              <Text className="mb-3 text-lg font-bold">주요 수상</Text>
+              <View className="gap-3">
+                {artist.awards.map((award) => (
+                  <View key={award.id} className="flex-row items-start gap-3">
+                    <Icon as={AwardIcon} size={18} className="mt-1 text-amber-500" />
+                    <View className="flex-1">
+                      <Text className="font-semibold">{award.awardName}</Text>
+                      <Text className="text-sm text-muted-foreground">{award.year}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </Card>
+          )}
+
           {/* Style Keywords */}
           {artist.style && (
             <Card className="p-4">
@@ -755,27 +496,6 @@ export default function ArtistDetailScreen() {
                     <Text className="text-sm text-primary">{keyword.trim()}</Text>
                   </View>
                 ))}
-              </View>
-            </Card>
-          )}
-
-          {/* Awards */}
-          {artist.awards && (
-            <Card className="p-4">
-              <Text className="mb-3 text-lg font-bold">주요 수상</Text>
-              <View className="gap-3">
-                {artist.awards.split('|').map((award, index) => {
-                  const [year, name] = award.split(':');
-                  return (
-                    <View key={index} className="flex-row items-start gap-3">
-                      <Icon as={AwardIcon} size={18} className="mt-1 text-amber-500" />
-                      <View className="flex-1">
-                        <Text className="font-semibold">{name}</Text>
-                        <Text className="text-sm text-muted-foreground">{year}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
               </View>
             </Card>
           )}
@@ -816,7 +536,7 @@ export default function ArtistDetailScreen() {
                 ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
                 renderItem={({ item: recording }) => (
                   <View className="w-48">
-                    <Card className="p-3" style={{ minHeight: 420 }}>
+                    <Card className="p-3" style={{ minHeight: canEdit ? 460 : 360 }}>
                       <View className="flex-1 gap-3">
                         <RecordingCoverLarge coverUrl={recording.coverUrl} />
                         <View className="gap-1.5" style={{ minHeight: 80 }}>
@@ -830,6 +550,7 @@ export default function ArtistDetailScreen() {
                             </Text>
                           )}
                         </View>
+                        <View className="flex-1" />
                         {(recording.spotifyUrl ||
                           recording.appleMusicUrl ||
                           recording.youtubeMusicUrl ||
@@ -838,15 +559,23 @@ export default function ArtistDetailScreen() {
                             {recording.spotifyUrl && (
                               <TouchableOpacity
                                 onPress={() => Linking.openURL(recording.spotifyUrl!)}
-                                className="h-8 w-8 items-center justify-center rounded-full bg-green-600">
-                                <Text className="text-xs font-bold text-white">S</Text>
+                                className="h-10 w-10 items-center justify-center">
+                                <Image
+                                  source={require('@/assets/spotify.png')}
+                                  className="h-10 w-10"
+                                  resizeMode="contain"
+                                />
                               </TouchableOpacity>
                             )}
                             {recording.appleMusicUrl && (
                               <TouchableOpacity
                                 onPress={() => Linking.openURL(recording.appleMusicUrl!)}
-                                className="h-8 w-8 items-center justify-center rounded-full bg-pink-600">
-                                <Text className="text-xs font-bold text-white">A</Text>
+                                className="h-10 w-10 items-center justify-center">
+                                <Image
+                                  source={require('@/assets/apple_music_classical.png')}
+                                  className="h-10 w-10"
+                                  resizeMode="contain"
+                                />
                               </TouchableOpacity>
                             )}
                             {recording.youtubeMusicUrl && (
@@ -870,9 +599,8 @@ export default function ArtistDetailScreen() {
                             )}
                           </View>
                         )}
-                        <View className="flex-1" />
                         {canEdit && (
-                          <View className="flex-row gap-2 border-t border-border pt-2">
+                          <View className="mt-2 flex-row gap-2 border-t border-border pt-2">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -918,62 +646,61 @@ export default function ArtistDetailScreen() {
                 renderItem={({ item: concert }) => (
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => router.push(`/concert/${concert.id}` as any)}
-                  >
+                    onPress={() => router.push(`/concert/${concert.id}` as any)}>
                     <View className="w-56">
                       <Card className="p-3" style={{ minHeight: 440 }}>
                         <View className="gap-3">
                           <ConcertPoster posterUrl={concert.posterUrl} />
-                        <View className="gap-2" style={{ minHeight: 100 }}>
-                          <Text className="text-base font-semibold" numberOfLines={2}>
-                            {concert.title}
-                          </Text>
-                          {concert.composerInfo && (
-                            <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                              {concert.composerInfo}
+                          <View className="gap-2" style={{ minHeight: 100 }}>
+                            <Text className="text-base font-semibold" numberOfLines={2}>
+                              {concert.title}
                             </Text>
-                          )}
-                          <View className="flex-row items-center gap-2">
-                            <Icon as={CalendarIcon} size={14} className="text-muted-foreground" />
-                            <Text className="text-xs text-muted-foreground">
-                              {concert.concertDate}
-                            </Text>
-                          </View>
-                          {concert.status && (
-                            <View
-                              className={`self-start rounded-full px-2 py-1 ${
-                                concert.status === 'upcoming'
-                                  ? 'bg-blue-500/20'
-                                  : concert.status === 'completed'
-                                    ? 'bg-gray-500/20'
-                                    : concert.status === 'ongoing'
-                                      ? 'bg-green-500/20'
-                                      : 'bg-red-500/20'
-                              }`}>
-                              <Text
-                                className={`text-xs font-medium ${
-                                  concert.status === 'upcoming'
-                                    ? 'text-blue-600'
-                                    : concert.status === 'completed'
-                                      ? 'text-gray-600'
-                                      : concert.status === 'ongoing'
-                                        ? 'text-green-600'
-                                        : 'text-red-600'
-                                }`}>
-                                {concert.status === 'upcoming'
-                                  ? '예정'
-                                  : concert.status === 'completed'
-                                    ? '완료'
-                                    : concert.status === 'ongoing'
-                                      ? '진행중'
-                                      : '취소'}
+                            {concert.composerInfo && (
+                              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+                                {concert.composerInfo}
+                              </Text>
+                            )}
+                            <View className="flex-row items-center gap-2">
+                              <Icon as={CalendarIcon} size={14} className="text-muted-foreground" />
+                              <Text className="text-xs text-muted-foreground">
+                                {concert.concertDate}
                               </Text>
                             </View>
-                          )}
+                            {concert.status && (
+                              <View
+                                className={`self-start rounded-full px-2 py-1 ${
+                                  concert.status === 'upcoming'
+                                    ? 'bg-blue-500/20'
+                                    : concert.status === 'completed'
+                                      ? 'bg-gray-500/20'
+                                      : concert.status === 'ongoing'
+                                        ? 'bg-green-500/20'
+                                        : 'bg-red-500/20'
+                                }`}>
+                                <Text
+                                  className={`text-xs font-medium ${
+                                    concert.status === 'upcoming'
+                                      ? 'text-blue-600'
+                                      : concert.status === 'completed'
+                                        ? 'text-gray-600'
+                                        : concert.status === 'ongoing'
+                                          ? 'text-green-600'
+                                          : 'text-red-600'
+                                  }`}>
+                                  {concert.status === 'upcoming'
+                                    ? '예정'
+                                    : concert.status === 'completed'
+                                      ? '완료'
+                                      : concert.status === 'ongoing'
+                                        ? '진행중'
+                                        : '취소'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
-                      </View>
-                    </Card>
-                  </View>
+                      </Card>
+                    </View>
                   </TouchableOpacity>
                 )}
               />

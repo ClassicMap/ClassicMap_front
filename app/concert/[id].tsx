@@ -16,7 +16,8 @@ import {
   SunIcon,
   TrashIcon,
   StarIcon,
-  EditIcon
+  EditIcon,
+  UserIcon
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
@@ -30,6 +31,14 @@ import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
 
+interface ConcertArtist {
+  id: number;
+  concertId: number;
+  artistId: number;
+  artistName: string;
+  role?: string;
+}
+
 interface Concert {
   id: number;
   title: string;
@@ -40,17 +49,27 @@ interface Concert {
   priceInfo?: string;
   posterUrl?: string;
   ticketUrl?: string;
-  isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
+  artists?: ConcertArtist[];
 }
 
-const STATUS_INFO = {
-  upcoming: { label: '예정', color: '#3b82f6', emoji: '📅' },
-  ongoing: { label: '진행중', color: '#22c55e', emoji: '🎵' },
-  completed: { label: '완료', color: '#6b7280', emoji: '✅' },
-  cancelled: { label: '취소', color: '#ef4444', emoji: '❌' },
+const getStatusInfo = (concert: Concert) => {
+  const concertDate = new Date(concert.concertDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  concertDate.setHours(0, 0, 0, 0);
+
+  if (concert.status === 'cancelled') {
+    return { label: '취소', color: '#ef4444' };
+  } else if (concertDate < today) {
+    return { label: '종료', color: '#9ca3af' };
+  } else if (concertDate.getTime() === today.getTime()) {
+    return { label: '오늘', color: '#22c55e' };
+  } else {
+    return { label: '예정', color: '#3b82f6' };
+  }
 };
 
 export default function ConcertDetailScreen() {
@@ -283,11 +302,11 @@ export default function ConcertDetailScreen() {
     );
   }
 
-  const statusInfo = STATUS_INFO[concert.status];
+  const statusInfo = getStatusInfo(concert);
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView 
+      <ScrollView
         className="flex-1"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -303,7 +322,7 @@ export default function ConcertDetailScreen() {
             >
               <Icon as={ArrowLeftIcon} size={24} className="text-foreground" />
             </TouchableOpacity>
-            
+
             <View className="flex-row items-center gap-3">
               <TouchableOpacity
                 onPress={toggleColorScheme}
@@ -317,28 +336,23 @@ export default function ConcertDetailScreen() {
 
           {/* Title Section */}
           <View className="px-4 pb-4 items-center">
-            <View className="flex-row items-center gap-2 mb-3 flex-wrap justify-center">
-              <View 
-                className="rounded-full px-3 py-1.5"
+            <Text className="text-3xl font-bold mb-2 text-center">{concert.title}</Text>
+
+            {concert.composerInfo && (
+              <Text className="text-base text-muted-foreground text-center mb-3">{concert.composerInfo}</Text>
+            )}
+
+            {/* Status Badge */}
+            <View className="flex-row items-center gap-2 flex-wrap justify-center">
+              <View
+                className="rounded px-2.5 py-1"
                 style={{ backgroundColor: statusInfo.color }}
               >
-                <Text className="text-xs font-bold text-white">
-                  {statusInfo.emoji} {statusInfo.label}
+                <Text className="text-xs font-medium text-white">
+                  {statusInfo.label}
                 </Text>
               </View>
-              {concert.isRecommended && (
-                <View 
-                  className="rounded-full px-3 py-1.5 flex-row items-center gap-1 bg-amber-500"
-                >
-                  <Icon as={StarIcon} size={12} color="white" />
-                  <Text className="text-xs font-bold text-white">추천</Text>
-                </View>
-              )}
             </View>
-            <Text className="text-3xl font-bold mb-2 text-center">{concert.title}</Text>
-            {concert.composerInfo && (
-              <Text className="text-base text-muted-foreground text-center">{concert.composerInfo}</Text>
-            )}
           </View>
         </View>
 
@@ -385,6 +399,18 @@ export default function ConcertDetailScreen() {
           {/* Concert Info */}
           <Card className="p-4">
             <View className="gap-3">
+              {concert.artists && concert.artists.length > 0 && (
+                <View className="flex-row items-start gap-3">
+                  <Icon as={UserIcon} size={20} className="text-primary mt-0.5" />
+                  <View className="flex-1">
+                    <Text className="text-xs text-muted-foreground">연주자</Text>
+                    <Text className="text-base font-medium">
+                      {concert.artists.map(a => a.artistName).join(', ')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               <View className="flex-row items-start gap-3">
                 <Icon as={CalendarIcon} size={20} className="text-primary mt-0.5" />
                 <View className="flex-1">

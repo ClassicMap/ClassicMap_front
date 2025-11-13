@@ -578,6 +578,7 @@ export default function ComposerDetailScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showPieceFormModal, setShowPieceFormModal] = React.useState(false);
+  const [editingPiece, setEditingPiece] = React.useState<Piece | undefined>(undefined);
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
   const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
@@ -595,6 +596,23 @@ export default function ComposerDetailScreen() {
     setError(null);
     try {
       const data = await ComposerAPI.getById(Number(id));
+
+      // 각 major piece의 상세 정보 가져오기
+      if (data?.majorPieces && data.majorPieces.length > 0) {
+        const detailedPieces = await Promise.all(
+          data.majorPieces.map(async (piece) => {
+            try {
+              const fullPiece = await ComposerAPI.getPieceById(piece.id);
+              return fullPiece || piece;
+            } catch (error) {
+              console.error(`Failed to load piece ${piece.id}:`, error);
+              return piece;
+            }
+          })
+        );
+        data.majorPieces = detailedPieces;
+      }
+
       setComposer(data);
 
       // 이미지 프리페치
@@ -614,6 +632,23 @@ export default function ComposerDetailScreen() {
     setRefreshing(true);
     try {
       const data = await ComposerAPI.getById(Number(id));
+
+      // 각 major piece의 상세 정보 가져오기
+      if (data?.majorPieces && data.majorPieces.length > 0) {
+        const detailedPieces = await Promise.all(
+          data.majorPieces.map(async (piece) => {
+            try {
+              const fullPiece = await ComposerAPI.getPieceById(piece.id);
+              return fullPiece || piece;
+            } catch (error) {
+              console.error(`Failed to load piece ${piece.id}:`, error);
+              return piece;
+            }
+          })
+        );
+        data.majorPieces = detailedPieces;
+      }
+
       setComposer(data);
 
       const imagesToLoad = [data.avatarUrl, data.coverImageUrl].filter(Boolean);
@@ -904,7 +939,10 @@ export default function ComposerDetailScreen() {
             <View className="flex-row items-center justify-between">
               <Text className="text-xl font-bold">주요 작품</Text>
               {canEdit && (
-                <Button size="sm" onPress={() => setShowPieceFormModal(true)}>
+                <Button size="sm" onPress={() => {
+                  setEditingPiece(undefined);
+                  setShowPieceFormModal(true);
+                }}>
                   <Icon as={PlusIcon} size={14} className="text-primary-foreground mr-1" />
                   <Text className="text-sm">작품 추가</Text>
                 </Button>
@@ -926,56 +964,78 @@ export default function ComposerDetailScreen() {
                           {work.opusNumber && (
                             <Text className="text-sm text-muted-foreground">{work.opusNumber}</Text>
                           )}
-                          {(work.spotifyUrl || work.appleMusicUrl || work.youtubeMusicUrl) && (
-                            <View className="flex-row gap-2 mt-2">
-                              {work.spotifyUrl && (
-                                <TouchableOpacity
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    Linking.openURL(work.spotifyUrl!);
-                                  }}
-                                  className="rounded bg-green-600 px-2 py-1"
-                                >
-                                  <Text className="text-xs text-white font-medium">Spotify</Text>
-                                </TouchableOpacity>
-                              )}
-                              {work.appleMusicUrl && (
-                                <TouchableOpacity
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    Linking.openURL(work.appleMusicUrl!);
-                                  }}
-                                  className="rounded bg-pink-600 px-2 py-1"
-                                >
-                                  <Text className="text-xs text-white font-medium">Apple Music</Text>
-                                </TouchableOpacity>
-                              )}
-                              {work.youtubeMusicUrl && (
-                                <TouchableOpacity
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    Linking.openURL(work.youtubeMusicUrl!);
-                                  }}
-                                  className="rounded bg-red-600 px-2 py-1"
-                                >
-                                  <Text className="text-xs text-white font-medium">YouTube</Text>
-                                </TouchableOpacity>
-                              )}
-                            </View>
-                          )}
                         </View>
-                        {canEdit && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleDeletePiece(work.id, work.title);
-                            }}
-                          >
-                            <Icon as={TrashIcon} size={16} className="text-destructive" />
-                          </Button>
+
+                        {/* 음악 스트리밍 아이콘 */}
+                        {(work.spotifyUrl || work.appleMusicUrl) && (
+                          <View className="flex-row gap-2">
+                            {work.spotifyUrl && (
+                              <TouchableOpacity
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  Linking.openURL(work.spotifyUrl!);
+                                }}
+                                className="h-8 w-8 items-center justify-center"
+                              >
+                                <Image
+                                  source={require('@/assets/spotify.png')}
+                                  className="h-8 w-8"
+                                  resizeMode="contain"
+                                />
+                              </TouchableOpacity>
+                            )}
+                            {work.appleMusicUrl && (
+                              <TouchableOpacity
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  Linking.openURL(work.appleMusicUrl!);
+                                }}
+                                className="h-8 w-8 items-center justify-center"
+                              >
+                                <Image
+                                  source={require('@/assets/apple_music_classical.png')}
+                                  className="h-8 w-8"
+                                  resizeMode="contain"
+                                />
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         )}
+
+                        {/* 관리자 버튼 */}
+                        {canEdit && (
+                          <View className="flex-row gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onPress={async (e) => {
+                                e.stopPropagation();
+                                // Piece 전체 정보를 API로 가져오기
+                                try {
+                                  const pieceData = await ComposerAPI.getPieceById(work.id);
+                                  setEditingPiece(pieceData);
+                                  setShowPieceFormModal(true);
+                                } catch (error) {
+                                  console.error('Failed to load piece:', error);
+                                  Alert.alert('오류', '작품 정보를 불러오는데 실패했습니다.');
+                                }
+                              }}
+                            >
+                              <Icon as={EditIcon} size={16} className="text-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleDeletePiece(work.id, work.title);
+                              }}
+                            >
+                              <Icon as={TrashIcon} size={16} className="text-destructive" />
+                            </Button>
+                          </View>
+                        )}
+
                         <Icon as={ArrowLeftIcon} size={16} className="text-muted-foreground rotate-180" />
                       </View>
                     </Card>
@@ -996,7 +1056,11 @@ export default function ComposerDetailScreen() {
           <PieceFormModal
             visible={showPieceFormModal}
             composerId={Number(id)}
-            onClose={() => setShowPieceFormModal(false)}
+            piece={editingPiece}
+            onClose={() => {
+              setShowPieceFormModal(false);
+              setEditingPiece(undefined);
+            }}
             onSuccess={loadComposer}
           />
         )}

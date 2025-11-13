@@ -46,6 +46,14 @@ export interface ComposerMajorPiece {
   createdAt?: Date;
 }
 
+export interface ArtistAward {
+  id: number;
+  artistId: number;
+  year: string;
+  awardName: string;
+  displayOrder: number;
+}
+
 export interface Artist {
   id: number;
   name: string;
@@ -59,6 +67,7 @@ export interface Artist {
   nationality: string;
   bio?: string;
   style?: string;
+  awards?: ArtistAward[];
   concertCount: number;
   countryCount: number;
   albumCount: number;
@@ -204,6 +213,14 @@ export interface Venue {
 // 공연
 // ============================================
 
+export interface ConcertArtist {
+  id: number;
+  concertId: number;
+  artistId: number;
+  artistName: string;
+  role?: string;
+}
+
 export interface Concert {
   id: number;
   title: string;
@@ -214,10 +231,10 @@ export interface Concert {
   priceInfo?: string;
   posterUrl?: string;
   ticketUrl?: string;
-  isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating: number;
   ratingCount: number;
+  artists?: ConcertArtist[];
   createdAt?: Date;
   updatedAt?: Date;
 }

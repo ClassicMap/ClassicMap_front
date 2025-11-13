@@ -62,6 +62,14 @@ interface APIPiece {
   youtubeMusicUrl?: string;
 }
 
+interface APIArtistAward {
+  id: number;
+  artistId: number;
+  year: string;
+  awardName: string;
+  displayOrder: number;
+}
+
 interface APIArtist {
   id: number;
   name: string;
@@ -75,9 +83,18 @@ interface APIArtist {
   nationality: string;
   bio?: string;
   style?: string;
+  awards?: APIArtistAward[];
   concertCount: number;
   countryCount: number;
   albumCount: number;
+}
+
+interface APIConcertArtist {
+  id: number;
+  concertId: number;
+  artistId: number;
+  artistName: string;
+  role?: string;
 }
 
 interface APIConcert {
@@ -91,10 +108,10 @@ interface APIConcert {
   posterUrl?: string;
   program?: string;
   ticketUrl?: string;
-  isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
+  artists?: APIConcertArtist[];
 }
 
 interface APIVenue {
@@ -117,7 +134,6 @@ interface Concert {
   posterUrl?: string;
   program?: string;
   ticketUrl?: string;
-  isRecommended: boolean;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
@@ -186,6 +202,13 @@ const mapArtist = (api: APIArtist): Artist => ({
   nationality: api.nationality,
   bio: api.bio,
   style: api.style,
+  awards: api.awards?.map(award => ({
+    id: award.id,
+    artistId: award.artistId,
+    year: award.year,
+    awardName: award.awardName,
+    displayOrder: award.displayOrder,
+  })),
   concertCount: api.concertCount,
   countryCount: api.countryCount,
   albumCount: api.albumCount,
@@ -206,6 +229,13 @@ const mapConcert = (api: APIConcert): Concert => ({
   status: api.status,
   rating: api.rating,
   ratingCount: api.ratingCount,
+  artists: api.artists?.map(artist => ({
+    id: artist.id,
+    concertId: artist.concertId,
+    artistId: artist.artistId,
+    artistName: artist.artistName,
+    role: artist.role,
+  })),
 });
 
 // API Base URL
@@ -289,6 +319,19 @@ export const ComposerAPI = {
     if (!composer) return null;
     const majorPieces = getMajorPiecesByComposer(id);
     return Promise.resolve({ ...composer, majorPieces });
+  },
+
+  /**
+   * Piece ID로 전체 정보 조회
+   */
+  async getPieceById(id: number): Promise<Piece | null> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch piece');
+      const pieceData: APIPiece = await response.json();
+      return pieceData;
+    }
+    return Promise.resolve(getPieceById(id));
   },
 
   /**
@@ -386,8 +429,17 @@ export const ArtistAPI = {
       const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`);
       if (!response.ok) throw new Error('Failed to fetch artist');
       const data: APIArtist = await response.json();
+      console.log('=== API Response (Raw) ===');
+      console.log('Raw API data:', JSON.stringify(data, null, 2));
+      console.log('Awards from API:', data.awards);
+      console.log('==========================');
       if (!data) return null;
-      return mapArtist(data);
+      const mapped = mapArtist(data);
+      console.log('=== After Mapping ===');
+      console.log('Mapped artist:', JSON.stringify(mapped, null, 2));
+      console.log('Awards after mapping:', mapped.awards);
+      console.log('=====================');
+      return mapped;
     }
     return Promise.resolve(getArtistById(id) || null);
   },

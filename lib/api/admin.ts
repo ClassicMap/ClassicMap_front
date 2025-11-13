@@ -179,18 +179,42 @@ export const AdminArtistAPI = {
     });
     if (!response.ok) throw new Error('Failed to delete artist');
   },
+
+  async createAward(artistId: number, award: {
+    year: string;
+    awardName: string;
+    displayOrder?: number;
+  }): Promise<number> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/awards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(award),
+    });
+    if (!response.ok) throw new Error('Failed to create award');
+    return response.json();
+  },
+
+  async deleteAward(artistId: number, awardId: number): Promise<void> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/awards/${awardId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete award');
+  },
 };
 
 // Piece CRUD
 export const AdminPieceAPI = {
   async create(data: {
-    composer_id: number;
+    composerId: number;
     title: string;
     description?: string;
-    opus_number?: string;
-    composition_year?: number;
-    difficulty_level?: number;
-    duration_minutes?: number;
+    opusNumber?: string;
+    compositionYear?: number;
+    difficultyLevel?: number;
+    durationMinutes?: number;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    youtubeMusicUrl?: string;
   }): Promise<number> {
     const response = await authenticatedFetch(`${API_BASE_URL}/pieces`, {
       method: 'POST',
@@ -199,6 +223,25 @@ export const AdminPieceAPI = {
     });
     if (!response.ok) throw new Error('Failed to create piece');
     return response.json();
+  },
+
+  async update(id: number, data: {
+    title?: string;
+    description?: string;
+    opusNumber?: string;
+    compositionYear?: number;
+    difficultyLevel?: number;
+    durationMinutes?: number;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    youtubeMusicUrl?: string;
+  }): Promise<void> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update piece');
   },
 
   async delete(id: number): Promise<void> {
@@ -218,7 +261,6 @@ export const AdminConcertAPI = {
     concertDate: string;
     concertTime?: string;
     priceInfo?: string;
-    isRecommended: boolean;
     status: string;
   }): Promise<number> {
     const response = await authenticatedFetch(`${API_BASE_URL}/concerts`, {
@@ -239,7 +281,6 @@ export const AdminConcertAPI = {
     priceInfo?: string;
     posterUrl?: string;
     ticketUrl?: string;
-    isRecommended?: boolean;
     status?: string;
   }): Promise<void> {
     // 이미지 URL을 상대 경로로 변환
@@ -247,7 +288,7 @@ export const AdminConcertAPI = {
       ...data,
       posterUrl: toRelativePath(data.posterUrl),
     };
-    
+
     const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
