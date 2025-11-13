@@ -333,7 +333,8 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
                   placeholder="작곡가 소개..."
                   multiline
                   numberOfLines={4}
-                  className="border border-input rounded-md p-3 text-base"
+                  className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
+                  placeholderTextColor={Platform.select({ ios: '#999999', android: '#999999', default: undefined })}
                   style={{ textAlignVertical: 'top' }}
                 />
               </View>

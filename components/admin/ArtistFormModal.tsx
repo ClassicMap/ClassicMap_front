@@ -7,9 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
-import { XIcon, ImageIcon, UploadIcon } from 'lucide-react-native';
+import { XIcon, ImageIcon, UploadIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import { AdminArtistAPI } from '@/lib/api/admin';
-import type { Artist } from '@/lib/types/models';
+import type { Artist, ArtistAward } from '@/lib/types/models';
 import * as ImagePicker from 'expo-image-picker';
 import { getImageUrl } from '@/lib/utils/image';
 
@@ -35,11 +35,24 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   const [submitting, setSubmitting] = React.useState(false);
   const [selectedImage, setSelectedImage] = React.useState<string | null>(null);
   const [selectedCoverImage, setSelectedCoverImage] = React.useState<string | null>(null);
-  
+
   // 카운트 입력
   const [concertCount, setConcertCount] = React.useState('0');
   const [countryCount, setCountryCount] = React.useState('0');
   const [albumCount, setAlbumCount] = React.useState('0');
+
+  // 수상 경력 관리
+  interface AwardInput {
+    id?: number; // 기존 award의 경우 id 존재
+    year: string;
+    awardName: string;
+    displayOrder: number;
+    isNew?: boolean; // 새로 추가된 award인지 여부
+    isDeleted?: boolean; // 삭제될 award인지 여부
+  }
+  const [awards, setAwards] = React.useState<AwardInput[]>([]);
+  const [newAwardYear, setNewAwardYear] = React.useState('');
+  const [newAwardName, setNewAwardName] = React.useState('');
 
   React.useEffect(() => {
     if (artist) {
@@ -59,6 +72,20 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
       setConcertCount(String(artist.concertCount || 0));
       setCountryCount(String(artist.countryCount || 0));
       setAlbumCount(String(artist.albumCount || 0));
+
+      // 기존 awards 로드
+      if (artist.awards && artist.awards.length > 0) {
+        setAwards(artist.awards.map(award => ({
+          id: award.id,
+          year: award.year,
+          awardName: award.awardName,
+          displayOrder: award.displayOrder,
+          isNew: false,
+          isDeleted: false,
+        })));
+      } else {
+        setAwards([]);
+      }
     } else {
       setName('');
       setEnglishName('');
@@ -76,7 +103,10 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
       setConcertCount('0');
       setCountryCount('0');
       setAlbumCount('0');
+      setAwards([]);
     }
+    setNewAwardYear('');
+    setNewAwardName('');
   }, [artist, visible]);
 
   const pickImage = async (type: 'profile' | 'cover') => {
@@ -103,6 +133,35 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
       
       // 서버에 업로드
       await uploadImageToServer(uri, type);
+    }
+  };
+
+  const handleAddAward = () => {
+    if (!newAwardYear || !newAwardName) {
+      Alert.alert('오류', '수상 연도와 이름을 모두 입력해주세요.');
+      return;
+    }
+
+    const newAward: AwardInput = {
+      year: newAwardYear,
+      awardName: newAwardName,
+      displayOrder: awards.length,
+      isNew: true,
+    };
+
+    setAwards([...awards, newAward]);
+    setNewAwardYear('');
+    setNewAwardName('');
+  };
+
+  const handleDeleteAward = (index: number) => {
+    const award = awards[index];
+    if (award.isNew) {
+      // 새로 추가된 award는 그냥 제거
+      setAwards(awards.filter((_, i) => i !== index));
+    } else {
+      // 기존 award는 삭제 플래그 설정
+      setAwards(awards.map((a, i) => i === index ? { ...a, isDeleted: true } : a));
     }
   };
 
@@ -174,6 +233,8 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
 
     setSubmitting(true);
     try {
+      let artistId: number;
+
       if (artist) {
         // Update existing artist
         await AdminArtistAPI.update(artist.id, {
@@ -192,10 +253,10 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
           countryCount: parseInt(countryCount),
           albumCount: parseInt(albumCount),
         });
-        Alert.alert('성공', '아티스트가 수정되었습니다.');
+        artistId = artist.id;
       } else {
         // Create new artist
-        await AdminArtistAPI.create({
+        artistId = await AdminArtistAPI.create({
           name,
           englishName,
           category,
@@ -211,8 +272,34 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
           countryCount: parseInt(countryCount),
           albumCount: parseInt(albumCount),
         });
-        Alert.alert('성공', '아티스트가 추가되었습니다.');
       }
+
+      // Awards 처리
+      // 1. 삭제할 awards
+      const awardsToDelete = awards.filter(a => a.isDeleted && a.id);
+      for (const award of awardsToDelete) {
+        try {
+          await AdminArtistAPI.deleteAward(artistId, award.id!);
+        } catch (error) {
+          console.error('Failed to delete award:', error);
+        }
+      }
+
+      // 2. 추가할 awards
+      const awardsToAdd = awards.filter(a => a.isNew && !a.isDeleted);
+      for (const award of awardsToAdd) {
+        try {
+          await AdminArtistAPI.createAward(artistId, {
+            year: award.year,
+            awardName: award.awardName,
+            displayOrder: award.displayOrder,
+          });
+        } catch (error) {
+          console.error('Failed to create award:', error);
+        }
+      }
+
+      Alert.alert('성공', artist ? '아티스트가 수정되었습니다.' : '아티스트가 추가되었습니다.');
       onSuccess();
       onClose();
     } catch (error) {
@@ -340,7 +427,8 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
                   placeholder="아티스트 소개..."
                   multiline
                   numberOfLines={4}
-                  className="border border-input rounded-md p-3 text-base"
+                  className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
+                  placeholderTextColor={Platform.select({ ios: '#999999', android: '#999999', default: undefined })}
                   style={{ textAlignVertical: 'top' }}
                 />
               </View>
@@ -349,6 +437,64 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
                 <Label>스타일</Label>
                 <Input value={style} onChangeText={setStyle} placeholder="섬세하고 시적인 표현..." />
               </View>
+            </View>
+          </Card>
+
+          {/* Awards */}
+          <Card className="p-4 mb-6">
+            <Text className="text-lg font-bold mb-3">수상 경력</Text>
+
+            {/* 기존 Awards 목록 */}
+            {awards.filter(a => !a.isDeleted).length > 0 && (
+              <View className="gap-2 mb-4">
+                {awards.map((award, index) => {
+                  if (award.isDeleted) return null;
+                  return (
+                    <View key={index} className="flex-row items-center gap-2 p-3 bg-muted rounded-md">
+                      <View className="flex-1">
+                        <Text className="font-semibold">{award.awardName}</Text>
+                        <Text className="text-sm text-muted-foreground">{award.year}</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteAward(index)}
+                        className="p-2"
+                      >
+                        <Icon as={TrashIcon} size={18} className="text-destructive" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* 새 Award 추가 */}
+            <View className="gap-3 p-3 border border-border rounded-md">
+              <Text className="font-semibold">새 수상 경력 추가</Text>
+              <View>
+                <Label>수상 연도</Label>
+                <Input
+                  value={newAwardYear}
+                  onChangeText={setNewAwardYear}
+                  placeholder="2015"
+                  keyboardType="numeric"
+                />
+              </View>
+              <View>
+                <Label>수상 내역</Label>
+                <Input
+                  value={newAwardName}
+                  onChangeText={setNewAwardName}
+                  placeholder="쇼팽 국제 피아노 콩쿠르 1위"
+                />
+              </View>
+              <Button
+                variant="outline"
+                onPress={handleAddAward}
+                className="flex-row items-center justify-center gap-2"
+              >
+                <Icon as={PlusIcon} size={16} />
+                <Text>추가</Text>
+              </Button>
             </View>
           </Card>
 

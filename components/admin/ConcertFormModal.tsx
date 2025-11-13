@@ -29,7 +29,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const [concertDate, setConcertDate] = React.useState('');
   const [concertTime, setConcertTime] = React.useState('');
   const [priceInfo, setPriceInfo] = React.useState('');
-  const [isRecommended, setIsRecommended] = React.useState(false);
   const [status, setStatus] = React.useState('upcoming');
   const [submitting, setSubmitting] = React.useState(false);
   const [selectedPoster, setSelectedPoster] = React.useState<string | null>(null);
@@ -58,7 +57,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setConcertDate(concert.concertDate);
         setConcertTime(concert.concertTime || '');
         setPriceInfo(concert.priceInfo || '');
-        setIsRecommended(concert.isRecommended);
         setStatus(concert.status);
         setPosterUrl(concert.posterUrl || null);
         setTicketUrl(concert.ticketUrl || '');
@@ -80,7 +78,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setConcertDate('');
         setConcertTime('');
         setPriceInfo('');
-        setIsRecommended(false);
         setStatus('upcoming');
         setSelectedPoster(null);
         setPosterUrl(null);
@@ -235,7 +232,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         priceInfo: priceInfo || undefined,
         posterUrl: posterUrl || undefined,
         ticketUrl: ticketUrl || undefined,
-        isRecommended: isRecommended,
         status,
       };
       
@@ -440,16 +436,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
                 </View>
               </View>
 
-              <View className="flex-row items-center justify-between">
-                <Label>추천 공연</Label>
-                <Button
-                  variant={isRecommended ? 'default' : 'outline'}
-                  onPress={() => setIsRecommended(!isRecommended)}
-                  size="sm"
-                >
-                  <Text>{isRecommended ? '✓ 추천' : '추천'}</Text>
-                </Button>
-              </View>
             </View>
           </Card>
 
