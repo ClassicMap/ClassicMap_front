@@ -62,9 +62,14 @@ function Routes() {
         <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="change-password" options={{ headerShown: false }} />
       </Stack.Protected>
 
       {/* Screens outside the guards are accessible to everyone (e.g. not found) */}
+      <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
     </Stack>
   );
 }
