@@ -38,18 +38,35 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
+import { useColorScheme, Platform } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TIMELINE_HEIGHT = SCREEN_HEIGHT * 0.4;
-const COMPOSER_AVATAR_SIZE = 50;
+const COMPOSER_AVATAR_SIZE = 45;
 const TIMELINE_PADDING = 20;
-const VERTICAL_LANES = 4;
+const VERTICAL_LANES = 5; // 레인 수 증가
 
 export default function TimelineScreen() {
   const router = useRouter();
   const { canEdit } = useAuth();
+  const systemColorScheme = useColorScheme();
+  const [isDark, setIsDark] = useState(false);
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // 웹과 네이티브 모두에서 다크모드 감지
+  React.useEffect(() => {
+    if (Platform.OS === 'web') {
+      const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      setIsDark(darkModeMediaQuery.matches);
+
+      const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+      darkModeMediaQuery.addEventListener('change', handler);
+      return () => darkModeMediaQuery.removeEventListener('change', handler);
+    } else {
+      setIsDark(systemColorScheme === 'dark');
+    }
+  }, [systemColorScheme]);
   const [currentEraIndex, setCurrentEraIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEra, setSelectedEra] = useState<PeriodInfo | null>(null);
@@ -59,6 +76,13 @@ export default function TimelineScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showComposerForm, setShowComposerForm] = useState(false);
+  const [selectedComposerArea, setSelectedComposerArea] = useState<{
+    composers: any[];
+    era: PeriodInfo;
+    centerYear: number;
+  } | null>(null);
+  const [showComposerAreaModal, setShowComposerAreaModal] = useState(false);
+  const [rotationIndex, setRotationIndex] = useState(0);
 
   const ERAS = React.useMemo(() => getAllPeriods(), []);
 
@@ -100,6 +124,15 @@ export default function TimelineScreen() {
     }, [loadComposers])
   );
 
+  // 2초마다 로테이션 인덱스 변경
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setRotationIndex((prev) => prev + 1);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -137,6 +170,15 @@ export default function TimelineScreen() {
 
   const handleComposerPress = (composer: any) => {
     router.push(`/composer/${composer.id}`);
+  };
+
+  const handleComposerAreaPress = (composer: any, nearbyComposers: any[], era: PeriodInfo) => {
+    setSelectedComposerArea({
+      composers: [composer, ...nearbyComposers],
+      era,
+      centerYear: composer.birthYear,
+    });
+    setShowComposerAreaModal(true);
   };
 
   const renderTimelineGraph = () => {
@@ -234,7 +276,7 @@ export default function TimelineScreen() {
 
       composersWithX.sort((a, b) => a.x - b.x);
 
-      const collisionRange = 100;
+      const collisionRange = 60; // 작아진 크기에 맞게 조정
 
       composersWithX.forEach(({ composer, x }) => {
         const nearbyComposers = Object.entries(composerPositions).filter(([id, pos]) => {
@@ -247,8 +289,9 @@ export default function TimelineScreen() {
         while (usedLanes.has(lane) && lane < VERTICAL_LANES) {
           lane++;
         }
+        // 레인이 부족하면 겹치도록 허용
         if (lane >= VERTICAL_LANES) {
-          lane = 0;
+          lane = Math.floor(Math.random() * VERTICAL_LANES);
         }
 
         const isCrowded = nearbyComposers.length > 0;
@@ -404,86 +447,332 @@ export default function TimelineScreen() {
             </View>
 
             {/* Composers on timeline */}
-            {COMPOSERS.map((composer) => {
-              const periodMap: { [key: string]: string } = {
-                바로크: 'baroque',
-                고전주의: 'classical',
-                낭만주의: 'romantic',
-                근현대: 'modern',
-              };
-              const eraId = periodMap[composer.period];
-              const era = ERAS.find((e) => e.id === eraId);
-              if (!era) return null;
+            {(() => {
+              // 타임라인 높이 범위 계산
+              const timelineMinY = 0;
+              const timelineMaxY = TIMELINE_HEIGHT - 60;
 
-              const position = composerPositions[composer.id];
-              if (!position) return null;
+              // 각 x 위치별로 작곡가들을 그룹화
+              const composersByXPosition: { [key: number]: typeof COMPOSERS } = {};
 
-              const { x, lane, crowded } = position;
-              const laneHeight = (TIMELINE_HEIGHT - 60) / VERTICAL_LANES;
-              const verticalOffset =
-                lane * laneHeight + laneHeight / 2 - (TIMELINE_HEIGHT - 60) / 2;
+              COMPOSERS.forEach((composer) => {
+                const position = composerPositions[composer.id];
+                if (!position) return;
 
-              return (
-                <TouchableOpacity
-                  key={composer.id}
-                  onPress={() => handleComposerPress(composer)}
-                  activeOpacity={0.8}
-                  style={{
-                    position: 'absolute',
-                    left: x - COMPOSER_AVATAR_SIZE / 2,
-                    top: (TIMELINE_HEIGHT - 60) / 2 - COMPOSER_AVATAR_SIZE / 2 + verticalOffset,
-                    zIndex: 10,
-                  }}>
-                  <View
+                const { x } = position;
+                const xKey = Math.round(x / 10) * 10; // 10px 단위로 그룹화
+
+                if (!composersByXPosition[xKey]) {
+                  composersByXPosition[xKey] = [];
+                }
+                composersByXPosition[xKey].push(composer);
+              });
+
+              // 각 위치별로 표시할 작곡가와 숨길 작곡가 결정
+              const composerGroups: { [key: string]: { visible: typeof COMPOSERS; hidden: typeof COMPOSERS } } = {};
+              const processedComposers = new Set<number>();
+
+              Object.entries(composersByXPosition).forEach(([xKey, composersAtX]) => {
+                if (composersAtX.length === 0) return;
+
+                // Y 위치별로 정렬
+                const composersWithY = composersAtX.map((c) => {
+                  const position = composerPositions[c.id];
+                  if (!position) return null;
+
+                  const { lane } = position;
+                  const laneHeight = timelineMaxY / VERTICAL_LANES;
+                  const y = lane * laneHeight + laneHeight / 2 - timelineMaxY / 2;
+
+                  return { composer: c, y, position };
+                }).filter(Boolean) as Array<{ composer: any; y: number; position: any }>;
+
+                composersWithY.sort((a, b) => a.y - b.y);
+
+                // 타임라인 범위 내에 있는 작곡가들
+                const visibleComposers: typeof COMPOSERS = [];
+                const hiddenComposers: typeof COMPOSERS = [];
+
+                composersWithY.forEach(({ composer, y }) => {
+                  const topY = y - COMPOSER_AVATAR_SIZE / 2;
+                  const bottomY = y + COMPOSER_AVATAR_SIZE / 2;
+
+                  // 완전히 범위 안에 있거나, 일부라도 보이면 visible로
+                  if (topY >= timelineMinY - COMPOSER_AVATAR_SIZE && bottomY <= timelineMaxY + COMPOSER_AVATAR_SIZE) {
+                    // 이미 visible에 있는 작곡가와 겹치는지 확인
+                    const overlaps = visibleComposers.some((vc) => {
+                      const vcPos = composerPositions[vc.id];
+                      if (!vcPos) return false;
+                      const vcLaneHeight = timelineMaxY / VERTICAL_LANES;
+                      const vcY = vcPos.lane * vcLaneHeight + vcLaneHeight / 2 - timelineMaxY / 2;
+                      return Math.abs(y - vcY) < COMPOSER_AVATAR_SIZE * 0.8;
+                    });
+
+                    if (overlaps) {
+                      hiddenComposers.push(composer);
+                    } else {
+                      visibleComposers.push(composer);
+                    }
+                  } else {
+                    // 범위 밖이면 hidden
+                    hiddenComposers.push(composer);
+                  }
+                });
+
+                // 최소 1명은 보여야 함
+                if (visibleComposers.length === 0 && composersWithY.length > 0) {
+                  visibleComposers.push(composersWithY[0].composer);
+                  hiddenComposers.splice(0, 1);
+                }
+
+                visibleComposers.forEach((c) => processedComposers.add(c.id));
+                hiddenComposers.forEach((c) => processedComposers.add(c.id));
+
+                if (visibleComposers.length > 0) {
+                  composerGroups[xKey] = { visible: visibleComposers, hidden: hiddenComposers };
+                }
+              });
+
+              return Object.entries(composerGroups).map(([groupKey, { visible, hidden }]) => {
+                if (visible.length === 0) return null;
+
+                const hasHidden = hidden.length > 0;
+                const allComposers = [...visible, ...hidden];
+
+                // 로테이션: visible 작곡가들 중에서 순환
+                const currentComposerIndex = hasHidden || visible.length > 1
+                  ? rotationIndex % allComposers.length
+                  : 0;
+                const displayComposer = allComposers[currentComposerIndex];
+
+                const periodMap: { [key: string]: string } = {
+                  바로크: 'baroque',
+                  고전주의: 'classical',
+                  낭만주의: 'romantic',
+                  근현대: 'modern',
+                };
+                const eraId = periodMap[displayComposer.period];
+                const era = ERAS.find((e) => e.id === eraId);
+                if (!era) return null;
+
+                const position = composerPositions[visible[0].id]; // 위치는 첫번째 작곡가 기준
+                if (!position) return null;
+
+                const { x, lane } = position;
+                const laneHeight = (TIMELINE_HEIGHT - 60) / VERTICAL_LANES;
+                const verticalOffset =
+                  lane * laneHeight + laneHeight / 2 - (TIMELINE_HEIGHT - 60) / 2;
+
+                return (
+                  <TouchableOpacity
+                    key={groupKey}
+                    onPress={() => {
+                      if (hasHidden || visible.length > 1) {
+                        handleComposerAreaPress(displayComposer, allComposers.filter(c => c.id !== displayComposer.id), era);
+                      } else {
+                        handleComposerPress(displayComposer);
+                      }
+                    }}
+                    activeOpacity={0.8}
                     style={{
-                      flexDirection: crowded ? 'row' : 'column',
-                      alignItems: 'center',
-                      gap: 8,
+                      position: 'absolute',
+                      left: x - COMPOSER_AVATAR_SIZE / 2,
+                      top: (TIMELINE_HEIGHT - 60) / 2 - COMPOSER_AVATAR_SIZE / 2 + verticalOffset,
                       zIndex: 10,
                     }}>
                     <View
                       style={{
-                        width: COMPOSER_AVATAR_SIZE,
-                        height: COMPOSER_AVATAR_SIZE,
-                        borderRadius: COMPOSER_AVATAR_SIZE / 2,
-                        borderWidth: 3,
-                        borderColor: era.color,
-                        overflow: 'hidden',
-                        backgroundColor: '#fff',
+                        alignItems: 'center',
+                        gap: 4,
+                        zIndex: 10,
                       }}>
-                      {composer.image ? (
-                        <Image
-                          source={{ uri: getImageUrl(composer.image) }}
-                          style={{ width: '100%', height: '100%' }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <View
-                          className="size-full items-center justify-center"
-                          style={{ backgroundColor: era.color + '30' }}>
-                          <Text className="text-lg font-bold" style={{ color: era.color }}>
-                            {composer.name[0]}
-                          </Text>
-                        </View>
-                      )}
+                      {/* 메인 아바타 (로테이션) */}
+                      <View style={{ position: 'relative', width: COMPOSER_AVATAR_SIZE, height: COMPOSER_AVATAR_SIZE }}>
+                        <Animated.View
+                          key={`${groupKey}-${currentComposerIndex}`}
+                          entering={FadeIn.duration(400)}
+                          exiting={FadeOut.duration(300)}
+                          style={{ position: 'absolute', left: 0, top: 0, width: COMPOSER_AVATAR_SIZE, height: COMPOSER_AVATAR_SIZE }}>
+                          {hasHidden || visible.length > 1 ? (
+                            <>
+                              {/* 뒤에 희미한 아바타 (다음 작곡가 힌트) */}
+                              {allComposers.length > 1 && (
+                                <View
+                                  style={{
+                                    position: 'absolute',
+                                    left: 4,
+                                    top: 4,
+                                    width: COMPOSER_AVATAR_SIZE,
+                                    height: COMPOSER_AVATAR_SIZE,
+                                    borderRadius: COMPOSER_AVATAR_SIZE / 2,
+                                    borderWidth: 2,
+                                    borderColor: era.color,
+                                    overflow: 'hidden',
+                                    backgroundColor: '#fff',
+                                    opacity: 0.3,
+                                  }}>
+                                  {allComposers[(currentComposerIndex + 1) % allComposers.length].image ? (
+                                    <Image
+                                      source={{ uri: getImageUrl(allComposers[(currentComposerIndex + 1) % allComposers.length].image) }}
+                                      style={{ width: '100%', height: '100%' }}
+                                      resizeMode="cover"
+                                    />
+                                  ) : (
+                                    <View
+                                      className="size-full items-center justify-center"
+                                      style={{ backgroundColor: era.color + '30' }}>
+                                      <Text className="text-sm font-bold" style={{ color: era.color }}>
+                                        {allComposers[(currentComposerIndex + 1) % allComposers.length].name[0]}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                              )}
+                              {/* 현재 표시 중인 아바타 */}
+                              <View
+                                style={{
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: 0,
+                                  width: COMPOSER_AVATAR_SIZE,
+                                  height: COMPOSER_AVATAR_SIZE,
+                                  borderRadius: COMPOSER_AVATAR_SIZE / 2,
+                                  borderWidth: 2,
+                                  borderColor: era.color,
+                                  overflow: 'hidden',
+                                  backgroundColor: '#fff',
+                                }}>
+                                {displayComposer.image ? (
+                                  <Image
+                                    source={{ uri: getImageUrl(displayComposer.image) }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <View
+                                    className="size-full items-center justify-center"
+                                    style={{ backgroundColor: era.color + '30' }}>
+                                    <Text className="text-sm font-bold" style={{ color: era.color }}>
+                                      {displayComposer.name[0]}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            </>
+                          ) : (
+                            <View
+                              style={{
+                                width: COMPOSER_AVATAR_SIZE,
+                                height: COMPOSER_AVATAR_SIZE,
+                                borderRadius: COMPOSER_AVATAR_SIZE / 2,
+                                borderWidth: 2,
+                                borderColor: era.color,
+                                overflow: 'hidden',
+                                backgroundColor: '#fff',
+                              }}>
+                              {displayComposer.image ? (
+                                <Image
+                                  source={{ uri: getImageUrl(displayComposer.image) }}
+                                  style={{ width: '100%', height: '100%' }}
+                                  resizeMode="cover"
+                                />
+                              ) : (
+                                <View
+                                  className="size-full items-center justify-center"
+                                  style={{ backgroundColor: era.color + '30' }}>
+                                  <Text className="text-sm font-bold" style={{ color: era.color }}>
+                                    {displayComposer.name[0]}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+                        </Animated.View>
+                      </View>
+
+                      {/* 이름 라벨 - 애니메이션 적용 */}
+                      <Animated.View
+                        key={`label-${groupKey}-${currentComposerIndex}`}
+                        entering={FadeIn.duration(400)}
+                        exiting={FadeOut.duration(300)}>
+                        {!(hasHidden || visible.length > 1) && (
+                          <View
+                            className="rounded-full border px-2 py-0.5"
+                            style={{
+                              borderColor: era.color,
+                              borderWidth: 1.5,
+                              backgroundColor: era.color + (isDark ? '30' : '20'),
+                              ...(Platform.OS === 'web' ? {
+                                boxShadow: `0 1px 3px ${era.color}40`,
+                              } : {
+                                shadowColor: era.color,
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.3,
+                                shadowRadius: 2,
+                                elevation: 3,
+                              }),
+                            }}>
+                            <Text
+                              className="text-[9px] font-bold"
+                              style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                              {displayComposer.name}
+                            </Text>
+                          </View>
+                        )}
+                        {hasHidden && (
+                          <View
+                            className="rounded-full px-2 py-0.5"
+                            style={{
+                              borderColor: era.color,
+                              borderWidth: 1.5,
+                              backgroundColor: era.color + (isDark ? '40' : '30'),
+                              ...(Platform.OS === 'web' ? {
+                                boxShadow: `0 1px 3px ${era.color}50`,
+                              } : {
+                                shadowColor: era.color,
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.4,
+                                shadowRadius: 2,
+                                elevation: 4,
+                              }),
+                            }}>
+                            <Text
+                              className="text-[9px] font-bold"
+                              style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                              {displayComposer.name}+{allComposers.length - 1}
+                            </Text>
+                          </View>
+                        )}
+                        {!hasHidden && visible.length > 1 && (
+                          <View
+                            className="rounded-full px-2 py-0.5"
+                            style={{
+                              borderColor: era.color,
+                              borderWidth: 1.5,
+                              backgroundColor: era.color + (isDark ? '35' : '25'),
+                              ...(Platform.OS === 'web' ? {
+                                boxShadow: `0 1px 3px ${era.color}45`,
+                              } : {
+                                shadowColor: era.color,
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.35,
+                                shadowRadius: 2,
+                                elevation: 3,
+                              }),
+                            }}>
+                            <Text
+                              className="text-[9px] font-bold"
+                              style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                              {visible.length}명
+                            </Text>
+                          </View>
+                        )}
+                      </Animated.View>
                     </View>
-                    <View
-                      className="rounded-lg border border-border/20 bg-card/95 px-2 py-1 shadow-xl"
-                      style={{
-                        alignItems: crowded ? 'flex-start' : 'center',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 4,
-                        elevation: 10,
-                      }}>
-                      <Text className="text-[10px] font-bold">{composer.name}</Text>
-                      <Text className="text-[9px] text-muted-foreground">{composer.birthYear}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+                  </TouchableOpacity>
+                );
+              });
+            })()}
           </View>
         </ScrollView>
 
@@ -539,83 +828,241 @@ export default function TimelineScreen() {
               <Animated.View
                 entering={SlideInDown.duration(300).springify()}
                 exiting={SlideOutDown.duration(200)}
-                className="rounded-t-3xl bg-background"
+                className="rounded-t-3xl overflow-hidden"
                 style={{
-                  maxHeight: SCREEN_HEIGHT * 0.7,
+                  maxHeight: SCREEN_HEIGHT * 0.8,
+                  backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
                 }}>
                 {selectedEra && (
-                  <View className="gap-4 p-6 pb-10">
-                    <View className="flex-row items-center justify-between">
+                  <>
+                    {/* 헤더 */}
+                    <View
+                      className="px-6 pt-6 pb-4"
+                      style={{
+                        backgroundColor: selectedEra.color + '20',
+                        borderBottomWidth: 3,
+                        borderBottomColor: selectedEra.color,
+                      }}>
+                      <View className="flex-row items-center justify-between mb-3">
+                        <View className="flex-1">
+                          <Text className="text-4xl font-bold" style={{ color: selectedEra.color }}>
+                            {selectedEra.name}
+                          </Text>
+                          <Text
+                            className="mt-1 text-base font-semibold"
+                            style={{ color: selectedEra.color, opacity: 0.8 }}>
+                            {selectedEra.period}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => setShowEraModal(false)}
+                          className="rounded-full p-2.5"
+                          style={{
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                          }}>
+                          <Icon as={XIcon} size={24} style={{ color: selectedEra.color }} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* 스크롤 가능한 내용 */}
+                    <ScrollView className="px-6 py-5" showsVerticalScrollIndicator={false}>
+                      <View className="gap-5 pb-8">
+                        {/* 설명 */}
+                        <View
+                          className="rounded-2xl p-5"
+                          style={{
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : selectedEra.color + '10',
+                            borderWidth: 1,
+                            borderColor: selectedEra.color + '30',
+                          }}>
+                          <Text className="text-base leading-7" style={{ color: isDark ? '#e5e5e5' : '#171717' }}>{selectedEra.description}</Text>
+                        </View>
+
+                        {/* 주요 특징 */}
+                        {selectedEra.characteristics && (
+                          <View className="gap-3">
+                            <Text className="text-xl font-bold" style={{ color: isDark ? '#e5e5e5' : '#171717' }}>주요 특징</Text>
+                            <View className="gap-3">
+                              {selectedEra.characteristics.map((char, index) => (
+                                <Animated.View
+                                  key={index}
+                                  entering={FadeIn.delay(index * 80).duration(300)}
+                                  className="flex-row items-start gap-3 rounded-xl p-4"
+                                  style={{
+                                    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                                    borderLeftWidth: 4,
+                                    borderLeftColor: selectedEra.color,
+                                    ...(Platform.OS === 'web' ? {
+                                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                    } : {
+                                      shadowColor: '#000',
+                                      shadowOffset: { width: 0, height: 1 },
+                                      shadowOpacity: 0.1,
+                                      shadowRadius: 2,
+                                      elevation: 2,
+                                    }),
+                                  }}>
+                                  <View
+                                    className="mt-1.5 size-2.5 rounded-full"
+                                    style={{ backgroundColor: selectedEra.color }}
+                                  />
+                                  <Text className="flex-1 text-base leading-6" style={{ color: isDark ? '#e5e5e5' : '#171717' }}>{char}</Text>
+                                </Animated.View>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+
+                        {/* 대표 작곡가 */}
+                        {selectedEra.keyComposers && (
+                          <View className="gap-3">
+                            <Text className="text-xl font-bold" style={{ color: isDark ? '#e5e5e5' : '#171717' }}>대표 작곡가</Text>
+                            <View className="flex-row flex-wrap gap-2.5">
+                              {selectedEra.keyComposers.map((composer, index) => (
+                                <Animated.View
+                                  key={index}
+                                  entering={FadeIn.delay(index * 60 + 200).duration(300)}
+                                  className="rounded-full px-5 py-2.5"
+                                  style={{
+                                    backgroundColor: selectedEra.color + '25',
+                                    borderWidth: 1.5,
+                                    borderColor: selectedEra.color,
+                                  }}>
+                                  <Text className="text-sm font-bold" style={{ color: selectedEra.color }}>
+                                    {composer}
+                                  </Text>
+                                </Animated.View>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    </ScrollView>
+                  </>
+                )}
+              </Animated.View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* Composer Area Modal - 작곡가 밀집 영역 확대 */}
+        <Modal
+          visible={showComposerAreaModal}
+          transparent={true}
+          animationType="none"
+          onRequestClose={() => setShowComposerAreaModal(false)}>
+          <Pressable
+            className="flex-1 justify-center bg-black/70"
+            onPress={() => setShowComposerAreaModal(false)}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+                className="mx-4 rounded-3xl bg-background"
+                style={{
+                  maxHeight: SCREEN_HEIGHT * 0.8,
+                }}>
+                {selectedComposerArea && (
+                  <ScrollView className="p-6">
+                    <View className="mb-6 flex-row items-center justify-between">
                       <View className="flex-1">
-                        <Text className="text-3xl font-bold" style={{ color: selectedEra.color }}>
-                          {selectedEra.name}
+                        <Text className="text-2xl font-bold" style={{ color: selectedComposerArea.era.color }}>
+                          {selectedComposerArea.era.name}
                         </Text>
-                        <Text
-                          className="mt-1 text-sm font-semibold"
-                          style={{ color: selectedEra.color, opacity: 0.7 }}>
-                          {selectedEra.period}
+                        <Text className="mt-1 text-sm text-muted-foreground">
+                          {selectedComposerArea.centerYear}년 전후 작곡가들
                         </Text>
                       </View>
                       <TouchableOpacity
-                        onPress={() => setShowEraModal(false)}
+                        onPress={() => setShowComposerAreaModal(false)}
                         className="rounded-full bg-muted p-2">
                         <Icon as={XIcon} size={24} className="text-foreground" />
                       </TouchableOpacity>
                     </View>
 
-                    <View
-                      className="rounded-xl p-4"
-                      style={{ backgroundColor: selectedEra.color + '15' }}>
-                      <Text className="text-base leading-6">{selectedEra.description}</Text>
-                    </View>
-
-                    {selectedEra.characteristics && (
-                      <View className="gap-2">
-                        <Text className="text-lg font-bold">주요 특징</Text>
-                        <View className="gap-2">
-                          {selectedEra.characteristics.map((char, index) => (
-                            <Animated.View
-                              key={index}
-                              entering={FadeIn.delay(index * 100).duration(300)}
-                              className="flex-row items-center gap-2 rounded-lg bg-card p-3"
+                    <View className="gap-3">
+                      {selectedComposerArea.composers
+                        .sort((a, b) => a.birthYear - b.birthYear)
+                        .map((composer, index) => (
+                          <Animated.View
+                            key={composer.id}
+                            entering={FadeIn.delay(index * 80).duration(300)}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setShowComposerAreaModal(false);
+                                handleComposerPress(composer);
+                              }}
+                              className="flex-row items-center gap-4 rounded-2xl bg-card p-4"
                               style={{
-                                borderLeftWidth: 3,
-                                borderLeftColor: selectedEra.color,
+                                borderLeftWidth: 4,
+                                borderLeftColor: selectedComposerArea.era.color,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 3,
                               }}>
                               <View
-                                className="size-2 rounded-full"
-                                style={{ backgroundColor: selectedEra.color }}
-                              />
-                              <Text className="flex-1">{char}</Text>
-                            </Animated.View>
-                          ))}
-                        </View>
-                      </View>
-                    )}
+                                style={{
+                                  width: 70,
+                                  height: 70,
+                                  borderRadius: 35,
+                                  overflow: 'hidden',
+                                  backgroundColor: selectedComposerArea.era.color + '20',
+                                  borderWidth: 3,
+                                  borderColor: selectedComposerArea.era.color,
+                                }}>
+                                {composer.image ? (
+                                  <Image
+                                    source={{ uri: getImageUrl(composer.image) }}
+                                    style={{ width: '100%', height: '100%' }}
+                                    resizeMode="cover"
+                                  />
+                                ) : (
+                                  <View className="size-full items-center justify-center">
+                                    <Text className="text-2xl font-bold" style={{ color: selectedComposerArea.era.color }}>
+                                      {composer.name[0]}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
 
-                    {selectedEra.keyComposers && (
-                      <View className="gap-2">
-                        <Text className="text-lg font-bold">대표 작곡가</Text>
-                        <View className="flex-row flex-wrap gap-2">
-                          {selectedEra.keyComposers.map((composer, index) => (
-                            <Animated.View
-                              key={index}
-                              entering={FadeIn.delay(index * 100 + 300).duration(300)}
-                              className="rounded-full px-4 py-2"
-                              style={{
-                                backgroundColor: selectedEra.color + '20',
-                                borderWidth: 1,
-                                borderColor: selectedEra.color,
-                              }}>
-                              <Text className="font-semibold" style={{ color: selectedEra.color }}>
-                                {composer}
-                              </Text>
-                            </Animated.View>
-                          ))}
-                        </View>
-                      </View>
-                    )}
-                  </View>
+                              <View className="flex-1">
+                                <Text className="text-lg font-bold">{composer.name}</Text>
+                                <Text className="text-sm text-muted-foreground">
+                                  {composer.fullName}
+                                </Text>
+                                <View className="mt-2 flex-row items-center gap-2">
+                                  <View
+                                    className="rounded-full px-3 py-1"
+                                    style={{ backgroundColor: selectedComposerArea.era.color + '20' }}>
+                                    <Text className="text-xs font-semibold" style={{ color: selectedComposerArea.era.color }}>
+                                      {composer.birthYear}~{composer.deathYear || '현재'}
+                                    </Text>
+                                  </View>
+                                  <Text className="text-xs text-muted-foreground">
+                                    {composer.nationality}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View className="items-center justify-center">
+                                <Text className="text-2xl" style={{ color: selectedComposerArea.era.color }}>
+                                  →
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          </Animated.View>
+                        ))}
+                    </View>
+
+                    <View className="mt-6 rounded-xl bg-muted p-4">
+                      <Text className="text-center text-sm text-muted-foreground">
+                        작곡가를 선택하면 상세 정보를 볼 수 있습니다
+                      </Text>
+                    </View>
+                  </ScrollView>
                 )}
               </Animated.View>
             </Pressable>
