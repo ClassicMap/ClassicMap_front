@@ -294,8 +294,8 @@ export function getAllPeriods(): PeriodInfo[] {
     {
       id: 'baroque',
       name: '바로크',
-      period: '1600-1750',
-      startYear: 1600,
+      period: '1640-1750',
+      startYear: 1640,
       endYear: 1750,
       color: '#9333ea',
       gradient: ['#7c3aed', '#a855f7'],
