@@ -596,23 +596,6 @@ export default function ComposerDetailScreen() {
     setError(null);
     try {
       const data = await ComposerAPI.getById(Number(id));
-
-      // 각 major piece의 상세 정보 가져오기
-      if (data?.majorPieces && data.majorPieces.length > 0) {
-        const detailedPieces = await Promise.all(
-          data.majorPieces.map(async (piece) => {
-            try {
-              const fullPiece = await ComposerAPI.getPieceById(piece.id);
-              return fullPiece || piece;
-            } catch (error) {
-              console.error(`Failed to load piece ${piece.id}:`, error);
-              return piece;
-            }
-          })
-        );
-        data.majorPieces = detailedPieces;
-      }
-
       setComposer(data);
 
       // 이미지 프리페치
@@ -632,22 +615,6 @@ export default function ComposerDetailScreen() {
     setRefreshing(true);
     try {
       const data = await ComposerAPI.getById(Number(id));
-
-      // 각 major piece의 상세 정보 가져오기
-      if (data?.majorPieces && data.majorPieces.length > 0) {
-        const detailedPieces = await Promise.all(
-          data.majorPieces.map(async (piece) => {
-            try {
-              const fullPiece = await ComposerAPI.getPieceById(piece.id);
-              return fullPiece || piece;
-            } catch (error) {
-              console.error(`Failed to load piece ${piece.id}:`, error);
-              return piece;
-            }
-          })
-        );
-        data.majorPieces = detailedPieces;
-      }
 
       setComposer(data);
 
@@ -921,8 +888,19 @@ export default function ComposerDetailScreen() {
           {/* Style */}
           {composer.style && (
             <Card className="p-4">
-              <Text className="mb-2 text-lg font-bold">음악 스타일</Text>
-              <Text className="leading-6 text-muted-foreground">{composer.style}</Text>
+              <Text className="mb-3 text-lg font-bold">음악 스타일</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {composer.style.split(',').map((keyword, index) => (
+                  <View
+                    key={index}
+                    className="rounded-full bg-primary/10 px-3 py-1.5 border border-primary/20"
+                  >
+                    <Text className="text-sm text-primary font-medium">
+                      {keyword.trim()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </Card>
           )}
 
@@ -934,10 +912,10 @@ export default function ComposerDetailScreen() {
             </Card>
           )}
 
-          {/* Major Works */}
+          {/* Works */}
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold">주요 작품</Text>
+              <Text className="text-xl font-bold">작품 목록</Text>
               {canEdit && (
                 <Button size="sm" onPress={() => {
                   setEditingPiece(undefined);
@@ -950,13 +928,12 @@ export default function ComposerDetailScreen() {
             </View>
             {composer.majorPieces && composer.majorPieces.length > 0 ? (
               <View className="gap-2">
-                {composer.majorPieces.map((work, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handlePieceClick(work.id, work.title)}
-                    activeOpacity={0.7}
-                  >
-                    <Card className="p-4">
+                {composer.majorPieces.map((work) => (
+                  <Card key={work.id} className="p-4">
+                    <TouchableOpacity
+                      onPress={() => handlePieceClick(work.id, work.title)}
+                      activeOpacity={0.7}
+                    >
                       <View className="flex-row items-center gap-3">
                         <Icon as={MusicIcon} size={20} className="text-primary" />
                         <View className="flex-1">
@@ -980,6 +957,7 @@ export default function ComposerDetailScreen() {
                                 <Image
                                   source={require('@/assets/spotify.png')}
                                   className="h-8 w-8"
+                                  style={{ width: 32, height: 32 }}
                                   resizeMode="contain"
                                 />
                               </TouchableOpacity>
@@ -995,6 +973,7 @@ export default function ComposerDetailScreen() {
                                 <Image
                                   source={require('@/assets/apple_music_classical.png')}
                                   className="h-8 w-8"
+                                  style={{ width: 32, height: 32 }}
                                   resizeMode="contain"
                                 />
                               </TouchableOpacity>
@@ -1038,14 +1017,14 @@ export default function ComposerDetailScreen() {
 
                         <Icon as={ArrowLeftIcon} size={16} className="text-muted-foreground rotate-180" />
                       </View>
-                    </Card>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </Card>
                 ))}
               </View>
             ) : (
               <Card className="p-6">
                 <Text className="text-center text-muted-foreground">
-                  {canEdit ? '작품을 추가해주세요.' : '아직 등록된 주요 작품이 없습니다.'}
+                  {canEdit ? '작품을 추가해주세요.' : '아직 등록된 작품이 없습니다.'}
                 </Text>
               </Card>
             )}

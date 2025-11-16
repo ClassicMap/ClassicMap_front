@@ -166,7 +166,7 @@ export interface ArtistDTO {
 // ============================================
 
 export interface ComposerWithPieces extends Composer {
-  majorPieces: Piece[];
+  majorPieces: Piece[]; // 작곡가의 모든 작품 목록
 }
 
 export interface PieceWithPerformances extends Piece {

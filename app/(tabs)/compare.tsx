@@ -82,6 +82,9 @@ export default function CompareScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
+  // URL 파라미터로부터 곡이 선택되었는지 추적
+  const isFromUrlParams = React.useRef(false);
+
   // 작곡가 필터링
   const filteredComposers = React.useMemo(() => {
     let filtered = composers;
@@ -218,6 +221,12 @@ export default function CompareScreen() {
 
   // 초기화: 작곡가 선택 시 첫 번째 곡 자동 선택
   React.useEffect(() => {
+    // URL 파라미터로부터 선택된 경우 자동 선택 건너뛰기
+    if (isFromUrlParams.current) {
+      isFromUrlParams.current = false;
+      return;
+    }
+
     if (
       selectedComposer &&
       selectedComposer.majorPieces &&
@@ -285,9 +294,11 @@ export default function CompareScreen() {
 
     if (params.pieceId) {
       const pieceId = Number(params.pieceId);
+
       for (const composer of composers) {
         const piece = composer.majorPieces?.find((p) => p.id === pieceId);
         if (piece) {
+          isFromUrlParams.current = true;
           setSelectedComposer(composer);
           setSelectedPiece(piece);
           setNoPieceFound(false);
@@ -299,6 +310,7 @@ export default function CompareScreen() {
       const composerId = Number(params.composerId);
       const composer = composers.find((c) => c.id === composerId);
       if (composer) {
+        isFromUrlParams.current = true;
         setSelectedComposer(composer);
         if (composer.majorPieces && composer.majorPieces.length > 0) {
           setSelectedPiece(composer.majorPieces[0]);

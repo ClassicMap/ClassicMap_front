@@ -293,26 +293,32 @@ export const ComposerAPI = {
   },
 
   /**
-   * 작곡가 ID로 조회 (주요 곡 포함)
+   * 작곡가 ID로 조회 (작품 목록 포함)
    */
   async getById(id: number): Promise<ComposerWithPieces | null> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch composer');
+      const composerResponse = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`);
+      if (!composerResponse.ok) throw new Error('Failed to fetch composer');
 
-      const composerData: any = await response.json();
+      const composerData: APIComposer = await composerResponse.json();
       if (!composerData) return null;
 
-      const majorPieces = composerData.majorPieces
-        ? composerData.majorPieces.split('|').map((p: string) => {
-            const [id, title] = p.split(':');
-            return { id: parseInt(id, 10), title };
-          })
-        : [];
+      // 작곡가의 모든 곡 가져오기
+      const piecesResponse = await authenticatedFetch(`${API_BASE_URL}/composers/${id}/pieces`);
+      let pieces: Piece[] = [];
+      if (piecesResponse.ok) {
+        const piecesData: APIPiece[] = await piecesResponse.json();
+        pieces = piecesData.map(mapPiece);
+      }
+
+      console.log('=== Composer API Response ===');
+      console.log('Composer:', composerData.name);
+      console.log('Pieces count:', pieces.length);
+      console.log('============================');
 
       return {
         ...mapComposer(composerData),
-        majorPieces,
+        majorPieces: pieces, // pieces를 majorPieces로 사용 (기존 코드 호환성 유지)
       };
     }
     const composer = getComposerById(id);
