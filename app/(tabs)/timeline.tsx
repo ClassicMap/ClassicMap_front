@@ -324,6 +324,7 @@ export default function TimelineScreen() {
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
           decelerationRate="normal"
           scrollEventThrottle={16}
           onScroll={(e) => {
@@ -340,6 +341,10 @@ export default function TimelineScreen() {
               }
             });
           }}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={true}
+            style={{ flex: 1 }}>
           <View style={{ width: totalWidth, paddingHorizontal: TIMELINE_PADDING }}>
             {/* Era backgrounds */}
             <View
@@ -774,11 +779,12 @@ export default function TimelineScreen() {
               });
             })()}
           </View>
+          </ScrollView>
         </ScrollView>
 
         <View className="absolute bottom-2 left-0 right-0 items-center">
           <View className="rounded-full bg-muted/80 px-4 py-2">
-            <Text className="text-xs text-muted-foreground">← 좌우로 스크롤하세요 →</Text>
+            <Text className="text-xs text-muted-foreground">← 좌우/위아래로 스크롤하세요 →</Text>
           </View>
         </View>
       </View>

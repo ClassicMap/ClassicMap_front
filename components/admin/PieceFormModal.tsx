@@ -21,6 +21,7 @@ interface PieceFormModalProps {
 
 export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess }: PieceFormModalProps) {
   const [title, setTitle] = React.useState('');
+  const [titleEn, setTitleEn] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [opusNumber, setOpusNumber] = React.useState('');
   const [compositionYear, setCompositionYear] = React.useState('');
@@ -35,6 +36,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
     if (visible && piece) {
       // 수정 모드: 기존 데이터 로드
       setTitle(piece.title);
+      setTitleEn(piece.titleEn || '');
       setDescription(piece.description || '');
       setOpusNumber(piece.opusNumber || '');
       setCompositionYear(piece.compositionYear ? piece.compositionYear.toString() : '');
@@ -46,6 +48,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
     } else if (!visible) {
       // 모달 닫힐 때 초기화
       setTitle('');
+      setTitleEn('');
       setDescription('');
       setOpusNumber('');
       setCompositionYear('');
@@ -69,6 +72,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         // 수정 모드
         await AdminPieceAPI.update(piece.id, {
           title,
+          titleEn: titleEn || null,
           description: description || null,
           opusNumber: opusNumber || null,
           compositionYear: compositionYear ? parseInt(compositionYear) : null,
@@ -84,6 +88,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         await AdminPieceAPI.create({
           composerId: composerId,
           title,
+          titleEn: titleEn || undefined,
           description: description || undefined,
           opusNumber: opusNumber || undefined,
           compositionYear: compositionYear ? parseInt(compositionYear) : undefined,
@@ -125,6 +130,11 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
               <View>
                 <Label>제목 *</Label>
                 <Input value={title} onChangeText={setTitle} placeholder="피아노 소나타 14번" />
+              </View>
+
+              <View>
+                <Label>영문 제목</Label>
+                <Input value={titleEn} onChangeText={setTitleEn} placeholder="Piano Sonata No. 14" />
               </View>
 
               <View>

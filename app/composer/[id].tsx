@@ -937,9 +937,12 @@ export default function ComposerDetailScreen() {
                       <View className="flex-row items-center gap-3">
                         <Icon as={MusicIcon} size={20} className="text-primary" />
                         <View className="flex-1">
-                          <Text className="font-medium">{work.title}</Text>
+                          <Text className="text-lg font-semibold">{work.title}</Text>
+                          {work.titleEn && (
+                            <Text className="text-sm text-muted-foreground mt-0.5">{work.titleEn}</Text>
+                          )}
                           {work.opusNumber && (
-                            <Text className="text-sm text-muted-foreground">{work.opusNumber}</Text>
+                            <Text className="text-xs text-muted-foreground mt-1">{work.opusNumber}</Text>
                           )}
                         </View>
 
