@@ -26,6 +26,7 @@ export interface Piece {
   id: number;
   composerId: number;
   title: string;
+  titleEn?: string;
   description?: string;
   opusNumber?: string;
   compositionYear?: number;
@@ -132,6 +133,7 @@ export interface PieceDTO {
   id: number;
   composerId: number;
   title: string;
+  titleEn?: string;
   description?: string;
   opusNumber?: string;
   compositionYear?: number;
