@@ -180,7 +180,6 @@ export default function CompareScreen() {
   React.useEffect(() => {
     // URL 파라미터로부터 선택된 경우 자동 선택 건너뛰기
     if (isFromUrlParams.current) {
-      isFromUrlParams.current = false;
       return;
     }
 
@@ -299,9 +298,65 @@ export default function CompareScreen() {
   // URL 파라미터로 작곡가/곡 선택
   React.useEffect(() => {
     if (!composers.length) return;
+    if (!params.pieceId && !params.composerId) {
+      // URL 파라미터가 없으면 플래그 리셋
+      isFromUrlParams.current = false;
+      return;
+    }
 
     const loadFromParams = async () => {
-      if (params.pieceId) {
+      // pieceId와 composerId가 둘 다 있는 경우
+      if (params.pieceId && params.composerId) {
+        const pieceId = Number(params.pieceId);
+        const composerId = Number(params.composerId);
+        const composer = composers.find((c) => c.id === composerId);
+
+        if (composer) {
+          isFromUrlParams.current = true;
+
+          // 곡 목록이 있으면 바로 찾기
+          if (composer.majorPieces) {
+            const piece = composer.majorPieces.find((p) => p.id === pieceId);
+            if (piece) {
+              setSelectedComposer(composer);
+              setSelectedPiece(piece);
+              setNoPieceFound(false);
+              // 플래그는 나중에 리셋 (다음 렌더링 후)
+              setTimeout(() => {
+                isFromUrlParams.current = false;
+              }, 100);
+              return;
+            }
+          }
+
+          // 곡 목록이 없으면 로드
+          try {
+            const pieces = await PieceAPI.getByComposer(composerId);
+            const piece = pieces.find((p) => p.id === pieceId);
+
+            if (piece) {
+              const updatedComposer = { ...composer, majorPieces: pieces };
+              setComposers((prev) =>
+                prev.map((c) => (c.id === composerId ? updatedComposer : c))
+              );
+              setSelectedComposer(updatedComposer);
+              setSelectedPiece(piece);
+              setNoPieceFound(false);
+              // 플래그는 나중에 리셋 (다음 렌더링 후)
+              setTimeout(() => {
+                isFromUrlParams.current = false;
+              }, 100);
+              return;
+            }
+          } catch (error) {
+            console.error('Failed to load pieces:', error);
+          }
+        }
+        setNoPieceFound(true);
+        isFromUrlParams.current = false;
+      }
+      // pieceId만 있는 경우 (composerId 없음)
+      else if (params.pieceId) {
         const pieceId = Number(params.pieceId);
 
         // 먼저 이미 로드된 데이터에서 찾기
@@ -312,6 +367,9 @@ export default function CompareScreen() {
             setSelectedComposer(composer);
             setSelectedPiece(piece);
             setNoPieceFound(false);
+            setTimeout(() => {
+              isFromUrlParams.current = false;
+            }, 100);
             return;
           }
         }
@@ -324,13 +382,16 @@ export default function CompareScreen() {
               const piece = pieces.find((p) => p.id === pieceId);
               if (piece) {
                 isFromUrlParams.current = true;
-                // composers 상태 업데이트
+                const updatedComposer = { ...composer, majorPieces: pieces };
                 setComposers((prev) =>
-                  prev.map((c) => (c.id === composer.id ? { ...c, majorPieces: pieces } : c))
+                  prev.map((c) => (c.id === composer.id ? updatedComposer : c))
                 );
-                setSelectedComposer({ ...composer, majorPieces: pieces });
+                setSelectedComposer(updatedComposer);
                 setSelectedPiece(piece);
                 setNoPieceFound(false);
+                setTimeout(() => {
+                  isFromUrlParams.current = false;
+                }, 100);
                 return;
               }
             } catch (error) {
@@ -339,35 +400,50 @@ export default function CompareScreen() {
           }
         }
         setNoPieceFound(true);
-      } else if (params.composerId) {
+        isFromUrlParams.current = false;
+      }
+      // composerId만 있는 경우
+      else if (params.composerId) {
         const composerId = Number(params.composerId);
         const composer = composers.find((c) => c.id === composerId);
         if (composer) {
           isFromUrlParams.current = true;
-          setSelectedComposer(composer);
 
           // 곡 목록이 없으면 로드
           if (!composer.majorPieces) {
             try {
               const pieces = await PieceAPI.getByComposer(composer.id);
+              const updatedComposer = { ...composer, majorPieces: pieces };
               setComposers((prev) =>
-                prev.map((c) => (c.id === composer.id ? { ...c, majorPieces: pieces } : c))
+                prev.map((c) => (c.id === composer.id ? updatedComposer : c))
               );
+              setSelectedComposer(updatedComposer);
+
               if (pieces.length > 0) {
                 setSelectedPiece(pieces[0]);
                 setNoPieceFound(false);
               } else {
                 setNoPieceFound(true);
               }
+              setTimeout(() => {
+                isFromUrlParams.current = false;
+              }, 100);
             } catch (error) {
               console.error('Failed to load pieces:', error);
               setNoPieceFound(true);
+              isFromUrlParams.current = false;
             }
-          } else if (composer.majorPieces.length > 0) {
-            setSelectedPiece(composer.majorPieces[0]);
-            setNoPieceFound(false);
           } else {
-            setNoPieceFound(true);
+            setSelectedComposer(composer);
+            if (composer.majorPieces.length > 0) {
+              setSelectedPiece(composer.majorPieces[0]);
+              setNoPieceFound(false);
+            } else {
+              setNoPieceFound(true);
+            }
+            setTimeout(() => {
+              isFromUrlParams.current = false;
+            }, 100);
           }
         }
       }
