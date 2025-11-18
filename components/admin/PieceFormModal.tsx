@@ -22,6 +22,7 @@ interface PieceFormModalProps {
 export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess }: PieceFormModalProps) {
   const [title, setTitle] = React.useState('');
   const [titleEn, setTitleEn] = React.useState('');
+  const [type, setType] = React.useState<'album' | 'song'>('song');
   const [description, setDescription] = React.useState('');
   const [opusNumber, setOpusNumber] = React.useState('');
   const [compositionYear, setCompositionYear] = React.useState('');
@@ -37,6 +38,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
       // 수정 모드: 기존 데이터 로드
       setTitle(piece.title);
       setTitleEn(piece.titleEn || '');
+      setType(piece.type);
       setDescription(piece.description || '');
       setOpusNumber(piece.opusNumber || '');
       setCompositionYear(piece.compositionYear ? piece.compositionYear.toString() : '');
@@ -49,6 +51,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
       // 모달 닫힐 때 초기화
       setTitle('');
       setTitleEn('');
+      setType('song');
       setDescription('');
       setOpusNumber('');
       setCompositionYear('');
@@ -73,6 +76,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         await AdminPieceAPI.update(piece.id, {
           title,
           titleEn: titleEn || null,
+          type,
           description: description || null,
           opusNumber: opusNumber || null,
           compositionYear: compositionYear ? parseInt(compositionYear) : null,
@@ -89,6 +93,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
           composerId: composerId,
           title,
           titleEn: titleEn || undefined,
+          type,
           description: description || undefined,
           opusNumber: opusNumber || undefined,
           compositionYear: compositionYear ? parseInt(compositionYear) : undefined,
@@ -135,6 +140,28 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
               <View>
                 <Label>영문 제목</Label>
                 <Input value={titleEn} onChangeText={setTitleEn} placeholder="Piano Sonata No. 14" />
+              </View>
+
+              <View>
+                <Label>작품 타입 *</Label>
+                <View className="flex-row gap-2 mt-2">
+                  <TouchableOpacity
+                    onPress={() => setType('song')}
+                    className={`flex-1 py-3 px-4 rounded-md border ${type === 'song' ? 'bg-primary border-primary' : 'bg-background border-input'}`}
+                  >
+                    <Text className={`text-center font-medium ${type === 'song' ? 'text-primary-foreground' : 'text-foreground'}`}>
+                      단일곡
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setType('album')}
+                    className={`flex-1 py-3 px-4 rounded-md border ${type === 'album' ? 'bg-primary border-primary' : 'bg-background border-input'}`}
+                  >
+                    <Text className={`text-center font-medium ${type === 'album' ? 'text-primary-foreground' : 'text-foreground'}`}>
+                      앨범/모음집
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View>

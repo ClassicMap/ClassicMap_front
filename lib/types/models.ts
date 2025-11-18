@@ -12,12 +12,12 @@ export interface Composer {
   deathYear: number | null;
   nationality: string;
   tier?: 'S' | 'A' | 'B' | 'C';
-  imageUrl?: string;
   avatarUrl?: string;
   coverImageUrl?: string;
   bio?: string;
   style?: string;
   influence?: string;
+  pieceCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -27,6 +27,7 @@ export interface Piece {
   composerId: number;
   title: string;
   titleEn?: string;
+  type: 'album' | 'song';
   description?: string;
   opusNumber?: string;
   compositionYear?: number;
@@ -134,6 +135,7 @@ export interface PieceDTO {
   composerId: number;
   title: string;
   titleEn?: string;
+  type: 'album' | 'song';
   description?: string;
   opusNumber?: string;
   compositionYear?: number;

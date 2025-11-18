@@ -138,34 +138,12 @@ export default function CompareScreen() {
     setError(null);
     try {
       const composersData = await ComposerAPI.getAll();
-      // 각 작곡가의 곡 정보 로드
-      const composersWithPieces = await Promise.all(
-        composersData.map(async (composer) => {
-          try {
-            const pieces = await PieceAPI.getByComposer(composer.id);
-            return { ...composer, majorPieces: pieces };
-          } catch {
-            return { ...composer, majorPieces: [] };
-          }
-        })
-      );
+      // 작곡가 목록만 먼저 로드 (pieces는 선택 시 로드)
+      const composersWithPieces = composersData.map((composer) => ({
+        ...composer,
+        majorPieces: undefined,
+      }));
       setComposers(composersWithPieces);
-
-      // 각 곡의 연주 개수 로드
-      const counts: { [key: number]: number } = {};
-      await Promise.all(
-        composersWithPieces.flatMap((composer) =>
-          (composer.majorPieces || []).map(async (piece) => {
-            try {
-              const performances = await PerformanceAPI.getByPiece(piece.id);
-              counts[piece.id] = performances.length;
-            } catch {
-              counts[piece.id] = 0;
-            }
-          })
-        )
-      );
-      setPiecePerformanceCounts(counts);
 
       if (composersWithPieces.length > 0) {
         setSelectedComposer(composersWithPieces[0]);
@@ -182,33 +160,12 @@ export default function CompareScreen() {
     setRefreshing(true);
     try {
       const composersData = await ComposerAPI.getAll();
-      const composersWithPieces = await Promise.all(
-        composersData.map(async (composer) => {
-          try {
-            const pieces = await PieceAPI.getByComposer(composer.id);
-            return { ...composer, majorPieces: pieces };
-          } catch {
-            return { ...composer, majorPieces: [] };
-          }
-        })
-      );
+      // 작곡가 목록만 먼저 로드 (pieces는 선택 시 로드)
+      const composersWithPieces = composersData.map((composer) => ({
+        ...composer,
+        majorPieces: undefined,
+      }));
       setComposers(composersWithPieces);
-
-      // 각 곡의 연주 개수 로드
-      const counts: { [key: number]: number } = {};
-      await Promise.all(
-        composersWithPieces.flatMap((composer) =>
-          (composer.majorPieces || []).map(async (piece) => {
-            try {
-              const performances = await PerformanceAPI.getByPiece(piece.id);
-              counts[piece.id] = performances.length;
-            } catch {
-              counts[piece.id] = 0;
-            }
-          })
-        )
-      );
-      setPiecePerformanceCounts(counts);
 
       setError(null);
       setRefreshing(false);
@@ -219,7 +176,7 @@ export default function CompareScreen() {
     }
   }, []);
 
-  // 초기화: 작곡가 선택 시 첫 번째 곡 자동 선택
+  // 초기화: 작곡가 선택 시 곡 목록 로드 및 첫 번째 곡 자동 선택
   React.useEffect(() => {
     // URL 파라미터로부터 선택된 경우 자동 선택 건너뛰기
     if (isFromUrlParams.current) {
@@ -227,18 +184,69 @@ export default function CompareScreen() {
       return;
     }
 
-    if (
-      selectedComposer &&
-      selectedComposer.majorPieces &&
-      selectedComposer.majorPieces.length > 0
-    ) {
-      setSelectedPiece(selectedComposer.majorPieces[0]);
-      setNoPieceFound(false);
+    if (selectedComposer) {
+      // 이미 곡 목록이 로드되어 있으면 다시 로드하지 않음
+      if (selectedComposer.majorPieces && selectedComposer.majorPieces.length > 0) {
+        setSelectedPiece(selectedComposer.majorPieces[0]);
+        setNoPieceFound(false);
+      } else {
+        loadPiecesForComposer(selectedComposer);
+      }
     } else {
       setSelectedPiece(null);
       setNoPieceFound(true);
     }
   }, [selectedComposer]);
+
+  // 선택된 작곡가의 곡 목록 로드 (연주 개수는 필요시에만)
+  const loadPiecesForComposer = async (composer: ComposerWithPieces) => {
+    try {
+      // 곡 목록 로드
+      const pieces = await PieceAPI.getByComposer(composer.id);
+
+      // composers 상태 업데이트
+      const updatedComposer = { ...composer, majorPieces: pieces };
+      setComposers((prev) =>
+        prev.map((c) => (c.id === composer.id ? updatedComposer : c))
+      );
+
+      // selectedComposer도 업데이트
+      setSelectedComposer(updatedComposer);
+
+      if (pieces.length > 0) {
+        setSelectedPiece(pieces[0]);
+        setNoPieceFound(false);
+        // 연주 개수는 곡 목록이 열릴 때만 로드하도록 변경
+      } else {
+        setSelectedPiece(null);
+        setNoPieceFound(true);
+      }
+    } catch (error) {
+      console.error('Failed to load pieces:', error);
+      setSelectedPiece(null);
+      setNoPieceFound(true);
+    }
+  };
+
+  // 곡 목록의 연주 개수를 로드하는 함수
+  const loadPerformanceCountsForPieces = async (pieces: Piece[]) => {
+    const counts: { [key: number]: number } = {};
+    await Promise.all(
+      pieces.map(async (piece) => {
+        // 이미 로드된 카운트는 건너뛰기
+        if (piecePerformanceCounts[piece.id] !== undefined) {
+          return;
+        }
+        try {
+          const performances = await PerformanceAPI.getByPiece(piece.id);
+          counts[piece.id] = performances.length;
+        } catch {
+          counts[piece.id] = 0;
+        }
+      })
+    );
+    setPiecePerformanceCounts((prev) => ({ ...prev, ...counts }));
+  };
 
   // 곡 선택 시 연주 목록 로드
   React.useEffect(() => {
@@ -292,33 +300,81 @@ export default function CompareScreen() {
   React.useEffect(() => {
     if (!composers.length) return;
 
-    if (params.pieceId) {
-      const pieceId = Number(params.pieceId);
+    const loadFromParams = async () => {
+      if (params.pieceId) {
+        const pieceId = Number(params.pieceId);
 
-      for (const composer of composers) {
-        const piece = composer.majorPieces?.find((p) => p.id === pieceId);
-        if (piece) {
+        // 먼저 이미 로드된 데이터에서 찾기
+        for (const composer of composers) {
+          const piece = composer.majorPieces?.find((p) => p.id === pieceId);
+          if (piece) {
+            isFromUrlParams.current = true;
+            setSelectedComposer(composer);
+            setSelectedPiece(piece);
+            setNoPieceFound(false);
+            return;
+          }
+        }
+
+        // 로드된 데이터에 없으면 각 작곡가의 곡 목록을 로드
+        for (const composer of composers) {
+          if (!composer.majorPieces) {
+            try {
+              const pieces = await PieceAPI.getByComposer(composer.id);
+              const piece = pieces.find((p) => p.id === pieceId);
+              if (piece) {
+                isFromUrlParams.current = true;
+                // composers 상태 업데이트
+                setComposers((prev) =>
+                  prev.map((c) => (c.id === composer.id ? { ...c, majorPieces: pieces } : c))
+                );
+                setSelectedComposer({ ...composer, majorPieces: pieces });
+                setSelectedPiece(piece);
+                setNoPieceFound(false);
+                return;
+              }
+            } catch (error) {
+              console.error('Failed to load pieces for composer:', error);
+            }
+          }
+        }
+        setNoPieceFound(true);
+      } else if (params.composerId) {
+        const composerId = Number(params.composerId);
+        const composer = composers.find((c) => c.id === composerId);
+        if (composer) {
           isFromUrlParams.current = true;
           setSelectedComposer(composer);
-          setSelectedPiece(piece);
-          setNoPieceFound(false);
-          return;
+
+          // 곡 목록이 없으면 로드
+          if (!composer.majorPieces) {
+            try {
+              const pieces = await PieceAPI.getByComposer(composer.id);
+              setComposers((prev) =>
+                prev.map((c) => (c.id === composer.id ? { ...c, majorPieces: pieces } : c))
+              );
+              if (pieces.length > 0) {
+                setSelectedPiece(pieces[0]);
+                setNoPieceFound(false);
+              } else {
+                setNoPieceFound(true);
+              }
+            } catch (error) {
+              console.error('Failed to load pieces:', error);
+              setNoPieceFound(true);
+            }
+          } else if (composer.majorPieces.length > 0) {
+            setSelectedPiece(composer.majorPieces[0]);
+            setNoPieceFound(false);
+          } else {
+            setNoPieceFound(true);
+          }
         }
       }
-      setNoPieceFound(true);
-    } else if (params.composerId) {
-      const composerId = Number(params.composerId);
-      const composer = composers.find((c) => c.id === composerId);
-      if (composer) {
-        isFromUrlParams.current = true;
-        setSelectedComposer(composer);
-        if (composer.majorPieces && composer.majorPieces.length > 0) {
-          setSelectedPiece(composer.majorPieces[0]);
-          setNoPieceFound(false);
-        }
-      }
-    }
-  }, [params.composerId, params.pieceId, composers]);
+    };
+
+    loadFromParams();
+  }, [params.composerId, params.pieceId, composers.length]);
 
   // 작곡가 리스트 애니메이션
   React.useEffect(() => {
@@ -334,7 +390,7 @@ export default function CompareScreen() {
     }
   }, [showComposerList]);
 
-  // 곡 리스트 애니메이션
+  // 곡 리스트 애니메이션 및 연주 개수 로드
   React.useEffect(() => {
     if (showPieceList) {
       Animated.spring(pieceAnimation, {
@@ -343,21 +399,20 @@ export default function CompareScreen() {
         friction: 8,
         tension: 40,
       }).start();
+
+      // 곡 목록이 열릴 때만 연주 개수 로드
+      if (selectedComposer?.majorPieces && selectedComposer.majorPieces.length > 0) {
+        loadPerformanceCountsForPieces(selectedComposer.majorPieces);
+      }
     } else {
       pieceAnimation.setValue(0);
     }
-  }, [showPieceList]);
+  }, [showPieceList, selectedComposer]);
 
   const handleComposerSelect = (composer: ComposerWithPieces) => {
     setSelectedComposer(composer);
-    if (composer.majorPieces && composer.majorPieces.length > 0) {
-      setSelectedPiece(composer.majorPieces[0]);
-      setNoPieceFound(false);
-    } else {
-      setSelectedPiece(null);
-      setNoPieceFound(true);
-    }
     setShowComposerList(false);
+    // 곡 목록 로딩은 useEffect에서 처리됨
   };
 
   const handlePieceSelect = (piece: Piece) => {
@@ -630,9 +685,11 @@ export default function CompareScreen() {
                                 <Text className="text-xs text-muted-foreground">
                                   {composer.period}
                                 </Text>
-                                <Text className="text-xs text-muted-foreground">
-                                  {`${composer.majorPieces?.length || 0}곡`}
-                                </Text>
+                                {(composer.majorPieces?.length !== undefined || composer.pieceCount !== undefined) && (
+                                  <Text className="text-xs text-muted-foreground">
+                                    {`${composer.majorPieces?.length ?? composer.pieceCount ?? 0}곡`}
+                                  </Text>
+                                )}
                               </View>
                               {selectedComposer.id === composer.id && (
                                 <Icon as={CheckIcon} size={20} className="text-primary" />
