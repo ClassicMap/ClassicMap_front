@@ -46,6 +46,7 @@ interface APIComposer {
   bio?: string;
   style?: string;
   influence?: string;
+  pieceCount?: number;
 }
 
 interface APIPiece {
@@ -171,6 +172,7 @@ const mapComposer = (api: any): Composer => {
     bio: api.bio,
     style: api.style,
     influence: api.influence,
+    pieceCount: api.pieceCount,
   };
   return mapped;
 };

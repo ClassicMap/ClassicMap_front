@@ -7,11 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
-import { XIcon, ImageIcon, UploadIcon } from 'lucide-react-native';
+import { XIcon, ImageIcon } from 'lucide-react-native';
 import { AdminComposerAPI } from '@/lib/api/admin';
 import type { Composer } from '@/lib/types/models';
-import * as ImagePicker from 'expo-image-picker';
-import { getImageUrl } from '@/lib/utils/image';
 
 interface ComposerFormModalProps {
   visible: boolean;
@@ -28,15 +26,12 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
   const [birthYear, setBirthYear] = React.useState('');
   const [deathYear, setDeathYear] = React.useState('');
   const [nationality, setNationality] = React.useState('');
-  const [imageUrl, setImageUrl] = React.useState('');
   const [avatarUrl, setAvatarUrl] = React.useState('');
   const [coverImageUrl, setCoverImageUrl] = React.useState('');
   const [bio, setBio] = React.useState('');
   const [style, setStyle] = React.useState('');
   const [influence, setInfluence] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [selectedAvatar, setSelectedAvatar] = React.useState<string | null>(null);
-  const [selectedCover, setSelectedCover] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (composer) {
@@ -47,14 +42,11 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
       setBirthYear(String(composer.birthYear));
       setDeathYear(String(composer.deathYear));
       setNationality(composer.nationality);
-      setImageUrl(composer.imageUrl || '');
       setAvatarUrl(composer.avatarUrl || '');
       setCoverImageUrl(composer.coverImageUrl || '');
       setBio(composer.bio || '');
       setStyle(composer.style || '');
       setInfluence(composer.influence || '');
-      setSelectedAvatar(composer.avatarUrl || null);
-      setSelectedCover(composer.coverImageUrl || null);
     } else {
       setName('');
       setFullName('');
@@ -63,103 +55,13 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
       setBirthYear('');
       setDeathYear('');
       setNationality('');
-      setImageUrl('');
       setAvatarUrl('');
       setCoverImageUrl('');
       setBio('');
       setStyle('');
       setInfluence('');
-      setSelectedAvatar(null);
-      setSelectedCover(null);
     }
   }, [composer, visible]);
-
-  const pickImage = async (type: 'avatar' | 'cover') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '갤러리 접근 권한이 필요합니다.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: type === 'avatar' ? [1, 1] : [16, 9],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      if (type === 'avatar') {
-        setSelectedAvatar(uri);
-      } else {
-        setSelectedCover(uri);
-      }
-      
-      // 서버에 업로드
-      await uploadImageToServer(uri, type);
-    }
-  };
-
-  const uploadImageToServer = async (uri: string, type: 'avatar' | 'cover') => {
-    try {
-      const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
-      const endpoint = type === 'avatar' 
-        ? '/upload/composer/avatar'
-        : '/upload/composer/cover';
-
-      const formData = new FormData();
-
-      // Web과 Native 플랫폼 구분
-      if (Platform.OS === 'web') {
-        // Web: blob URL을 File 객체로 변환
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        const filename = `image_${Date.now()}.jpg`;
-        const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-        formData.append('file', file);
-      } else {
-        // Native: 기존 방식
-        let filename = uri.split('/').pop() || 'image.jpg';
-        
-        if (!filename.includes('.')) {
-          filename = `${filename}.jpg`;
-        }
-        
-        const match = /\.(\w+)$/.exec(filename);
-        const fileType = match ? `image/${match[1]}` : 'image/jpeg';
-
-        formData.append('file', {
-          uri,
-          name: filename,
-          type: fileType,
-        } as any);
-      }
-
-      const uploadResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (uploadResponse.ok) {
-        const data = await uploadResponse.json();
-        const serverUrl = data.url; // 서버에서 받은 상대 경로: /uploads/...
-        if (type === 'avatar') {
-          setAvatarUrl(serverUrl);
-          setSelectedAvatar(serverUrl); // 미리보기도 서버 경로로 업데이트
-        } else {
-          setCoverImageUrl(serverUrl);
-          setSelectedCover(serverUrl); // 미리보기도 서버 경로로 업데이트
-        }
-        Alert.alert('성공', '이미지가 업로드되었습니다.');
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (error) {
-      console.error('Image upload error:', error);
-      Alert.alert('오류', '이미지 업로드에 실패했습니다.');
-    }
-  };
 
   const handleSubmit = async () => {
     if (!name || !fullName || !englishName || !birthYear || !deathYear || !nationality) {
@@ -179,7 +81,6 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
           birthYear: parseInt(birthYear),
           deathYear: parseInt(deathYear),
           nationality,
-          imageUrl: imageUrl || undefined,
           avatarUrl: avatarUrl || undefined,
           coverImageUrl: coverImageUrl || undefined,
           bio: bio || undefined,
@@ -197,7 +98,6 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
           birthYear: parseInt(birthYear),
           deathYear: parseInt(deathYear),
           nationality,
-          imageUrl: imageUrl || undefined,
           avatarUrl: avatarUrl || undefined,
           coverImageUrl: coverImageUrl || undefined,
           bio: bio || undefined,
@@ -230,11 +130,11 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
         </View>
 
         <ScrollView className="flex-1 p-4">
-          {/* Avatar Image */}
+          {/* Avatar Image Preview */}
           <Card className="overflow-hidden p-0 mb-6 mx-auto" style={{ width: '60%', maxWidth: 240 }}>
-            {selectedAvatar ? (
-              <Image 
-                source={{ uri: getImageUrl(selectedAvatar) }} 
+            {avatarUrl ? (
+              <Image
+                source={{ uri: avatarUrl }}
                 className="w-full"
                 style={{ aspectRatio: 1 }}
                 resizeMode="cover"
@@ -242,21 +142,16 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
             ) : (
               <View className="w-full bg-muted items-center justify-center" style={{ aspectRatio: 1 }}>
                 <Icon as={ImageIcon} size={48} className="text-muted-foreground" />
+                <Text className="text-xs text-muted-foreground mt-2">아바타 이미지</Text>
               </View>
             )}
-            <TouchableOpacity 
-              onPress={() => pickImage('avatar')}
-              className="absolute bottom-2 right-2 bg-primary rounded-full p-2"
-            >
-              <Icon as={UploadIcon} size={20} color="white" />
-            </TouchableOpacity>
           </Card>
 
-          {/* Cover Image */}
+          {/* Cover Image Preview */}
           <Card className="overflow-hidden p-0 mb-6">
-            {selectedCover ? (
-              <Image 
-                source={{ uri: getImageUrl(selectedCover) }} 
+            {coverImageUrl ? (
+              <Image
+                source={{ uri: coverImageUrl }}
                 className="w-full h-32"
                 resizeMode="cover"
               />
@@ -266,12 +161,6 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
                 <Text className="text-xs text-muted-foreground mt-2">커버 이미지</Text>
               </View>
             )}
-            <TouchableOpacity 
-              onPress={() => pickImage('cover')}
-              className="absolute bottom-2 right-2 bg-primary rounded-full p-2"
-            >
-              <Icon as={UploadIcon} size={18} color="white" />
-            </TouchableOpacity>
           </Card>
 
           {/* Form Fields */}
@@ -323,6 +212,16 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
               <View>
                 <Label>국적 *</Label>
                 <Input value={nationality} onChangeText={setNationality} placeholder="독일" />
+              </View>
+
+              <View>
+                <Label>아바타 이미지 URL</Label>
+                <Input value={avatarUrl} onChangeText={setAvatarUrl} placeholder="https://..." />
+              </View>
+
+              <View>
+                <Label>커버 이미지 URL</Label>
+                <Input value={coverImageUrl} onChangeText={setCoverImageUrl} placeholder="https://..." />
               </View>
 
               <View>

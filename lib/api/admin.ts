@@ -1,8 +1,6 @@
 // lib/api/admin.ts
 // Admin/Moderator 전용 API
 
-import { toRelativePath } from '../utils/image';
-
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
 // 인증 토큰 저장소
@@ -45,25 +43,16 @@ export const AdminComposerAPI = {
     birthYear: number;
     deathYear: number;
     nationality: string;
-    imageUrl?: string;
     avatarUrl?: string;
     coverImageUrl?: string;
     bio?: string;
     style?: string;
     influence?: string;
   }): Promise<number> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      imageUrl: toRelativePath(data.imageUrl),
-      avatarUrl: toRelativePath(data.avatarUrl),
-      coverImageUrl: toRelativePath(data.coverImageUrl),
-    };
-    
     const response = await authenticatedFetch(`${API_BASE_URL}/composers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create composer');
     return response.json();
@@ -77,25 +66,16 @@ export const AdminComposerAPI = {
     birthYear?: number;
     deathYear?: number;
     nationality?: string;
-    imageUrl?: string;
     avatarUrl?: string;
     coverImageUrl?: string;
     bio?: string;
     style?: string;
     influence?: string;
   }): Promise<void> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      imageUrl: toRelativePath(data.imageUrl),
-      avatarUrl: toRelativePath(data.avatarUrl),
-      coverImageUrl: toRelativePath(data.coverImageUrl),
-    };
-    
     const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update composer');
   },
@@ -207,6 +187,7 @@ export const AdminPieceAPI = {
   async create(data: {
     composerId: number;
     title: string;
+    type: 'album' | 'song';
     description?: string;
     opusNumber?: string;
     compositionYear?: number;
@@ -227,6 +208,7 @@ export const AdminPieceAPI = {
 
   async update(id: number, data: {
     title?: string;
+    type?: 'album' | 'song';
     description?: string;
     opusNumber?: string;
     compositionYear?: number;
