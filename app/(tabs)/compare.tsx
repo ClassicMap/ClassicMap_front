@@ -32,6 +32,7 @@ import type { Composer, Piece, Performance, Artist } from '@/lib/types/models';
 import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
 import { getImageUrl } from '@/lib/utils/image';
 import { getAllPeriods } from '@/lib/data/mockDTO';
+import { useComposers } from '@/lib/query/hooks/useComposers';
 
 interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];
@@ -41,10 +42,20 @@ export default function CompareScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const { canEdit } = useAuth();
+
+  // React Query로 작곡가 데이터 로드 (자동 캐싱)
+  const {
+    data: composersData = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useComposers();
+
+  const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
+
+  // 작곡가에 곡 목록 추가
   const [composers, setComposers] = React.useState<ComposerWithPieces[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
   const [selectedComposer, setSelectedComposer] = React.useState<ComposerWithPieces | null>(null);
   const [selectedPiece, setSelectedPiece] = React.useState<Piece | null>(null);
@@ -128,53 +139,20 @@ export default function CompareScreen() {
     return filtered;
   }, [selectedComposer, pieceSearchQuery]);
 
-  // 작곡가 데이터 로드
+  // composersData가 변경되면 composers 상태 업데이트
   React.useEffect(() => {
-    loadComposers();
-  }, []);
-
-  const loadComposers = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const composersData = await ComposerAPI.getAll();
-      // 작곡가 목록만 먼저 로드 (pieces는 선택 시 로드)
+    if (composersData.length > 0) {
       const composersWithPieces = composersData.map((composer) => ({
         ...composer,
         majorPieces: undefined,
       }));
       setComposers(composersWithPieces);
 
-      if (composersWithPieces.length > 0) {
+      if (!selectedComposer && composersWithPieces.length > 0) {
         setSelectedComposer(composersWithPieces[0]);
       }
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load composers:', err);
-      setError('작곡가 정보를 불러오는데 실패했습니다.');
-      setLoading(false);
     }
-  };
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const composersData = await ComposerAPI.getAll();
-      // 작곡가 목록만 먼저 로드 (pieces는 선택 시 로드)
-      const composersWithPieces = composersData.map((composer) => ({
-        ...composer,
-        majorPieces: undefined,
-      }));
-      setComposers(composersWithPieces);
-
-      setError(null);
-      setRefreshing(false);
-    } catch (err) {
-      console.error('Failed to refresh composers:', err);
-      setError('작곡가 정보를 불러오는데 실패했습니다.');
-      setRefreshing(false);
-    }
-  }, []);
+  }, [composersData]);
 
   // 초기화: 작곡가 선택 시 곡 목록 로드 및 첫 번째 곡 자동 선택
   React.useEffect(() => {
@@ -297,7 +275,9 @@ export default function CompareScreen() {
 
   // URL 파라미터로 작곡가/곡 선택
   React.useEffect(() => {
-    if (!composers.length) return;
+    // 로딩 중이거나 작곡가 목록이 없으면 대기
+    if (loading || !composers.length) return;
+
     if (!params.pieceId && !params.composerId) {
       // URL 파라미터가 없으면 플래그 리셋
       isFromUrlParams.current = false;
@@ -450,7 +430,7 @@ export default function CompareScreen() {
     };
 
     loadFromParams();
-  }, [params.composerId, params.pieceId, composers.length]);
+  }, [params.composerId, params.pieceId, composers, loading]);
 
   // 작곡가 리스트 애니메이션
   React.useEffect(() => {
@@ -530,7 +510,7 @@ export default function CompareScreen() {
       <View className="flex-1 items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md p-8">
           <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={loadComposers}>
+          <Button variant="outline" onPress={() => refetch()}>
             <Text>다시 시도</Text>
           </Button>
         </Card>
@@ -573,7 +553,7 @@ export default function CompareScreen() {
     <>
       <ScrollView
         className="flex-1 bg-background"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />}>
         <View className="gap-6 p-4 pb-20">
           {/* 작곡가 선택 */}
           <View className="gap-3">

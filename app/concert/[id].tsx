@@ -30,6 +30,7 @@ import { getImageUrl } from '@/lib/utils/image';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
+import { useConcert } from '@/lib/query/hooks/useConcerts';
 
 interface ConcertArtist {
   id: number;
@@ -76,11 +77,19 @@ export default function ConcertDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const [concert, setConcert] = React.useState<Concert | null>(null);
-  const [loading, setLoading] = React.useState(true);
+
+  // React Query로 공연 데이터 로드 (자동 캐싱)
+  const {
+    data: concert,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useConcert(id ? Number(id) : undefined);
+
+  const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
+
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = React.useState(false);
   const imageOpacity = React.useRef(new Animated.Value(0)).current;
   const { canEdit, isSignedIn } = useAuth();
@@ -89,12 +98,10 @@ export default function ConcertDetailScreen() {
   const [hasWatched, setHasWatched] = React.useState(false);
   const [venueName, setVenueName] = React.useState<string>('');
 
+  // 사용자 평점 로드
   React.useEffect(() => {
-    if (id) {
-      loadConcert();
-      if (isSignedIn) {
-        loadUserRating();
-      }
+    if (id && isSignedIn) {
+      loadUserRating();
     }
   }, [id, isSignedIn]);
 
@@ -141,8 +148,8 @@ export default function ConcertDetailScreen() {
     try {
       await ConcertAPI.submitRating(Number(id), rating);
       Alert.alert('성공', '평점이 등록되었습니다.');
-      // Reload concert to show updated average rating
-      loadConcert();
+      // 캐시 업데이트
+      refetch();
     } catch (error) {
       Alert.alert('오류', '평점 등록에 실패했습니다.');
       console.error('Failed to submit rating:', error);
@@ -167,18 +174,17 @@ export default function ConcertDetailScreen() {
     }).start();
   };
 
-  const loadConcert = async () => {
-    setLoading(true);
-    setImagesLoaded(false);
-    setError(null);
-    try {
-      const data = await ConcertAPI.getById(Number(id));
-      setConcert(data as Concert);
+  // 공연장 정보와 이미지 로드
+  React.useEffect(() => {
+    const loadAdditionalData = async () => {
+      if (!concert) return;
+
+      setImagesLoaded(false);
 
       // 공연장 정보 로드
-      if (data?.venueId) {
+      if (concert.venueId) {
         try {
-          const venue = await VenueAPI.getById(data.venueId);
+          const venue = await VenueAPI.getById(concert.venueId);
           if (venue) {
             setVenueName(venue.name);
           }
@@ -188,47 +194,18 @@ export default function ConcertDetailScreen() {
       }
 
       // 이미지 프리페치
-      if (data.posterUrl) {
-        await prefetchImages([data.posterUrl]);
+      if (concert.posterUrl) {
+        await prefetchImages([concert.posterUrl]);
       }
       setImagesLoaded(true);
-      setLoading(false);
-    } catch (err) {
-      setError('공연 정보를 불러오는데 실패했습니다.');
-      setLoading(false);
-      setImagesLoaded(true);
-    }
+    };
+
+    loadAdditionalData();
+  }, [concert]);
+
+  const onRefresh = () => {
+    refetch();
   };
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const data = await ConcertAPI.getById(Number(id));
-      setConcert(data as Concert);
-
-      // 공연장 정보 로드
-      if (data?.venueId) {
-        try {
-          const venue = await VenueAPI.getById(data.venueId);
-          if (venue) {
-            setVenueName(venue.name);
-          }
-        } catch (err) {
-          console.error('Failed to load venue:', err);
-        }
-      }
-
-      if (data.posterUrl) {
-        await prefetchImages([data.posterUrl]);
-      }
-
-      setError(null);
-      setRefreshing(false);
-    } catch (err) {
-      setError('공연 정보를 불러오는데 실패했습니다.');
-      setRefreshing(false);
-    }
-  }, [id]);
 
   const handleDeleteConcert = () => {
     if (!concert) return;
@@ -574,9 +551,7 @@ export default function ConcertDetailScreen() {
           visible={editModalVisible}
           concert={concert}
           onClose={() => setEditModalVisible(false)}
-          onSuccess={() => {
-            loadConcert();
-          }}
+          onSuccess={() => refetch()}
         />
       )}
     </View>

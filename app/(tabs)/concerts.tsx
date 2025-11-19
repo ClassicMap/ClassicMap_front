@@ -29,12 +29,13 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as React from 'react';
 import { useRouter } from 'expo-router';
-import { ConcertAPI, VenueAPI } from '@/lib/api/client';
+import { VenueAPI, ConcertAPI } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
+import { useConcerts } from '@/lib/query/hooks/useConcerts';
 
 interface ConcertArtist {
   id: number;
@@ -68,11 +69,6 @@ interface Venue {
 }
 
 export default function ConcertsScreen() {
-  const [concerts, setConcerts] = React.useState<Concert[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'upcoming' | 'completed'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
@@ -87,79 +83,49 @@ export default function ConcertsScreen() {
   const [showFilters, setShowFilters] = React.useState(false);
   const { canEdit } = useAuth();
 
+  // React Query로 공연 데이터 로드 (자동 캐싱)
+  const {
+    data: concerts = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useConcerts();
+
+  // 에러 처리
+  const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
+
+  // 공연장 정보 로드
   React.useEffect(() => {
-    loadConcerts();
-  }, []);
-
-  const loadConcerts = async () => {
-    setLoading(true);
-    setImagesLoaded(false);
-    setError(null);
-    try {
-      const data = await ConcertAPI.getAll();
-      setConcerts(data as any);
-
-      // 공연장 정보 로드
-      const venueIds = [...new Set(data.map((c) => c.venueId))];
-      const venueData: { [key: number]: Venue } = {};
-      await Promise.all(
-        venueIds.map(async (venueId) => {
-          try {
-            const venue = await VenueAPI.getById(venueId);
-            if (venue) {
-              venueData[venueId] = venue;
-            }
-          } catch (error) {
-            console.error(`Failed to load venue ${venueId}:`, error);
-          }
-        })
-      );
-      setVenues(venueData);
-
-      // 이미지 로딩 완료 대기
-      await prefetchImages(data.map((c) => c.posterUrl));
-      setImagesLoaded(true);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load concerts:', err);
-      setError('공연 정보를 불러오는데 실패했습니다.');
-      setLoading(false);
-      setImagesLoaded(true);
+    if (concerts.length > 0) {
+      loadVenues();
     }
+  }, [concerts]);
+
+  const loadVenues = async () => {
+    const venueIds = [...new Set(concerts.map((c) => c.venueId))];
+    const venueData: { [key: number]: Venue } = {};
+    await Promise.all(
+      venueIds.map(async (venueId) => {
+        try {
+          const venue = await VenueAPI.getById(venueId);
+          if (venue) {
+            venueData[venueId] = venue;
+          }
+        } catch (error) {
+          console.error(`Failed to load venue ${venueId}:`, error);
+        }
+      })
+    );
+    setVenues(venueData);
   };
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const data = await ConcertAPI.getAll();
-      setConcerts(data as any);
-
-      // 공연장 정보 로드
-      const venueIds = [...new Set(data.map((c) => c.venueId))];
-      const venueData: { [key: number]: Venue } = {};
-      await Promise.all(
-        venueIds.map(async (venueId) => {
-          try {
-            const venue = await VenueAPI.getById(venueId);
-            if (venue) {
-              venueData[venueId] = venue;
-            }
-          } catch (error) {
-            console.error(`Failed to load venue ${venueId}:`, error);
-          }
-        })
-      );
-      setVenues(venueData);
-
-      await prefetchImages(data.map((c) => c.posterUrl));
-      setError(null);
-      setRefreshing(false);
-    } catch (err) {
-      console.error('Failed to refresh concerts:', err);
-      setError('공연 정보를 불러오는데 실패했습니다.');
-      setRefreshing(false);
+  // 이미지 프리페치
+  React.useEffect(() => {
+    if (concerts.length > 0) {
+      prefetchImages(concerts.map((c) => c.posterUrl));
     }
-  }, []);
+  }, [concerts]);
 
   const handleDelete = (id: number, title: string) => {
     Alert.alert('공연 삭제', `${title}을(를) 삭제하시겠습니까?`, [
@@ -171,7 +137,7 @@ export default function ConcertsScreen() {
           try {
             await AdminConcertAPI.delete(id);
             Alert.alert('성공', '공연이 삭제되었습니다.');
-            loadConcerts();
+            refetch();
           } catch (error) {
             Alert.alert('오류', '삭제에 실패했습니다.');
           }
@@ -278,7 +244,7 @@ export default function ConcertsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />}>
       <View className="gap-6 p-4">
         <View className="gap-2">
           <View className="flex-row items-center justify-between">
@@ -481,17 +447,17 @@ export default function ConcertsScreen() {
 
         {/* Concert List */}
         <View className="gap-4">
-          {loading || !imagesLoaded ? (
+          {loading ? (
             <View className="py-12">
               <ActivityIndicator size="large" />
               <Text className="mt-4 text-center text-muted-foreground">
-                {loading ? '공연 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+                공연 정보를 불러오는 중...
               </Text>
             </View>
           ) : error ? (
             <Card className="p-8">
               <Text className="mb-4 text-center text-destructive">{error}</Text>
-              <Button variant="outline" size="sm" className="mx-auto" onPress={loadConcerts}>
+              <Button variant="outline" size="sm" className="mx-auto" onPress={() => refetch()}>
                 <Text>다시 시도</Text>
               </Button>
             </Card>
@@ -502,7 +468,7 @@ export default function ConcertsScreen() {
                 concert={concert}
                 canEdit={canEdit}
                 onDelete={handleDelete}
-                onRatingSuccess={loadConcerts}
+                onRatingSuccess={() => refetch()}
                 venueName={venues[concert.venueId]?.name}
               />
             ))
@@ -517,7 +483,7 @@ export default function ConcertsScreen() {
       <ConcertFormModal
         visible={showFormModal}
         onClose={() => setShowFormModal(false)}
-        onSuccess={loadConcerts}
+        onSuccess={() => refetch()}
       />
     </ScrollView>
   );
@@ -548,6 +514,9 @@ function ConcertCard({
   }, [concert.id, isSignedIn]);
 
   const loadUserRating = async () => {
+    // 로그인하지 않았으면 요청하지 않음
+    if (!isSignedIn) return;
+
     try {
       const rating = await ConcertAPI.getUserRating(concert.id);
       if (rating != null) {
@@ -555,7 +524,10 @@ function ConcertCard({
         setHasWatched(true);
       }
     } catch (error) {
-      console.error('Failed to load user rating:', error);
+      // 401 에러는 정상 (로그인 필요)
+      if (error instanceof Error && !error.message.includes('401')) {
+        console.error('Failed to load user rating:', error);
+      }
     }
   };
 

@@ -9,57 +9,38 @@ import { Alert } from '@/lib/utils/alert';
 import { StarIcon, TrendingUpIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
-import { ArtistAPI } from '@/lib/api/client';
 import { AdminArtistAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import type { Artist } from '@/lib/types/models';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
+import { useArtists } from '@/lib/query/hooks/useArtists';
 
 export default function ArtistsScreen() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedFilter, setSelectedFilter] = React.useState<'all' | 'S' | 'Rising'>('all');
-  const [artists, setArtists] = React.useState<Artist[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [showFormModal, setShowFormModal] = React.useState(false);
   const { canEdit } = useAuth();
 
+  // React Query로 아티스트 데이터 로드 (자동 캐싱)
+  const {
+    data: artists = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useArtists();
+
+  // 에러 처리
+  const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
+
+  // 이미지 프리페치
   React.useEffect(() => {
-    loadArtists();
-  }, []);
-
-  const loadArtists = () => {
-    setLoading(true);
-    setError(null);
-    ArtistAPI.getAll()
-      .then((data) => {
-        setArtists(data);
-        prefetchImages(data.map(a => a.imageUrl));
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError('아티스트 정보를 불러오는데 실패했습니다.');
-        setLoading(false);
-      });
-  };
-
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    ArtistAPI.getAll()
-      .then((data) => {
-        setArtists(data);
-        prefetchImages(data.map(a => a.imageUrl));
-        setError(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        setError('아티스트 정보를 불러오는데 실패했습니다.');
-        setRefreshing(false);
-      });
-  }, []);
+    if (artists.length > 0) {
+      prefetchImages(artists.map((a) => a.imageUrl));
+    }
+  }, [artists]);
 
   const handleDelete = (id: number, name: string) => {
     Alert.alert(
@@ -74,7 +55,7 @@ export default function ArtistsScreen() {
             try {
               await AdminArtistAPI.delete(id);
               Alert.alert('성공', '아티스트가 삭제되었습니다.');
-              loadArtists();
+              refetch();
             } catch (error) {
               Alert.alert('오류', '삭제에 실패했습니다.');
             }
@@ -98,11 +79,33 @@ export default function ArtistsScreen() {
     });
   }, [artists, searchQuery, selectedFilter]);
 
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
+        <Text className="mt-2 text-muted-foreground">로딩 중...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md p-8">
+          <Text className="mb-4 text-center text-destructive">{error}</Text>
+          <Button variant="outline" onPress={() => refetch()}>
+            <Text>다시 시도</Text>
+          </Button>
+        </Card>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView 
+    <ScrollView
       className="flex-1 bg-background"
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />
       }
     >
       <View className="gap-6 p-4">
@@ -166,27 +169,11 @@ export default function ArtistsScreen() {
 
         {/* Artists List */}
         <View className="gap-3">
-          {loading ? (
-            <View className="py-12">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : error ? (
-            <Card className="p-8">
-              <Text className="text-center text-destructive mb-4">{error}</Text>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mx-auto"
-                onPress={loadArtists}
-              >
-                <Text>다시 시도</Text>
-              </Button>
-            </Card>
-          ) : filteredArtists.length > 0 ? (
+          {filteredArtists.length > 0 ? (
             filteredArtists.map((artist) => (
-              <ArtistCard 
-                key={artist.id} 
-                artist={artist} 
+              <ArtistCard
+                key={artist.id}
+                artist={artist}
                 canEdit={canEdit}
                 onDelete={handleDelete}
               />
@@ -204,7 +191,7 @@ export default function ArtistsScreen() {
       <ArtistFormModal
         visible={showFormModal}
         onClose={() => setShowFormModal(false)}
-        onSuccess={loadArtists}
+        onSuccess={() => refetch()}
       />
     </ScrollView>
   );

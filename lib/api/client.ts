@@ -53,6 +53,7 @@ interface APIPiece {
   id: number;
   composerId: number;
   title: string;
+  titleEn?: string;
   description?: string;
   opusNumber?: string;
   compositionYear?: number;
@@ -181,6 +182,8 @@ const mapPiece = (api: APIPiece): Piece => ({
   id: api.id,
   composerId: api.composerId,
   title: api.title,
+  titleEn: api.titleEn,
+  type: 'song', // 기본값
   description: api.description,
   opusNumber: api.opusNumber,
   compositionYear: api.compositionYear,

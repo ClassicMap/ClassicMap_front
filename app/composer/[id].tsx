@@ -29,6 +29,7 @@ import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import type { Composer, Piece } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
 import { prefetchImages } from '@/components/optimized-image';
+import { useComposer } from '@/lib/query/hooks/useComposers';
 
 interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];
@@ -572,63 +573,33 @@ export default function ComposerDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const [composer, setComposer] = React.useState<ComposerWithPieces | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [showPieceFormModal, setShowPieceFormModal] = React.useState(false);
   const [editingPiece, setEditingPiece] = React.useState<Piece | undefined>(undefined);
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
+  const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
   const { canEdit } = useAuth();
 
+  // React Query로 작곡가 데이터 로드 (자동 캐싱)
+  const {
+    data: composer,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useComposer(id ? Number(id) : undefined);
+
+  // 에러 처리
+  const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
+
+  // 이미지 프리페치
   React.useEffect(() => {
-    if (id) {
-      loadComposer();
+    if (composer && !imagesLoaded) {
+      const imagesToLoad = [composer.avatarUrl, composer.coverImageUrl].filter(Boolean);
+      prefetchImages(imagesToLoad).then(() => setImagesLoaded(true));
     }
-  }, [id]);
-
-  const loadComposer = async () => {
-    setLoading(true);
-    setImagesLoaded(false);
-    setError(null);
-    try {
-      const data = await ComposerAPI.getById(Number(id));
-      setComposer(data);
-
-      // 이미지 프리페치
-      const imagesToLoad = [data.avatarUrl, data.coverImageUrl].filter(Boolean);
-      await prefetchImages(imagesToLoad);
-      setImagesLoaded(true);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load composer:', err);
-      setError('작곡가 정보를 불러오는데 실패했습니다.');
-      setLoading(false);
-      setImagesLoaded(true);
-    }
-  };
-
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const data = await ComposerAPI.getById(Number(id));
-
-      setComposer(data);
-
-      const imagesToLoad = [data.avatarUrl, data.coverImageUrl].filter(Boolean);
-      await prefetchImages(imagesToLoad);
-
-      setError(null);
-      setRefreshing(false);
-    } catch (err) {
-      console.error('Failed to refresh composer:', err);
-      setError('작곡가 정보를 불러오는데 실패했습니다.');
-      setRefreshing(false);
-    }
-  }, [id]);
+  }, [composer, imagesLoaded]);
 
   const handlePieceClick = (pieceId: number, pieceTitle: string) => {
     router.push(`/(tabs)/compare?pieceId=${pieceId}&composerId=${id}`);
@@ -647,7 +618,7 @@ export default function ComposerDetailScreen() {
             try {
               await AdminPieceAPI.delete(pieceId);
               Alert.alert('성공', '작품이 삭제되었습니다.');
-              loadComposer();
+              refetch();
             } catch (error) {
               Alert.alert('오류', '삭제에 실패했습니다.');
             }
@@ -727,10 +698,10 @@ export default function ComposerDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView 
+      <ScrollView
         className="flex-1"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />
         }
       >
         {/* Cover Image with overlays */}
@@ -1043,7 +1014,7 @@ export default function ComposerDetailScreen() {
               setShowPieceFormModal(false);
               setEditingPiece(undefined);
             }}
-            onSuccess={loadComposer}
+            onSuccess={() => refetch()}
           />
         )}
 
@@ -1054,7 +1025,7 @@ export default function ComposerDetailScreen() {
             composer={composer}
             onClose={() => setEditModalVisible(false)}
             onSuccess={() => {
-              loadComposer();
+              refetch();
             }}
           />
         )}
