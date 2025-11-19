@@ -14,6 +14,9 @@ import { getAllPeriods } from '@/lib/data/mockDTO';
 import type { Artist } from '@/lib/types/models';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
+import { useComposers } from '@/lib/query/hooks/useComposers';
+import { useArtists } from '@/lib/query/hooks/useArtists';
+import { useConcerts } from '@/lib/query/hooks/useConcerts';
 
 // 레거시 형식으로 변환 (타입 호환성 유지)
 interface LegacyArtist {
@@ -53,27 +56,51 @@ export default function HomeScreen() {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const waveAnim = React.useRef(new Animated.Value(0)).current;
   const [showGreeting, setShowGreeting] = React.useState(true);
-  
+
+  // React Query로 병렬 데이터 로드 (자동 캐싱)
+  const {
+    data: artistsData = [],
+    isLoading: loadingArtists,
+    error: artistsQueryError,
+    refetch: refetchArtists,
+  } = useArtists();
+
+  const {
+    data: concertsData = [],
+    isLoading: loadingConcerts,
+    error: concertsQueryError,
+    refetch: refetchConcerts,
+  } = useConcerts('upcoming');
+
+  const {
+    data: composersData = [],
+    isLoading: loadingComposers,
+    error: composersQueryError,
+    refetch: refetchComposers,
+  } = useComposers();
+
+  const errorArtists = artistsQueryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
+  const errorConcerts = concertsQueryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
+  const errorComposers = composersQueryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
+
+  // 레거시 형식으로 변환
   const [artists, setArtists] = React.useState<LegacyArtist[]>([]);
   const [concerts, setConcerts] = React.useState<LegacyConcert[]>([]);
   const [composers, setComposers] = React.useState<any[]>([]);
-  
-  const [loadingArtists, setLoadingArtists] = React.useState(true);
-  const [loadingConcerts, setLoadingConcerts] = React.useState(true);
-  const [loadingComposers, setLoadingComposers] = React.useState(true);
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const [errorArtists, setErrorArtists] = React.useState<string | null>(null);
-  const [errorConcerts, setErrorConcerts] = React.useState<string | null>(null);
-  const [errorComposers, setErrorComposers] = React.useState<string | null>(null);
+  // 데이터를 레거시 형식으로 변환 및 이미지 프리페치
+  React.useEffect(() => {
+    const convertAndPrefetch = async () => {
+      if (artistsData.length === 0 && concertsData.length === 0 && composersData.length === 0) {
+        return;
+      }
 
-  const loadAllData = React.useCallback(async () => {
-    setImagesLoaded(false);
-    try {
-      // 아티스트 데이터 로드
-      const artistData = await ArtistAPI.getAll();
-      const legacyArtists = artistData.slice(0, 5).map(artist => ({
+      setImagesLoaded(false);
+
+      // 레거시 형식으로 변환
+      const legacyArtists = artistsData.slice(0, 5).map(artist => ({
         id: String(artist.id),
         name: artist.name,
         category: artist.category,
@@ -81,11 +108,8 @@ export default function HomeScreen() {
         image: artist.imageUrl || '',
       }));
       setArtists(legacyArtists);
-      setLoadingArtists(false);
 
-      // 공연 데이터 로드
-      const concertData = await ConcertAPI.getAll();
-      const legacyConcerts = concertData.slice(0, 5).map(concert => ({
+      const legacyConcerts = concertsData.slice(0, 5).map(concert => ({
         id: String(concert.id),
         title: concert.title,
         date: concert.concertDate,
@@ -93,77 +117,30 @@ export default function HomeScreen() {
         poster: concert.posterUrl || '',
       }));
       setConcerts(legacyConcerts);
-      setLoadingConcerts(false);
 
-      // 작곡가 데이터 로드
-      const composerData = await ComposerAPI.getAll();
-      setComposers(composerData);
-      setLoadingComposers(false);
+      setComposers(composersData);
 
-      // 모든 이미지 로딩 대기
+      // 이미지 프리페치
       await prefetchImages([
-        ...artistData.slice(0, 5).map(a => a.imageUrl),
-        ...concertData.slice(0, 5).map(c => c.posterUrl)
+        ...artistsData.slice(0, 5).map(a => a.imageUrl),
+        ...concertsData.slice(0, 5).map(c => c.posterUrl)
       ]);
       setImagesLoaded(true);
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setErrorArtists('아티스트 정보를 불러오는데 실패했습니다.');
-      setErrorConcerts('공연 정보를 불러오는데 실패했습니다.');
-      setErrorComposers('작곡가 정보를 불러오는데 실패했습니다.');
-      setLoadingArtists(false);
-      setLoadingConcerts(false);
-      setLoadingComposers(false);
-      setImagesLoaded(true);
-    }
-  }, []);
+    };
 
+    convertAndPrefetch();
+  }, [artistsData, concertsData, composersData]);
+
+  // 새로고침 핸들러
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
-    try {
-      const [artistData, concertData, composerData] = await Promise.all([
-        ArtistAPI.getAll(),
-        ConcertAPI.getAll(),
-        ComposerAPI.getAll()
-      ]);
-
-      const legacyArtists = artistData.slice(0, 5).map(artist => ({
-        id: String(artist.id),
-        name: artist.name,
-        category: artist.category,
-        tier: artist.tier as 'S' | 'Rising',
-        image: artist.imageUrl || '',
-      }));
-      setArtists(legacyArtists);
-
-      const legacyConcerts = concertData.slice(0, 5).map(concert => ({
-        id: String(concert.id),
-        title: concert.title,
-        date: concert.concertDate,
-        venue: '공연장',
-        poster: concert.posterUrl || '',
-      }));
-      setConcerts(legacyConcerts);
-
-      setComposers(composerData);
-
-      await prefetchImages([
-        ...artistData.slice(0, 5).map(a => a.imageUrl),
-        ...concertData.slice(0, 5).map(c => c.posterUrl)
-      ]);
-
-      setErrorArtists(null);
-      setErrorConcerts(null);
-      setErrorComposers(null);
-      setRefreshing(false);
-    } catch (err) {
-      setRefreshing(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    loadAllData();
-  }, [loadAllData]);
+    await Promise.all([
+      refetchArtists(),
+      refetchConcerts(),
+      refetchComposers(),
+    ]);
+    setRefreshing(false);
+  }, [refetchArtists, refetchConcerts, refetchComposers]);
 
   React.useEffect(() => {
     // 페이드 인
@@ -285,7 +262,7 @@ export default function HomeScreen() {
                 variant="outline"
                 size="sm"
                 className="mt-4 mx-auto"
-                onPress={loadAllData}
+                onPress={() => refetchArtists()}
               >
                 <Text>다시 시도</Text>
               </Button>
@@ -331,7 +308,7 @@ export default function HomeScreen() {
                 variant="outline"
                 size="sm"
                 className="mt-4 mx-auto"
-                onPress={loadAllData}
+                onPress={() => refetchConcerts()}
               >
                 <Text>다시 시도</Text>
               </Button>
@@ -377,7 +354,7 @@ export default function HomeScreen() {
                 variant="outline"
                 size="sm"
                 className="mt-4 mx-auto"
-                onPress={loadAllData}
+                onPress={() => refetchComposers()}
               >
                 <Text>다시 시도</Text>
               </Button>

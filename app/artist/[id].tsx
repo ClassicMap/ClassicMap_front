@@ -35,7 +35,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { ArtistAPI, RecordingAPI, ConcertAPI } from '@/lib/api/client';
+import { RecordingAPI, ConcertAPI } from '@/lib/api/client';
 import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import type { Artist, Recording, Concert } from '@/lib/types/models';
@@ -43,6 +43,7 @@ import { getImageUrl } from '@/lib/utils/image';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 import { prefetchImages } from '@/components/optimized-image';
+import { useArtist } from '@/lib/query/hooks/useArtists';
 
 // Recording Cover Component with error handling (small)
 function RecordingCover({ coverUrl }: { coverUrl?: string | null }) {
@@ -117,11 +118,7 @@ export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const [artist, setArtist] = React.useState<Artist | null>(null);
-  const [loading, setLoading] = React.useState(true);
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
   const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
   const { canEdit } = useAuth();
@@ -131,106 +128,57 @@ export default function ArtistDetailScreen() {
   const [selectedRecording, setSelectedRecording] = React.useState<Recording | undefined>();
   const [concerts, setConcerts] = React.useState<Concert[]>([]);
 
+  // React Query로 아티스트 데이터 로드 (자동 캐싱)
+  const {
+    data: artist,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useArtist(id ? Number(id) : undefined);
+
+  // 에러 처리
+  const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
+
+  // 아티스트 데이터 로드 시 녹음/공연 목록 로드
   React.useEffect(() => {
-    if (id) {
-      loadArtist();
+    if (artist) {
+      loadAdditionalData();
     }
-  }, [id]);
+  }, [artist]);
 
-  const loadArtist = async () => {
-    setLoading(true);
-    setImagesLoaded(false);
-    setError(null);
+  const loadAdditionalData = async () => {
+    if (!id) return;
+
+    // 녹음 목록 로드
     try {
-      const data = await ArtistAPI.getById(Number(id));
-      console.log('=== Artist Data Loaded ===');
-      console.log('Full artist data:', JSON.stringify(data, null, 2));
-      console.log('Awards field:', data.awards);
-      console.log('Awards type:', typeof data.awards);
-      console.log('==========================');
-      setArtist(data);
+      const recordingData = await RecordingAPI.getByArtist(Number(id));
+      setRecordings(recordingData);
+    } catch (error) {
+      console.error('Failed to fetch recordings:', error);
+    }
 
-      // 녹음 목록 로드
-      let recordingData: Recording[] = [];
-      try {
-        recordingData = await RecordingAPI.getByArtist(Number(id));
-        setRecordings(recordingData);
-      } catch (error) {
-        console.error('Failed to fetch recordings:', error);
-      }
-
-      // 공연 목록 로드
-      let concertData: Concert[] = [];
-      try {
-        concertData = await ConcertAPI.getByArtist(Number(id));
-        setConcerts(concertData);
-      } catch (error) {
-        console.error('Failed to fetch concerts:', error);
-      }
-
-      // 이미지 프리페치
-      const imagesToLoad = [
-        data.imageUrl,
-        data.coverImageUrl,
-        ...recordingData.map((r) => r.coverUrl),
-        ...concertData.map((c) => c.posterUrl),
-      ].filter(Boolean);
-      await prefetchImages(imagesToLoad);
-      setImagesLoaded(true);
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to load artist:', err);
-      setError('아티스트 정보를 불러오는데 실패했습니다.');
-      setLoading(false);
-      setImagesLoaded(true);
+    // 공연 목록 로드
+    try {
+      const concertData = await ConcertAPI.getByArtist(Number(id));
+      setConcerts(concertData);
+    } catch (error) {
+      console.error('Failed to fetch concerts:', error);
     }
   };
 
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const data = await ArtistAPI.getById(Number(id));
-      console.log('=== Artist Data Refreshed ===');
-      console.log('Full artist data:', JSON.stringify(data, null, 2));
-      console.log('Awards field:', data.awards);
-      console.log('=============================');
-      setArtist(data);
-
-      // 녹음 목록 새로고침
-      let recordingData: Recording[] = [];
-      try {
-        recordingData = await RecordingAPI.getByArtist(Number(id));
-        setRecordings(recordingData);
-      } catch (error) {
-        console.error('Failed to fetch recordings:', error);
-      }
-
-      // 공연 목록 새로고침
-      let concertData: Concert[] = [];
-      try {
-        concertData = await ConcertAPI.getByArtist(Number(id));
-        setConcerts(concertData);
-      } catch (error) {
-        console.error('Failed to fetch concerts:', error);
-      }
-
-      // 이미지 프리페치
+  // 이미지 프리페치
+  React.useEffect(() => {
+    if (artist && !imagesLoaded) {
       const imagesToLoad = [
-        data.imageUrl,
-        data.coverImageUrl,
-        ...recordingData.map((r) => r.coverUrl),
-        ...concertData.map((c) => c.posterUrl),
+        artist.imageUrl,
+        artist.coverImageUrl,
+        ...recordings.map((r) => r.coverUrl),
+        ...concerts.map((c) => c.posterUrl),
       ].filter(Boolean);
-      await prefetchImages(imagesToLoad);
-
-      setError(null);
-      setRefreshing(false);
-    } catch (err) {
-      console.error('Failed to refresh artist:', err);
-      setError('아티스트 정보를 불러오는데 실패했습니다.');
-      setRefreshing(false);
+      prefetchImages(imagesToLoad).then(() => setImagesLoaded(true));
     }
-  }, [id]);
+  }, [artist, recordings, concerts, imagesLoaded]);
 
   const handleCoverImageLoad = () => {
     setCoverImageLoaded(true);
@@ -319,7 +267,7 @@ export default function ArtistDetailScreen() {
     <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { refetch(); loadAdditionalData(); }} />}>
         {/* Cover Image with overlays */}
         <View className="relative h-64">
           {!coverImageLoaded && (

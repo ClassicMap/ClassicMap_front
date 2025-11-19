@@ -29,7 +29,6 @@ import Animated, {
 import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
 import { XIcon, RefreshCw, Plus } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
-import { ComposerAPI } from '@/lib/api/client';
 import { getAllPeriods, type PeriodInfo } from '@/lib/data/mockDTO';
 import type { Composer } from '@/lib/types/models';
 import { Card } from '@/components/ui/card';
@@ -39,6 +38,7 @@ import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
 import { useColorScheme, Platform } from 'react-native';
+import { useComposers } from '@/lib/query/hooks/useComposers';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TIMELINE_HEIGHT = SCREEN_HEIGHT * 0.4;
@@ -71,10 +71,6 @@ export default function TimelineScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEra, setSelectedEra] = useState<PeriodInfo | null>(null);
   const [showEraModal, setShowEraModal] = useState(false);
-  const [composers, setComposers] = useState<Composer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showComposerForm, setShowComposerForm] = useState(false);
   const [selectedComposerArea, setSelectedComposerArea] = useState<{
     composers: any[];
@@ -86,43 +82,29 @@ export default function TimelineScreen() {
 
   const ERAS = React.useMemo(() => getAllPeriods(), []);
 
-  const loadComposers = React.useCallback(() => {
-    ComposerAPI.getAll()
-      .then((data) => {
-        setComposers(data);
-        prefetchImages(data.map((c) => c.avatarUrl));
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError('작곡가 정보를 불러오는데 실패했습니다.');
-        setLoading(false);
-      });
-  }, []);
+  // React Query로 작곡가 데이터 로드 (자동 캐싱)
+  const {
+    data: composers = [],
+    isLoading: loading,
+    error: queryError,
+    refetch,
+    isRefetching: refreshing,
+  } = useComposers();
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    ComposerAPI.getAll()
-      .then((data) => {
-        setComposers(data);
-        prefetchImages(data.map((c) => c.avatarUrl));
-        setError(null);
-        setRefreshing(false);
-      })
-      .catch((err) => {
-        setError('작곡가 정보를 불러오는데 실패했습니다.');
-        setRefreshing(false);
-      });
-  }, []);
+  // 에러 처리
+  const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 
+  // 이미지 프리페치
   React.useEffect(() => {
-    loadComposers();
-  }, [loadComposers]);
+    if (composers.length > 0) {
+      prefetchImages(composers.map((c) => c.avatarUrl));
+    }
+  }, [composers]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadComposers();
-    }, [loadComposers])
-  );
+  // 새로고침 핸들러
+  const onRefresh = React.useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   // 2초마다 로테이션 인덱스 변경
   React.useEffect(() => {
@@ -146,7 +128,7 @@ export default function TimelineScreen() {
       <View className="flex-1 items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md p-8">
           <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={loadComposers}>
+          <Button variant="outline" onPress={() => refetch()}>
             <Text>다시 시도</Text>
           </Button>
         </Card>
@@ -1206,7 +1188,7 @@ export default function TimelineScreen() {
             visible={showComposerForm}
             onClose={() => setShowComposerForm(false)}
             onSuccess={() => {
-              loadComposers();
+              refetch();
             }}
           />
         )}
