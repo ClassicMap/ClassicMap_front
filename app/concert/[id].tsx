@@ -193,11 +193,21 @@ export default function ConcertDetailScreen() {
         }
       }
 
-      // 이미지 프리페치
-      if (concert.posterUrl) {
-        await prefetchImages([concert.posterUrl]);
+      // 이미지 프리페치 (타임아웃 추가)
+      const timeout = setTimeout(() => {
+        setImagesLoaded(true);
+      }, 1000);
+
+      try {
+        if (concert.posterUrl) {
+          await prefetchImages([concert.posterUrl]);
+        }
+        setImagesLoaded(true);
+      } catch (error) {
+        setImagesLoaded(true);
+      } finally {
+        clearTimeout(timeout);
       }
-      setImagesLoaded(true);
     };
 
     loadAdditionalData();

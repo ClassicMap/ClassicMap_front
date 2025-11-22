@@ -167,7 +167,7 @@ export default function ArtistDetailScreen() {
     }
   };
 
-  // 이미지 프리페치
+  // 이미지 프리페치 (타임아웃 추가)
   React.useEffect(() => {
     if (artist && !imagesLoaded) {
       const imagesToLoad = [
@@ -176,7 +176,18 @@ export default function ArtistDetailScreen() {
         ...recordings.map((r) => r.coverUrl),
         ...concerts.map((c) => c.posterUrl),
       ].filter(Boolean);
-      prefetchImages(imagesToLoad).then(() => setImagesLoaded(true));
+
+      // 이미지 로딩 실패 또는 지연 시 1초 후 자동으로 표시
+      const timeout = setTimeout(() => {
+        setImagesLoaded(true);
+      }, 1000);
+
+      prefetchImages(imagesToLoad)
+        .then(() => setImagesLoaded(true))
+        .catch(() => setImagesLoaded(true))
+        .finally(() => clearTimeout(timeout));
+
+      return () => clearTimeout(timeout);
     }
   }, [artist, recordings, concerts, imagesLoaded]);
 
@@ -228,7 +239,8 @@ export default function ArtistDetailScreen() {
           try {
             await AdminRecordingAPI.delete(recordingId);
             Alert.alert('성공', '앨범이 삭제되었습니다.');
-            loadArtist();
+            refetch();
+            loadAdditionalData();
           } catch (error) {
             Alert.alert('오류', '앨범 삭제에 실패했습니다.');
           }
@@ -345,6 +357,14 @@ export default function ArtistDetailScreen() {
                   <View className="rounded bg-blue-500 px-2 py-1">
                     <Icon as={TrendingUpIcon} size={14} color="white" />
                   </View>
+                ) : artist.tier === 'A' ? (
+                  <View className="rounded bg-green-600 px-2 py-1">
+                    <Text className="text-xs font-bold text-white">A</Text>
+                  </View>
+                ) : artist.tier === 'B' ? (
+                  <View className="rounded bg-gray-500 px-2 py-1">
+                    <Text className="text-xs font-bold text-white">B</Text>
+                  </View>
                 ) : null}
               </View>
               <Text className="text-muted-foreground">{artist.englishName}</Text>
@@ -392,15 +412,45 @@ export default function ArtistDetailScreen() {
             )}
           </Card>
 
+          {/* Top Award - 주요 수상 */}
+          {(() => {
+            if (!artist.awards || artist.awards.length === 0) return null;
+            // displayOrder가 가장 큰 것(가장 높은 점수) 찾기
+            const topAward = artist.awards.reduce((prev, current) => {
+              const prevOrder = prev.displayOrder ?? 0;
+              const currentOrder = current.displayOrder ?? 0;
+              return currentOrder > prevOrder ? current : prev;
+            });
+            if (!topAward) return null;
+
+            return (
+              <Card className="p-4 bg-amber-500/10 border-amber-500/20">
+                <View className="flex-row items-center gap-2 mb-3">
+                  <Icon as={AwardIcon} size={22} className="text-amber-600" />
+                  <Text className="text-lg font-bold text-amber-800">주요 수상</Text>
+                </View>
+                <View className="gap-2">
+                  <Text className="text-lg font-semibold text-amber-900">{topAward.awardName}</Text>
+                  <Text className="text-base text-amber-700">{topAward.year}</Text>
+                  {topAward.category && (
+                    <Text className="text-sm text-amber-700">{topAward.category}</Text>
+                  )}
+                  {topAward.ranking && (
+                    <Text className="text-sm text-amber-600">{topAward.ranking}</Text>
+                  )}
+                  {topAward.organization && (
+                    <Text className="text-xs text-amber-600 mt-1">{topAward.organization}</Text>
+                  )}
+                </View>
+              </Card>
+            );
+          })()}
+
           {/* Stats */}
           <View className="flex-row gap-3">
             <Card className="flex-1 items-center gap-1 p-4">
               <Text className="text-2xl font-bold">{artist.concertCount}+</Text>
               <Text className="text-xs text-muted-foreground">공연</Text>
-            </Card>
-            <Card className="flex-1 items-center gap-1 p-4">
-              <Text className="text-2xl font-bold">{artist.countryCount}+</Text>
-              <Text className="text-xs text-muted-foreground">국가</Text>
             </Card>
             <Card className="flex-1 items-center gap-1 p-4">
               <Text className="text-2xl font-bold">{artist.albumCount}+</Text>
@@ -409,41 +459,57 @@ export default function ArtistDetailScreen() {
           </View>
 
           {/* Biography */}
-          {artist.bio && (
-            <Card className="p-4">
-              <Text className="mb-2 text-lg font-bold">소개</Text>
+          <Card className="p-4">
+            <Text className="mb-2 text-lg font-bold">소개</Text>
+            {artist.bio ? (
               <Text className="leading-6 text-muted-foreground">{artist.bio}</Text>
-            </Card>
-          )}
+            ) : (
+              <Text className="leading-6 text-muted-foreground/50 italic">소개가 아직 등록되지 않았습니다.</Text>
+            )}
+          </Card>
 
-          {/* Awards */}
-          {artist.awards && artist.awards.length > 0 && (
-            <Card className="p-4">
-              <Text className="mb-3 text-lg font-bold">주요 수상</Text>
+
+          {/* Awards History - 수상 경력 */}
+          <Card className="p-4">
+            <Text className="mb-3 text-lg font-bold">수상 경력</Text>
+            {artist.awards && artist.awards.length > 0 ? (
               <View className="gap-3">
                 {artist.awards.map((award) => (
                   <View key={award.id} className="flex-row items-start gap-3">
                     <Icon as={AwardIcon} size={18} className="mt-1 text-amber-500" />
                     <View className="flex-1">
-                      <Text className="font-semibold">{award.awardName}</Text>
+                      <View className="flex-row items-center gap-2">
+                        <Text className="font-semibold">{award.awardName}</Text>
+                        {award.ranking && (
+                          <Text className="text-sm font-medium text-amber-600">({award.ranking})</Text>
+                        )}
+                      </View>
                       <Text className="text-sm text-muted-foreground">{award.year}</Text>
+                      {award.category && (
+                        <Text className="text-xs text-muted-foreground mt-0.5">{award.category}</Text>
+                      )}
+                      {award.organization && (
+                        <Text className="text-xs text-muted-foreground mt-0.5">{award.organization}</Text>
+                      )}
                     </View>
                   </View>
                 ))}
               </View>
-            </Card>
-          )}
+            ) : (
+              <Text className="text-muted-foreground/50 italic">수상 경력이 아직 등록되지 않았습니다.</Text>
+            )}
+          </Card>
 
-          {/* Style Keywords */}
+          {/* Style Description */}
           {artist.style && (
-            <Card className="p-4">
-              <Text className="mb-3 text-lg font-bold">연주 스타일</Text>
-              <View className="flex-row flex-wrap gap-2">
-                {artist.style.split(',').map((keyword, index) => (
-                  <View key={index} className="rounded-full bg-primary/10 px-3 py-1.5">
-                    <Text className="text-sm text-primary">{keyword.trim()}</Text>
-                  </View>
-                ))}
+            <Card className="p-5 bg-primary/5 border-primary/10">
+              <View className="gap-3">
+                <Text className="text-base font-semibold text-primary">연주 스타일</Text>
+                <View className="border-l-4 border-primary/30 pl-4">
+                  <Text className="text-base leading-7 text-foreground/80 italic">
+                    {artist.style}
+                  </Text>
+                </View>
               </View>
             </Card>
           )}
@@ -507,22 +573,24 @@ export default function ArtistDetailScreen() {
                             {recording.spotifyUrl && (
                               <TouchableOpacity
                                 onPress={() => Linking.openURL(recording.spotifyUrl!)}
-                                className="h-10 w-10 items-center justify-center">
+                                className="h-10 w-10 items-center justify-center rounded-full bg-green-600">
                                 <Image
                                   source={require('@/assets/spotify.png')}
                                   className="h-10 w-10"
                                   resizeMode="contain"
+                                  defaultSource={require('@/assets/spotify.png')}
                                 />
                               </TouchableOpacity>
                             )}
                             {recording.appleMusicUrl && (
                               <TouchableOpacity
                                 onPress={() => Linking.openURL(recording.appleMusicUrl!)}
-                                className="h-10 w-10 items-center justify-center">
+                                className="h-10 w-10 items-center justify-center rounded-full bg-pink-600">
                                 <Image
                                   source={require('@/assets/apple_music_classical.png')}
                                   className="h-10 w-10"
                                   resizeMode="contain"
+                                  defaultSource={require('@/assets/apple_music_classical.png')}
                                 />
                               </TouchableOpacity>
                             )}
@@ -664,7 +732,8 @@ export default function ArtistDetailScreen() {
           artist={artist}
           onClose={() => setEditModalVisible(false)}
           onSuccess={() => {
-            loadArtist();
+            refetch();
+            loadAdditionalData();
           }}
         />
       )}
@@ -677,7 +746,8 @@ export default function ArtistDetailScreen() {
         onClose={() => setRecordingFormVisible(false)}
         onSuccess={() => {
           setRecordingFormVisible(false);
-          loadArtist();
+          refetch();
+          loadAdditionalData();
         }}
       />
     </View>

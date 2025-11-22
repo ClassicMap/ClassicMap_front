@@ -232,6 +232,14 @@ function ArtistCard({
                 <View className="rounded bg-blue-500 px-2 py-0.5">
                   <Icon as={TrendingUpIcon} size={12} color="white" />
                 </View>
+              ) : artist.tier === 'A' ? (
+                <View className="rounded bg-green-600 px-2 py-0.5">
+                  <Text className="text-xs font-bold text-white">A</Text>
+                </View>
+              ) : artist.tier === 'B' ? (
+                <View className="rounded bg-gray-500 px-2 py-0.5">
+                  <Text className="text-xs font-bold text-white">B</Text>
+                </View>
               ) : null}
             </View>
             <Text className="text-sm text-muted-foreground">{artist.category}</Text>

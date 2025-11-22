@@ -24,8 +24,11 @@ interface RecordingFormModalProps {
 export function RecordingFormModal({ visible, artistId, recording, onClose, onSuccess }: RecordingFormModalProps) {
   const [title, setTitle] = React.useState('');
   const [year, setYear] = React.useState('');
+  const [releaseDate, setReleaseDate] = React.useState('');
   const [label, setLabel] = React.useState('');
   const [coverUrl, setCoverUrl] = React.useState('');
+  const [trackCount, setTrackCount] = React.useState('');
+  const [isSingle, setIsSingle] = React.useState(false);
   const [spotifyUrl, setSpotifyUrl] = React.useState('');
   const [appleMusicUrl, setAppleMusicUrl] = React.useState('');
   const [youtubeMusicUrl, setYoutubeMusicUrl] = React.useState('');
@@ -38,8 +41,11 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
       if (recording) {
         setTitle(recording.title);
         setYear(recording.year);
+        setReleaseDate(recording.releaseDate || '');
         setLabel(recording.label || '');
         setCoverUrl(recording.coverUrl || '');
+        setTrackCount(recording.trackCount ? String(recording.trackCount) : '');
+        setIsSingle(recording.isSingle || false);
         setSpotifyUrl(recording.spotifyUrl || '');
         setAppleMusicUrl(recording.appleMusicUrl || '');
         setYoutubeMusicUrl(recording.youtubeMusicUrl || '');
@@ -48,8 +54,11 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
       } else {
         setTitle('');
         setYear('');
+        setReleaseDate('');
         setLabel('');
         setCoverUrl('');
+        setTrackCount('');
+        setIsSingle(false);
         setSpotifyUrl('');
         setAppleMusicUrl('');
         setYoutubeMusicUrl('');
@@ -140,8 +149,11 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
         await AdminRecordingAPI.update(recording.id, {
           title,
           year,
+          releaseDate: releaseDate || undefined,
           label: label || undefined,
           coverUrl: coverUrl || undefined,
+          trackCount: trackCount ? parseInt(trackCount) : undefined,
+          isSingle: isSingle,
           spotifyUrl: spotifyUrl || undefined,
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
@@ -153,8 +165,11 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           artistId,
           title,
           year,
+          releaseDate: releaseDate || undefined,
           label: label || undefined,
           coverUrl: coverUrl || undefined,
+          trackCount: trackCount ? parseInt(trackCount) : undefined,
+          isSingle: isSingle,
           spotifyUrl: spotifyUrl || undefined,
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
@@ -221,12 +236,23 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           {/* Year */}
           <View className="gap-2 mb-4">
             <Label nativeID="year">발매 연도 *</Label>
-            <Input 
-              placeholder="2024" 
+            <Input
+              placeholder="2024"
               value={year}
               onChangeText={setYear}
               aria-labelledby="year"
               keyboardType="numeric"
+            />
+          </View>
+
+          {/* Release Date */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="releaseDate">정확한 발매일</Label>
+            <Input
+              placeholder="2024-01-15"
+              value={releaseDate}
+              onChangeText={setReleaseDate}
+              aria-labelledby="releaseDate"
             />
           </View>
 
@@ -239,6 +265,30 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
               onChangeText={setLabel}
               aria-labelledby="label"
             />
+          </View>
+
+          {/* Track Count */}
+          <View className="gap-2 mb-4">
+            <Label nativeID="trackCount">트랙 수</Label>
+            <Input
+              placeholder="10"
+              value={trackCount}
+              onChangeText={setTrackCount}
+              aria-labelledby="trackCount"
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Is Single */}
+          <View className="flex-row items-center gap-2 mb-4">
+            <Label nativeID="isSingle">싱글 앨범</Label>
+            <Button
+              size="sm"
+              variant={isSingle ? "default" : "outline"}
+              onPress={() => setIsSingle(!isSingle)}
+            >
+              <Text>{isSingle ? '예' : '아니오'}</Text>
+            </Button>
           </View>
 
           {/* Streaming Links Section */}

@@ -53,6 +53,12 @@ export interface ArtistAward {
   artistId: number;
   year: string;
   awardName: string;
+  awardType?: string;
+  organization?: string;
+  category?: string;
+  ranking?: string;
+  source?: string;
+  notes?: string;
   displayOrder: number;
 }
 
@@ -71,8 +77,8 @@ export interface Artist {
   style?: string;
   awards?: ArtistAward[];
   concertCount: number;
-  countryCount: number;
   albumCount: number;
+  topAwardId?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -82,8 +88,19 @@ export interface Recording {
   artistId: number;
   title: string;
   year: string;
+  releaseDate?: string;
   label?: string;
   coverUrl?: string;
+  upc?: string;
+  appleMusicId?: string;
+  trackCount?: number;
+  isSingle?: boolean;
+  isCompilation?: boolean;
+  genreNames?: string;
+  copyright?: string;
+  editorialNotes?: string;
+  artworkWidth?: number;
+  artworkHeight?: number;
   spotifyUrl?: string;
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
