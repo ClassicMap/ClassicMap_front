@@ -93,11 +93,14 @@ export default function HomeScreen() {
   // 데이터를 레거시 형식으로 변환 및 이미지 프리페치
   React.useEffect(() => {
     const convertAndPrefetch = async () => {
-      if (artistsData.length === 0 && concertsData.length === 0 && composersData.length === 0) {
+      // 로딩 중이거나 데이터가 없으면 실행하지 않음
+      if (loadingArtists || loadingConcerts || loadingComposers) {
         return;
       }
 
-      setImagesLoaded(false);
+      if (artistsData.length === 0 && concertsData.length === 0 && composersData.length === 0) {
+        return;
+      }
 
       // 레거시 형식으로 변환
       const legacyArtists = artistsData.slice(0, 5).map(artist => ({
@@ -120,16 +123,26 @@ export default function HomeScreen() {
 
       setComposers(composersData);
 
-      // 이미지 프리페치
-      await prefetchImages([
-        ...artistsData.slice(0, 5).map(a => a.imageUrl),
-        ...concertsData.slice(0, 5).map(c => c.posterUrl)
-      ]);
-      setImagesLoaded(true);
+      // 이미지 프리페치 (타임아웃 추가)
+      const timeout = setTimeout(() => {
+        setImagesLoaded(true);
+      }, 1000);
+
+      try {
+        await prefetchImages([
+          ...artistsData.slice(0, 5).map(a => a.imageUrl),
+          ...concertsData.slice(0, 5).map(c => c.posterUrl)
+        ]);
+        setImagesLoaded(true);
+      } catch (error) {
+        setImagesLoaded(true);
+      } finally {
+        clearTimeout(timeout);
+      }
     };
 
     convertAndPrefetch();
-  }, [artistsData, concertsData, composersData]);
+  }, [artistsData, concertsData, composersData, loadingArtists, loadingConcerts, loadingComposers]);
 
   // 새로고침 핸들러
   const onRefresh = React.useCallback(async () => {
@@ -418,9 +431,17 @@ function ArtistCard({ artist }: { artist: LegacyArtist }) {
                 <View className="rounded bg-amber-500 px-1.5 py-0.5">
                   <Text className="text-[10px] font-bold text-white">S</Text>
                 </View>
-              ) : (
+              ) : artist.tier === 'Rising' ? (
                 <Icon as={TrendingUpIcon} size={12} className="text-blue-500" />
-              )}
+              ) : artist.tier === 'A' ? (
+                <View className="rounded bg-green-600 px-1.5 py-0.5">
+                  <Text className="text-[10px] font-bold text-white">A</Text>
+                </View>
+              ) : artist.tier === 'B' ? (
+                <View className="rounded bg-gray-500 px-1.5 py-0.5">
+                  <Text className="text-[10px] font-bold text-white">B</Text>
+                </View>
+              ) : null}
             </View>
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {artist.category}

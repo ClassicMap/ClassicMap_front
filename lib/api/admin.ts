@@ -106,17 +106,10 @@ export const AdminArtistAPI = {
     countryCount?: number;
     albumCount?: number;
   }): Promise<number> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      imageUrl: toRelativePath(data.imageUrl),
-      coverImageUrl: toRelativePath(data.coverImageUrl),
-    };
-    
     const response = await authenticatedFetch(`${API_BASE_URL}/artists`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create artist');
     return response.json();
@@ -138,17 +131,10 @@ export const AdminArtistAPI = {
     countryCount?: number;
     albumCount?: number;
   }): Promise<void> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      imageUrl: toRelativePath(data.imageUrl),
-      coverImageUrl: toRelativePath(data.coverImageUrl),
-    };
-    
     const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update artist');
   },
@@ -265,16 +251,10 @@ export const AdminConcertAPI = {
     ticketUrl?: string;
     status?: string;
   }): Promise<void> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      posterUrl: toRelativePath(data.posterUrl),
-    };
-
     const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update concert');
   },
@@ -296,16 +276,10 @@ export const AdminRecordingAPI = {
     label?: string;
     coverUrl?: string;
   }): Promise<number> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      coverUrl: toRelativePath(data.coverUrl),
-    };
-
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to create recording');
     return response.json();
@@ -317,16 +291,10 @@ export const AdminRecordingAPI = {
     label?: string;
     coverUrl?: string;
   }): Promise<void> {
-    // 이미지 URL을 상대 경로로 변환
-    const processedData = {
-      ...data,
-      coverUrl: toRelativePath(data.coverUrl),
-    };
-
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(processedData),
+      body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error('Failed to update recording');
   },

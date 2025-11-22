@@ -593,11 +593,22 @@ export default function ComposerDetailScreen() {
   // 에러 처리
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 
-  // 이미지 프리페치
+  // 이미지 프리페치 (타임아웃 추가)
   React.useEffect(() => {
     if (composer && !imagesLoaded) {
       const imagesToLoad = [composer.avatarUrl, composer.coverImageUrl].filter(Boolean);
-      prefetchImages(imagesToLoad).then(() => setImagesLoaded(true));
+
+      // 이미지 로딩 실패 또는 지연 시 1초 후 자동으로 표시
+      const timeout = setTimeout(() => {
+        setImagesLoaded(true);
+      }, 1000);
+
+      prefetchImages(imagesToLoad)
+        .then(() => setImagesLoaded(true))
+        .catch(() => setImagesLoaded(true))
+        .finally(() => clearTimeout(timeout));
+
+      return () => clearTimeout(timeout);
     }
   }, [composer, imagesLoaded]);
 
@@ -796,9 +807,17 @@ export default function ComposerDetailScreen() {
                   <View
                     className="rounded-full px-3 py-1.5"
                     style={{
-                      backgroundColor: composer.tier === 'S' ? '#fbbf24' : composer.tier === 'A' ? '#a78bfa' : '#60a5fa',
+                      backgroundColor:
+                        composer.tier === 'S' ? '#fbbf24' :
+                        composer.tier === 'A' ? '#16a34a' :
+                        composer.tier === 'B' ? '#6b7280' :
+                        '#60a5fa',
                       borderWidth: 2,
-                      borderColor: composer.tier === 'S' ? '#f59e0b' : composer.tier === 'A' ? '#8b5cf6' : '#3b82f6'
+                      borderColor:
+                        composer.tier === 'S' ? '#f59e0b' :
+                        composer.tier === 'A' ? '#15803d' :
+                        composer.tier === 'B' ? '#4b5563' :
+                        '#3b82f6'
                     }}
                   >
                     <Text className="text-sm font-bold text-white">
