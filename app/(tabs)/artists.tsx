@@ -15,32 +15,228 @@ import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import type { Artist } from '@/lib/types/models';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
-import { useArtists } from '@/lib/query/hooks/useArtists';
+import { useArtists, ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArtistAPI } from '@/lib/api/client';
 
 export default function ArtistsScreen() {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const [selectedFilter, setSelectedFilter] = React.useState<'all' | 'S' | 'Rising'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
+  const [searchResults, setSearchResults] = React.useState<Artist[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchOffset, setSearchOffset] = React.useState(0);
+  const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
   const { canEdit } = useAuth();
+  const queryClient = useQueryClient();
 
-  // React Query로 아티스트 데이터 로드 (자동 캐싱)
+  // Debounce search query (300ms delay)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      // Reset search pagination when query changes
+      setSearchOffset(0);
+      setSearchResults([]);
+      setHasMoreSearchResults(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // React Query 무한 스크롤로 아티스트 데이터 로드
   const {
-    data: artists = [],
+    data,
     isLoading: loading,
     error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     refetch,
     isRefetching: refreshing,
   } = useArtists();
 
+  // 페이지 데이터를 평탄화 및 중복 제거
+  const artists = React.useMemo(() => {
+    if (!data?.pages) return [];
+
+    const allArtists = data.pages.flat();
+
+    // ID 기준으로 중복 제거
+    const uniqueArtists = Array.from(
+      new Map(allArtists.map(artist => [artist.id, artist])).values()
+    );
+
+    return uniqueArtists;
+  }, [data]);
+
   // 에러 처리
   const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
 
-  // 이미지 프리페치
+  // Backend search effect - initial search
+  React.useEffect(() => {
+    if (debouncedSearchQuery.trim().length > 0) {
+      setIsSearching(true);
+      // Apply tier filter if selected
+      const tier = selectedFilter !== 'all' ? selectedFilter : undefined;
+      ArtistAPI.search({
+        q: debouncedSearchQuery,
+        tier,
+        offset: 0,
+        limit: 20,
+      })
+        .then((results) => {
+          setSearchResults(results);
+          setSearchOffset(20);
+          setHasMoreSearchResults(results.length === 20);
+          setIsSearching(false);
+        })
+        .catch((error) => {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+          setIsSearching(false);
+        });
+    } else {
+      setSearchResults([]);
+      setSearchOffset(0);
+      setHasMoreSearchResults(true);
+      setIsSearching(false);
+    }
+  }, [debouncedSearchQuery, selectedFilter]);
+
+  // Load more search results
+  const loadMoreSearchResults = React.useCallback(() => {
+    if (!debouncedSearchQuery.trim() || !hasMoreSearchResults || isSearching) {
+      return;
+    }
+
+    setIsSearching(true);
+    const tier = selectedFilter !== 'all' ? selectedFilter : undefined;
+    ArtistAPI.search({
+      q: debouncedSearchQuery,
+      tier,
+      offset: searchOffset,
+      limit: 20,
+    })
+      .then((results) => {
+        if (results.length > 0) {
+          // Deduplicate by ID
+          const existingIds = new Set(searchResults.map(a => a.id));
+          const newResults = results.filter(a => !existingIds.has(a.id));
+          setSearchResults(prev => [...prev, ...newResults]);
+          setSearchOffset(prev => prev + 20);
+          setHasMoreSearchResults(results.length === 20);
+        } else {
+          setHasMoreSearchResults(false);
+        }
+        setIsSearching(false);
+      })
+      .catch((error) => {
+        console.error('Failed to load more search results:', error);
+        setIsSearching(false);
+      });
+  }, [debouncedSearchQuery, selectedFilter, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+
+  // 새로고침 핸들러 (첫 페이지만 다시 로드) - early return 전에 정의
+  const handleRefresh = React.useCallback(() => {
+    // Clear search state
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setSearchResults([]);
+    setSearchOffset(0);
+    setHasMoreSearchResults(true);
+
+    // resetQueries를 사용하여 무한 스크롤 상태를 초기화
+    // 이렇게 하면 첫 페이지만 로드됨
+    queryClient.resetQueries({ queryKey: ARTIST_QUERY_KEYS.all });
+  }, [queryClient]);
+
+  // 무한 스크롤 처리 - 마지막 요청 추적 - early return 전에 정의
+  const lastFetchRef = React.useRef<number>(0);
+
+  const handleScroll = React.useCallback(
+    (event: any) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const paddingToBottom = 200; // 하단 200px 전에 로드 시작
+
+      // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
+      if (contentSize.height === 0) {
+        return;
+      }
+
+      // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
+      if (contentOffset.y < 0) {
+        return;
+      }
+
+      // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
+      const hasScrolled = contentOffset.y > 200;
+
+      const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+
+      if (!hasScrolled || !isNearBottom) {
+        return;
+      }
+
+      const now = Date.now();
+      // 마지막 요청 후 1초 이내면 무시 (중복 방지)
+      if (now - lastFetchRef.current < 1000) {
+        return;
+      }
+
+      // If searching, load more search results
+      if (debouncedSearchQuery.trim().length > 0) {
+        if (hasMoreSearchResults && !isSearching) {
+          lastFetchRef.current = now;
+          loadMoreSearchResults();
+        }
+      } else {
+        // Otherwise, load more paginated results
+        if (hasNextPage && !isFetchingNextPage) {
+          lastFetchRef.current = now;
+          fetchNextPage();
+        }
+      }
+    },
+    [
+      hasNextPage,
+      isFetchingNextPage,
+      fetchNextPage,
+      debouncedSearchQuery,
+      hasMoreSearchResults,
+      isSearching,
+      loadMoreSearchResults,
+    ]
+  );
+
+  const filteredArtists = React.useMemo(() => {
+    // Use search results if searching, otherwise use paginated artists
+    let filtered = debouncedSearchQuery.trim().length > 0 ? searchResults : artists;
+
+    // Deduplicate by ID to prevent duplicate key errors
+    filtered = Array.from(
+      new Map(filtered.map(artist => [artist.id, artist])).values()
+    );
+
+    // Apply tier filter only when NOT searching (search already filters on backend)
+    if (debouncedSearchQuery.trim().length === 0 && selectedFilter !== 'all') {
+      filtered = filtered.filter((artist) =>
+        (selectedFilter === 'S' && artist.tier === 'S') ||
+        (selectedFilter === 'Rising' && artist.tier === 'Rising')
+      );
+    }
+
+    return filtered;
+  }, [artists, searchResults, debouncedSearchQuery, selectedFilter]);
+
+  // 이미지 프리페치 (첫 10개만 - 성능 최적화)
   React.useEffect(() => {
     if (artists.length > 0) {
-      prefetchImages(artists.map((a) => a.imageUrl));
+      const firstBatch = artists.slice(0, 10).map((a) => a.imageUrl).filter(Boolean);
+      if (firstBatch.length > 0) {
+        prefetchImages(firstBatch);
+      }
     }
-  }, [artists]);
+  }, [artists.length]);
 
   const handleDelete = (id: number, name: string) => {
     Alert.alert(
@@ -65,21 +261,7 @@ export default function ArtistsScreen() {
     );
   };
 
-  const filteredArtists = React.useMemo(() => {
-    return artists.filter((artist) => {
-      const matchesSearch = artist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           artist.englishName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           artist.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           artist.nationality.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (artist.style && artist.style.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesFilter = selectedFilter === 'all' ||
-                           (selectedFilter === 'S' && artist.tier === 'S') ||
-                           (selectedFilter === 'Rising' && artist.tier === 'Rising');
-      return matchesSearch && matchesFilter;
-    });
-  }, [artists, searchQuery, selectedFilter]);
-
-  if (loading) {
+  if (loading && !isSearching) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
@@ -104,8 +286,10 @@ export default function ArtistsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background"
+      onScroll={handleScroll}
+      scrollEventThrottle={400}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
       }
     >
       <View className="gap-6 p-4">
@@ -169,7 +353,12 @@ export default function ArtistsScreen() {
 
         {/* Artists List */}
         <View className="gap-3">
-          {filteredArtists.length > 0 ? (
+          {(isSearching && filteredArtists.length === 0) ? (
+            <View className="py-12">
+              <ActivityIndicator size="large" />
+              <Text className="mt-4 text-center text-muted-foreground">검색 중...</Text>
+            </View>
+          ) : filteredArtists.length > 0 ? (
             filteredArtists.map((artist) => (
               <ArtistCard
                 key={artist.id}
@@ -181,11 +370,57 @@ export default function ArtistsScreen() {
           ) : (
             <Card className="p-8">
               <Text className="text-center text-muted-foreground">
-                검색 결과가 없습니다
+                {debouncedSearchQuery
+                  ? `"${debouncedSearchQuery}"에 대한 검색 결과가 없습니다`
+                  : '아티스트가 없습니다'}
               </Text>
             </Card>
           )}
         </View>
+
+        {/* 무한 스크롤 로딩 인디케이터 */}
+        {debouncedSearchQuery ? (
+          // 검색 중일 때
+          isSearching && filteredArtists.length > 0 && (
+            <View className="py-4">
+              <ActivityIndicator size="small" />
+              <Text className="mt-2 text-center text-sm text-muted-foreground">
+                더 많은 검색 결과를 불러오는 중...
+              </Text>
+            </View>
+          )
+        ) : (
+          // 일반 무한 스크롤
+          isFetchingNextPage && (
+            <View className="py-4">
+              <ActivityIndicator size="small" />
+              <Text className="mt-2 text-center text-sm text-muted-foreground">
+                더 많은 아티스트를 불러오는 중...
+              </Text>
+            </View>
+          )
+        )}
+
+        {/* 더 이상 데이터가 없을 때 */}
+        {debouncedSearchQuery ? (
+          // 검색 모드
+          !hasMoreSearchResults && filteredArtists.length > 0 && (
+            <View className="py-4">
+              <Text className="text-center text-sm text-muted-foreground">
+                "{debouncedSearchQuery}" 검색 결과: 총 {filteredArtists.length}개
+              </Text>
+            </View>
+          )
+        ) : (
+          // 일반 모드
+          !hasNextPage && artists.length > 0 && (
+            <View className="py-4">
+              <Text className="text-center text-muted-foreground text-sm">
+                모든 아티스트를 불러왔습니다
+              </Text>
+            </View>
+          )
+        )}
       </View>
 
       <ArtistFormModal
@@ -197,20 +432,29 @@ export default function ArtistsScreen() {
   );
 }
 
-function ArtistCard({ 
-  artist, 
-  canEdit, 
-  onDelete 
-}: { 
-  artist: Artist; 
+const ArtistCard = React.memo(({
+  artist,
+  canEdit,
+  onDelete
+}: {
+  artist: Artist;
   canEdit: boolean;
   onDelete: (id: number, name: string) => void;
-}) {
+}) => {
   const router = useRouter();
-  
+
+  const handlePress = React.useCallback(() => {
+    router.push(`/artist/${artist.id}` as any);
+  }, [router, artist.id]);
+
+  const handleDeletePress = React.useCallback((e: any) => {
+    e.stopPropagation();
+    onDelete(artist.id, artist.name);
+  }, [onDelete, artist.id, artist.name]);
+
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/artist/${artist.id}` as any)}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       <Card className="p-4">
@@ -249,10 +493,7 @@ function ArtistCard({
             <Button
               variant="ghost"
               size="sm"
-              onPress={(e) => {
-                e.stopPropagation();
-                onDelete(artist.id, artist.name);
-              }}
+              onPress={handleDeletePress}
             >
               <Icon as={TrashIcon} size={18} className="text-destructive" />
             </Button>
@@ -261,4 +502,4 @@ function ArtistCard({
       </Card>
     </TouchableOpacity>
   );
-}
+});

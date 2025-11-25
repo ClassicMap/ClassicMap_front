@@ -45,12 +45,18 @@ export default function CompareScreen() {
 
   // React Query로 작곡가 데이터 로드 (자동 캐싱)
   const {
-    data: composersData = [],
+    data: composersQueryData,
     isLoading: loading,
     error: queryError,
     refetch,
     isRefetching: refreshing,
   } = useComposers();
+
+  // 무한 스크롤 데이터를 평탄화
+  const composersData = React.useMemo(() => {
+    if (!composersQueryData?.pages) return [];
+    return composersQueryData.pages.flat();
+  }, [composersQueryData]);
 
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 

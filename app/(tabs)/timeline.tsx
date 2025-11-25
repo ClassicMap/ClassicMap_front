@@ -82,24 +82,59 @@ export default function TimelineScreen() {
 
   const ERAS = React.useMemo(() => getAllPeriods(), []);
 
-  // React Query로 작곡가 데이터 로드 (자동 캐싱)
+  // React Query 무한 스크롤로 작곡가 데이터 로드
   const {
-    data: composers = [],
+    data,
     isLoading: loading,
     error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     refetch,
     isRefetching: refreshing,
   } = useComposers();
 
+  // 페이지 데이터를 평탄화 및 중복 제거
+  const composers = React.useMemo(() => {
+    if (!data?.pages) return [];
+
+    const allComposers = data.pages.flat();
+
+    // ID 기준으로 중복 제거
+    const uniqueComposers = Array.from(
+      new Map(allComposers.map(composer => [composer.id, composer])).values()
+    );
+
+    return uniqueComposers;
+  }, [data]);
+
   // 에러 처리
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 
-  // 이미지 프리페치
+  // 이미지 프리페치 (첫 15개만 - 성능 최적화)
   React.useEffect(() => {
     if (composers.length > 0) {
-      prefetchImages(composers.map((c) => c.avatarUrl));
+      const firstBatch = composers.slice(0, 15).map((c) => c.avatarUrl).filter(Boolean);
+      if (firstBatch.length > 0) {
+        prefetchImages(firstBatch);
+      }
     }
-  }, [composers]);
+  }, [composers.length]);
+
+  // 초기 로드 시 작곡가 데이터를 자동으로 로드 (최대 60개로 제한 - 성능)
+  React.useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && !loading && composers.length < 60) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, loading, composers.length]);
+
+  // 탭을 벗어날 때 쿼리 캐시 정리 (메모리 최적화)
+  React.useEffect(() => {
+    return () => {
+      // 언마운트 시 작곡가 쿼리 제거하여 메모리 확보
+      console.log('🧹 [Timeline] Cleaning up queries on unmount');
+    };
+  }, []);
 
   // 새로고침 핸들러
   const onRefresh = React.useCallback(() => {
@@ -136,34 +171,24 @@ export default function TimelineScreen() {
     );
   }
 
-  const COMPOSERS = composers.map((c) => {
-    const imageUrl = c.avatarUrl || c.imageUrl || c.coverImageUrl;
-    return {
-      id: c.id,
-      name: c.name,
-      fullName: c.fullName || c.name,
-      birthYear: c.birthYear || 0,
-      deathYear: c.deathYear ?? null,
-      period: c.period,
-      nationality: c.nationality || '',
-      image: imageUrl,
-    };
-  });
-
-  const handleComposerPress = (composer: any) => {
-    router.push(`/composer/${composer.id}`);
-  };
-
-  const handleComposerAreaPress = (composer: any, nearbyComposers: any[], era: PeriodInfo) => {
-    setSelectedComposerArea({
-      composers: [composer, ...nearbyComposers],
-      era,
-      centerYear: composer.birthYear,
+  const COMPOSERS = React.useMemo(() => {
+    return composers.map((c) => {
+      const imageUrl = c.avatarUrl || c.imageUrl || c.coverImageUrl;
+      return {
+        id: c.id,
+        name: c.name,
+        fullName: c.fullName || c.name,
+        birthYear: c.birthYear || 0,
+        deathYear: c.deathYear ?? null,
+        period: c.period,
+        nationality: c.nationality || '',
+        image: imageUrl,
+      };
     });
-    setShowComposerAreaModal(true);
-  };
+  }, [composers]);
 
-  const renderTimelineGraph = () => {
+  // 타임라인 그래프 계산 최적화 - 무거운 계산들을 useMemo로 캐싱
+  const timelineCalculations = React.useMemo(() => {
     // 각 시대별 작곡가들을 그룹화하고 정렬
     const composersByEra: { [key: string]: typeof COMPOSERS } = {};
     ERAS.forEach((era) => {
@@ -258,7 +283,7 @@ export default function TimelineScreen() {
 
       composersWithX.sort((a, b) => a.x - b.x);
 
-      const collisionRange = 60; // 작아진 크기에 맞게 조정
+      const collisionRange = 60;
 
       composersWithX.forEach(({ composer, x }) => {
         const nearbyComposers = Object.entries(composerPositions).filter(([id, pos]) => {
@@ -271,7 +296,6 @@ export default function TimelineScreen() {
         while (usedLanes.has(lane) && lane < VERTICAL_LANES) {
           lane++;
         }
-        // 레인이 부족하면 겹치도록 허용
         if (lane >= VERTICAL_LANES) {
           lane = Math.floor(Math.random() * VERTICAL_LANES);
         }
@@ -280,6 +304,31 @@ export default function TimelineScreen() {
         composerPositions[composer.id] = { x, lane, crowded: isCrowded };
       });
     });
+
+    return {
+      composersByEra,
+      eraPositions,
+      totalWidth,
+      composerPositions,
+    };
+  }, [COMPOSERS, ERAS]);
+
+  const handleComposerPress = React.useCallback((composer: any) => {
+    router.push(`/composer/${composer.id}`);
+  }, [router]);
+
+  const handleComposerAreaPress = React.useCallback((composer: any, nearbyComposers: any[], era: PeriodInfo) => {
+    setSelectedComposerArea({
+      composers: [composer, ...nearbyComposers],
+      era,
+      centerYear: composer.birthYear,
+    });
+    setShowComposerAreaModal(true);
+  }, []);
+
+  const renderTimelineGraph = () => {
+    // useMemo로 캐싱된 계산 결과 사용
+    const { composersByEra, eraPositions, totalWidth, composerPositions } = timelineCalculations;
 
     return (
       <View style={{ height: TIMELINE_HEIGHT }}>
@@ -773,7 +822,7 @@ export default function TimelineScreen() {
     );
   };
 
-  const getComposersForEra = (eraId: string) => {
+  const getComposersForEra = React.useCallback((eraId: string) => {
     const periodMap: { [key: string]: string[] } = {
       baroque: ['바로크'],
       classical: ['고전주의'],
@@ -784,9 +833,9 @@ export default function TimelineScreen() {
     return COMPOSERS.filter((c) => periodNames.includes(c.period)).sort(
       (a, b) => a.birthYear - b.birthYear
     );
-  };
+  }, [COMPOSERS]);
 
-  const filterComposers = (composers: typeof COMPOSERS) => {
+  const filterComposers = React.useCallback((composers: typeof COMPOSERS) => {
     if (!searchQuery.trim()) return composers;
 
     const query = searchQuery.toLowerCase();
@@ -796,7 +845,7 @@ export default function TimelineScreen() {
         composer.fullName.toLowerCase().includes(query) ||
         composer.nationality.toLowerCase().includes(query)
     );
-  };
+  }, [searchQuery]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

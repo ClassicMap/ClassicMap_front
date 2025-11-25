@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComposerAPI } from '@/lib/api/client';
 import type { Composer } from '@/lib/types/models';
 
@@ -11,17 +11,41 @@ export const COMPOSER_QUERY_KEYS = {
 };
 
 /**
- * 모든 작곡가 조회 훅
- * - 자동 캐싱 (5분 stale, 24시간 gc)
- * - 오프라인 지원 (AsyncStorage)
- * - 자동 백그라운드 리페칭
+ * 모든 작곡가 조회 훅 (무한 스크롤)
+ * - 페이지당 20개씩 로드
+ * - 자동 캐싱 (3분 stale)
  */
 export function useComposers() {
-  return useQuery({
+  const PAGE_SIZE = 20;
+
+  return useInfiniteQuery({
     queryKey: COMPOSER_QUERY_KEYS.all,
-    queryFn: () => ComposerAPI.getAll(),
-    // 캐싱 설정은 queryClient의 기본값 사용
-    // staleTime: 5분, gcTime: 24시간
+    queryFn: async ({ pageParam = 0 }) => {
+      console.log(`🔍 [useComposers] Fetching composers - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
+      const result = await ComposerAPI.getAll(pageParam, PAGE_SIZE);
+      console.log(`✅ [useComposers] Received ${result?.length || 0} composers for offset ${pageParam}`);
+      return result;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      try {
+        // 마지막 페이지가 비어있거나 PAGE_SIZE보다 작으면 더 이상 없음
+        if (!lastPage || !Array.isArray(lastPage) || lastPage.length < PAGE_SIZE) {
+          return undefined;
+        }
+        // 다음 offset 계산
+        const nextOffset = allPages.length * PAGE_SIZE;
+        return nextOffset;
+      } catch (error) {
+        console.error('Error in getNextPageParam:', error);
+        return undefined;
+      }
+    },
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 3, // 3분
+    gcTime: 1000 * 60 * 10, // 10분 (캐시 유지)
+    refetchOnWindowFocus: false, // 포커스 시 재요청 방지
+    refetchOnMount: false, // 마운트 시 재요청 방지
+    retry: 1, // 1번만 재시도
   });
 }
 

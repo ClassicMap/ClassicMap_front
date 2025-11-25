@@ -28,6 +28,7 @@ import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getImageUrl } from '@/lib/utils/image';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
+import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
@@ -40,33 +41,53 @@ interface ConcertArtist {
   role?: string;
 }
 
+interface BoxofficeRanking {
+  id: number;
+  ranking: number;
+  genreName?: string;
+  areaName?: string;
+  seatScale?: string;
+  performanceCount?: number;
+}
+
+interface TicketVendor {
+  id: number;
+  concertId: number;
+  vendorName?: string;
+  vendorUrl: string;
+  displayOrder: number;
+}
+
 interface Concert {
   id: number;
   title: string;
   composerInfo?: string;
   venueId: number;
-  concertDate: string;
+  startDate: string;
+  endDate?: string;
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
-  ticketUrl?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
   artists?: ConcertArtist[];
+  facilityName?: string;
+  boxofficeRanking?: BoxofficeRanking;
+  ticketVendors?: TicketVendor[];
 }
 
 const getStatusInfo = (concert: Concert) => {
-  const concertDate = new Date(concert.concertDate);
+  const concertStartDate = new Date(concert.startDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  concertDate.setHours(0, 0, 0, 0);
+  concertStartDate.setHours(0, 0, 0, 0);
 
   if (concert.status === 'cancelled') {
     return { label: '취소', color: '#ef4444' };
-  } else if (concertDate < today) {
+  } else if (concertStartDate < today) {
     return { label: '종료', color: '#9ca3af' };
-  } else if (concertDate.getTime() === today.getTime()) {
+  } else if (concertStartDate.getTime() === today.getTime()) {
     return { label: '오늘', color: '#22c55e' };
   } else {
     return { label: '예정', color: '#3b82f6' };
@@ -97,6 +118,9 @@ export default function ConcertDetailScreen() {
   const [userRating, setUserRating] = React.useState<number>(0);
   const [hasWatched, setHasWatched] = React.useState(false);
   const [venueName, setVenueName] = React.useState<string>('');
+  const [isLoadingVendors, setIsLoadingVendors] = React.useState(false);
+  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
+  const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
 
   // 사용자 평점 로드
   React.useEffect(() => {
@@ -174,23 +198,16 @@ export default function ConcertDetailScreen() {
     }).start();
   };
 
-  // 공연장 정보와 이미지 로드
+  // 이미지 로드
   React.useEffect(() => {
-    const loadAdditionalData = async () => {
+    const loadImages = async () => {
       if (!concert) return;
 
       setImagesLoaded(false);
 
-      // 공연장 정보 로드
-      if (concert.venueId) {
-        try {
-          const venue = await VenueAPI.getById(concert.venueId);
-          if (venue) {
-            setVenueName(venue.name);
-          }
-        } catch (err) {
-          console.error('Failed to load venue:', err);
-        }
+      // facilityName 직접 사용 (API 호출 없음)
+      if (concert.facilityName) {
+        setVenueName(concert.facilityName);
       }
 
       // 이미지 프리페치 (타임아웃 추가)
@@ -210,7 +227,7 @@ export default function ConcertDetailScreen() {
       }
     };
 
-    loadAdditionalData();
+    loadImages();
   }, [concert]);
 
   const onRefresh = () => {
@@ -241,13 +258,19 @@ export default function ConcertDetailScreen() {
     );
   };
 
-  const handleBookTicket = () => {
-    if (concert?.ticketUrl) {
-      Linking.openURL(concert.ticketUrl).catch(() => {
-        Alert.alert('오류', '예매 페이지를 열 수 없습니다.');
-      });
-    } else {
-      Alert.alert('안내', '예매 링크가 없습니다.');
+  const handleBookTicket = async () => {
+    if (!concert) return;
+
+    setIsLoadingVendors(true);
+    try {
+      const fetchedVendors = await ConcertAPI.getTicketVendors(concert.id);
+      setVendors(fetchedVendors);
+      setIsLoadingVendors(false);
+      setShowVendorsModal(true);
+    } catch (error) {
+      setIsLoadingVendors(false);
+      console.error('Failed to fetch ticket vendors:', error);
+      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
     }
   };
 
@@ -402,7 +425,10 @@ export default function ConcertDetailScreen() {
                 <Icon as={CalendarIcon} size={20} className="text-primary mt-0.5" />
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">날짜</Text>
-                  <Text className="text-base font-medium">{formatDate(concert.concertDate)}</Text>
+                  <Text className="text-base font-medium">
+                    {formatDate(concert.startDate)}
+                    {concert.endDate && concert.endDate !== concert.startDate && ` ~ ${formatDate(concert.endDate)}`}
+                  </Text>
                 </View>
               </View>
 
@@ -437,6 +463,32 @@ export default function ConcertDetailScreen() {
               )}
             </View>
           </Card>
+
+          {/* Boxoffice Ranking Section */}
+          {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
+            <Card className="p-4">
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="size-12 rounded-full items-center justify-center"
+                  style={{
+                    backgroundColor:
+                      concert.boxofficeRanking.ranking === 1 ? '#FFD700' :
+                      concert.boxofficeRanking.ranking === 2 ? '#C0C0C0' : '#CD7F32'
+                  }}
+                >
+                  <Text className="text-2xl font-bold text-white">
+                    {concert.boxofficeRanking.ranking}
+                  </Text>
+                </View>
+                <View className="flex-1">
+                  <Text className="text-lg font-bold">박스오피스 순위</Text>
+                  <Text className="text-sm text-muted-foreground">
+                    {concert.boxofficeRanking.genreName} · {concert.boxofficeRanking.areaName}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          )}
 
           {/* Rating Section */}
           <Card className="p-4">
@@ -503,10 +555,17 @@ export default function ConcertDetailScreen() {
 
           {/* Booking Buttons */}
           {concert.status === 'upcoming' && (
-            <Button size="lg" className="items-center justify-center" onPress={handleBookTicket}>
+            <Button
+              size="lg"
+              className="items-center justify-center"
+              onPress={handleBookTicket}
+              disabled={isLoadingVendors}
+            >
               <View className="flex-row items-center justify-center">
-                <Icon as={TicketIcon} size={20} className="text-primary-foreground mr-2" />
-                <Text className="text-lg">예매하기</Text>
+                {!isLoadingVendors && (
+                  <Icon as={TicketIcon} size={20} className="text-primary-foreground mr-2" />
+                )}
+                <Text className="text-lg">{isLoadingVendors ? '로딩 중...' : '예매하기'}</Text>
               </View>
             </Button>
           )}
@@ -564,6 +623,13 @@ export default function ConcertDetailScreen() {
           onSuccess={() => refetch()}
         />
       )}
+
+      {/* Ticket Vendors Modal */}
+      <TicketVendorsModal
+        visible={showVendorsModal}
+        vendors={vendors}
+        onClose={() => setShowVendorsModal(false)}
+      />
     </View>
   );
 }

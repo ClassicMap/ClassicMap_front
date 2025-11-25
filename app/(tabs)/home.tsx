@@ -17,6 +17,8 @@ import { getImageUrl } from '@/lib/utils/image';
 import { useComposers } from '@/lib/query/hooks/useComposers';
 import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
+import { Alert } from '@/lib/utils/alert';
 
 // 레거시 형식으로 변환 (타입 호환성 유지)
 interface LegacyArtist {
@@ -59,25 +61,40 @@ export default function HomeScreen() {
 
   // React Query로 병렬 데이터 로드 (자동 캐싱)
   const {
-    data: artistsData = [],
+    data: artistsQueryData,
     isLoading: loadingArtists,
     error: artistsQueryError,
     refetch: refetchArtists,
   } = useArtists();
 
+  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
+  const artistsData = React.useMemo(() => {
+    return artistsQueryData?.pages?.[0] || [];
+  }, [artistsQueryData]);
+
   const {
-    data: concertsData = [],
+    data: concertsQueryData,
     isLoading: loadingConcerts,
     error: concertsQueryError,
     refetch: refetchConcerts,
-  } = useConcerts('upcoming');
+  } = useConcerts();
+
+  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
+  const concertsData = React.useMemo(() => {
+    return concertsQueryData?.pages?.[0] || [];
+  }, [concertsQueryData]);
 
   const {
-    data: composersData = [],
+    data: composersQueryData,
     isLoading: loadingComposers,
     error: composersQueryError,
     refetch: refetchComposers,
   } = useComposers();
+
+  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
+  const composersData = React.useMemo(() => {
+    return composersQueryData?.pages?.[0] || [];
+  }, [composersQueryData]);
 
   const errorArtists = artistsQueryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
   const errorConcerts = concertsQueryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
@@ -115,7 +132,7 @@ export default function HomeScreen() {
       const legacyConcerts = concertsData.slice(0, 5).map(concert => ({
         id: String(concert.id),
         title: concert.title,
-        date: concert.concertDate,
+        date: concert.startDate,
         venue: '공연장',
         poster: concert.posterUrl || '',
       }));
@@ -405,12 +422,12 @@ export default function HomeScreen() {
 }
 
 // 아티스트 카드
-function ArtistCard({ artist }: { artist: LegacyArtist }) {
+const ArtistCard = React.memo(({ artist }: { artist: LegacyArtist }) => {
   const router = useRouter();
-  
-  const handlePress = () => {
+
+  const handlePress = React.useCallback(() => {
     router.push(`/artist/${artist.id}`);
-  };
+  }, [router, artist.id]);
 
   return (
     <Pressable onPress={handlePress}>
@@ -451,67 +468,94 @@ function ArtistCard({ artist }: { artist: LegacyArtist }) {
       </Card>
     </Pressable>
   );
-}
+});
 
 // 공연 카드
-function ConcertCard({ concert }: { concert: LegacyConcert }) {
+const ConcertCard = React.memo(({ concert }: { concert: LegacyConcert }) => {
   const router = useRouter();
-  
-  const handlePress = () => {
+  const [isLoadingVendors, setIsLoadingVendors] = React.useState(false);
+  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
+  const [vendors, setVendors] = React.useState<any[]>([]);
+
+  const handlePress = React.useCallback(() => {
     router.push(`/concert/${concert.id}`);
-  };
-  
+  }, [router, concert.id]);
+
+  const handleBookTicket = React.useCallback(async (e: any) => {
+    e.stopPropagation();
+    setIsLoadingVendors(true);
+    try {
+      const concertId = parseInt(concert.id);
+      const fetchedVendors = await ConcertAPI.getTicketVendors(concertId);
+      setVendors(fetchedVendors);
+      setIsLoadingVendors(false);
+      setShowVendorsModal(true);
+    } catch (error) {
+      setIsLoadingVendors(false);
+      console.error('Failed to fetch ticket vendors:', error);
+      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
+    }
+  }, [concert.id]);
+
   return (
-    <Pressable onPress={handlePress}>
-      <Card className="w-[200px] overflow-hidden p-0">
-        <View className="aspect-[3/4] bg-muted">
-          {concert.poster ? (
-            <OptimizedImage 
-              uri={concert.poster}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="h-full w-full items-center justify-center">
-              <Icon as={CalendarIcon} size={32} className="text-muted-foreground" />
-            </View>
-          )}
-        </View>
-        <View className="gap-3 p-3">
-          <View className="gap-1">
-            <Text className="font-semibold" numberOfLines={2}>
-              {concert.title}
-            </Text>
-            <View className="flex-row items-center gap-1">
-              <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
-              <Text className="text-xs text-muted-foreground">{concert.date}</Text>
-            </View>
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {concert.venue}
-            </Text>
+    <>
+      <Pressable onPress={handlePress}>
+        <Card className="w-[200px] overflow-hidden p-0">
+          <View className="aspect-[3/4] bg-muted">
+            {concert.poster ? (
+              <OptimizedImage
+                uri={concert.poster}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="h-full w-full items-center justify-center">
+                <Icon as={CalendarIcon} size={32} className="text-muted-foreground" />
+              </View>
+            )}
           </View>
-          <Button size="sm">
-            <Text className="text-xs">예매</Text>
-          </Button>
-        </View>
-      </Card>
-    </Pressable>
+          <View className="gap-3 p-3">
+            <View className="gap-1">
+              <Text className="font-semibold" numberOfLines={2}>
+                {concert.title}
+              </Text>
+              <View className="flex-row items-center gap-1">
+                <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
+                <Text className="text-xs text-muted-foreground">{concert.date}</Text>
+              </View>
+              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                {concert.venue}
+              </Text>
+            </View>
+            <Button size="sm" onPress={handleBookTicket} disabled={isLoadingVendors}>
+              <Text className="text-xs">{isLoadingVendors ? '로딩...' : '예매'}</Text>
+            </Button>
+          </View>
+        </Card>
+      </Pressable>
+
+      <TicketVendorsModal
+        visible={showVendorsModal}
+        vendors={vendors}
+        onClose={() => setShowVendorsModal(false)}
+      />
+    </>
   );
-}
+});
 
 // 비교 카드
-function ComparisonCard({ comparison }: { comparison: LegacyComparison }) {
+const ComparisonCard = React.memo(({ comparison }: { comparison: LegacyComparison }) => {
   const router = useRouter();
-  
-  const handlePress = () => {
+
+  const handlePress = React.useCallback(() => {
     router.push({
       pathname: '/(tabs)/compare',
-      params: { 
+      params: {
         composerId: String(comparison.composerId),
         pieceId: String(comparison.pieceId)
       }
     });
-  };
+  }, [router, comparison.composerId, comparison.pieceId]);
 
   return (
     <Card className="w-[180px] gap-2 p-3">
@@ -529,6 +573,6 @@ function ComparisonCard({ comparison }: { comparison: LegacyComparison }) {
       </Button>
     </Card>
   );
-}
+});
 
 
