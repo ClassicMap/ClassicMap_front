@@ -35,7 +35,7 @@ import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
 import { useConcerts, CONCERT_QUERY_KEYS } from '@/lib/query/hooks/useConcerts';
 import { useQueryClient } from '@tanstack/react-query';
-import { ConcertAPI } from '@/lib/api/client';
+import { ConcertAPI, BoxofficeAPI, BoxofficeConcert } from '@/lib/api/client';
 
 interface ConcertArtist {
   id: number;
@@ -86,6 +86,7 @@ export default function ConcertsScreen() {
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'upcoming' | 'completed'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
   const [selectedCity, setSelectedCity] = React.useState<string>('all');
+  const [selectedAreaCode, setSelectedAreaCode] = React.useState<string | undefined>(undefined); // KOPIS area code
   const [startDate, setStartDate] = React.useState<Date | null>(null);
   const [endDate, setEndDate] = React.useState<Date | null>(null);
   const [showHighRating, setShowHighRating] = React.useState(false);
@@ -97,6 +98,8 @@ export default function ConcertsScreen() {
   const [isSearching, setIsSearching] = React.useState(false);
   const [searchOffset, setSearchOffset] = React.useState(0);
   const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
+  const [top3Concerts, setTop3Concerts] = React.useState<BoxofficeConcert[]>([]);
+  const [loadingTop3, setLoadingTop3] = React.useState(false);
   const { canEdit } = useAuth();
 
   // Debounce search query (300ms delay)
@@ -242,6 +245,27 @@ export default function ConcertsScreen() {
     return 'upcoming';
   }, []);
 
+  // 지역명 -> KOPIS 코드 매핑
+  const AREA_CODE_MAP: Record<string, string> = {
+    '서울': '11',
+    '부산': '26',
+    '대구': '27',
+    '인천': '28',
+    '광주': '29',
+    '대전': '30',
+    '울산': '31',
+    '세종': '36',
+    '경기': '41',
+    '강원': '42',
+    '충북': '43',
+    '충남': '44',
+    '전북': '45',
+    '전남': '46',
+    '경북': '47',
+    '경남': '48',
+    '제주': '50',
+  };
+
   // 도시 목록 추출 (area 사용)
   const availableCities = React.useMemo(() => {
     const cities = new Set<string>();
@@ -252,6 +276,23 @@ export default function ConcertsScreen() {
     });
     return Array.from(cities).sort();
   }, [concerts]);
+
+  // Load TOP3 boxoffice concerts
+  React.useEffect(() => {
+    const loadTop3 = async () => {
+      setLoadingTop3(true);
+      try {
+        const data = await BoxofficeAPI.getTop3(selectedAreaCode);
+        setTop3Concerts(data);
+      } catch (error) {
+        console.error('Failed to load TOP3 boxoffice:', error);
+        setTop3Concerts([]);
+      } finally {
+        setLoadingTop3(false);
+      }
+    };
+    loadTop3();
+  }, [selectedAreaCode]);
 
   const filteredConcerts = React.useMemo(() => {
     // Use search results if searching, otherwise use paginated concerts
@@ -522,6 +563,7 @@ export default function ConcertsScreen() {
                       <TouchableOpacity
                         onPress={() => {
                           setSelectedCity('all');
+                          setSelectedAreaCode(undefined);
                           setShowCityPicker(false);
                         }}
                         className={`p-3 border-b border-border ${selectedCity === 'all' ? 'bg-primary/10' : ''}`}
@@ -533,6 +575,7 @@ export default function ConcertsScreen() {
                           key={city}
                           onPress={() => {
                             setSelectedCity(city);
+                            setSelectedAreaCode(AREA_CODE_MAP[city]);
                             setShowCityPicker(false);
                           }}
                           className={`p-3 border-b border-border ${selectedCity === city ? 'bg-primary/10' : ''}`}
@@ -585,6 +628,40 @@ export default function ConcertsScreen() {
         </Card>
         )}
 
+        {/* TOP 3 Boxoffice Section */}
+        {!debouncedSearchQuery && top3Concerts.length > 0 && (
+          <View className="gap-3">
+            <View className="flex-row items-center gap-2 px-1">
+              <Icon as={StarIcon} size={20} className="text-amber-500" />
+              <Text className="text-xl font-bold">
+                {selectedAreaCode ? `${selectedCity} 박스오피스 TOP 3` : '전국 박스오피스 TOP 3'}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 2 }}
+              className="gap-3"
+            >
+              {top3Concerts.map((concert, index) => (
+                <View key={concert.id} style={{ marginRight: index < top3Concerts.length - 1 ? 16 : 0 }}>
+                  <BoxofficeTop3Card concert={concert} canEdit={canEdit} />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Loading TOP3 */}
+        {!debouncedSearchQuery && loadingTop3 && (
+          <View className="py-4">
+            <ActivityIndicator size="small" />
+            <Text className="mt-2 text-center text-sm text-muted-foreground">
+              박스오피스 순위를 불러오는 중...
+            </Text>
+          </View>
+        )}
+
         {/* Concert List */}
         <View className="gap-4">
           {(loading || (isSearching && filteredConcerts.length === 0)) ? (
@@ -602,14 +679,22 @@ export default function ConcertsScreen() {
               </Button>
             </Card>
           ) : filteredConcerts.length > 0 ? (
-            filteredConcerts.map((concert) => (
-              <ConcertCard
-                key={concert.id}
-                concert={concert}
-                canEdit={canEdit}
-                onDelete={handleDelete}
-              />
-            ))
+            <>
+              {!debouncedSearchQuery && filteredConcerts.length > 0 && (
+                <View className="flex-row items-center gap-2 mt-2">
+                  <Text className="text-lg font-semibold">전체 공연</Text>
+                  <Text className="text-sm text-muted-foreground">({filteredConcerts.length})</Text>
+                </View>
+              )}
+              {filteredConcerts.map((concert) => (
+                <ConcertCard
+                  key={concert.id}
+                  concert={concert}
+                  canEdit={canEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </>
           ) : (
             <Card className="p-8">
               <Text className="text-center text-muted-foreground">
@@ -674,6 +759,140 @@ export default function ConcertsScreen() {
     </ScrollView>
   );
 }
+
+// BoxofficeTop3Card component
+const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
+  concert,
+  canEdit,
+}: {
+  concert: BoxofficeConcert;
+  canEdit: boolean;
+}) {
+  const router = useRouter();
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '날짜 정보 없음';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '날짜 정보 없음';
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const getRankingColor = () => {
+    switch(concert.ranking) {
+      case 1: return '#FFD700';
+      case 2: return '#C0C0C0';
+      case 3: return '#CD7F32';
+      default: return '#9CA3AF';
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(`/concert/${concert.concertId}` as any)}
+      activeOpacity={0.7}>
+      <Card className="overflow-hidden p-0" style={{
+        borderWidth: 2.5,
+        borderColor: getRankingColor(),
+        shadowColor: getRankingColor(),
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+        elevation: 6,
+      }}>
+        <View style={{ width: 220 }}>
+          {/* Poster Image with Ranking Badge */}
+          <View className="items-center justify-center bg-muted relative" style={{ aspectRatio: 3/4 }}>
+            <OptimizedImage
+              key={`boxoffice-poster-${concert.id}`}
+              uri={concert.posterUrl}
+              style={{ width: '100%', aspectRatio: 3/4 }}
+              resizeMode="cover"
+              fallbackComponent={
+                <View className="h-full w-full items-center justify-center bg-muted">
+                  <Icon as={CalendarIcon} size={48} className="text-muted-foreground" />
+                </View>
+              }
+            />
+            {/* Dark Gradient Overlay */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 80,
+                backgroundColor: 'rgba(0,0,0,0.35)',
+              }}
+            />
+            {/* Ranking Badge */}
+            <View
+              className="absolute top-2.5 left-2.5"
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                backgroundColor: getRankingColor(),
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.7,
+                shadowRadius: 6,
+                elevation: 10,
+                borderWidth: 2.5,
+                borderColor: '#FFF',
+              }}
+            >
+              <Text style={{
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#FFF',
+                textShadowColor: 'rgba(0,0,0,0.4)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 3
+              }}>
+                {concert.ranking}
+              </Text>
+            </View>
+          </View>
+
+          {/* Concert Info */}
+          <View className="gap-2 p-3 bg-card">
+            <View className="gap-1.5">
+              <Text className="text-sm font-bold leading-4" numberOfLines={2}>{concert.title}</Text>
+              <View className="flex-row items-center gap-1">
+                <Icon as={StarIcon} size={13} className="text-amber-500" />
+                <Text className="text-xs font-semibold">
+                  {concert.rating != null && Number(concert.rating) > 0
+                    ? Number(concert.rating).toFixed(1)
+                    : '0.0'}
+                </Text>
+                <Text className="text-xs text-muted-foreground">
+                  ({concert.ratingCount && concert.ratingCount > 0 ? concert.ratingCount : 0})
+                </Text>
+              </View>
+            </View>
+
+            <View className="gap-1.5">
+              <View className="flex-row items-center gap-1.5">
+                <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
+                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                  {formatDate(concert.startDate)}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <Icon as={MapPinIcon} size={12} className="text-muted-foreground" />
+                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                  {concert.facilityName || '공연장 정보 없음'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
+});
 
 const ConcertCard = React.memo(function ConcertCard({
   concert,
@@ -743,31 +962,6 @@ const ConcertCard = React.memo(function ConcertCard({
                 </View>
               }
             />
-            {/* Ranking Badge for Top 3 */}
-            {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
-              <View
-                className="absolute top-2 left-2"
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor:
-                    concert.boxofficeRanking.ranking === 1 ? '#FFD700' :
-                    concert.boxofficeRanking.ranking === 2 ? '#C0C0C0' : '#CD7F32',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 4,
-                  elevation: 6,
-                }}
-              >
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFF' }}>
-                  {concert.boxofficeRanking.ranking}
-                </Text>
-              </View>
-            )}
           </View>
           <View className="flex-1 gap-3 p-4">
             <View className="gap-2">

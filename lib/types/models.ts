@@ -259,6 +259,14 @@ export interface TicketVendor {
   displayOrder: number;
 }
 
+export interface ConcertImage {
+  id: number;
+  concertId: number;
+  imageUrl: string;
+  imageType: string; // 'introduction', 'poster', 'other'
+  displayOrder: number;
+}
+
 export interface Concert {
   id: number;
   title: string;
@@ -277,6 +285,12 @@ export interface Concert {
   area?: string;
   boxofficeRanking?: BoxofficeRanking;
   ticketVendors?: TicketVendor[];
+  // Concert detail information
+  synopsis?: string;
+  runtime?: string;
+  ageRestriction?: string;
+  cast?: string;
+  images?: ConcertImage[];
   createdAt?: Date;
   updatedAt?: Date;
 }
