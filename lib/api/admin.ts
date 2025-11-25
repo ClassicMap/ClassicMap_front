@@ -226,7 +226,8 @@ export const AdminConcertAPI = {
     title: string;
     composerInfo?: string;
     venueId: number;
-    concertDate: string;
+    startDate: string;
+    endDate?: string;
     concertTime?: string;
     priceInfo?: string;
     status: string;
@@ -248,7 +249,6 @@ export const AdminConcertAPI = {
     concertTime?: string;
     priceInfo?: string;
     posterUrl?: string;
-    ticketUrl?: string;
     status?: string;
   }): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {

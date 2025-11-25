@@ -99,21 +99,42 @@ interface APIConcertArtist {
   role?: string;
 }
 
+interface APIBoxofficeRanking {
+  id: number;
+  ranking: number;
+  genreName?: string;
+  areaName?: string;
+  seatScale?: string;
+  performanceCount?: number;
+}
+
+interface APITicketVendor {
+  id: number;
+  concertId: number;
+  vendorName?: string;
+  vendorUrl: string;
+  displayOrder: number;
+}
+
 interface APIConcert {
   id: number;
   title: string;
   composerInfo?: string;
   venueId: number;
-  concertDate: string;
+  startDate: string; // 백엔드에서 startDate로 보냄
+  endDate?: string;
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
   program?: string;
-  ticketUrl?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
   artists?: APIConcertArtist[];
+  facilityName?: string;
+  area?: string;
+  boxofficeRanking?: APIBoxofficeRanking | number;  // ConcertListItem에서는 숫자만 올 수 있음
+  ticketVendors?: APITicketVendor[];  // ConcertWithDetails에서 오는 데이터
 }
 
 interface APIVenue {
@@ -125,20 +146,32 @@ interface APIVenue {
   capacity?: number;
 }
 
+interface TicketVendor {
+  id: number;
+  concertId: number;
+  vendorName?: string;
+  vendorUrl: string;
+  displayOrder: number;
+}
+
 interface Concert {
   id: number;
   title: string;
   composerInfo?: string;
   venueId: number;
-  concertDate: string;
+  startDate: string;
+  endDate?: string;
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
   program?: string;
-  ticketUrl?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
+  facilityName?: string;
+  area?: string;
+  boxofficeRanking?: APIBoxofficeRanking;
+  ticketVendors?: TicketVendor[];
 }
 
 // Performance API 타입
@@ -224,16 +257,22 @@ const mapConcert = (api: APIConcert): Concert => ({
   title: api.title,
   composerInfo: api.composerInfo,
   venueId: api.venueId,
-  concertDate: api.concertDate,
+  startDate: api.startDate,
+  endDate: api.endDate,
   concertTime: api.concertTime,
   priceInfo: api.priceInfo,
   posterUrl: api.posterUrl ? api.posterUrl : undefined,
   program: api.program,
-  ticketUrl: api.ticketUrl,
-  isRecommended: api.isRecommended,
   status: api.status,
   rating: api.rating,
   ratingCount: api.ratingCount,
+  facilityName: api.facilityName,
+  area: api.area,
+  // boxofficeRanking이 숫자면 객체로 변환 (ConcertListItem의 경우)
+  boxofficeRanking: typeof api.boxofficeRanking === 'number'
+    ? { id: 0, ranking: api.boxofficeRanking }
+    : api.boxofficeRanking,
+  ticketVendors: api.ticketVendors,
   artists: api.artists?.map(artist => ({
     id: artist.id,
     concertId: artist.concertId,
@@ -286,15 +325,15 @@ export const ComposerAPI = {
   /**
    * 모든 작곡가 조회
    */
-  async getAll(): Promise<Composer[]> {
+  async getAll(offset: number = 0, limit: number = 20): Promise<Composer[]> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/composers`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/composers?offset=${offset}&limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch composers');
       const data: APIComposer[] = await response.json();
       const mapped = data.map(mapComposer);
       return mapped;
     }
-    return Promise.resolve(COMPOSERS);
+    return Promise.resolve(COMPOSERS.slice(offset, offset + limit));
   },
 
   /**
@@ -315,11 +354,6 @@ export const ComposerAPI = {
         const piecesData: APIPiece[] = await piecesResponse.json();
         pieces = piecesData.map(mapPiece);
       }
-
-      console.log('=== Composer API Response ===');
-      console.log('Composer:', composerData.name);
-      console.log('Pieces count:', pieces.length);
-      console.log('============================');
 
       return {
         ...mapComposer(composerData),
@@ -422,14 +456,14 @@ export const ArtistAPI = {
   /**
    * 모든 아티스트 조회
    */
-  async getAll(): Promise<Artist[]> {
+  async getAll(offset: number = 0, limit: number = 20): Promise<Artist[]> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/artists`);
+      const response = await authenticatedFetch(`${API_BASE_URL}/artists?offset=${offset}&limit=${limit}`);
       if (!response.ok) throw new Error('Failed to fetch artists');
       const data: APIArtist[] = await response.json();
       return data.map(mapArtist);
     }
-    return Promise.resolve(ARTISTS);
+    return Promise.resolve(ARTISTS.slice(offset, offset + limit));
   },
 
   /**
@@ -440,19 +474,38 @@ export const ArtistAPI = {
       const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`);
       if (!response.ok) throw new Error('Failed to fetch artist');
       const data: APIArtist = await response.json();
-      console.log('=== API Response (Raw) ===');
-      console.log('Raw API data:', JSON.stringify(data, null, 2));
-      console.log('Awards from API:', data.awards);
-      console.log('==========================');
       if (!data) return null;
       const mapped = mapArtist(data);
-      console.log('=== After Mapping ===');
-      console.log('Mapped artist:', JSON.stringify(mapped, null, 2));
-      console.log('Awards after mapping:', mapped.awards);
-      console.log('=====================');
       return mapped;
     }
     return Promise.resolve(getArtistById(id) || null);
+  },
+
+  /**
+   * 아티스트 검색 (전체 DB 대상)
+   */
+  async search(params: {
+    q?: string;
+    tier?: string;
+    category?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<Artist[]> {
+    if (USE_REAL_API) {
+      const queryParams = new URLSearchParams();
+      if (params.q) queryParams.append('q', params.q);
+      if (params.tier) queryParams.append('tier', params.tier);
+      if (params.category) queryParams.append('category', params.category);
+      if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
+      if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+
+      const url = `${API_BASE_URL}/artists/search?${queryParams.toString()}`;
+      const response = await authenticatedFetch(url);
+      if (!response.ok) throw new Error('Failed to search artists');
+      const data: APIArtist[] = await response.json();
+      return data.map(mapArtist);
+    }
+    return Promise.resolve([]);
   },
 };
 
@@ -477,11 +530,16 @@ export const PeriodAPI = {
  */
 export const ConcertAPI = {
   /**
-   * 모든 공연 조회
+   * 모든 공연 조회 (페이지네이션 지원)
    */
-  async getAll(): Promise<Concert[]> {
+  async getAll(params?: { offset?: number; limit?: number }): Promise<Concert[]> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/concerts`);
+      const queryParams = new URLSearchParams();
+      if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString());
+      if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
+
+      const url = `${API_BASE_URL}/concerts${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await authenticatedFetch(url);
       if (!response.ok) throw new Error('Failed to fetch concerts');
       const data: APIConcert[] = await response.json();
       const mapped = data.map(mapConcert);
@@ -537,11 +595,75 @@ export const ConcertAPI = {
   async getUserRating(concertId: number): Promise<number | null> {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/user-rating`);
-      if (!response.ok) throw new Error('Failed to get user rating');
-      const rating = await response.json();
-      return rating ? Number(rating) : null;
+      if (!response.ok) {
+        // 401 (인증 필요) 또는 404는 null 반환
+        if (response.status === 401 || response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to get user rating');
+      }
+      try {
+        const rating = await response.json();
+        return rating ? Number(rating) : null;
+      } catch (error) {
+        console.error(`Failed to parse user rating for concert ${concertId}:`, error);
+        return null;
+      }
     }
     return Promise.resolve(null);
+  },
+
+  /**
+   * 공연의 예매처 정보 조회
+   */
+  async getTicketVendors(concertId: number): Promise<TicketVendor[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/ticket-vendors`);
+      if (!response.ok) {
+        // 404는 빈 배열 반환 (예매처 없음)
+        if (response.status === 404) {
+          return [];
+        }
+        throw new Error('Failed to fetch ticket vendors');
+      }
+      try {
+        const data: APITicketVendor[] = await response.json();
+        return data;
+      } catch (error) {
+        console.error(`Failed to parse ticket vendors for concert ${concertId}:`, error);
+        return [];
+      }
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
+   * 공연 검색 (전체 DB 대상)
+   */
+  async search(params: {
+    q?: string;
+    genre?: string;
+    area?: string;
+    status?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<Concert[]> {
+    if (USE_REAL_API) {
+      const queryParams = new URLSearchParams();
+      if (params.q) queryParams.append('q', params.q);
+      if (params.genre) queryParams.append('genre', params.genre);
+      if (params.area) queryParams.append('area', params.area);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
+      if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+
+      const url = `${API_BASE_URL}/concerts/search?${queryParams.toString()}`;
+      const response = await authenticatedFetch(url);
+      if (!response.ok) throw new Error('Failed to search concerts');
+      const data: APIConcert[] = await response.json();
+      return data.map(mapConcert);
+    }
+    return Promise.resolve([]);
   },
 };
 
@@ -599,10 +721,19 @@ export const VenueAPI = {
   async getById(id: number): Promise<Venue | null> {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(`${API_BASE_URL}/venues/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch venue');
-      const data: APIVenue = await response.json();
-      if (!data) return null;
-      return data;
+      if (!response.ok) {
+        // 404나 다른 에러는 null 반환
+        return null;
+      }
+      try {
+        const data: APIVenue = await response.json();
+        if (!data) return null;
+        return data;
+      } catch (error) {
+        // JSON 파싱 에러 처리
+        console.error(`Failed to parse venue ${id}:`, error);
+        return null;
+      }
     }
     return Promise.resolve(null);
   },

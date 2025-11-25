@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConcertAPI } from '@/lib/api/client';
 import type { Concert } from '@/lib/types/models';
 
@@ -12,15 +12,41 @@ export const CONCERT_QUERY_KEYS = {
 };
 
 /**
- * 모든 공연 조회 훅
- * - 자동 캐싱 (3분 stale, 24시간 gc)
- * - 날짜별로 조회되므로 조금 짧은 staleTime
+ * 모든 공연 조회 훅 (무한 스크롤)
+ * - 페이지당 20개씩 로드
+ * - 자동 캐싱 (3분 stale)
  */
-export function useConcerts(filter?: 'upcoming' | 'completed') {
-  return useQuery({
-    queryKey: filter ? CONCERT_QUERY_KEYS.filtered(filter) : CONCERT_QUERY_KEYS.all,
-    queryFn: () => ConcertAPI.getAll(filter),
-    staleTime: 1000 * 60 * 3, // 3분 (날짜별로 바뀔 수 있음)
+export function useConcerts() {
+  const PAGE_SIZE = 20;
+
+  return useInfiniteQuery({
+    queryKey: CONCERT_QUERY_KEYS.all,
+    queryFn: async ({ pageParam = 0 }) => {
+      console.log(`🔍 [useConcerts] Fetching concerts - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
+      const result = await ConcertAPI.getAll({ offset: pageParam, limit: PAGE_SIZE });
+      console.log(`✅ [useConcerts] Received ${result.length} concerts for offset ${pageParam}`);
+      return result;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      try {
+        // 마지막 페이지가 비어있거나 PAGE_SIZE보다 작으면 더 이상 없음
+        if (!lastPage || !Array.isArray(lastPage) || lastPage.length < PAGE_SIZE) {
+          return undefined;
+        }
+        // 다음 offset 계산
+        const nextOffset = allPages.length * PAGE_SIZE;
+        return nextOffset;
+      } catch (error) {
+        console.error('Error in getNextPageParam:', error);
+        return undefined;
+      }
+    },
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 3, // 3분
+    gcTime: 1000 * 60 * 10, // 10분 (캐시 유지)
+    refetchOnWindowFocus: false, // 포커스 시 재요청 방지
+    refetchOnMount: false, // 마운트 시 재요청 방지
+    retry: 1, // 1번만 재시도
   });
 }
 

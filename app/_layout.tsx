@@ -10,8 +10,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { queryClient, persistOptions } from '@/lib/query/client';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query/client';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -22,7 +22,7 @@ export default function RootLayout() {
   const { colorScheme } = useColorScheme();
 
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+    <QueryClientProvider client={queryClient}>
       <ClerkProvider tokenCache={tokenCache}>
         <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
@@ -30,7 +30,7 @@ export default function RootLayout() {
           <PortalHost />
         </ThemeProvider>
       </ClerkProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   );
 }
 

@@ -29,13 +29,13 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as React from 'react';
 import { useRouter } from 'expo-router';
-import { VenueAPI, ConcertAPI } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
-import { StarRating } from '@/components/StarRating';
-import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import { useConcerts, CONCERT_QUERY_KEYS } from '@/lib/query/hooks/useConcerts';
+import { useQueryClient } from '@tanstack/react-query';
+import { ConcertAPI } from '@/lib/api/client';
 
 interface ConcertArtist {
   id: number;
@@ -45,34 +45,46 @@ interface ConcertArtist {
   role?: string;
 }
 
+interface BoxofficeRanking {
+  id: number;
+  ranking: number;
+  genreName?: string;
+  areaName?: string;
+}
+
+interface TicketVendor {
+  id: number;
+  concertId: number;
+  vendorName?: string;
+  vendorUrl: string;
+  displayOrder: number;
+}
+
 interface Concert {
   id: number;
   title: string;
   composerInfo?: string;
   venueId: number;
-  concertDate: string;
+  startDate: string;
+  endDate?: string;
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
-  ticketUrl?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
   artists?: ConcertArtist[];
-}
-
-interface Venue {
-  id: number;
-  name: string;
-  city?: string;
-  country?: string;
+  facilityName?: string; // 백엔드에서 이미 제공
+  area?: string;
+  boxofficeRanking?: BoxofficeRanking;
+  ticketVendors?: TicketVendor[];
 }
 
 export default function ConcertsScreen() {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'upcoming' | 'completed'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
-  const [venues, setVenues] = React.useState<{ [key: number]: Venue }>({});
   const [selectedCity, setSelectedCity] = React.useState<string>('all');
   const [startDate, setStartDate] = React.useState<Date | null>(null);
   const [endDate, setEndDate] = React.useState<Date | null>(null);
@@ -81,53 +93,124 @@ export default function ConcertsScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = React.useState(false);
   const [showCityPicker, setShowCityPicker] = React.useState(false);
   const [showFilters, setShowFilters] = React.useState(false);
+  const [searchResults, setSearchResults] = React.useState<Concert[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchOffset, setSearchOffset] = React.useState(0);
+  const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
   const { canEdit } = useAuth();
 
-  // React Query로 공연 데이터 로드 (자동 캐싱)
+  // Debounce search query (300ms delay)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      // Reset search pagination when query changes
+      setSearchOffset(0);
+      setSearchResults([]);
+      setHasMoreSearchResults(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // React Query 무한 스크롤로 공연 데이터 로드
+  const queryClient = useQueryClient();
   const {
-    data: concerts = [],
+    data,
     isLoading: loading,
     error: queryError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     refetch,
     isRefetching: refreshing,
   } = useConcerts();
 
+  // 페이지 데이터를 평탄화 및 중복 제거
+  const concerts = React.useMemo(() => {
+    if (!data?.pages) return [];
+
+    const allConcerts = data.pages.flat();
+
+    // ID 기준으로 중복 제거
+    const uniqueConcerts = Array.from(
+      new Map(allConcerts.map(concert => [concert.id, concert])).values()
+    );
+
+    return uniqueConcerts;
+  }, [data]);
+
+  // Backend search effect - initial search
+  React.useEffect(() => {
+    if (debouncedSearchQuery.trim().length > 0) {
+      setIsSearching(true);
+      ConcertAPI.search({
+        q: debouncedSearchQuery,
+        offset: 0,
+        limit: 20,
+      })
+        .then((results) => {
+          setSearchResults(results);
+          setSearchOffset(20);
+          setHasMoreSearchResults(results.length === 20);
+          setIsSearching(false);
+        })
+        .catch((error) => {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+          setIsSearching(false);
+        });
+    } else {
+      setSearchResults([]);
+      setSearchOffset(0);
+      setHasMoreSearchResults(true);
+      setIsSearching(false);
+    }
+  }, [debouncedSearchQuery]);
+
+  // Load more search results
+  const loadMoreSearchResults = React.useCallback(() => {
+    if (!debouncedSearchQuery.trim() || !hasMoreSearchResults || isSearching) {
+      return;
+    }
+
+    setIsSearching(true);
+    ConcertAPI.search({
+      q: debouncedSearchQuery,
+      offset: searchOffset,
+      limit: 20,
+    })
+      .then((results) => {
+        if (results.length > 0) {
+          // Deduplicate by ID
+          const existingIds = new Set(searchResults.map(c => c.id));
+          const newResults = results.filter(c => !existingIds.has(c.id));
+          setSearchResults(prev => [...prev, ...newResults]);
+          setSearchOffset(prev => prev + 20);
+          setHasMoreSearchResults(results.length === 20);
+        } else {
+          setHasMoreSearchResults(false);
+        }
+        setIsSearching(false);
+      })
+      .catch((error) => {
+        console.error('Failed to load more search results:', error);
+        setIsSearching(false);
+      });
+  }, [debouncedSearchQuery, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+
   // 에러 처리
   const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
 
-  // 공연장 정보 로드
+  // 이미지 프리페치 (첫 10개만 - 성능 최적화)
   React.useEffect(() => {
     if (concerts.length > 0) {
-      loadVenues();
+      const firstBatch = concerts.slice(0, 10).map((c) => c.posterUrl).filter(Boolean);
+      if (firstBatch.length > 0) {
+        prefetchImages(firstBatch);
+      }
     }
-  }, [concerts]);
+  }, [concerts.length]);
 
-  const loadVenues = async () => {
-    const venueIds = [...new Set(concerts.map((c) => c.venueId))];
-    const venueData: { [key: number]: Venue } = {};
-    await Promise.all(
-      venueIds.map(async (venueId) => {
-        try {
-          const venue = await VenueAPI.getById(venueId);
-          if (venue) {
-            venueData[venueId] = venue;
-          }
-        } catch (error) {
-          console.error(`Failed to load venue ${venueId}:`, error);
-        }
-      })
-    );
-    setVenues(venueData);
-  };
-
-  // 이미지 프리페치
-  React.useEffect(() => {
-    if (concerts.length > 0) {
-      prefetchImages(concerts.map((c) => c.posterUrl));
-    }
-  }, [concerts]);
-
-  const handleDelete = (id: number, title: string) => {
+  const handleDelete = React.useCallback((id: number, title: string) => {
     Alert.alert('공연 삭제', `${title}을(를) 삭제하시겠습니까?`, [
       { text: '취소', style: 'cancel' },
       {
@@ -144,81 +227,66 @@ export default function ConcertsScreen() {
         },
       },
     ]);
-  };
+  }, [refetch]);
 
-  const getConcertStatus = (concert: Concert) => {
+  const getConcertStatus = React.useCallback((concert: Concert) => {
     if (concert.status === 'cancelled') return 'cancelled';
 
-    const concertDate = new Date(concert.concertDate);
+    const concertStartDate = new Date(concert.startDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    concertDate.setHours(0, 0, 0, 0);
+    concertStartDate.setHours(0, 0, 0, 0);
 
-    if (concertDate.getTime() === today.getTime()) return 'today';
-    if (concertDate < today) return 'completed';
+    if (concertStartDate.getTime() === today.getTime()) return 'today';
+    if (concertStartDate < today) return 'completed';
     return 'upcoming';
-  };
+  }, []);
 
-  // 도시 목록 추출
+  // 도시 목록 추출 (area 사용)
   const availableCities = React.useMemo(() => {
     const cities = new Set<string>();
-    Object.values(venues).forEach((venue) => {
-      if (venue.city) {
-        cities.add(venue.city);
+    concerts.forEach((concert) => {
+      if (concert.area) {
+        cities.add(concert.area);
       }
     });
     return Array.from(cities).sort();
-  }, [venues]);
+  }, [concerts]);
 
   const filteredConcerts = React.useMemo(() => {
-    let filtered = concerts;
+    // Use search results if searching, otherwise use paginated concerts
+    let filtered = debouncedSearchQuery.trim().length > 0 ? searchResults : concerts;
 
-    // 검색 필터 (공연명, 작곡가, 연주자, 공연장명, 도시)
-    if (searchQuery) {
-      filtered = filtered.filter((concert) => {
-        const venue = venues[concert.venueId];
-        const venueName = venue?.name || '';
-        const venueCity = venue?.city || '';
-        const artistNames = concert.artists?.map(a => a.artistName).join(' ') || '';
-        const query = searchQuery.toLowerCase();
-        return (
-          concert.title.toLowerCase().includes(query) ||
-          (concert.composerInfo && concert.composerInfo.toLowerCase().includes(query)) ||
-          venueName.toLowerCase().includes(query) ||
-          venueCity.toLowerCase().includes(query) ||
-          artistNames.toLowerCase().includes(query)
-        );
-      });
-    }
+    // Deduplicate by ID to prevent duplicate key errors
+    filtered = Array.from(
+      new Map(filtered.map(concert => [concert.id, concert])).values()
+    );
 
     // 도시 필터
     if (selectedCity !== 'all') {
-      filtered = filtered.filter((c) => {
-        const venue = venues[c.venueId];
-        return venue?.city === selectedCity;
-      });
+      filtered = filtered.filter((c) => c.area === selectedCity);
     }
 
     // 날짜 범위 필터
     if (startDate || endDate) {
       filtered = filtered.filter((c) => {
-        const concertDate = new Date(c.concertDate);
-        concertDate.setHours(0, 0, 0, 0);
+        const concertStartDate = new Date(c.startDate);
+        concertStartDate.setHours(0, 0, 0, 0);
 
         if (startDate && endDate) {
           const start = new Date(startDate);
           start.setHours(0, 0, 0, 0);
           const end = new Date(endDate);
           end.setHours(23, 59, 59, 999);
-          return concertDate >= start && concertDate <= end;
+          return concertStartDate >= start && concertStartDate <= end;
         } else if (startDate) {
           const start = new Date(startDate);
           start.setHours(0, 0, 0, 0);
-          return concertDate >= start;
+          return concertStartDate >= start;
         } else if (endDate) {
           const end = new Date(endDate);
           end.setHours(23, 59, 59, 999);
-          return concertDate <= end;
+          return concertStartDate <= end;
         }
         return true;
       });
@@ -240,11 +308,83 @@ export default function ConcertsScreen() {
     }
 
     return filtered;
-  }, [concerts, searchQuery, selectedCity, startDate, endDate, statusFilter, showHighRating, venues]);
+  }, [concerts, searchResults, debouncedSearchQuery, selectedCity, startDate, endDate, statusFilter, showHighRating, getConcertStatus]);
+
+  // 무한 스크롤 처리 - 마지막 요청 추적
+  const lastFetchRef = React.useRef<number>(0);
+
+  const handleScroll = React.useCallback((event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 200; // 하단 200px 전에 로드 시작
+
+    // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
+    if (contentSize.height === 0) {
+      return;
+    }
+
+    // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
+    if (contentOffset.y < 0) {
+      return;
+    }
+
+    // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
+    const hasScrolled = contentOffset.y > 200;
+
+    const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+
+    if (!hasScrolled || !isNearBottom) {
+      return;
+    }
+
+    const now = Date.now();
+    // 마지막 요청 후 1초 이내면 무시 (중복 방지)
+    if (now - lastFetchRef.current < 1000) {
+      return;
+    }
+
+    // If searching, load more search results
+    if (debouncedSearchQuery.trim().length > 0) {
+      if (hasMoreSearchResults && !isSearching) {
+        lastFetchRef.current = now;
+        loadMoreSearchResults();
+      }
+    } else {
+      // Otherwise, load more paginated results
+      if (hasNextPage && !isFetchingNextPage) {
+        lastFetchRef.current = now;
+        fetchNextPage();
+      }
+    }
+  }, [
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    debouncedSearchQuery,
+    hasMoreSearchResults,
+    isSearching,
+    loadMoreSearchResults,
+  ]);
+
+  // 새로고침 핸들러 (첫 페이지만 다시 로드)
+  const handleRefresh = React.useCallback(() => {
+    // Clear search state
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setSearchResults([]);
+    setSearchOffset(0);
+    setHasMoreSearchResults(true);
+
+    // resetQueries를 사용하여 무한 스크롤 상태를 초기화
+    // 이렇게 하면 첫 페이지만 로드됨
+    queryClient.resetQueries({ queryKey: CONCERT_QUERY_KEYS.all });
+  }, [queryClient]);
+
   return (
     <ScrollView
       className="flex-1 bg-background"
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />}>
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+      onScroll={handleScroll}
+      scrollEventThrottle={400}>
       <View className="gap-6 p-4">
         <View className="gap-2">
           <View className="flex-row items-center justify-between">
@@ -447,17 +587,17 @@ export default function ConcertsScreen() {
 
         {/* Concert List */}
         <View className="gap-4">
-          {loading ? (
+          {(loading || (isSearching && filteredConcerts.length === 0)) ? (
             <View className="py-12">
               <ActivityIndicator size="large" />
               <Text className="mt-4 text-center text-muted-foreground">
-                공연 정보를 불러오는 중...
+                {isSearching ? '검색 중...' : '공연 정보를 불러오는 중...'}
               </Text>
             </View>
           ) : error ? (
             <Card className="p-8">
               <Text className="mb-4 text-center text-destructive">{error}</Text>
-              <Button variant="outline" size="sm" className="mx-auto" onPress={() => refetch()}>
+              <Button variant="outline" size="sm" className="mx-auto" onPress={handleRefresh}>
                 <Text>다시 시도</Text>
               </Button>
             </Card>
@@ -468,14 +608,60 @@ export default function ConcertsScreen() {
                 concert={concert}
                 canEdit={canEdit}
                 onDelete={handleDelete}
-                onRatingSuccess={() => refetch()}
-                venueName={venues[concert.venueId]?.name}
               />
             ))
           ) : (
             <Card className="p-8">
-              <Text className="text-center text-muted-foreground">공연 정보가 없습니다</Text>
+              <Text className="text-center text-muted-foreground">
+                {debouncedSearchQuery
+                  ? `"${debouncedSearchQuery}"에 대한 검색 결과가 없습니다`
+                  : '공연 정보가 없습니다'}
+              </Text>
             </Card>
+          )}
+
+          {/* 무한 스크롤 로딩 인디케이터 */}
+          {debouncedSearchQuery ? (
+            // 검색 중일 때
+            isSearching && filteredConcerts.length > 0 && (
+              <View className="py-4">
+                <ActivityIndicator size="small" />
+                <Text className="mt-2 text-center text-sm text-muted-foreground">
+                  더 많은 검색 결과를 불러오는 중...
+                </Text>
+              </View>
+            )
+          ) : (
+            // 일반 무한 스크롤
+            isFetchingNextPage && (
+              <View className="py-4">
+                <ActivityIndicator size="small" />
+                <Text className="mt-2 text-center text-sm text-muted-foreground">
+                  더 많은 공연을 불러오는 중...
+                </Text>
+              </View>
+            )
+          )}
+
+          {/* 더 이상 데이터가 없을 때 */}
+          {debouncedSearchQuery ? (
+            // 검색 모드
+            !hasMoreSearchResults && filteredConcerts.length > 0 && (
+              <View className="py-4">
+                <Text className="text-center text-sm text-muted-foreground">
+                  "{debouncedSearchQuery}" 검색 결과: 총 {filteredConcerts.length}개
+                </Text>
+              </View>
+            )
+          ) : (
+            // 일반 모드
+            !hasNextPage && filteredConcerts.length > 0 && (
+              <View className="py-4">
+                <Text className="text-center text-sm text-muted-foreground">
+                  모든 공연을 불러왔습니다
+                </Text>
+              </View>
+            )
           )}
         </View>
       </View>
@@ -489,86 +675,16 @@ export default function ConcertsScreen() {
   );
 }
 
-function ConcertCard({
+const ConcertCard = React.memo(function ConcertCard({
   concert,
   canEdit,
   onDelete,
-  onRatingSuccess,
-  venueName,
 }: {
   concert: Concert;
   canEdit: boolean;
   onDelete: (id: number, title: string) => void;
-  onRatingSuccess: () => void;
-  venueName?: string;
 }) {
   const router = useRouter();
-  const [userRating, setUserRating] = React.useState<number>(0);
-  const [hasWatched, setHasWatched] = React.useState(false);
-  const { isSignedIn } = useAuth();
-
-  React.useEffect(() => {
-    if (isSignedIn) {
-      loadUserRating();
-    }
-  }, [concert.id, isSignedIn]);
-
-  const loadUserRating = async () => {
-    // 로그인하지 않았으면 요청하지 않음
-    if (!isSignedIn) return;
-
-    try {
-      const rating = await ConcertAPI.getUserRating(concert.id);
-      if (rating != null) {
-        setUserRating(Number(rating));
-        setHasWatched(true);
-      }
-    } catch (error) {
-      // 401 에러는 정상 (로그인 필요)
-      if (error instanceof Error && !error.message.includes('401')) {
-        console.error('Failed to load user rating:', error);
-      }
-    }
-  };
-
-  const handleRatingPress = () => {
-    if (!isSignedIn) {
-      Alert.alert('로그인 필요', '평점을 입력하려면 로그인이 필요합니다.');
-      return;
-    }
-
-    if (!hasWatched) {
-      Alert.alert(
-        '공연 관람 확인',
-        '이 평점은 공연을 관람한 후에 매기는 평점입니다. 공연을 보셨나요?',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '네, 봤습니다',
-            onPress: () => setHasWatched(true),
-          },
-        ]
-      );
-    }
-  };
-
-  const handleRatingChange = async (rating: number) => {
-    if (!hasWatched) {
-      handleRatingPress();
-      return;
-    }
-
-    setUserRating(rating);
-    try {
-      await ConcertAPI.submitRating(concert.id, rating);
-      Alert.alert('성공', '평점이 등록되었습니다.');
-      // Reload concerts to show updated average rating
-      onRatingSuccess();
-    } catch (error) {
-      Alert.alert('오류', '평점 등록에 실패했습니다.');
-      console.error('Failed to submit rating:', error);
-    }
-  };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '날짜 정보 없음';
@@ -579,22 +695,22 @@ function ConcertCard({
 
   // 상태 정보 계산
   const getConcertStatusInfo = () => {
-    const concertDate = new Date(concert.concertDate);
+    const concertStartDate = new Date(concert.startDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    concertDate.setHours(0, 0, 0, 0);
+    concertStartDate.setHours(0, 0, 0, 0);
 
     if (concert.status === 'cancelled') {
       return {
         text: '취소',
         bgColor: '#ef4444',
       };
-    } else if (concertDate < today) {
+    } else if (concertStartDate < today) {
       return {
         text: '종료',
         bgColor: '#9ca3af',
       };
-    } else if (concertDate.getTime() === today.getTime()) {
+    } else if (concertStartDate.getTime() === today.getTime()) {
       return {
         text: '오늘',
         bgColor: '#22c55e',
@@ -614,11 +730,12 @@ function ConcertCard({
       onPress={() => router.push(`/concert/${concert.id}` as any)}
       activeOpacity={0.7}>
       <Card className="overflow-hidden p-0">
-        <View className="flex-row" style={{ height: 295 }}>
-          <View className="w-32 items-center justify-center bg-muted">
+        <View className="flex-row" style={{ height: 250 }}>
+          <View className="w-32 items-center justify-center bg-muted relative">
             <OptimizedImage
+              key={`concert-poster-${concert.id}`}
               uri={concert.posterUrl}
-              style={{ width: '100%', height: 295 }}
+              style={{ width: '100%', height: 250 }}
               resizeMode="cover"
               fallbackComponent={
                 <View className="h-full w-full items-center justify-center bg-muted">
@@ -626,6 +743,31 @@ function ConcertCard({
                 </View>
               }
             />
+            {/* Ranking Badge for Top 3 */}
+            {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
+              <View
+                className="absolute top-2 left-2"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor:
+                    concert.boxofficeRanking.ranking === 1 ? '#FFD700' :
+                    concert.boxofficeRanking.ranking === 2 ? '#C0C0C0' : '#CD7F32',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 4,
+                  elevation: 6,
+                }}
+              >
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFF' }}>
+                  {concert.boxofficeRanking.ranking}
+                </Text>
+              </View>
+            )}
           </View>
           <View className="flex-1 gap-3 p-4">
             <View className="gap-2">
@@ -675,12 +817,12 @@ function ConcertCard({
               <View className="flex-row items-center gap-2">
                 <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
                 <Text className="text-sm">
-                  {formatDate(concert.concertDate)} {concert.concertTime || ''}
+                  {formatDate(concert.startDate)} {concert.concertTime || ''}
                 </Text>
               </View>
               <View className="flex-row items-center gap-2">
                 <Icon as={MapPinIcon} size={16} className="text-muted-foreground" />
-                <Text className="text-sm">{venueName || '공연장 정보 없음'}</Text>
+                <Text className="text-sm">{concert.facilityName || '공연장 정보 없음'}</Text>
               </View>
               {concert.priceInfo && (
                 <View className="flex-row items-center gap-2">
@@ -689,27 +831,9 @@ function ConcertCard({
                 </View>
               )}
             </View>
-
-            {/* Rating Section */}
-            <TouchableOpacity onPress={handleRatingPress} activeOpacity={hasWatched ? 1 : 0.7}>
-              <View className="gap-1">
-                <Text className="text-xs text-muted-foreground">내 평점</Text>
-                <StarRating
-                  rating={userRating}
-                  onRatingChange={hasWatched ? handleRatingChange : undefined}
-                  size={20}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {concert.ticketUrl && (
-              <Button onPress={() => Linking.openURL(concert.ticketUrl!)}>
-                <Text>예매하기</Text>
-              </Button>
-            )}
           </View>
         </View>
       </Card>
     </TouchableOpacity>
   );
-}
+});

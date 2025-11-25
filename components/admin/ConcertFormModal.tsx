@@ -26,14 +26,13 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const [title, setTitle] = React.useState('');
   const [composerInfo, setComposerInfo] = React.useState('');
   const [venueId, setVenueId] = React.useState<number | null>(null);
-  const [concertDate, setConcertDate] = React.useState('');
+  const [startDate, setStartDate] = React.useState('');
   const [concertTime, setConcertTime] = React.useState('');
   const [priceInfo, setPriceInfo] = React.useState('');
   const [status, setStatus] = React.useState('upcoming');
   const [submitting, setSubmitting] = React.useState(false);
   const [selectedPoster, setSelectedPoster] = React.useState<string | null>(null);
   const [posterUrl, setPosterUrl] = React.useState<string | null>(null);
-  const [ticketUrl, setTicketUrl] = React.useState('');
   const [showVenuePicker, setShowVenuePicker] = React.useState(false);
   const [venueSearch, setVenueSearch] = React.useState('');
 
@@ -54,16 +53,15 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setTitle(concert.title);
         setComposerInfo(concert.composerInfo || '');
         setVenueId(concert.venueId);
-        setConcertDate(concert.concertDate);
+        setStartDate(concert.startDate);
         setConcertTime(concert.concertTime || '');
         setPriceInfo(concert.priceInfo || '');
         setStatus(concert.status);
         setPosterUrl(concert.posterUrl || null);
-        setTicketUrl(concert.ticketUrl || '');
 
         // Date picker 초기화
-        if (concert.concertDate) {
-          setSelectedDate(new Date(concert.concertDate));
+        if (concert.startDate) {
+          setSelectedDate(new Date(concert.startDate));
         }
         if (concert.concertTime) {
           const [hours, minutes] = concert.concertTime.split(':');
@@ -75,13 +73,12 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         setTitle('');
         setComposerInfo('');
         setVenueId(null);
-        setConcertDate('');
+        setStartDate('');
         setConcertTime('');
         setPriceInfo('');
         setStatus('upcoming');
         setSelectedPoster(null);
         setPosterUrl(null);
-        setTicketUrl('');
         setSelectedDate(new Date());
         setSelectedTime(new Date());
       }
@@ -94,7 +91,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
     if (date) {
       setSelectedDate(date);
       const formattedDate = date.toISOString().split('T')[0];
-      setConcertDate(formattedDate);
+      setStartDate(formattedDate);
     }
   };
 
@@ -204,7 +201,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   };
 
   const handleSubmit = async () => {
-    if (!title || !concertDate) {
+    if (!title || !startDate) {
       Alert.alert('오류', '제목과 공연일을 입력해주세요.');
       return;
     }
@@ -216,7 +213,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
 
     // 날짜 형식 검증 (YYYY-MM-DD)
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(concertDate)) {
+    if (!dateRegex.test(startDate)) {
       Alert.alert('오류', '날짜는 YYYY-MM-DD 형식이어야 합니다.');
       return;
     }
@@ -227,11 +224,10 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         title,
         composerInfo: composerInfo || undefined,
         venueId: venueId,
-        concertDate: concertDate,
+        startDate: startDate,
         concertTime: concertTime || undefined,
         priceInfo: priceInfo || undefined,
         posterUrl: posterUrl || undefined,
-        ticketUrl: ticketUrl || undefined,
         status,
       };
       
@@ -309,8 +305,8 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
                   onPress={() => setShowDatePicker(true)}
                   className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  <Text className={concertDate ? "text-base" : "text-base text-muted-foreground"}>
-                    {concertDate || '날짜를 선택하세요'}
+                  <Text className={startDate ? "text-base" : "text-base text-muted-foreground"}>
+                    {startDate || '날짜를 선택하세요'}
                   </Text>
                   <Icon as={CalendarIcon} size={18} className="text-muted-foreground" />
                 </TouchableOpacity>
@@ -402,16 +398,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
               <View>
                 <Label>가격 정보</Label>
                 <Input value={priceInfo} onChangeText={setPriceInfo} placeholder="R석 100,000원" />
-              </View>
-
-              <View>
-                <Label>예매 링크</Label>
-                <Input 
-                  value={ticketUrl} 
-                  onChangeText={setTicketUrl} 
-                  placeholder="https://ticket.interpark.com/..."
-                  autoCapitalize="none"
-                />
               </View>
 
               <View>

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
 import type { Artist } from '@/lib/types/models';
 
@@ -11,15 +11,41 @@ export const ARTIST_QUERY_KEYS = {
 };
 
 /**
- * 모든 아티스트 조회 훅
- * - 자동 캐싱 (5분 stale, 24시간 gc)
- * - 오프라인 지원 (AsyncStorage)
- * - 자동 백그라운드 리페칭
+ * 모든 아티스트 조회 훅 (무한 스크롤)
+ * - 페이지당 20개씩 로드
+ * - 자동 캐싱 (3분 stale)
  */
 export function useArtists() {
-  return useQuery({
+  const PAGE_SIZE = 20;
+
+  return useInfiniteQuery({
     queryKey: ARTIST_QUERY_KEYS.all,
-    queryFn: () => ArtistAPI.getAll(),
+    queryFn: async ({ pageParam = 0 }) => {
+      console.log(`🔍 [useArtists] Fetching artists - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
+      const result = await ArtistAPI.getAll(pageParam, PAGE_SIZE);
+      console.log(`✅ [useArtists] Received ${result?.length || 0} artists for offset ${pageParam}`);
+      return result;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      try {
+        // 마지막 페이지가 비어있거나 PAGE_SIZE보다 작으면 더 이상 없음
+        if (!lastPage || !Array.isArray(lastPage) || lastPage.length < PAGE_SIZE) {
+          return undefined;
+        }
+        // 다음 offset 계산
+        const nextOffset = allPages.length * PAGE_SIZE;
+        return nextOffset;
+      } catch (error) {
+        console.error('Error in getNextPageParam:', error);
+        return undefined;
+      }
+    },
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 3, // 3분
+    gcTime: 1000 * 60 * 10, // 10분 (캐시 유지)
+    refetchOnWindowFocus: false, // 포커스 시 재요청 방지
+    refetchOnMount: false, // 마운트 시 재요청 방지
+    retry: 1, // 1번만 재시도
   });
 }
 

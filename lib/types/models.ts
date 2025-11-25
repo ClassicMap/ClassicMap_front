@@ -242,20 +242,41 @@ export interface ConcertArtist {
   role?: string;
 }
 
+export interface BoxofficeRanking {
+  id: number;
+  ranking: number;
+  genreName?: string;
+  areaName?: string;
+  seatScale?: string;
+  performanceCount?: number;
+}
+
+export interface TicketVendor {
+  id: number;
+  concertId: number;
+  vendorName?: string;
+  vendorUrl: string;
+  displayOrder: number;
+}
+
 export interface Concert {
   id: number;
   title: string;
   composerInfo?: string;
   venueId: number;
-  concertDate: string;
+  startDate: string;
+  endDate?: string;
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
-  ticketUrl?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  rating: number;
-  ratingCount: number;
+  rating?: number;
+  ratingCount?: number;
   artists?: ConcertArtist[];
+  facilityName?: string;
+  area?: string;
+  boxofficeRanking?: BoxofficeRanking;
+  ticketVendors?: TicketVendor[];
   createdAt?: Date;
   updatedAt?: Date;
 }
