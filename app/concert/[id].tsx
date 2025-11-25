@@ -32,50 +32,7 @@ import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
-
-interface ConcertArtist {
-  id: number;
-  concertId: number;
-  artistId: number;
-  artistName: string;
-  role?: string;
-}
-
-interface BoxofficeRanking {
-  id: number;
-  ranking: number;
-  genreName?: string;
-  areaName?: string;
-  seatScale?: string;
-  performanceCount?: number;
-}
-
-interface TicketVendor {
-  id: number;
-  concertId: number;
-  vendorName?: string;
-  vendorUrl: string;
-  displayOrder: number;
-}
-
-interface Concert {
-  id: number;
-  title: string;
-  composerInfo?: string;
-  venueId: number;
-  startDate: string;
-  endDate?: string;
-  concertTime?: string;
-  priceInfo?: string;
-  posterUrl?: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  rating?: number;
-  ratingCount?: number;
-  artists?: ConcertArtist[];
-  facilityName?: string;
-  boxofficeRanking?: BoxofficeRanking;
-  ticketVendors?: TicketVendor[];
-}
+import type { Concert, ConcertArtist, BoxofficeRanking, TicketVendor } from '@/lib/types/models';
 
 const getStatusInfo = (concert: Concert) => {
   const concertStartDate = new Date(concert.startDate);
@@ -415,7 +372,7 @@ export default function ConcertDetailScreen() {
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">연주자</Text>
                     <Text className="text-base font-medium">
-                      {concert.artists.map(a => a.artistName).join(', ')}
+                      {concert.artists.map((a: ConcertArtist) => a.artistName).join(', ')}
                     </Text>
                   </View>
                 </View>
@@ -463,6 +420,72 @@ export default function ConcertDetailScreen() {
               )}
             </View>
           </Card>
+
+          {/* Concert Introduction Section */}
+          {(concert.synopsis || concert.runtime || concert.ageRestriction || concert.cast) && (
+            <Card className="p-4">
+              <Text className="text-lg font-bold mb-3">공연 소개</Text>
+              <View className="gap-3">
+                {concert.synopsis && (
+                  <View>
+                    <Text className="text-sm font-medium text-muted-foreground mb-1">소개</Text>
+                    <Text className="text-base leading-6">{concert.synopsis}</Text>
+                  </View>
+                )}
+
+                <View className="flex-row gap-4 flex-wrap">
+                  {concert.runtime && (
+                    <View className="flex-row items-center gap-2">
+                      <Icon as={ClockIcon} size={16} className="text-primary" />
+                      <View>
+                        <Text className="text-xs text-muted-foreground">러닝타임</Text>
+                        <Text className="text-sm font-medium">{concert.runtime}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {concert.ageRestriction && (
+                    <View className="flex-row items-center gap-2">
+                      <Icon as={UserIcon} size={16} className="text-primary" />
+                      <View>
+                        <Text className="text-xs text-muted-foreground">관람연령</Text>
+                        <Text className="text-sm font-medium">{concert.ageRestriction}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                {concert.cast && (
+                  <View>
+                    <Text className="text-sm font-medium text-muted-foreground mb-1">출연진</Text>
+                    <Text className="text-base leading-6">{concert.cast}</Text>
+                  </View>
+                )}
+              </View>
+            </Card>
+          )}
+
+          {/* Program Images Gallery */}
+          {concert.images && concert.images.length > 0 && (
+            <Card className="p-4">
+              <Text className="text-lg font-bold mb-3">프로그램 이미지</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-3">
+                {concert.images
+                  .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
+                  .map((image: any, index: number) => (
+                    <View key={image.id} className="mr-3" style={{ width: 250 }}>
+                      <Card className="overflow-hidden p-0">
+                        <Image
+                          source={{ uri: getImageUrl(image.imageUrl) }}
+                          style={{ width: 250, height: 350 }}
+                          resizeMode="cover"
+                        />
+                      </Card>
+                    </View>
+                  ))}
+              </ScrollView>
+            </Card>
+          )}
 
           {/* Boxoffice Ranking Section */}
           {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (

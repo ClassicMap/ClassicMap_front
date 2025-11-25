@@ -782,3 +782,54 @@ export const PerformanceAPI = {
     return Promise.resolve(null);
   },
 };
+
+// ====================================================
+// Boxoffice API
+// ====================================================
+
+export interface BoxofficeConcert {
+  id: number;
+  concertId: number;
+  ranking: number;
+  genreName?: string;
+  areaName?: string;
+  syncStartDate: string;
+  syncEndDate: string;
+  // Concert info
+  title: string;
+  posterUrl?: string;
+  startDate: string;
+  endDate?: string;
+  concertTime?: string;
+  facilityName?: string;
+  status: string;
+  rating?: number;
+  ratingCount?: number;
+  genre?: string;
+  area?: string;
+}
+
+export const BoxofficeAPI = {
+  /**
+   * Get TOP 3 boxoffice concerts
+   * @param areaCode - Optional area code (11=서울, 26=부산, etc.). If not provided, returns national TOP 3
+   * @param genreCode - Optional genre code (default: CCCA for 클래식)
+   */
+  async getTop3(
+    areaCode?: string,
+    genreCode?: string
+  ): Promise<BoxofficeConcert[]> {
+    if (USE_REAL_API) {
+      const queryParams = new URLSearchParams();
+      if (areaCode) queryParams.set('area_code', areaCode);
+      if (genreCode) queryParams.set('genre_code', genreCode);
+
+      const url = `${API_BASE_URL}/concerts/boxoffice/top3${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      const response = await authenticatedFetch(url);
+      if (!response.ok) throw new Error('Failed to fetch boxoffice TOP 3');
+      const data: BoxofficeConcert[] = await response.json();
+      return data;
+    }
+    return Promise.resolve([]);
+  },
+};
