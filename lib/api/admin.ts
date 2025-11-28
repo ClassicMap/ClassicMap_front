@@ -58,20 +58,23 @@ export const AdminComposerAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    name?: string;
-    fullName?: string;
-    englishName?: string;
-    period?: string;
-    birthYear?: number;
-    deathYear?: number;
-    nationality?: string;
-    avatarUrl?: string;
-    coverImageUrl?: string;
-    bio?: string;
-    style?: string;
-    influence?: string;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      name?: string;
+      fullName?: string;
+      englishName?: string;
+      period?: string;
+      birthYear?: number;
+      deathYear?: number;
+      nationality?: string;
+      avatarUrl?: string;
+      coverImageUrl?: string;
+      bio?: string;
+      style?: string;
+      influence?: string;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -115,22 +118,25 @@ export const AdminArtistAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    name?: string;
-    englishName?: string;
-    category?: string;
-    tier?: string;
-    nationality?: string;
-    rating?: number;
-    imageUrl?: string;
-    coverImageUrl?: string;
-    birthYear?: string;
-    bio?: string;
-    style?: string;
-    concertCount?: number;
-    countryCount?: number;
-    albumCount?: number;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      name?: string;
+      englishName?: string;
+      category?: string;
+      tier?: string;
+      nationality?: string;
+      rating?: number;
+      imageUrl?: string;
+      coverImageUrl?: string;
+      birthYear?: string;
+      bio?: string;
+      style?: string;
+      concertCount?: number;
+      countryCount?: number;
+      albumCount?: number;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/artists/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -146,11 +152,14 @@ export const AdminArtistAPI = {
     if (!response.ok) throw new Error('Failed to delete artist');
   },
 
-  async createAward(artistId: number, award: {
-    year: string;
-    awardName: string;
-    displayOrder?: number;
-  }): Promise<number> {
+  async createAward(
+    artistId: number,
+    award: {
+      year: string;
+      awardName: string;
+      displayOrder?: number;
+    }
+  ): Promise<number> {
     const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/awards`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -161,9 +170,12 @@ export const AdminArtistAPI = {
   },
 
   async deleteAward(artistId: number, awardId: number): Promise<void> {
-    const response = await authenticatedFetch(`${API_BASE_URL}/artists/${artistId}/awards/${awardId}`, {
-      method: 'DELETE',
-    });
+    const response = await authenticatedFetch(
+      `${API_BASE_URL}/artists/${artistId}/awards/${awardId}`,
+      {
+        method: 'DELETE',
+      }
+    );
     if (!response.ok) throw new Error('Failed to delete award');
   },
 };
@@ -192,18 +204,21 @@ export const AdminPieceAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    title?: string;
-    type?: 'album' | 'song';
-    description?: string;
-    opusNumber?: string;
-    compositionYear?: number;
-    difficultyLevel?: number;
-    durationMinutes?: number;
-    spotifyUrl?: string;
-    appleMusicUrl?: string;
-    youtubeMusicUrl?: string;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      title?: string;
+      type?: 'album' | 'song';
+      description?: string;
+      opusNumber?: string;
+      compositionYear?: number;
+      difficultyLevel?: number;
+      durationMinutes?: number;
+      spotifyUrl?: string;
+      appleMusicUrl?: string;
+      youtubeMusicUrl?: string;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -241,16 +256,19 @@ export const AdminConcertAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    title?: string;
-    composerInfo?: string;
-    venueId?: number;
-    concertDate?: string;
-    concertTime?: string;
-    priceInfo?: string;
-    posterUrl?: string;
-    status?: string;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      title?: string;
+      composerInfo?: string;
+      venueId?: number;
+      concertDate?: string;
+      concertTime?: string;
+      priceInfo?: string;
+      posterUrl?: string;
+      status?: string;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -285,12 +303,15 @@ export const AdminRecordingAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    title?: string;
-    year?: string;
-    label?: string;
-    coverUrl?: string;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      title?: string;
+      year?: string;
+      label?: string;
+      coverUrl?: string;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -307,17 +328,58 @@ export const AdminRecordingAPI = {
   },
 };
 
+// Performance Sector CRUD
+export const AdminPerformanceSectorAPI = {
+  async create(data: {
+    pieceId: number;
+    sectorName: string;
+    description?: string;
+    displayOrder?: number;
+  }): Promise<number> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/sectors`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to create sector');
+    return response.json();
+  },
+
+  async update(
+    id: number,
+    data: {
+      sectorName?: string;
+      description?: string;
+      displayOrder?: number;
+    }
+  ): Promise<void> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/sectors/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to update sector');
+  },
+
+  async delete(id: number): Promise<void> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/sectors/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete sector');
+  },
+};
+
 // Performance CRUD
 export const AdminPerformanceAPI = {
   async create(data: {
-    pieceId: number;
+    sectorId: number;
+    pieceId: number; // 하위 호환성
     artistId: number;
     videoPlatform: string;
     videoId: string;
     startTime: number;
     endTime: number;
     characteristic?: string;
-    recordingDate?: string;
     viewCount?: number;
     rating?: number;
   }): Promise<number> {
@@ -330,18 +392,20 @@ export const AdminPerformanceAPI = {
     return response.json();
   },
 
-  async update(id: number, data: {
-    pieceId?: number;
-    artistId?: number;
-    videoPlatform?: string;
-    videoId?: string;
-    startTime?: number;
-    endTime?: number;
-    characteristic?: string;
-    recordingDate?: string;
-    viewCount?: number;
-    rating?: number;
-  }): Promise<void> {
+  async update(
+    id: number,
+    data: {
+      pieceId?: number;
+      artistId?: number;
+      videoPlatform?: string;
+      videoId?: string;
+      startTime?: number;
+      endTime?: number;
+      characteristic?: string;
+      viewCount?: number;
+      rating?: number;
+    }
+  ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/performances/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

@@ -25,11 +25,13 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import YoutubePlayer from 'react-native-youtube-iframe';
-import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI } from '@/lib/api/client';
+import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
-import type { Composer, Piece, Performance, Artist } from '@/lib/types/models';
+import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount } from '@/lib/types/models';
 import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
+import { SectorFormModal } from '@/components/admin/SectorFormModal';
+import { SectorChip, AddSectorChip } from '@/components/sector-chip';
 import { getImageUrl } from '@/lib/utils/image';
 import { getAllPeriods } from '@/lib/data/mockDTO';
 import { useComposers } from '@/lib/query/hooks/useComposers';
@@ -43,14 +45,21 @@ export default function CompareScreen() {
   const router = useRouter();
   const { canEdit } = useAuth();
 
+  // Period filter state - MUST be declared before useComposers hook
+  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
+
   // React Query로 작곡가 데이터 로드 (자동 캐싱)
   const {
     data: composersQueryData,
     isLoading: loading,
+    isFetching,
     error: queryError,
     refetch,
     isRefetching: refreshing,
-  } = useComposers();
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useComposers(periodFilter !== 'all' ? periodFilter : undefined);
 
   // 무한 스크롤 데이터를 평탄화
   const composersData = React.useMemo(() => {
@@ -69,10 +78,29 @@ export default function CompareScreen() {
   const [showPieceList, setShowPieceList] = React.useState(false);
   const [noPieceFound, setNoPieceFound] = React.useState(false);
 
+  // 섹터 관련 state
+  const [sectors, setSectors] = React.useState<PerformanceSectorWithCount[]>([]);
+  const [selectedSector, setSelectedSector] = React.useState<PerformanceSectorWithCount | null>(null);
+  const [loadingSectors, setLoadingSectors] = React.useState(false);
+  const [sectorFormVisible, setSectorFormVisible] = React.useState(false);
+  const [selectedSectorForEdit, setSelectedSectorForEdit] = React.useState<PerformanceSectorWithCount | undefined>();
+
   // 검색 및 필터 state
   const [composerSearchQuery, setComposerSearchQuery] = React.useState('');
-  const [periodFilter, setPeriodFilter] = React.useState<string>('all');
   const [pieceSearchQuery, setPieceSearchQuery] = React.useState('');
+
+  // Search states (following Artist/Concert pattern)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState<ComposerWithPieces[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchOffset, setSearchOffset] = React.useState(0);
+  const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
+
+  // Prevent duplicate pagination requests
+  const isPaginatingRef = React.useRef(false);
+
+  // Track initial mount to show full page loading only on first load
+  const isInitialMount = React.useRef(true);
 
   // 연주 관련 state
   const [performances, setPerformances] = React.useState<Performance[]>([]);
@@ -99,31 +127,170 @@ export default function CompareScreen() {
     itemVisiblePercentThreshold: 50,
   }).current;
 
+  // Memoize renderItem to prevent unnecessary re-renders
+  const renderPerformanceItem = React.useCallback(({ item: performance }: { item: Performance }) => {
+    const artist = artists[performance.artistId];
+
+    return (
+      <Card className="mr-4 overflow-hidden" style={{ width: 350 }}>
+        {/* Compact Artist Info */}
+        <TouchableOpacity
+          className="flex-row items-center gap-2 border-b border-border/30 bg-card px-3 py-2.5"
+          onPress={() => artist && router.push(`/artist/${artist.id}`)}
+          activeOpacity={0.7}>
+          {/* Small Avatar: 32px */}
+          {artist?.imageUrl ? (
+            <Image
+              source={{ uri: getImageUrl(artist.imageUrl) }}
+              className="h-8 w-8 rounded-full border border-primary/20"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+              <Text className="text-xs font-bold text-primary">
+                {artist?.name?.[0] || '?'}
+              </Text>
+            </View>
+          )}
+
+          {/* Artist Name & Metadata */}
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-sm font-semibold">{artist?.name || '알 수 없음'}</Text>
+              {artist?.tier && (
+                <View className="rounded-full bg-primary/10 px-2 py-0.5">
+                  <Text className="text-xs font-medium text-primary">T{artist.tier}</Text>
+                </View>
+              )}
+            </View>
+            <Text className="text-xs text-muted-foreground">
+              {formatTime(performance.startTime)} - {formatTime(performance.endTime)}
+            </Text>
+          </View>
+
+          {/* Admin Controls */}
+          {canEdit && (
+            <View className="flex-row gap-1">
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setSelectedPerformance(performance);
+                  setPerformanceFormVisible(true);
+                }}
+                className="rounded-md bg-primary/10 p-1.5"
+                activeOpacity={0.7}>
+                <Icon as={EditIcon} size={14} className="text-primary" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDeletePerformance(performance.id);
+                }}
+                className="rounded-md bg-destructive/10 p-1.5"
+                activeOpacity={0.7}>
+                <Icon as={TrashIcon} size={14} className="text-destructive" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* YouTube Player - 더 큰 크기 */}
+        <View style={{ width: '100%', height: 196 }}>
+          <YoutubePlayer
+            key={`youtube-${performance.id}`}
+            videoId={performance.videoId}
+            height={196}
+            play={false}
+            initialPlayerParams={{
+              start: performance.startTime,
+              end: performance.endTime,
+              controls: true,
+              modestbranding: true,
+              rel: false,
+            }}
+            webViewProps={{
+              androidLayerType: 'hardware',
+              allowsInlineMediaPlayback: true,
+            }}
+          />
+        </View>
+
+        {/* Quote-style Characteristic */}
+        {performance.characteristic && (
+          <View className="border-l-4 border-primary/40 bg-muted/30 px-4 py-3">
+            <Text className="text-sm italic leading-relaxed text-muted-foreground">
+              "{performance.characteristic}"
+            </Text>
+          </View>
+        )}
+      </Card>
+    );
+  }, [artists, canEdit, router]);
+
   // URL 파라미터로부터 곡이 선택되었는지 추적
   const isFromUrlParams = React.useRef(false);
 
-  // 작곡가 필터링
-  const filteredComposers = React.useMemo(() => {
-    let filtered = composers;
+  // Debounce search query (300ms delay)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(composerSearchQuery);
+      setSearchOffset(0);
+      setSearchResults([]);
+      setHasMoreSearchResults(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [composerSearchQuery]);
 
-    // 검색 필터
-    if (composerSearchQuery.trim()) {
-      const searchLower = composerSearchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (composer) =>
-          composer.name.toLowerCase().includes(searchLower) ||
-          composer.fullName.toLowerCase().includes(searchLower) ||
-          composer.englishName.toLowerCase().includes(searchLower)
-      );
+  // Backend search effect
+  React.useEffect(() => {
+    if (debouncedSearchQuery.trim().length > 0) {
+      setIsSearching(true);
+      ComposerAPI.search({
+        q: debouncedSearchQuery,
+        period: periodFilter !== 'all' ? periodFilter : undefined,
+        offset: 0,
+        limit: 20,
+      })
+        .then((results) => {
+          setSearchResults(results);
+          setSearchOffset(20);
+          setHasMoreSearchResults(results.length === 20);
+          setIsSearching(false);
+        })
+        .catch((error) => {
+          console.error('Search failed:', error);
+          setSearchResults([]);
+          setIsSearching(false);
+        });
+    } else {
+      setSearchResults([]);
+      setSearchOffset(0);
+      setHasMoreSearchResults(true);
+      setIsSearching(false);
     }
+  }, [debouncedSearchQuery, periodFilter]);
 
-    // 시대 필터
-    if (periodFilter !== 'all') {
-      filtered = filtered.filter((composer) => composer.period === periodFilter);
+  // Display search results if searching, otherwise show paginated list
+  const displayedComposers = React.useMemo(() => {
+    if (debouncedSearchQuery.trim().length > 0) {
+      return searchResults;
     }
+    return composersData;
+  }, [debouncedSearchQuery, searchResults, composersData]);
 
-    return filtered;
-  }, [composers, composerSearchQuery, periodFilter]);
+  // Update composers list with piece counts
+  React.useEffect(() => {
+    setComposers(displayedComposers.map(c => ({
+      ...c,
+      // Don't override majorPieces if it exists, otherwise leave undefined to show pieceCount
+      majorPieces: c.majorPieces || undefined,
+    })));
+
+    // Mark initial mount as complete once we have composers
+    if (displayedComposers.length > 0) {
+      isInitialMount.current = false;
+    }
+  }, [displayedComposers]);
 
   // 곡 필터링
   const filteredPieces = React.useMemo(() => {
@@ -231,16 +398,70 @@ export default function CompareScreen() {
     setPiecePerformanceCounts((prev) => ({ ...prev, ...counts }));
   };
 
-  // 곡 선택 시 연주 목록 로드
+  // 곡 선택 시 섹터 목록 로드
   React.useEffect(() => {
-    if (selectedPiece) {
-      loadPerformances(selectedPiece.id);
+    const loadSectors = async () => {
+      if (!selectedPiece) {
+        setSectors([]);
+        setSelectedSector(null);
+        return;
+      }
+
+      setLoadingSectors(true);
+      try {
+        const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
+        setSectors(sectorData);
+
+        // Always select first sector if available
+        if (sectorData.length > 0) {
+          setSelectedSector(sectorData[0]);
+        } else {
+          setSelectedSector(null);
+        }
+      } catch (error) {
+        console.error('Failed to load sectors:', error);
+        setSectors([]);
+        setSelectedSector(null);
+      } finally {
+        setLoadingSectors(false);
+      }
+    };
+
+    loadSectors();
+  }, [selectedPiece]);
+
+  // 섹터 재로드 함수 (생성/수정/삭제 후 사용)
+  const reloadSectors = async () => {
+    if (!selectedPiece) return;
+
+    setLoadingSectors(true);
+    try {
+      const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
+      setSectors(sectorData);
+
+      // Auto-select the last sector (newest created)
+      if (sectorData.length > 0) {
+        setSelectedSector(sectorData[sectorData.length - 1]);
+      } else {
+        setSelectedSector(null);
+      }
+    } catch (error) {
+      console.error('Failed to reload sectors:', error);
+    } finally {
+      setLoadingSectors(false);
+    }
+  };
+
+  // 섹터 선택 시 연주 목록 로드
+  React.useEffect(() => {
+    if (selectedSector) {
+      loadPerformancesBySector(selectedSector.id);
       setCurrentPerformanceIndex(0);
     } else {
       setPerformances([]);
       setCurrentPerformanceIndex(0);
     }
-  }, [selectedPiece]);
+  }, [selectedSector]);
 
   const loadPerformances = async (pieceId: number) => {
     try {
@@ -276,6 +497,54 @@ export default function CompareScreen() {
         ...prev,
         [pieceId]: 0,
       }));
+    }
+  };
+
+  const loadPerformancesBySector = async (sectorId: number) => {
+    // Validate sectorId
+    if (!sectorId || sectorId <= 0) {
+      console.error('Invalid sectorId:', sectorId);
+      setPerformances([]);
+      setArtists({});
+      return;
+    }
+
+    try {
+      const performanceData = await PerformanceAPI.getBySector(sectorId);
+
+      // Handle empty performance array (sector with no performances)
+      if (!performanceData || performanceData.length === 0) {
+        setPerformances([]);
+        setArtists({});
+        return;
+      }
+
+      setPerformances(performanceData);
+
+      // 연주자 정보 로드
+      const artistIds = [...new Set(performanceData.map((p) => p.artistId).filter(id => id))];
+      const artistData: { [key: number]: Artist } = {};
+
+      if (artistIds.length > 0) {
+        await Promise.all(
+          artistIds.map(async (artistId) => {
+            try {
+              const artist = await ArtistAPI.getById(artistId);
+              if (artist) {
+                artistData[artistId] = artist;
+              }
+            } catch (error) {
+              console.error(`Failed to load artist ${artistId}:`, error);
+            }
+          })
+        );
+      }
+
+      setArtists(artistData);
+    } catch (error) {
+      console.error('Failed to load performances by sector:', error);
+      setPerformances([]);
+      setArtists({});
     }
   };
 
@@ -482,6 +751,117 @@ export default function CompareScreen() {
     setShowPieceList(false);
   };
 
+  const handleSectorSelect = (sector: PerformanceSectorWithCount) => {
+    // Validate sector has required properties
+    if (!sector || !sector.id || !sector.sectorName) {
+      console.error('Invalid sector data:', sector);
+      return;
+    }
+    setSelectedSector(sector);
+  };
+
+  // 섹터 추가 버튼 클릭
+  const handleAddSector = () => {
+    setSelectedSectorForEdit(undefined);
+    setSectorFormVisible(true);
+  };
+
+  // 섹터 수정 버튼 클릭
+  const handleEditSector = (sector: PerformanceSectorWithCount) => {
+    setSelectedSectorForEdit(sector);
+    setSectorFormVisible(true);
+  };
+
+  // 섹터 폼 성공 콜백
+  const handleSectorFormSuccess = async () => {
+    setSectorFormVisible(false);
+    await reloadSectors();
+  };
+
+  // 섹터에 연주 추가 버튼 클릭
+  const handleAddPerformanceToSector = (sector: PerformanceSectorWithCount) => {
+    setSelectedSector(sector);
+    setSelectedPerformance(undefined);
+    setPerformanceFormVisible(true);
+  };
+
+  // Infinite scroll handler for composer list
+  const handleComposerScroll = (event: any) => {
+    // Prevent duplicate requests
+    if (isPaginatingRef.current) {
+      return;
+    }
+
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 100;
+
+    // Check if near bottom
+    const isNearBottom =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
+
+    if (isNearBottom) {
+      // If searching, load more search results
+      if (debouncedSearchQuery.trim().length > 0 && hasMoreSearchResults && !isSearching) {
+        isPaginatingRef.current = true;
+        setIsSearching(true);
+        ComposerAPI.search({
+          q: debouncedSearchQuery,
+          period: periodFilter !== 'all' ? periodFilter : undefined,
+          offset: searchOffset,
+          limit: 20,
+        })
+          .then((results) => {
+            setSearchResults(prev => [...prev, ...results]);
+            setSearchOffset(prev => prev + 20);
+            setHasMoreSearchResults(results.length === 20);
+            setIsSearching(false);
+            // Add delay before allowing next request
+            setTimeout(() => {
+              isPaginatingRef.current = false;
+            }, 800);
+          })
+          .catch((error) => {
+            console.error('Load more search failed:', error);
+            setIsSearching(false);
+            isPaginatingRef.current = false;
+          });
+      }
+      // If browsing all, fetch next page
+      else if (!debouncedSearchQuery.trim() && hasNextPage && !isFetchingNextPage) {
+        isPaginatingRef.current = true;
+        fetchNextPage().finally(() => {
+          // Add delay before allowing next request
+          setTimeout(() => {
+            isPaginatingRef.current = false;
+          }, 800);
+        });
+      }
+    }
+  };
+
+  // Handle pull-to-refresh - reset to first 20 composers
+  const handleRefresh = async () => {
+    // Reset search states
+    setComposerSearchQuery('');
+    setDebouncedSearchQuery('');
+    setSearchResults([]);
+    setSearchOffset(0);
+    setHasMoreSearchResults(true);
+    setIsSearching(false);
+    isPaginatingRef.current = false;
+
+    // Refetch first page from React Query
+    await refetch();
+  };
+
+  // 초를 "분:초" 형식으로 변환
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
   const handleDeletePerformance = (performanceId: number) => {
     Alert.alert('연주 삭제', '정말 이 연주를 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
@@ -492,8 +872,8 @@ export default function CompareScreen() {
           try {
             await AdminPerformanceAPI.delete(performanceId);
             Alert.alert('성공', '연주가 삭제되었습니다.');
-            if (selectedPiece) {
-              loadPerformances(selectedPiece.id);
+            if (selectedSector) {
+              loadPerformancesBySector(selectedSector.id);
             }
           } catch (error) {
             Alert.alert('오류', '연주 삭제에 실패했습니다.');
@@ -503,7 +883,8 @@ export default function CompareScreen() {
     ]);
   };
 
-  if (loading) {
+  // Show full page loading only on initial mount
+  if (loading && isInitialMount.current) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
@@ -532,16 +913,6 @@ export default function CompareScreen() {
     );
   }
 
-  const getPeriodEmoji = (period: string): string => {
-    const emojiMap: { [key: string]: string } = {
-      바로크: '🎻',
-      고전주의: '🎹',
-      낭만주의: '🎼',
-      근현대: '🎵',
-    };
-    return emojiMap[period] || '🎵';
-  };
-
   const getPeriodColor = (period: string): string => {
     const ERAS = getAllPeriods();
     const periodMap: { [key: string]: string } = {
@@ -559,7 +930,7 @@ export default function CompareScreen() {
     <>
       <ScrollView
         className="flex-1 bg-background"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => refetch()} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}>
         <View className="gap-6 p-4 pb-20">
           {/* 작곡가 선택 */}
           <View className="gap-3">
@@ -696,17 +1067,39 @@ export default function CompareScreen() {
                 }),
               }}>
               {showComposerList && (
-                <ScrollView style={{ maxHeight: 500 }}>
+                <ScrollView
+                  style={{ maxHeight: 500 }}
+                  onScroll={handleComposerScroll}
+                  scrollEventThrottle={800}>
                   <Card className="overflow-hidden p-3">
                     <View className="gap-3">
-                      {filteredComposers.length === 0 ? (
-                        <View className="items-center p-4">
-                          <Text className="text-sm text-muted-foreground">
-                            검색 결과가 없습니다
+                      {/* Loading indicator for filter changes when composers exist */}
+                      {isFetching && !isFetchingNextPage && composers.length > 0 && !isSearching && (
+                        <View className="items-center py-3">
+                          <ActivityIndicator size="small" />
+                          <Text className="mt-2 text-xs text-muted-foreground">
+                            필터 적용 중...
                           </Text>
                         </View>
+                      )}
+
+                      {composers.length === 0 ? (
+                        <View className="items-center p-4">
+                          {isFetching || isSearching ? (
+                            <>
+                              <ActivityIndicator size="small" />
+                              <Text className="mt-2 text-sm text-muted-foreground">
+                                로딩 중...
+                              </Text>
+                            </>
+                          ) : (
+                            <Text className="text-sm text-muted-foreground">
+                              검색 결과가 없습니다
+                            </Text>
+                          )}
+                        </View>
                       ) : (
-                        filteredComposers.map((composer) => (
+                        composers.map((composer) => (
                           <TouchableOpacity
                             key={composer.id}
                             onPress={() => handleComposerSelect(composer)}
@@ -759,6 +1152,16 @@ export default function CompareScreen() {
                             </View>
                           </TouchableOpacity>
                         ))
+                      )}
+
+                      {/* Loading indicator for pagination/search */}
+                      {(isFetchingNextPage || isSearching) && composers.length > 0 && (
+                        <View className="items-center py-4">
+                          <ActivityIndicator size="small" />
+                          <Text className="mt-2 text-xs text-muted-foreground">
+                            로딩 중...
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </Card>
@@ -886,7 +1289,7 @@ export default function CompareScreen() {
               <Card className="bg-primary/5 p-4">
                 <View className="gap-2">
                   <Text className="text-2xl font-bold">
-                    {getPeriodEmoji(selectedComposer.period)} {selectedPiece.title}
+                    {selectedPiece.title}
                   </Text>
                   <Text className="text-sm text-muted-foreground">
                     {selectedComposer.fullName} • {selectedComposer.period}
@@ -895,150 +1298,124 @@ export default function CompareScreen() {
                 </View>
               </Card>
 
-              {/* 연주 비교 */}
+              {/* 연주 비교 섹션 */}
               {selectedPiece && (
-                <View className="gap-3">
-                  <View className="flex-row items-center justify-between">
-                    <View>
-                      <Text className="text-xl font-bold">연주 비교</Text>
-                      {performances.length > 0 && (
-                        <Text className="mt-1 text-sm text-muted-foreground">
-                          {currentPerformanceIndex + 1} / {performances.length}개 연주
-                        </Text>
-                      )}
-                    </View>
-                    {canEdit && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onPress={() => {
-                          setSelectedPerformance(undefined);
-                          setPerformanceFormVisible(true);
-                        }}>
-                        <Icon as={PlusIcon} size={16} />
-                        <Text className="ml-1">추가</Text>
-                      </Button>
-                    )}
-                  </View>
+                <View className="gap-4">
+                  <Text className="text-xl font-bold">연주 비교</Text>
 
-                  {performances.length === 0 ? (
-                    <Card className="bg-muted/50 p-8">
-                      <View className="items-center gap-4">
-                        <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
-                        <View className="items-center gap-2">
-                          <Text className="text-center text-xl font-bold">연주 영상 준비 중</Text>
-                          <Text className="text-center text-sm text-muted-foreground">
-                            이 곡의 연주 비교 영상이 아직 준비되지 않았습니다.
-                          </Text>
-                        </View>
+                  {/* Sector Chips */}
+                  {sectors.length > 0 ? (
+                    <View className="flex-row flex-wrap gap-2">
+                      {sectors.map((sector) => (
+                        <SectorChip
+                          key={sector.id}
+                          sector={sector}
+                          isSelected={selectedSector?.id === sector.id}
+                          onPress={() => handleSectorSelect(sector)}
+                          onEdit={canEdit ? () => handleEditSector(sector) : undefined}
+                        />
+                      ))}
+                      {canEdit && <AddSectorChip onPress={handleAddSector} />}
+                    </View>
+                  ) : (
+                    <Card className="bg-muted/20 p-8">
+                      <View className="items-center gap-3">
+                        <Icon as={PlayCircleIcon} size={48} className="text-primary/60" />
+                        <Text className="text-center text-base font-medium">섹터가 없습니다</Text>
+                        <Text className="text-center text-sm text-muted-foreground">
+                          {canEdit ? '섹터를 추가하여 연주를 분류하세요' : '아직 섹터가 생성되지 않았습니다'}
+                        </Text>
+                        {canEdit && (
+                          <Button size="sm" onPress={handleAddSector} className="mt-2">
+                            <Icon as={PlusIcon} size={16} className="text-primary-foreground" />
+                            <Text className="ml-1">섹터 추가</Text>
+                          </Button>
+                        )}
                       </View>
                     </Card>
-                  ) : (
+                  )}
+
+                  {/* Performance Area - only if sector selected */}
+                  {selectedSector ? (
+                    <View className="gap-3">
+                      {performances.length > 0 && (
+                        <View className="flex-row items-center justify-between">
+                          <Text className="text-sm text-muted-foreground">
+                            {currentPerformanceIndex + 1} / {performances.length}개 연주
+                          </Text>
+                          {canEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onPress={() => handleAddPerformanceToSector(selectedSector)}>
+                              <Icon as={PlusIcon} size={14} />
+                              <Text className="ml-1">연주 추가</Text>
+                            </Button>
+                          )}
+                        </View>
+                      )}
+
+                      {performances.length === 0 ? (
+                        <Card className="bg-muted/50 p-8">
+                          <View className="items-center gap-4">
+                            <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
+                            <View className="items-center gap-2">
+                              <Text className="text-center text-xl font-bold">연주 영상 준비 중</Text>
+                              <Text className="text-center text-sm text-muted-foreground">
+                                이 섹터의 연주 비교 영상이 아직 준비되지 않았습니다.
+                              </Text>
+                            </View>
+                            {canEdit && (
+                              <Button
+                                size="sm"
+                                onPress={() => handleAddPerformanceToSector(selectedSector)}
+                                className="mt-2">
+                                <Icon as={PlusIcon} size={16} />
+                                <Text className="ml-1">연주 추가</Text>
+                              </Button>
+                            )}
+                          </View>
+                        </Card>
+                      ) : (
                     <FlatList
                       data={performances}
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       pagingEnabled
-                      snapToInterval={350}
+                      snapToInterval={360}
                       decelerationRate="fast"
                       contentContainerStyle={{ paddingRight: 16 }}
                       onViewableItemsChanged={onViewableItemsChanged}
                       viewabilityConfig={viewabilityConfig}
-                      renderItem={({ item: performance }) => {
-                        const artist = artists[performance.artistId];
-
-                        return (
-                          <Card className="mr-4 overflow-hidden" style={{ width: 340 }}>
-                            {/* 연주자 정보 */}
-                            <View className="flex-row items-center justify-between bg-muted/30 p-4">
-                              <TouchableOpacity
-                                className="flex-1 flex-row items-center gap-3"
-                                onPress={() => artist && router.push(`/artist/${artist.id}`)}>
-                                {artist?.imageUrl ? (
-                                  <Image
-                                    source={{ uri: getImageUrl(artist.imageUrl) }}
-                                    className="h-12 w-12 rounded-full"
-                                  />
-                                ) : (
-                                  <View className="h-12 w-12 items-center justify-center rounded-full bg-muted">
-                                    <Text className="text-lg font-bold">
-                                      {artist?.name?.[0] || '?'}
-                                    </Text>
-                                  </View>
-                                )}
-                                <View className="flex-1">
-                                  <Text className="font-bold">{artist?.name || '알 수 없음'}</Text>
-                                  <Text className="text-xs text-muted-foreground">
-                                    {Math.floor(performance.startTime / 60)}:
-                                    {(performance.startTime % 60).toString().padStart(2, '0')} -{' '}
-                                    {Math.floor(performance.endTime / 60)}:
-                                    {(performance.endTime % 60).toString().padStart(2, '0')}
-                                  </Text>
-                                </View>
-                              </TouchableOpacity>
-
-                              {canEdit && (
-                                <View className="flex-row gap-2">
-                                  <TouchableOpacity
-                                    onPress={() => {
-                                      setSelectedPerformance(performance);
-                                      setPerformanceFormVisible(true);
-                                    }}
-                                    className="p-2">
-                                    <Icon as={EditIcon} size={18} className="text-primary" />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    onPress={() => handleDeletePerformance(performance.id)}
-                                    className="p-2">
-                                    <Icon as={TrashIcon} size={18} className="text-destructive" />
-                                  </TouchableOpacity>
-                                </View>
-                              )}
-                            </View>
-
-                            {/* YouTube Player */}
-                            <View style={{ width: '100%', height: 250 }}>
-                              <YoutubePlayer
-                                videoId={performance.videoId}
-                                height={250}
-                                play={false}
-                                initialPlayerParams={{
-                                  start: performance.startTime,
-                                  end: performance.endTime,
-                                  controls: true,
-                                  modestbranding: true,
-                                  rel: false,
-                                }}
-                              />
-                            </View>
-
-                            {/* 연주 특징 */}
-                            {performance.characteristic && (
-                              <View className="bg-background p-4">
-                                <Text className="text-sm leading-5 text-muted-foreground">
-                                  {performance.characteristic}
-                                </Text>
-                              </View>
-                            )}
-                          </Card>
-                        );
-                      }}
+                      renderItem={renderPerformanceItem}
                       keyExtractor={(item) => item.id.toString()}
-                    />
-                  )}
+                      />
+                      )}
 
-                  {/* 페이지 인디케이터 */}
-                  {performances.length > 1 && (
-                    <View className="mt-3 flex-row justify-center gap-2">
-                      {performances.map((_, index) => (
-                        <View
-                          key={index}
-                          className={`h-2 rounded-full ${
-                            index === currentPerformanceIndex ? 'w-6 bg-primary' : 'w-2 bg-muted'
-                          }`}
-                        />
-                      ))}
+                      {/* 페이지 인디케이터 */}
+                      {performances.length > 1 && (
+                        <View className="mt-3 flex-row justify-center gap-2">
+                          {performances.map((_, index) => (
+                            <View
+                              key={index}
+                              className={`h-2 rounded-full ${
+                                index === currentPerformanceIndex ? 'w-6 bg-primary' : 'w-2 bg-muted'
+                              }`}
+                            />
+                          ))}
+                        </View>
+                      )}
                     </View>
+                  ) : (
+                    sectors.length > 0 && (
+                      <Card className="bg-muted/20 p-8">
+                        <View className="items-center gap-2">
+                          <Text className="text-center text-sm text-muted-foreground">
+                            섹터를 선택하여 연주를 감상하세요
+                          </Text>
+                        </View>
+                      </Card>
+                    )
                   )}
                 </View>
               )}
@@ -1053,13 +1430,23 @@ export default function CompareScreen() {
         performance={selectedPerformance}
         composerId={selectedComposer?.id}
         pieceId={selectedPiece?.id}
+        sectorId={selectedSector?.id}
         onClose={() => setPerformanceFormVisible(false)}
         onSuccess={() => {
           setPerformanceFormVisible(false);
-          if (selectedPiece) {
-            loadPerformances(selectedPiece.id);
+          if (selectedSector) {
+            loadPerformancesBySector(selectedSector.id);
           }
         }}
+      />
+
+      {/* Sector Form Modal */}
+      <SectorFormModal
+        visible={sectorFormVisible}
+        sector={selectedSectorForEdit}
+        pieceId={selectedPiece?.id}
+        onClose={() => setSectorFormVisible(false)}
+        onSuccess={handleSectorFormSuccess}
       />
     </>
   );

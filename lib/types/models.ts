@@ -109,16 +109,30 @@ export interface Recording {
   updatedAt?: Date;
 }
 
-export interface Performance {
+export interface PerformanceSector {
   id: number;
   pieceId: number;
+  sectorName: string;
+  description?: string;
+  displayOrder: number;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface PerformanceSectorWithCount extends PerformanceSector {
+  performanceCount: number;
+}
+
+export interface Performance {
+  id: number;
+  sectorId: number;
+  pieceId: number; // 하위 호환성
   artistId: number;
   videoPlatform: 'youtube' | 'vimeo' | 'other';
   videoId: string;
   startTime: number;
   endTime: number;
   characteristic?: string;
-  recordingDate?: Date;
   viewCount: number;
   rating: number;
   createdAt?: Date;
@@ -161,7 +175,8 @@ export interface PieceDTO {
 
 export interface PerformanceDTO {
   id: number;
-  pieceId: number;
+  sectorId: number;
+  pieceId: number; // 하위 호환성
   artist: ArtistDTO;
   videoPlatform: string;
   videoId: string;
@@ -277,12 +292,14 @@ export interface Concert {
   concertTime?: string;
   priceInfo?: string;
   posterUrl?: string;
+  program?: string;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   rating?: number;
   ratingCount?: number;
   artists?: ConcertArtist[];
   facilityName?: string;
   area?: string;
+  genre?: string;
   boxofficeRanking?: BoxofficeRanking;
   ticketVendors?: TicketVendor[];
   // Concert detail information
@@ -290,7 +307,19 @@ export interface Concert {
   runtime?: string;
   ageRestriction?: string;
   cast?: string;
+  crew?: string;
+  performanceSchedule?: string;
+  productionCompany?: string;
+  productionCompanyHost?: string;
   images?: ConcertImage[];
+  // Metadata
+  kopisId?: string;
+  dataSource?: string;
+  isOpenRun?: boolean;
+  isVisit?: boolean;
+  isChild?: boolean;
+  isDaehakro?: boolean;
+  isFestival?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

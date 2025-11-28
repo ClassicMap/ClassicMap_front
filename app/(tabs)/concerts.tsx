@@ -33,7 +33,7 @@ import { AdminConcertAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
-import { useConcerts, CONCERT_QUERY_KEYS } from '@/lib/query/hooks/useConcerts';
+import { useConcerts, useAreas, CONCERT_QUERY_KEYS } from '@/lib/query/hooks/useConcerts';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConcertAPI, BoxofficeAPI, BoxofficeConcert } from '@/lib/api/client';
 
@@ -125,7 +125,7 @@ export default function ConcertsScreen() {
     isFetchingNextPage,
     refetch,
     isRefetching: refreshing,
-  } = useConcerts();
+  } = useConcerts(selectedCity !== 'all' ? selectedCity : undefined);
 
   // 페이지 데이터를 평탄화 및 중복 제거
   const concerts = React.useMemo(() => {
@@ -147,6 +147,7 @@ export default function ConcertsScreen() {
       setIsSearching(true);
       ConcertAPI.search({
         q: debouncedSearchQuery,
+        area: selectedCity !== 'all' ? selectedCity : undefined,
         offset: 0,
         limit: 20,
       })
@@ -167,7 +168,7 @@ export default function ConcertsScreen() {
       setHasMoreSearchResults(true);
       setIsSearching(false);
     }
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, selectedCity]);
 
   // Load more search results
   const loadMoreSearchResults = React.useCallback(() => {
@@ -178,6 +179,7 @@ export default function ConcertsScreen() {
     setIsSearching(true);
     ConcertAPI.search({
       q: debouncedSearchQuery,
+      area: selectedCity !== 'all' ? selectedCity : undefined,
       offset: searchOffset,
       limit: 20,
     })
@@ -198,7 +200,7 @@ export default function ConcertsScreen() {
         console.error('Failed to load more search results:', error);
         setIsSearching(false);
       });
-  }, [debouncedSearchQuery, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+  }, [debouncedSearchQuery, selectedCity, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
 
   // 에러 처리
   const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
@@ -266,16 +268,8 @@ export default function ConcertsScreen() {
     '제주': '50',
   };
 
-  // 도시 목록 추출 (area 사용)
-  const availableCities = React.useMemo(() => {
-    const cities = new Set<string>();
-    concerts.forEach((concert) => {
-      if (concert.area) {
-        cities.add(concert.area);
-      }
-    });
-    return Array.from(cities).sort();
-  }, [concerts]);
+  // 도시 목록 조회 (API에서 가져오기)
+  const { data: availableCities = [] } = useAreas();
 
   // Load TOP3 boxoffice concerts
   React.useEffect(() => {
@@ -283,6 +277,7 @@ export default function ConcertsScreen() {
       setLoadingTop3(true);
       try {
         const data = await BoxofficeAPI.getTop3(selectedAreaCode);
+        console.log('Boxoffice TOP3 data:', data.map(c => ({ id: c.id, ranking: c.ranking, title: c.title })));
         setTop3Concerts(data);
       } catch (error) {
         console.error('Failed to load TOP3 boxoffice:', error);
@@ -302,11 +297,6 @@ export default function ConcertsScreen() {
     filtered = Array.from(
       new Map(filtered.map(concert => [concert.id, concert])).values()
     );
-
-    // 도시 필터
-    if (selectedCity !== 'all') {
-      filtered = filtered.filter((c) => c.area === selectedCity);
-    }
 
     // 날짜 범위 필터
     if (startDate || endDate) {
@@ -349,7 +339,7 @@ export default function ConcertsScreen() {
     }
 
     return filtered;
-  }, [concerts, searchResults, debouncedSearchQuery, selectedCity, startDate, endDate, statusFilter, showHighRating, getConcertStatus]);
+  }, [concerts, searchResults, debouncedSearchQuery, startDate, endDate, statusFilter, showHighRating, getConcertStatus]);
 
   // 무한 스크롤 처리 - 마지막 요청 추적
   const lastFetchRef = React.useRef<number>(0);
@@ -416,8 +406,8 @@ export default function ConcertsScreen() {
     setHasMoreSearchResults(true);
 
     // resetQueries를 사용하여 무한 스크롤 상태를 초기화
-    // 이렇게 하면 첫 페이지만 로드됨
-    queryClient.resetQueries({ queryKey: CONCERT_QUERY_KEYS.all });
+    // 모든 공연 쿼리 (전체 및 지역별 필터링 포함)를 리셋
+    queryClient.resetQueries({ queryKey: ['concerts'] });
   }, [queryClient]);
 
   return (

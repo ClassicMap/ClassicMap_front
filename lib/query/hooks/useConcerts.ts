@@ -7,24 +7,35 @@ import type { Concert } from '@/lib/types/models';
  */
 export const CONCERT_QUERY_KEYS = {
   all: ['concerts'] as const,
-  filtered: (filter?: string) => ['concerts', filter] as const,
+  filtered: (area?: string) => ['concerts', { area }] as const,
   detail: (id: number) => ['concerts', id] as const,
+  areas: ['concerts', 'areas'] as const,
 };
 
 /**
  * 모든 공연 조회 훅 (무한 스크롤)
  * - 페이지당 20개씩 로드
  * - 자동 캐싱 (3분 stale)
+ * - area 파라미터로 지역 필터링 지원
  */
-export function useConcerts() {
+export function useConcerts(area?: string) {
   const PAGE_SIZE = 20;
 
   return useInfiniteQuery({
-    queryKey: CONCERT_QUERY_KEYS.all,
+    queryKey: area ? CONCERT_QUERY_KEYS.filtered(area) : CONCERT_QUERY_KEYS.all,
     queryFn: async ({ pageParam = 0 }) => {
-      console.log(`🔍 [useConcerts] Fetching concerts - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
+      // 지역 필터가 있으면 search API 사용
+      if (area) {
+        const result = await ConcertAPI.search({
+          area: area,
+          offset: pageParam,
+          limit: PAGE_SIZE,
+        });
+        return result;
+      }
+
+      // 전체 지역이면 getAll API 사용
       const result = await ConcertAPI.getAll({ offset: pageParam, limit: PAGE_SIZE });
-      console.log(`✅ [useConcerts] Received ${result.length} concerts for offset ${pageParam}`);
       return result;
     },
     getNextPageParam: (lastPage, allPages) => {
@@ -72,7 +83,7 @@ export function useCreateConcert() {
   return useMutation({
     mutationFn: (data: Partial<Concert>) => ConcertAPI.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
   });
 }
@@ -88,7 +99,7 @@ export function useUpdateConcert() {
       ConcertAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });
-      queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
   });
 }
@@ -103,7 +114,22 @@ export function useDeleteConcert() {
     mutationFn: (id: number) => ConcertAPI.delete(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });
-      queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
+  });
+}
+
+/**
+ * 공연이 있는 지역 목록 조회 훅
+ * - 30분 stale (지역은 자주 바뀌지 않음)
+ */
+export function useAreas() {
+  return useQuery({
+    queryKey: CONCERT_QUERY_KEYS.areas,
+    queryFn: async () => {
+      return await ConcertAPI.getAreas();
+    },
+    staleTime: 1000 * 60 * 30, // 30분
+    gcTime: 1000 * 60 * 60, // 1시간
   });
 }

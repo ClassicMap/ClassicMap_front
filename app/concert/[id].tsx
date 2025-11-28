@@ -3,7 +3,17 @@ import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Animated, Platform } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Linking,
+  Animated,
+  Platform,
+} from 'react-native';
 import { Alert } from '@/lib/utils/alert';
 import {
   ArrowLeftIcon,
@@ -17,7 +27,7 @@ import {
   TrashIcon,
   StarIcon,
   EditIcon,
-  UserIcon
+  UserIcon,
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
@@ -33,6 +43,36 @@ import { prefetchImages } from '@/components/optimized-image';
 import { StarRating } from '@/components/StarRating';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
 import type { Concert, ConcertArtist, BoxofficeRanking, TicketVendor } from '@/lib/types/models';
+
+// ----------------------------------------------------------------------
+// [추가됨] 이미지의 원본 비율을 계산하여 가로를 꽉 채워주는 컴포넌트
+// ----------------------------------------------------------------------
+const ScalableImage = ({ uri }: { uri: string }) => {
+  const [aspectRatio, setAspectRatio] = React.useState(1); // 기본 1:1
+
+  React.useEffect(() => {
+    if (uri) {
+      Image.getSize(
+        uri,
+        (width, height) => {
+          if (width > 0 && height > 0) {
+            setAspectRatio(width / height);
+          }
+        },
+        (error) => console.log('Image size calc error:', error)
+      );
+    }
+  }, [uri]);
+
+  return (
+    <Image
+      source={{ uri }}
+      // width: '100%'로 부모 컨테이너(카드)에 맞추고, 높이는 비율에 따라 자동 조절
+      style={{ width: '100%', aspectRatio: aspectRatio }}
+      resizeMode="contain"
+    />
+  );
+};
 
 const getStatusInfo = (concert: Concert) => {
   const concertStartDate = new Date(concert.startDate);
@@ -193,26 +233,22 @@ export default function ConcertDetailScreen() {
 
   const handleDeleteConcert = () => {
     if (!concert) return;
-    Alert.alert(
-      '공연 삭제',
-      `${concert.title}을(를) 삭제하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AdminConcertAPI.delete(concert.id);
-              Alert.alert('성공', '공연이 삭제되었습니다.');
-              router.back();
-            } catch (error) {
-              Alert.alert('오류', '삭제에 실패했습니다.');
-            }
-          },
+    Alert.alert('공연 삭제', `${concert.title}을(를) 삭제하시겠습니까?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await AdminConcertAPI.delete(concert.id);
+            Alert.alert('성공', '공연이 삭제되었습니다.');
+            router.back();
+          } catch (error) {
+            Alert.alert('오류', '삭제에 실패했습니다.');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleBookTicket = async () => {
@@ -247,7 +283,7 @@ export default function ConcertDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" />
-        <Text className="text-center text-muted-foreground mt-4">
+        <Text className="mt-4 text-center text-muted-foreground">
           {loading ? '공연 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
         </Text>
       </View>
@@ -257,8 +293,8 @@ export default function ConcertDetailScreen() {
   if (error || !concert) {
     return (
       <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="p-8 w-full max-w-md">
-          <Text className="text-center text-destructive mb-4">
+        <Card className="w-full max-w-md p-8">
+          <Text className="mb-4 text-center text-destructive">
             {error || '공연을 찾을 수 없습니다'}
           </Text>
           <Button variant="outline" onPress={() => router.back()}>
@@ -275,49 +311,45 @@ export default function ConcertDetailScreen() {
     <View className="flex-1 bg-background">
       <ScrollView
         className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Header */}
         <View className="bg-background">
           {/* Top Controls */}
-          <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
+          <View className="flex-row items-center justify-between px-4 pb-4 pt-12">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="size-10 items-center justify-center"
-            >
+              className="size-10 items-center justify-center">
               <Icon as={ArrowLeftIcon} size={24} className="text-foreground" />
             </TouchableOpacity>
 
             <View className="flex-row items-center gap-3">
               <TouchableOpacity
                 onPress={toggleColorScheme}
-                className="size-10 items-center justify-center"
-              >
-                <Icon as={colorScheme === 'dark' ? SunIcon : MoonStarIcon} size={24} className="text-foreground" />
+                className="size-10 items-center justify-center">
+                <Icon
+                  as={colorScheme === 'dark' ? SunIcon : MoonStarIcon}
+                  size={24}
+                  className="text-foreground"
+                />
               </TouchableOpacity>
               <UserMenu />
             </View>
           </View>
 
           {/* Title Section */}
-          <View className="px-4 pb-4 items-center">
-            <Text className="text-3xl font-bold mb-2 text-center">{concert.title}</Text>
+          <View className="items-center px-4 pb-4">
+            <Text className="mb-2 text-center text-3xl font-bold">{concert.title}</Text>
 
             {concert.composerInfo && (
-              <Text className="text-base text-muted-foreground text-center mb-3">{concert.composerInfo}</Text>
+              <Text className="mb-3 text-center text-base text-muted-foreground">
+                {concert.composerInfo}
+              </Text>
             )}
 
             {/* Status Badge */}
-            <View className="flex-row items-center gap-2 flex-wrap justify-center">
-              <View
-                className="rounded px-2.5 py-1"
-                style={{ backgroundColor: statusInfo.color }}
-              >
-                <Text className="text-xs font-medium text-white">
-                  {statusInfo.label}
-                </Text>
+            <View className="flex-row flex-wrap items-center justify-center gap-2">
+              <View className="rounded px-2.5 py-1" style={{ backgroundColor: statusInfo.color }}>
+                <Text className="text-xs font-medium text-white">{statusInfo.label}</Text>
               </View>
             </View>
           </View>
@@ -326,9 +358,11 @@ export default function ConcertDetailScreen() {
         {/* Content */}
         <View className="gap-6 p-4 pb-20">
           {/* Poster Image */}
-          <Card className="overflow-hidden p-0 mx-auto" style={{ width: '80%', maxWidth: 320 }}>
+          <Card className="mx-auto overflow-hidden p-0" style={{ width: '80%', maxWidth: 320 }}>
             {!imageLoaded && (
-              <View className="w-full bg-muted items-center justify-center" style={{ aspectRatio: 2/3 }}>
+              <View
+                className="w-full items-center justify-center bg-muted"
+                style={{ aspectRatio: 2 / 3 }}>
                 <ActivityIndicator size="large" />
               </View>
             )}
@@ -337,7 +371,7 @@ export default function ConcertDetailScreen() {
                 <Image
                   source={{ uri: getImageUrl(concert.posterUrl) }}
                   className="w-full"
-                  style={{ aspectRatio: 2/3, opacity: imageLoaded ? 1 : 0 }}
+                  style={{ aspectRatio: 2 / 3, opacity: imageLoaded ? 1 : 0 }}
                   resizeMode="cover"
                   onLoad={handleImageLoad}
                   onError={handleImageError}
@@ -346,7 +380,7 @@ export default function ConcertDetailScreen() {
                 <Animated.Image
                   source={{ uri: getImageUrl(concert.posterUrl) }}
                   className="w-full"
-                  style={{ aspectRatio: 2/3, opacity: imageOpacity }}
+                  style={{ aspectRatio: 2 / 3, opacity: imageOpacity }}
                   resizeMode="cover"
                   onLoad={handleImageLoad}
                   onError={handleImageError}
@@ -354,11 +388,30 @@ export default function ConcertDetailScreen() {
               )
             ) : (
               <View
-                className="w-full bg-muted items-center justify-center"
-                style={{ aspectRatio: 2/3 }}
-                onLayout={handleImageLoad}
-              >
+                className="w-full items-center justify-center bg-muted"
+                style={{ aspectRatio: 2 / 3 }}
+                onLayout={handleImageLoad}>
                 <Icon as={CalendarIcon} size={64} className="text-muted-foreground" />
+              </View>
+            )}
+
+            {/* Boxoffice Ranking Badge */}
+            {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
+              <View style={{ position: 'absolute', top: 12, right: 12 }}>
+                <View
+                  className="size-12 items-center justify-center rounded-full shadow-lg"
+                  style={{
+                    backgroundColor:
+                      concert.boxofficeRanking.ranking === 1
+                        ? '#FFD700'
+                        : concert.boxofficeRanking.ranking === 2
+                          ? '#C0C0C0'
+                          : '#CD7F32',
+                  }}>
+                  <Text className="text-xl font-bold text-white">
+                    {concert.boxofficeRanking.ranking}
+                  </Text>
+                </View>
               </View>
             )}
           </Card>
@@ -368,7 +421,7 @@ export default function ConcertDetailScreen() {
             <View className="gap-3">
               {concert.artists && concert.artists.length > 0 && (
                 <View className="flex-row items-start gap-3">
-                  <Icon as={UserIcon} size={20} className="text-primary mt-0.5" />
+                  <Icon as={UserIcon} size={20} className="mt-0.5 text-primary" />
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">연주자</Text>
                     <Text className="text-base font-medium">
@@ -379,19 +432,21 @@ export default function ConcertDetailScreen() {
               )}
 
               <View className="flex-row items-start gap-3">
-                <Icon as={CalendarIcon} size={20} className="text-primary mt-0.5" />
+                <Icon as={CalendarIcon} size={20} className="mt-0.5 text-primary" />
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">날짜</Text>
                   <Text className="text-base font-medium">
                     {formatDate(concert.startDate)}
-                    {concert.endDate && concert.endDate !== concert.startDate && ` ~ ${formatDate(concert.endDate)}`}
+                    {concert.endDate &&
+                      concert.endDate !== concert.startDate &&
+                      ` ~ ${formatDate(concert.endDate)}`}
                   </Text>
                 </View>
               </View>
 
               {concert.concertTime && (
                 <View className="flex-row items-start gap-3">
-                  <Icon as={ClockIcon} size={20} className="text-primary mt-0.5" />
+                  <Icon as={ClockIcon} size={20} className="mt-0.5 text-primary" />
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">시간</Text>
                     <Text className="text-base font-medium">{concert.concertTime}</Text>
@@ -400,21 +455,25 @@ export default function ConcertDetailScreen() {
               )}
 
               <View className="flex-row items-start gap-3">
-                <Icon as={MapPinIcon} size={20} className="text-primary mt-0.5" />
+                <Icon as={MapPinIcon} size={20} className="mt-0.5 text-primary" />
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">장소</Text>
-                  <Text className="text-base font-medium">
-                    {venueName || '공연장 정보 없음'}
-                  </Text>
+                  <Text className="text-base font-medium">{venueName || '공연장 정보 없음'}</Text>
                 </View>
               </View>
 
               {concert.priceInfo && (
                 <View className="flex-row items-start gap-3">
-                  <Icon as={TicketIcon} size={20} className="text-primary mt-0.5" />
+                  <Icon as={TicketIcon} size={20} className="mt-0.5 text-primary" />
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">가격</Text>
-                    <Text className="text-base font-medium">{concert.priceInfo}</Text>
+                    <View className="gap-1">
+                      {concert.priceInfo.split(/,\s+(?=\D)/).map((price, index) => (
+                        <Text key={index} className="text-base font-medium">
+                          {price.trim()}
+                        </Text>
+                      ))}
+                    </View>
                   </View>
                 </View>
               )}
@@ -424,16 +483,16 @@ export default function ConcertDetailScreen() {
           {/* Concert Introduction Section */}
           {(concert.synopsis || concert.runtime || concert.ageRestriction || concert.cast) && (
             <Card className="p-4">
-              <Text className="text-lg font-bold mb-3">공연 소개</Text>
+              <Text className="mb-3 text-lg font-bold">공연 소개</Text>
               <View className="gap-3">
                 {concert.synopsis && (
                   <View>
-                    <Text className="text-sm font-medium text-muted-foreground mb-1">소개</Text>
+                    <Text className="mb-1 text-sm font-medium text-muted-foreground">소개</Text>
                     <Text className="text-base leading-6">{concert.synopsis}</Text>
                   </View>
                 )}
 
-                <View className="flex-row gap-4 flex-wrap">
+                <View className="flex-row flex-wrap gap-4">
                   {concert.runtime && (
                     <View className="flex-row items-center gap-2">
                       <Icon as={ClockIcon} size={16} className="text-primary" />
@@ -457,61 +516,37 @@ export default function ConcertDetailScreen() {
 
                 {concert.cast && (
                   <View>
-                    <Text className="text-sm font-medium text-muted-foreground mb-1">출연진</Text>
+                    <Text className="mb-1 text-sm font-medium text-muted-foreground">출연진</Text>
                     <Text className="text-base leading-6">{concert.cast}</Text>
+                  </View>
+                )}
+
+                {concert.crew && (
+                  <View>
+                    <Text className="mb-1 text-sm font-medium text-muted-foreground">제작진</Text>
+                    <Text className="text-base leading-6">{concert.crew}</Text>
                   </View>
                 )}
               </View>
             </Card>
           )}
 
-          {/* Program Images Gallery */}
+          {/* ==================================================================== */}
+          {/* [수정됨] Introduction Images Gallery: 가로 스크롤 제거, 세로로 꽉 차게 변경 */}
+          {/* ==================================================================== */}
           {concert.images && concert.images.length > 0 && (
             <Card className="p-4">
-              <Text className="text-lg font-bold mb-3">프로그램 이미지</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-3">
+              <Text className="mb-3 text-lg font-bold">공연 소개 이미지</Text>
+              <View className="w-full gap-0">
                 {concert.images
                   .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-                  .map((image: any, index: number) => (
-                    <View key={image.id} className="mr-3" style={{ width: 250 }}>
-                      <Card className="overflow-hidden p-0">
-                        <Image
-                          source={{ uri: getImageUrl(image.imageUrl) }}
-                          style={{ width: 250, height: 350 }}
-                          resizeMode="cover"
-                        />
-                      </Card>
-                    </View>
+                  .map((image: any) => (
+                    <ScalableImage key={image.id} uri={getImageUrl(image.imageUrl)} />
                   ))}
-              </ScrollView>
-            </Card>
-          )}
-
-          {/* Boxoffice Ranking Section */}
-          {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
-            <Card className="p-4">
-              <View className="flex-row items-center gap-3">
-                <View
-                  className="size-12 rounded-full items-center justify-center"
-                  style={{
-                    backgroundColor:
-                      concert.boxofficeRanking.ranking === 1 ? '#FFD700' :
-                      concert.boxofficeRanking.ranking === 2 ? '#C0C0C0' : '#CD7F32'
-                  }}
-                >
-                  <Text className="text-2xl font-bold text-white">
-                    {concert.boxofficeRanking.ranking}
-                  </Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-lg font-bold">박스오피스 순위</Text>
-                  <Text className="text-sm text-muted-foreground">
-                    {concert.boxofficeRanking.genreName} · {concert.boxofficeRanking.areaName}
-                  </Text>
-                </View>
               </View>
             </Card>
           )}
+
 
           {/* Rating Section */}
           <Card className="p-4">
@@ -532,9 +567,7 @@ export default function ConcertDetailScreen() {
                   )}
                 </View>
               ) : (
-                <Text className="text-center text-muted-foreground py-2">
-                  아직 평가가 없습니다
-                </Text>
+                <Text className="py-2 text-center text-muted-foreground">아직 평가가 없습니다</Text>
               )}
 
               {/* User Rating Input */}
@@ -550,12 +583,12 @@ export default function ConcertDetailScreen() {
                       />
                     </View>
                     {!hasWatched && isSignedIn && (
-                      <Text className="text-xs text-muted-foreground text-center">
+                      <Text className="text-center text-xs text-muted-foreground">
                         평점을 입력하려면 탭하세요
                       </Text>
                     )}
                     {!isSignedIn && (
-                      <Text className="text-xs text-muted-foreground text-center">
+                      <Text className="text-center text-xs text-muted-foreground">
                         로그인 후 평점을 입력할 수 있습니다
                       </Text>
                     )}
@@ -566,13 +599,24 @@ export default function ConcertDetailScreen() {
           </Card>
 
           {/* Program Info */}
-          {concert.composerInfo && (
+          {(concert.composerInfo || concert.program) && (
             <Card className="p-4">
-              <View className="flex-row items-center gap-2 mb-3">
+              <View className="mb-3 flex-row items-center gap-2">
                 <Icon as={MusicIcon} size={20} className="text-primary" />
                 <Text className="text-lg font-bold">프로그램</Text>
               </View>
-              <Text className="text-muted-foreground leading-6">{concert.composerInfo}</Text>
+              {concert.composerInfo && (
+                <View className="mb-3">
+                  <Text className="mb-1 text-sm font-medium text-muted-foreground">곡목</Text>
+                  <Text className="text-base leading-6">{concert.composerInfo}</Text>
+                </View>
+              )}
+              {concert.program && (
+                <View>
+                  <Text className="mb-1 text-sm font-medium text-muted-foreground">상세</Text>
+                  <Text className="text-base leading-6">{concert.program}</Text>
+                </View>
+              )}
             </Card>
           )}
 
@@ -582,11 +626,10 @@ export default function ConcertDetailScreen() {
               size="lg"
               className="items-center justify-center"
               onPress={handleBookTicket}
-              disabled={isLoadingVendors}
-            >
+              disabled={isLoadingVendors}>
               <View className="flex-row items-center justify-center">
                 {!isLoadingVendors && (
-                  <Icon as={TicketIcon} size={20} className="text-primary-foreground mr-2" />
+                  <Icon as={TicketIcon} size={20} className="mr-2 text-primary-foreground" />
                 )}
                 <Text className="text-lg">{isLoadingVendors ? '로딩 중...' : '예매하기'}</Text>
               </View>
@@ -606,7 +649,11 @@ export default function ConcertDetailScreen() {
           )}
 
           {concert.status === 'cancelled' && (
-            <Button size="lg" variant="destructive" disabled className="items-center justify-center">
+            <Button
+              size="lg"
+              variant="destructive"
+              disabled
+              className="items-center justify-center">
               <Text className="text-lg">공연 취소</Text>
             </Button>
           )}
@@ -618,8 +665,7 @@ export default function ConcertDetailScreen() {
                 variant="outline"
                 size="sm"
                 className="flex-1"
-                onPress={() => setEditModalVisible(true)}
-              >
+                onPress={() => setEditModalVisible(true)}>
                 <Icon as={EditIcon} size={16} className="mr-2" />
                 <Text>공연 수정</Text>
               </Button>
@@ -627,8 +673,7 @@ export default function ConcertDetailScreen() {
                 variant="destructive"
                 size="sm"
                 className="flex-1"
-                onPress={handleDeleteConcert}
-              >
+                onPress={handleDeleteConcert}>
                 <Icon as={TrashIcon} size={16} className="mr-2" />
                 <Text>공연 삭제</Text>
               </Button>

@@ -21,9 +21,7 @@ export function useArtists() {
   return useInfiniteQuery({
     queryKey: ARTIST_QUERY_KEYS.all,
     queryFn: async ({ pageParam = 0 }) => {
-      console.log(`🔍 [useArtists] Fetching artists - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
       const result = await ArtistAPI.getAll(pageParam, PAGE_SIZE);
-      console.log(`✅ [useArtists] Received ${result?.length || 0} artists for offset ${pageParam}`);
       return result;
     },
     getNextPageParam: (lastPage, allPages) => {
@@ -83,8 +81,7 @@ export function useUpdateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Artist> }) =>
-      ArtistAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Artist> }) => ArtistAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });

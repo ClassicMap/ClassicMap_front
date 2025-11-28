@@ -22,6 +22,8 @@ import type {
   Piece,
   Artist,
   Performance,
+  PerformanceSector,
+  PerformanceSectorWithCount,
   Period,
   ComposerWithPieces,
   PieceWithPerformances,
@@ -116,6 +118,14 @@ interface APITicketVendor {
   displayOrder: number;
 }
 
+interface APIConcertImage {
+  id: number;
+  concertId: number;
+  imageUrl: string;
+  imageType: string;
+  displayOrder: number;
+}
+
 interface APIConcert {
   id: number;
   title: string;
@@ -133,8 +143,27 @@ interface APIConcert {
   artists?: APIConcertArtist[];
   facilityName?: string;
   area?: string;
-  boxofficeRanking?: APIBoxofficeRanking | number;  // ConcertListItem에서는 숫자만 올 수 있음
-  ticketVendors?: APITicketVendor[];  // ConcertWithDetails에서 오는 데이터
+  genre?: string;
+  boxofficeRanking?: APIBoxofficeRanking | number; // ConcertListItem에서는 숫자만 올 수 있음
+  ticketVendors?: APITicketVendor[]; // ConcertWithDetails에서 오는 데이터
+  // Detail fields
+  synopsis?: string;
+  runtime?: string;
+  ageRestriction?: string;
+  cast?: string;
+  crew?: string;
+  performanceSchedule?: string;
+  productionCompany?: string;
+  productionCompanyHost?: string;
+  images?: APIConcertImage[];
+  // Metadata
+  kopisId?: string;
+  dataSource?: string;
+  isOpenRun?: boolean;
+  isVisit?: boolean;
+  isChild?: boolean;
+  isDaehakro?: boolean;
+  isFestival?: boolean;
 }
 
 interface APIVenue {
@@ -184,7 +213,6 @@ interface APIPerformance {
   startTime: number;
   endTime: number;
   characteristic?: string;
-  recordingDate?: string;
   viewCount: number;
   rating: number;
 }
@@ -240,7 +268,7 @@ const mapArtist = (api: APIArtist): Artist => ({
   nationality: api.nationality,
   bio: api.bio,
   style: api.style,
-  awards: api.awards?.map(award => ({
+  awards: api.awards?.map((award) => ({
     id: award.id,
     artistId: award.artistId,
     year: award.year,
@@ -268,18 +296,38 @@ const mapConcert = (api: APIConcert): Concert => ({
   ratingCount: api.ratingCount,
   facilityName: api.facilityName,
   area: api.area,
+  genre: api.genre,
   // boxofficeRanking이 숫자면 객체로 변환 (ConcertListItem의 경우)
-  boxofficeRanking: typeof api.boxofficeRanking === 'number'
-    ? { id: 0, ranking: api.boxofficeRanking }
-    : api.boxofficeRanking,
+  boxofficeRanking:
+    typeof api.boxofficeRanking === 'number'
+      ? { id: 0, ranking: api.boxofficeRanking }
+      : api.boxofficeRanking,
   ticketVendors: api.ticketVendors,
-  artists: api.artists?.map(artist => ({
+  artists: api.artists?.map((artist) => ({
     id: artist.id,
     concertId: artist.concertId,
     artistId: artist.artistId,
     artistName: artist.artistName,
     role: artist.role,
   })),
+  // Detail fields
+  synopsis: api.synopsis,
+  runtime: api.runtime,
+  ageRestriction: api.ageRestriction,
+  cast: api.cast,
+  crew: api.crew,
+  performanceSchedule: api.performanceSchedule,
+  productionCompany: api.productionCompany,
+  productionCompanyHost: api.productionCompanyHost,
+  images: api.images,
+  // Metadata
+  kopisId: api.kopisId,
+  dataSource: api.dataSource,
+  isOpenRun: api.isOpenRun,
+  isVisit: api.isVisit,
+  isChild: api.isChild,
+  isDaehakro: api.isDaehakro,
+  isFestival: api.isFestival,
 });
 
 // API Base URL
@@ -325,13 +373,29 @@ export const ComposerAPI = {
   /**
    * 모든 작곡가 조회
    */
-  async getAll(offset: number = 0, limit: number = 20): Promise<Composer[]> {
+  async getAll(params?: {
+    offset?: number;
+    limit?: number;
+    period?: string;
+  }): Promise<Composer[]> {
+    const offset = params?.offset ?? 0;
+    const limit = params?.limit ?? 20;
+    const period = params?.period;
+
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/composers?offset=${offset}&limit=${limit}`);
+      const queryParams = new URLSearchParams();
+      queryParams.append('offset', offset.toString());
+      queryParams.append('limit', limit.toString());
+      if (period && period !== 'all') {
+        queryParams.append('period', period);
+      }
+
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/composers?${queryParams.toString()}`
+      );
       if (!response.ok) throw new Error('Failed to fetch composers');
       const data: APIComposer[] = await response.json();
-      const mapped = data.map(mapComposer);
-      return mapped;
+      return data.map(mapComposer);
     }
     return Promise.resolve(COMPOSERS.slice(offset, offset + limit));
   },
@@ -377,6 +441,38 @@ export const ComposerAPI = {
       return pieceData;
     }
     return Promise.resolve(getPieceById(id));
+  },
+
+  /**
+   * 작곡가 검색
+   */
+  async search(params: {
+    q?: string;
+    period?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<Composer[]> {
+    if (USE_REAL_API) {
+      const queryParams = new URLSearchParams();
+      if (params.q) queryParams.append('q', params.q);
+      if (params.period && params.period !== 'all') {
+        queryParams.append('period', params.period);
+      }
+      if (params.offset !== undefined) {
+        queryParams.append('offset', params.offset.toString());
+      }
+      if (params.limit !== undefined) {
+        queryParams.append('limit', params.limit.toString());
+      }
+
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/composers/search?${queryParams.toString()}`
+      );
+      if (!response.ok) throw new Error('Failed to search composers');
+      const data: APIComposer[] = await response.json();
+      return data.map(mapComposer);
+    }
+    return Promise.resolve([]);
   },
 
   /**
@@ -458,7 +554,9 @@ export const ArtistAPI = {
    */
   async getAll(offset: number = 0, limit: number = 20): Promise<Artist[]> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/artists?offset=${offset}&limit=${limit}`);
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/artists?offset=${offset}&limit=${limit}`
+      );
       if (!response.ok) throw new Error('Failed to fetch artists');
       const data: APIArtist[] = await response.json();
       return data.map(mapArtist);
@@ -594,7 +692,9 @@ export const ConcertAPI = {
    */
   async getUserRating(concertId: number): Promise<number | null> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/user-rating`);
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/concerts/${concertId}/user-rating`
+      );
       if (!response.ok) {
         // 401 (인증 필요) 또는 404는 null 반환
         if (response.status === 401 || response.status === 404) {
@@ -618,7 +718,9 @@ export const ConcertAPI = {
    */
   async getTicketVendors(concertId: number): Promise<TicketVendor[]> {
     if (USE_REAL_API) {
-      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/${concertId}/ticket-vendors`);
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/concerts/${concertId}/ticket-vendors`
+      );
       if (!response.ok) {
         // 404는 빈 배열 반환 (예매처 없음)
         if (response.status === 404) {
@@ -662,6 +764,18 @@ export const ConcertAPI = {
       if (!response.ok) throw new Error('Failed to search concerts');
       const data: APIConcert[] = await response.json();
       return data.map(mapConcert);
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
+   * 공연이 있는 지역 목록 조회
+   */
+  async getAreas(): Promise<string[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/concerts/areas`);
+      if (!response.ok) throw new Error('Failed to fetch areas');
+      return await response.json();
     }
     return Promise.resolve([]);
   },
@@ -737,12 +851,74 @@ export const VenueAPI = {
     }
     return Promise.resolve(null);
   },
+
+  /**
+   * 공연장 검색
+   */
+  async search(params: { q?: string; offset?: number; limit?: number }): Promise<Venue[]> {
+    if (USE_REAL_API) {
+      const searchParams = new URLSearchParams();
+      if (params.q) searchParams.append('q', params.q);
+      if (params.offset !== undefined) searchParams.append('offset', params.offset.toString());
+      if (params.limit !== undefined) searchParams.append('limit', params.limit.toString());
+
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/venues/search?${searchParams.toString()}`
+      );
+      if (!response.ok) throw new Error('Failed to search venues');
+      const data: APIVenue[] = await response.json();
+      return data;
+    }
+    return Promise.resolve([]);
+  },
+};
+
+/**
+ * 연주 섹터 API
+ */
+export const PerformanceSectorAPI = {
+  /**
+   * 특정 곡의 모든 섹터 조회 (연주 개수 포함)
+   */
+  async getByPiece(pieceId: number): Promise<PerformanceSectorWithCount[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${pieceId}/sectors`);
+      if (!response.ok) throw new Error('Failed to fetch sectors');
+      return await response.json();
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
+   * 섹터 ID로 조회
+   */
+  async getById(id: number): Promise<PerformanceSector | null> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/sectors/${id}`);
+      if (!response.ok) throw new Error('Failed to fetch sector');
+      return await response.json();
+    }
+    return Promise.resolve(null);
+  },
 };
 
 /**
  * 연주 API
  */
 export const PerformanceAPI = {
+  /**
+   * 특정 섹터의 모든 연주 조회
+   */
+  async getBySector(sectorId: number): Promise<Performance[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(`${API_BASE_URL}/sectors/${sectorId}/performances`);
+      if (!response.ok) throw new Error('Failed to fetch performances');
+      const data: APIPerformance[] = await response.json();
+      return data;
+    }
+    return Promise.resolve([]);
+  },
+
   /**
    * 특정 곡의 모든 연주 조회
    */
@@ -815,10 +991,7 @@ export const BoxofficeAPI = {
    * @param areaCode - Optional area code (11=서울, 26=부산, etc.). If not provided, returns national TOP 3
    * @param genreCode - Optional genre code (default: CCCA for 클래식)
    */
-  async getTop3(
-    areaCode?: string,
-    genreCode?: string
-  ): Promise<BoxofficeConcert[]> {
+  async getTop3(areaCode?: string, genreCode?: string): Promise<BoxofficeConcert[]> {
     if (USE_REAL_API) {
       const queryParams = new URLSearchParams();
       if (areaCode) queryParams.set('area_code', areaCode);

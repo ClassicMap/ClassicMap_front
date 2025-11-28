@@ -30,6 +30,7 @@ import {
   EditIcon,
   Disc3Icon,
   PlusIcon,
+  TicketIcon,
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserMenu } from '@/components/user-menu';
@@ -38,10 +39,11 @@ import * as React from 'react';
 import { RecordingAPI, ConcertAPI } from '@/lib/api/client';
 import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
-import type { Artist, Recording, Concert } from '@/lib/types/models';
+import type { Artist, Recording, Concert, TicketVendor } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
+import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { prefetchImages } from '@/components/optimized-image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 
@@ -114,6 +116,42 @@ function ConcertPoster({ posterUrl }: { posterUrl?: string | null }) {
   );
 }
 
+/**
+ * 최근 공연 필터링 (과거 30일 ~ 미래 180일)
+ * 날짜순 오름차순 정렬
+ */
+function filterRecentConcerts(concerts: Concert[]): Concert[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startRange = new Date(today);
+  startRange.setDate(startRange.getDate() - 30);
+
+  const endRange = new Date(today);
+  endRange.setDate(endRange.getDate() + 180);
+
+  return concerts
+    .filter(concert => {
+      try {
+        if (!concert.startDate) return false;
+
+        const startDate = new Date(concert.startDate);
+        if (isNaN(startDate.getTime())) return false;
+
+        startDate.setHours(0, 0, 0, 0);
+        return startDate >= startRange && startDate <= endRange;
+      } catch (error) {
+        console.warn(`Invalid concert date: ${concert.startDate}`, error);
+        return false;
+      }
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.startDate).getTime();
+      const dateB = new Date(b.startDate).getTime();
+      return dateA - dateB; // 오름차순
+    });
+}
+
 export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -127,6 +165,9 @@ export default function ArtistDetailScreen() {
   const [recordingFormVisible, setRecordingFormVisible] = React.useState(false);
   const [selectedRecording, setSelectedRecording] = React.useState<Recording | undefined>();
   const [concerts, setConcerts] = React.useState<Concert[]>([]);
+  const [isLoadingVendors, setIsLoadingVendors] = React.useState<number | null>(null);
+  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
+  const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
 
   // React Query로 아티스트 데이터 로드 (자동 캐싱)
   const {
@@ -161,7 +202,8 @@ export default function ArtistDetailScreen() {
     // 공연 목록 로드
     try {
       const concertData = await ConcertAPI.getByArtist(Number(id));
-      setConcerts(concertData);
+      const filteredConcerts = filterRecentConcerts(concertData);
+      setConcerts(filteredConcerts);
     } catch (error) {
       console.error('Failed to fetch concerts:', error);
     }
@@ -247,6 +289,34 @@ export default function ArtistDetailScreen() {
         },
       },
     ]);
+  };
+
+  const handleBookTicket = async (concert: Concert) => {
+    if (!concert) return;
+
+    setIsLoadingVendors(concert.id);
+    try {
+      const fetchedVendors = await ConcertAPI.getTicketVendors(concert.id);
+      setVendors(fetchedVendors);
+      setIsLoadingVendors(null);
+      setShowVendorsModal(true);
+    } catch (error) {
+      setIsLoadingVendors(null);
+      console.error('Failed to fetch ticket vendors:', error);
+      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
+    }
+  };
+
+  const formatConcertDate = (dateStr: string) => {
+    if (!dateStr) return '날짜 미정';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '날짜 미정';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekday = weekdays[date.getDay()];
+    return `${year}년 ${month}월 ${day}일 (${weekday})`;
   };
 
   if (loading || !imagesLoaded) {
@@ -679,7 +749,9 @@ export default function ArtistDetailScreen() {
                             <View className="flex-row items-center gap-2">
                               <Icon as={CalendarIcon} size={14} className="text-muted-foreground" />
                               <Text className="text-xs text-muted-foreground">
-                                {concert.concertDate}
+                                {formatConcertDate(concert.startDate)}
+                                {concert.endDate && concert.endDate !== concert.startDate &&
+                                  ` ~ ${formatConcertDate(concert.endDate)}`}
                               </Text>
                             </View>
                             {concert.status && (
@@ -714,6 +786,27 @@ export default function ArtistDetailScreen() {
                               </View>
                             )}
                           </View>
+
+                          {/* 예매하기 버튼 */}
+                          {concert.status === 'upcoming' && (
+                            <Button
+                              size="sm"
+                              className="mt-2 w-full"
+                              onPress={(e) => {
+                                e?.stopPropagation?.();
+                                handleBookTicket(concert);
+                              }}
+                              disabled={isLoadingVendors === concert.id}>
+                              <View className="flex-row items-center justify-center">
+                                {isLoadingVendors !== concert.id && (
+                                  <Icon as={TicketIcon} size={16} className="mr-2 text-primary-foreground" />
+                                )}
+                                <Text className="text-sm">
+                                  {isLoadingVendors === concert.id ? '로딩 중...' : '예매하기'}
+                                </Text>
+                              </View>
+                            </Button>
+                          )}
                         </View>
                       </Card>
                     </View>
@@ -749,6 +842,13 @@ export default function ArtistDetailScreen() {
           refetch();
           loadAdditionalData();
         }}
+      />
+
+      {/* Ticket Vendors Modal */}
+      <TicketVendorsModal
+        visible={showVendorsModal}
+        vendors={vendors}
+        onClose={() => setShowVendorsModal(false)}
       />
     </View>
   );

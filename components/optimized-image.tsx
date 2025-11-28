@@ -8,10 +8,26 @@ interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   fallbackComponent?: React.ReactNode;
 }
 
-export function OptimizedImage({ uri, fallbackUri, fallbackComponent, style, ...props }: OptimizedImageProps) {
+const OptimizedImageComponent = ({ uri, fallbackUri, fallbackComponent, style, ...props }: OptimizedImageProps) => {
+  // Memoize imageUrl to prevent recalculation on every render
+  const imageUrl = React.useMemo(() => {
+    return getImageUrl(uri) || fallbackUri || '';
+  }, [uri, fallbackUri]);
+
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(false);
-  const imageUrl = getImageUrl(uri) || fallbackUri || '';
+  const [loadedUrl, setLoadedUrl] = React.useState<string>('');
+
+  // Reset states only when imageUrl changes
+  React.useEffect(() => {
+    // If image is already loaded (cached), don't show loading state
+    if (loadedUrl === imageUrl) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(false);
+  }, [imageUrl, loadedUrl]);
 
   if (!imageUrl || error) {
     if (fallbackComponent) {
@@ -29,10 +45,13 @@ export function OptimizedImage({ uri, fallbackUri, fallbackComponent, style, ...
       )}
       <Image
         {...props}
-        source={{ uri: imageUrl }}
+        source={{ uri: imageUrl, cache: 'force-cache' }}
         style={[style, { opacity: loading ? 0 : 1 }]}
         onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={() => {
+          setLoading(false);
+          setLoadedUrl(imageUrl);
+        }}
         onError={() => {
           setError(true);
           setLoading(false);
@@ -40,7 +59,14 @@ export function OptimizedImage({ uri, fallbackUri, fallbackComponent, style, ...
       />
     </View>
   );
-}
+};
+
+// Memoize component to prevent re-renders when props haven't changed
+export const OptimizedImage = React.memo(OptimizedImageComponent, (prevProps, nextProps) => {
+  return prevProps.uri === nextProps.uri &&
+         prevProps.fallbackUri === nextProps.fallbackUri &&
+         prevProps.style === nextProps.style;
+});
 
 export function prefetchImages(uris: (string | null | undefined)[]): Promise<void[]> {
   const validUris = uris
