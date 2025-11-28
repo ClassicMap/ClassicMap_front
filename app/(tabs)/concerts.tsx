@@ -135,7 +135,7 @@ export default function ConcertsScreen() {
 
     // ID 기준으로 중복 제거
     const uniqueConcerts = Array.from(
-      new Map(allConcerts.map(concert => [concert.id, concert])).values()
+      new Map(allConcerts.map((concert) => [concert.id, concert])).values()
     );
 
     return uniqueConcerts;
@@ -186,10 +186,10 @@ export default function ConcertsScreen() {
       .then((results) => {
         if (results.length > 0) {
           // Deduplicate by ID
-          const existingIds = new Set(searchResults.map(c => c.id));
-          const newResults = results.filter(c => !existingIds.has(c.id));
-          setSearchResults(prev => [...prev, ...newResults]);
-          setSearchOffset(prev => prev + 20);
+          const existingIds = new Set(searchResults.map((c) => c.id));
+          const newResults = results.filter((c) => !existingIds.has(c.id));
+          setSearchResults((prev) => [...prev, ...newResults]);
+          setSearchOffset((prev) => prev + 20);
           setHasMoreSearchResults(results.length === 20);
         } else {
           setHasMoreSearchResults(false);
@@ -200,7 +200,14 @@ export default function ConcertsScreen() {
         console.error('Failed to load more search results:', error);
         setIsSearching(false);
       });
-  }, [debouncedSearchQuery, selectedCity, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+  }, [
+    debouncedSearchQuery,
+    selectedCity,
+    searchOffset,
+    hasMoreSearchResults,
+    isSearching,
+    searchResults,
+  ]);
 
   // 에러 처리
   const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
@@ -208,31 +215,37 @@ export default function ConcertsScreen() {
   // 이미지 프리페치 (첫 10개만 - 성능 최적화)
   React.useEffect(() => {
     if (concerts.length > 0) {
-      const firstBatch = concerts.slice(0, 10).map((c) => c.posterUrl).filter(Boolean);
+      const firstBatch = concerts
+        .slice(0, 10)
+        .map((c) => c.posterUrl)
+        .filter(Boolean);
       if (firstBatch.length > 0) {
         prefetchImages(firstBatch);
       }
     }
   }, [concerts.length]);
 
-  const handleDelete = React.useCallback((id: number, title: string) => {
-    Alert.alert('공연 삭제', `${title}을(를) 삭제하시겠습니까?`, [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await AdminConcertAPI.delete(id);
-            Alert.alert('성공', '공연이 삭제되었습니다.');
-            refetch();
-          } catch (error) {
-            Alert.alert('오류', '삭제에 실패했습니다.');
-          }
+  const handleDelete = React.useCallback(
+    (id: number, title: string) => {
+      Alert.alert('공연 삭제', `${title}을(를) 삭제하시겠습니까?`, [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminConcertAPI.delete(id);
+              Alert.alert('성공', '공연이 삭제되었습니다.');
+              refetch();
+            } catch (error) {
+              Alert.alert('오류', '삭제에 실패했습니다.');
+            }
+          },
         },
-      },
-    ]);
-  }, [refetch]);
+      ]);
+    },
+    [refetch]
+  );
 
   const getConcertStatus = React.useCallback((concert: Concert) => {
     if (concert.status === 'cancelled') return 'cancelled';
@@ -249,23 +262,23 @@ export default function ConcertsScreen() {
 
   // 지역명 -> KOPIS 코드 매핑
   const AREA_CODE_MAP: Record<string, string> = {
-    '서울': '11',
-    '부산': '26',
-    '대구': '27',
-    '인천': '28',
-    '광주': '29',
-    '대전': '30',
-    '울산': '31',
-    '세종': '36',
-    '경기': '41',
-    '강원': '42',
-    '충북': '43',
-    '충남': '44',
-    '전북': '45',
-    '전남': '46',
-    '경북': '47',
-    '경남': '48',
-    '제주': '50',
+    서울: '11',
+    부산: '26',
+    대구: '27',
+    인천: '28',
+    광주: '29',
+    대전: '30',
+    울산: '31',
+    세종: '36',
+    경기: '41',
+    강원: '42',
+    충북: '43',
+    충남: '44',
+    전북: '45',
+    전남: '46',
+    경북: '47',
+    경남: '48',
+    제주: '50',
   };
 
   // 도시 목록 조회 (API에서 가져오기)
@@ -277,7 +290,6 @@ export default function ConcertsScreen() {
       setLoadingTop3(true);
       try {
         const data = await BoxofficeAPI.getTop3(selectedAreaCode);
-        console.log('Boxoffice TOP3 data:', data.map(c => ({ id: c.id, ranking: c.ranking, title: c.title })));
         setTop3Concerts(data);
       } catch (error) {
         console.error('Failed to load TOP3 boxoffice:', error);
@@ -294,9 +306,7 @@ export default function ConcertsScreen() {
     let filtered = debouncedSearchQuery.trim().length > 0 ? searchResults : concerts;
 
     // Deduplicate by ID to prevent duplicate key errors
-    filtered = Array.from(
-      new Map(filtered.map(concert => [concert.id, concert])).values()
-    );
+    filtered = Array.from(new Map(filtered.map((concert) => [concert.id, concert])).values());
 
     // 날짜 범위 필터
     if (startDate || endDate) {
@@ -339,62 +349,75 @@ export default function ConcertsScreen() {
     }
 
     return filtered;
-  }, [concerts, searchResults, debouncedSearchQuery, startDate, endDate, statusFilter, showHighRating, getConcertStatus]);
+  }, [
+    concerts,
+    searchResults,
+    debouncedSearchQuery,
+    startDate,
+    endDate,
+    statusFilter,
+    showHighRating,
+    getConcertStatus,
+  ]);
 
   // 무한 스크롤 처리 - 마지막 요청 추적
   const lastFetchRef = React.useRef<number>(0);
 
-  const handleScroll = React.useCallback((event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 200; // 하단 200px 전에 로드 시작
+  const handleScroll = React.useCallback(
+    (event: any) => {
+      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+      const paddingToBottom = 200; // 하단 200px 전에 로드 시작
 
-    // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
-    if (contentSize.height === 0) {
-      return;
-    }
-
-    // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
-    if (contentOffset.y < 0) {
-      return;
-    }
-
-    // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
-    const hasScrolled = contentOffset.y > 200;
-
-    const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-    if (!hasScrolled || !isNearBottom) {
-      return;
-    }
-
-    const now = Date.now();
-    // 마지막 요청 후 1초 이내면 무시 (중복 방지)
-    if (now - lastFetchRef.current < 1000) {
-      return;
-    }
-
-    // If searching, load more search results
-    if (debouncedSearchQuery.trim().length > 0) {
-      if (hasMoreSearchResults && !isSearching) {
-        lastFetchRef.current = now;
-        loadMoreSearchResults();
+      // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
+      if (contentSize.height === 0) {
+        return;
       }
-    } else {
-      // Otherwise, load more paginated results
-      if (hasNextPage && !isFetchingNextPage) {
-        lastFetchRef.current = now;
-        fetchNextPage();
+
+      // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
+      if (contentOffset.y < 0) {
+        return;
       }
-    }
-  }, [
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    debouncedSearchQuery,
-    hasMoreSearchResults,
-    isSearching,
-    loadMoreSearchResults,
-  ]);
+
+      // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
+      const hasScrolled = contentOffset.y > 200;
+
+      const isNearBottom =
+        layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+
+      if (!hasScrolled || !isNearBottom) {
+        return;
+      }
+
+      const now = Date.now();
+      // 마지막 요청 후 1초 이내면 무시 (중복 방지)
+      if (now - lastFetchRef.current < 1000) {
+        return;
+      }
+
+      // If searching, load more search results
+      if (debouncedSearchQuery.trim().length > 0) {
+        if (hasMoreSearchResults && !isSearching) {
+          lastFetchRef.current = now;
+          loadMoreSearchResults();
+        }
+      } else {
+        // Otherwise, load more paginated results
+        if (hasNextPage && !isFetchingNextPage) {
+          lastFetchRef.current = now;
+          fetchNextPage();
+        }
+      }
+    },
+    [
+      hasNextPage,
+      isFetchingNextPage,
+      fetchNextPage,
+      debouncedSearchQuery,
+      hasMoreSearchResults,
+      isSearching,
+      loadMoreSearchResults,
+    ]
+  );
 
   // 새로고침 핸들러 (첫 페이지만 다시 로드)
   const handleRefresh = React.useCallback(() => {
@@ -465,157 +488,155 @@ export default function ConcertsScreen() {
         {/* Filters */}
         {showFilters && (
           <Card className="p-4">
-          <View className="gap-4">
-            {/* 날짜 범위 필터 */}
-            <View className="gap-2">
-              <Text className="text-sm font-medium">날짜 범위</Text>
-              <View className="flex-row gap-2">
-                <View className="flex-1">
-                  <TouchableOpacity
-                    onPress={() => setShowStartDatePicker(true)}
-                    className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <Text className={startDate ? "text-sm" : "text-sm text-muted-foreground"}>
-                      {startDate ? startDate.toLocaleDateString('ko-KR') : '시작일'}
-                    </Text>
-                    <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
-                  </TouchableOpacity>
-                  {startDate && (
-                    <TouchableOpacity
-                      onPress={() => setStartDate(null)}
-                      className="absolute right-8 top-2.5"
-                    >
-                      <Icon as={XIcon} size={16} className="text-muted-foreground" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <Text className="text-muted-foreground self-center">~</Text>
-                <View className="flex-1">
-                  <TouchableOpacity
-                    onPress={() => setShowEndDatePicker(true)}
-                    className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <Text className={endDate ? "text-sm" : "text-sm text-muted-foreground"}>
-                      {endDate ? endDate.toLocaleDateString('ko-KR') : '종료일'}
-                    </Text>
-                    <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
-                  </TouchableOpacity>
-                  {endDate && (
-                    <TouchableOpacity
-                      onPress={() => setEndDate(null)}
-                      className="absolute right-8 top-2.5"
-                    >
-                      <Icon as={XIcon} size={16} className="text-muted-foreground" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-              {showStartDatePicker && (
-                <DateTimePicker
-                  value={startDate || new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, date) => {
-                    setShowStartDatePicker(Platform.OS === 'ios');
-                    if (date) setStartDate(date);
-                  }}
-                />
-              )}
-              {showEndDatePicker && (
-                <DateTimePicker
-                  value={endDate || new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, date) => {
-                    setShowEndDatePicker(Platform.OS === 'ios');
-                    if (date) setEndDate(date);
-                  }}
-                />
-              )}
-            </View>
-
-            {/* 지역 필터 */}
-            {availableCities.length > 0 && (
+            <View className="gap-4">
+              {/* 날짜 범위 필터 */}
               <View className="gap-2">
-                <Text className="text-sm font-medium">지역</Text>
-                <TouchableOpacity
-                  onPress={() => setShowCityPicker(!showCityPicker)}
-                  className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
-                >
-                  <Text className={selectedCity !== 'all' ? "text-sm" : "text-sm text-muted-foreground"}>
-                    {selectedCity !== 'all' ? selectedCity : '전체 지역'}
-                  </Text>
-                  <Text className="text-muted-foreground">▼</Text>
-                </TouchableOpacity>
-                {showCityPicker && (
-                  <View className="border border-border rounded-md bg-background">
-                    <ScrollView className="max-h-48">
+                <Text className="text-sm font-medium">날짜 범위</Text>
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <TouchableOpacity
+                      onPress={() => setShowStartDatePicker(true)}
+                      className="h-10 w-full flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2">
+                      <Text className={startDate ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                        {startDate ? startDate.toLocaleDateString('ko-KR') : '시작일'}
+                      </Text>
+                      <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
+                    </TouchableOpacity>
+                    {startDate && (
                       <TouchableOpacity
-                        onPress={() => {
-                          setSelectedCity('all');
-                          setSelectedAreaCode(undefined);
-                          setShowCityPicker(false);
-                        }}
-                        className={`p-3 border-b border-border ${selectedCity === 'all' ? 'bg-primary/10' : ''}`}
-                      >
-                        <Text className="text-sm">전체 지역</Text>
+                        onPress={() => setStartDate(null)}
+                        className="absolute right-8 top-2.5">
+                        <Icon as={XIcon} size={16} className="text-muted-foreground" />
                       </TouchableOpacity>
-                      {availableCities.map((city) => (
-                        <TouchableOpacity
-                          key={city}
-                          onPress={() => {
-                            setSelectedCity(city);
-                            setSelectedAreaCode(AREA_CODE_MAP[city]);
-                            setShowCityPicker(false);
-                          }}
-                          className={`p-3 border-b border-border ${selectedCity === city ? 'bg-primary/10' : ''}`}
-                        >
-                          <Text className="text-sm">{city}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                    )}
                   </View>
+                  <Text className="self-center text-muted-foreground">~</Text>
+                  <View className="flex-1">
+                    <TouchableOpacity
+                      onPress={() => setShowEndDatePicker(true)}
+                      className="h-10 w-full flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2">
+                      <Text className={endDate ? 'text-sm' : 'text-sm text-muted-foreground'}>
+                        {endDate ? endDate.toLocaleDateString('ko-KR') : '종료일'}
+                      </Text>
+                      <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
+                    </TouchableOpacity>
+                    {endDate && (
+                      <TouchableOpacity
+                        onPress={() => setEndDate(null)}
+                        className="absolute right-8 top-2.5">
+                        <Icon as={XIcon} size={16} className="text-muted-foreground" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    value={startDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowStartDatePicker(Platform.OS === 'ios');
+                      if (date) setStartDate(date);
+                    }}
+                  />
+                )}
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    value={endDate || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={(event, date) => {
+                      setShowEndDatePicker(Platform.OS === 'ios');
+                      if (date) setEndDate(date);
+                    }}
+                  />
                 )}
               </View>
-            )}
 
-            {/* 상태 및 평점 필터 */}
-            <View className="gap-2">
-              <Text className="text-sm font-medium">기타 필터</Text>
-              <View className="flex-row gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant={statusFilter === 'all' ? 'default' : 'outline'}
-                  onPress={() => setStatusFilter('all')}
-                >
-                  <Text className="text-xs">전체</Text>
-                </Button>
-                <Button
-                  size="sm"
-                  variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
-                  onPress={() => setStatusFilter('upcoming')}
-                >
-                  <Text className="text-xs">예정</Text>
-                </Button>
-                <Button
-                  size="sm"
-                  variant={statusFilter === 'completed' ? 'default' : 'outline'}
-                  onPress={() => setStatusFilter('completed')}
-                >
-                  <Text className="text-xs">종료</Text>
-                </Button>
-                <Button
-                  size="sm"
-                  variant={showHighRating ? 'default' : 'outline'}
-                  onPress={() => setShowHighRating(!showHighRating)}
-                >
-                  <Icon as={StarIcon} size={12} className={showHighRating ? "text-primary-foreground mr-1" : "text-foreground mr-1"} />
-                  <Text className="text-xs">평점 4.0+</Text>
-                </Button>
+              {/* 지역 필터 */}
+              {availableCities.length > 0 && (
+                <View className="gap-2">
+                  <Text className="text-sm font-medium">지역</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowCityPicker(!showCityPicker)}
+                    className="h-10 w-full flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2">
+                    <Text
+                      className={
+                        selectedCity !== 'all' ? 'text-sm' : 'text-sm text-muted-foreground'
+                      }>
+                      {selectedCity !== 'all' ? selectedCity : '전체 지역'}
+                    </Text>
+                    <Text className="text-muted-foreground">▼</Text>
+                  </TouchableOpacity>
+                  {showCityPicker && (
+                    <View className="rounded-md border border-border bg-background">
+                      <ScrollView className="max-h-48">
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedCity('all');
+                            setSelectedAreaCode(undefined);
+                            setShowCityPicker(false);
+                          }}
+                          className={`border-b border-border p-3 ${selectedCity === 'all' ? 'bg-primary/10' : ''}`}>
+                          <Text className="text-sm">전체 지역</Text>
+                        </TouchableOpacity>
+                        {availableCities.map((city) => (
+                          <TouchableOpacity
+                            key={city}
+                            onPress={() => {
+                              setSelectedCity(city);
+                              setSelectedAreaCode(AREA_CODE_MAP[city]);
+                              setShowCityPicker(false);
+                            }}
+                            className={`border-b border-border p-3 ${selectedCity === city ? 'bg-primary/10' : ''}`}>
+                            <Text className="text-sm">{city}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* 상태 및 평점 필터 */}
+              <View className="gap-2">
+                <Text className="text-sm font-medium">기타 필터</Text>
+                <View className="flex-row flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant={statusFilter === 'all' ? 'default' : 'outline'}
+                    onPress={() => setStatusFilter('all')}>
+                    <Text className="text-xs">전체</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={statusFilter === 'upcoming' ? 'default' : 'outline'}
+                    onPress={() => setStatusFilter('upcoming')}>
+                    <Text className="text-xs">예정</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={statusFilter === 'completed' ? 'default' : 'outline'}
+                    onPress={() => setStatusFilter('completed')}>
+                    <Text className="text-xs">종료</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={showHighRating ? 'default' : 'outline'}
+                    onPress={() => setShowHighRating(!showHighRating)}>
+                    <Icon
+                      as={StarIcon}
+                      size={12}
+                      className={
+                        showHighRating ? 'mr-1 text-primary-foreground' : 'mr-1 text-foreground'
+                      }
+                    />
+                    <Text className="text-xs">평점 4.0+</Text>
+                  </Button>
+                </View>
               </View>
             </View>
-          </View>
-        </Card>
+          </Card>
         )}
 
         {/* TOP 3 Boxoffice Section */}
@@ -631,10 +652,11 @@ export default function ConcertsScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 4, paddingVertical: 2 }}
-              className="gap-3"
-            >
+              className="gap-3">
               {top3Concerts.map((concert, index) => (
-                <View key={concert.id} style={{ marginRight: index < top3Concerts.length - 1 ? 16 : 0 }}>
+                <View
+                  key={concert.id}
+                  style={{ marginRight: index < top3Concerts.length - 1 ? 16 : 0 }}>
                   <BoxofficeTop3Card concert={concert} canEdit={canEdit} />
                 </View>
               ))}
@@ -654,7 +676,7 @@ export default function ConcertsScreen() {
 
         {/* Concert List */}
         <View className="gap-4">
-          {(loading || (isSearching && filteredConcerts.length === 0)) ? (
+          {loading || (isSearching && filteredConcerts.length === 0) ? (
             <View className="py-12">
               <ActivityIndicator size="large" />
               <Text className="mt-4 text-center text-muted-foreground">
@@ -671,7 +693,7 @@ export default function ConcertsScreen() {
           ) : filteredConcerts.length > 0 ? (
             <>
               {!debouncedSearchQuery && filteredConcerts.length > 0 && (
-                <View className="flex-row items-center gap-2 mt-2">
+                <View className="mt-2 flex-row items-center gap-2">
                   <Text className="text-lg font-semibold">전체 공연</Text>
                   <Text className="text-sm text-muted-foreground">({filteredConcerts.length})</Text>
                 </View>
@@ -696,48 +718,47 @@ export default function ConcertsScreen() {
           )}
 
           {/* 무한 스크롤 로딩 인디케이터 */}
-          {debouncedSearchQuery ? (
-            // 검색 중일 때
-            isSearching && filteredConcerts.length > 0 && (
-              <View className="py-4">
-                <ActivityIndicator size="small" />
-                <Text className="mt-2 text-center text-sm text-muted-foreground">
-                  더 많은 검색 결과를 불러오는 중...
-                </Text>
-              </View>
-            )
-          ) : (
-            // 일반 무한 스크롤
-            isFetchingNextPage && (
-              <View className="py-4">
-                <ActivityIndicator size="small" />
-                <Text className="mt-2 text-center text-sm text-muted-foreground">
-                  더 많은 공연을 불러오는 중...
-                </Text>
-              </View>
-            )
-          )}
+          {debouncedSearchQuery
+            ? // 검색 중일 때
+              isSearching &&
+              filteredConcerts.length > 0 && (
+                <View className="py-4">
+                  <ActivityIndicator size="small" />
+                  <Text className="mt-2 text-center text-sm text-muted-foreground">
+                    더 많은 검색 결과를 불러오는 중...
+                  </Text>
+                </View>
+              )
+            : // 일반 무한 스크롤
+              isFetchingNextPage && (
+                <View className="py-4">
+                  <ActivityIndicator size="small" />
+                  <Text className="mt-2 text-center text-sm text-muted-foreground">
+                    더 많은 공연을 불러오는 중...
+                  </Text>
+                </View>
+              )}
 
           {/* 더 이상 데이터가 없을 때 */}
-          {debouncedSearchQuery ? (
-            // 검색 모드
-            !hasMoreSearchResults && filteredConcerts.length > 0 && (
-              <View className="py-4">
-                <Text className="text-center text-sm text-muted-foreground">
-                  "{debouncedSearchQuery}" 검색 결과: 총 {filteredConcerts.length}개
-                </Text>
-              </View>
-            )
-          ) : (
-            // 일반 모드
-            !hasNextPage && filteredConcerts.length > 0 && (
-              <View className="py-4">
-                <Text className="text-center text-sm text-muted-foreground">
-                  모든 공연을 불러왔습니다
-                </Text>
-              </View>
-            )
-          )}
+          {debouncedSearchQuery
+            ? // 검색 모드
+              !hasMoreSearchResults &&
+              filteredConcerts.length > 0 && (
+                <View className="py-4">
+                  <Text className="text-center text-sm text-muted-foreground">
+                    "{debouncedSearchQuery}" 검색 결과: 총 {filteredConcerts.length}개
+                  </Text>
+                </View>
+              )
+            : // 일반 모드
+              !hasNextPage &&
+              filteredConcerts.length > 0 && (
+                <View className="py-4">
+                  <Text className="text-center text-sm text-muted-foreground">
+                    모든 공연을 불러왔습니다
+                  </Text>
+                </View>
+              )}
         </View>
       </View>
 
@@ -768,11 +789,15 @@ const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
   };
 
   const getRankingColor = () => {
-    switch(concert.ranking) {
-      case 1: return '#FFD700';
-      case 2: return '#C0C0C0';
-      case 3: return '#CD7F32';
-      default: return '#9CA3AF';
+    switch (concert.ranking) {
+      case 1:
+        return '#FFD700';
+      case 2:
+        return '#C0C0C0';
+      case 3:
+        return '#CD7F32';
+      default:
+        return '#9CA3AF';
     }
   };
 
@@ -780,22 +805,26 @@ const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
     <TouchableOpacity
       onPress={() => router.push(`/concert/${concert.concertId}` as any)}
       activeOpacity={0.7}>
-      <Card className="overflow-hidden p-0" style={{
-        borderWidth: 2.5,
-        borderColor: getRankingColor(),
-        shadowColor: getRankingColor(),
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.25,
-        shadowRadius: 6,
-        elevation: 6,
-      }}>
+      <Card
+        className="overflow-hidden p-0"
+        style={{
+          borderWidth: 2.5,
+          borderColor: getRankingColor(),
+          shadowColor: getRankingColor(),
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          elevation: 6,
+        }}>
         <View style={{ width: 220 }}>
           {/* Poster Image with Ranking Badge */}
-          <View className="items-center justify-center bg-muted relative" style={{ aspectRatio: 3/4 }}>
+          <View
+            className="relative items-center justify-center bg-muted"
+            style={{ aspectRatio: 3 / 4 }}>
             <OptimizedImage
               key={`boxoffice-poster-${concert.id}`}
               uri={concert.posterUrl}
-              style={{ width: '100%', aspectRatio: 3/4 }}
+              style={{ width: '100%', aspectRatio: 3 / 4 }}
               resizeMode="cover"
               fallbackComponent={
                 <View className="h-full w-full items-center justify-center bg-muted">
@@ -816,7 +845,7 @@ const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
             />
             {/* Ranking Badge */}
             <View
-              className="absolute top-2.5 left-2.5"
+              className="absolute left-2.5 top-2.5"
               style={{
                 width: 48,
                 height: 48,
@@ -831,25 +860,27 @@ const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
                 elevation: 10,
                 borderWidth: 2.5,
                 borderColor: '#FFF',
-              }}
-            >
-              <Text style={{
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#FFF',
-                textShadowColor: 'rgba(0,0,0,0.4)',
-                textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 3
               }}>
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: 'bold',
+                  color: '#FFF',
+                  textShadowColor: 'rgba(0,0,0,0.4)',
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 3,
+                }}>
                 {concert.ranking}
               </Text>
             </View>
           </View>
 
           {/* Concert Info */}
-          <View className="gap-2 p-3 bg-card">
+          <View className="gap-2 bg-card p-3">
             <View className="gap-1.5">
-              <Text className="text-sm font-bold leading-4" numberOfLines={2}>{concert.title}</Text>
+              <Text className="text-sm font-bold leading-4" numberOfLines={2}>
+                {concert.title}
+              </Text>
               <View className="flex-row items-center gap-1">
                 <Icon as={StarIcon} size={13} className="text-amber-500" />
                 <Text className="text-xs font-semibold">
@@ -866,13 +897,13 @@ const BoxofficeTop3Card = React.memo(function BoxofficeTop3Card({
             <View className="gap-1.5">
               <View className="flex-row items-center gap-1.5">
                 <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
-                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                <Text className="flex-1 text-xs text-muted-foreground" numberOfLines={1}>
                   {formatDate(concert.startDate)}
                 </Text>
               </View>
               <View className="flex-row items-center gap-1.5">
                 <Icon as={MapPinIcon} size={12} className="text-muted-foreground" />
-                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                <Text className="flex-1 text-xs text-muted-foreground" numberOfLines={1}>
                   {concert.facilityName || '공연장 정보 없음'}
                 </Text>
               </View>
@@ -940,7 +971,7 @@ const ConcertCard = React.memo(function ConcertCard({
       activeOpacity={0.7}>
       <Card className="overflow-hidden p-0">
         <View className="flex-row" style={{ height: 250 }}>
-          <View className="w-32 items-center justify-center bg-muted relative">
+          <View className="relative w-32 items-center justify-center bg-muted">
             <OptimizedImage
               key={`concert-poster-${concert.id}`}
               uri={concert.posterUrl}
@@ -961,11 +992,8 @@ const ConcertCard = React.memo(function ConcertCard({
                   {/* Status Badge */}
                   <View
                     className="mt-1 self-start rounded px-2 py-0.5"
-                    style={{ backgroundColor: statusInfo.bgColor }}
-                  >
-                    <Text className="text-xs font-medium text-white">
-                      {statusInfo.text}
-                    </Text>
+                    style={{ backgroundColor: statusInfo.bgColor }}>
+                    <Text className="text-xs font-medium text-white">{statusInfo.text}</Text>
                   </View>
                 </View>
                 {canEdit && (
@@ -980,7 +1008,7 @@ const ConcertCard = React.memo(function ConcertCard({
               {(concert.artists && concert.artists.length > 0) || concert.composerInfo ? (
                 <Text className="text-muted-foreground">
                   {concert.artists && concert.artists.length > 0
-                    ? `${concert.artists.map(a => a.artistName).join(', ')}${concert.composerInfo ? ' | ' + concert.composerInfo : ''}`
+                    ? `${concert.artists.map((a) => a.artistName).join(', ')}${concert.composerInfo ? ' | ' + concert.composerInfo : ''}`
                     : concert.composerInfo}
                 </Text>
               ) : null}
