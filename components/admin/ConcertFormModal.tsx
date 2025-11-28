@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import type { Concert, Venue } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
+import { useVenueSearch } from '@/lib/hooks/useVenueSearch';
 
 interface ConcertFormModalProps {
   visible: boolean;
@@ -22,7 +23,6 @@ interface ConcertFormModalProps {
 }
 
 export function ConcertFormModal({ visible, concert, onClose, onSuccess }: ConcertFormModalProps) {
-  const [venues, setVenues] = React.useState<Venue[]>([]);
   const [title, setTitle] = React.useState('');
   const [composerInfo, setComposerInfo] = React.useState('');
   const [venueId, setVenueId] = React.useState<number | null>(null);
@@ -42,10 +42,14 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [showTimePicker, setShowTimePicker] = React.useState(false);
 
+  const { data: venueSearchResults = [], isLoading: venuesLoading } = useVenueSearch(
+    venueSearch,
+    visible
+  );
+
   // 초기 데이터 로드
   React.useEffect(() => {
     if (visible) {
-      loadVenues();
       setShowVenuePicker(false);
       setVenueSearch('');
 
@@ -104,28 +108,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
       setConcertTime(`${hours}:${minutes}:00`);
     }
   };
-
-  const loadVenues = async () => {
-    try {
-      const data = await VenueAPI.getAll();
-      setVenues(data);
-    } catch (error) {
-      console.error('Failed to load venues:', error);
-    }
-  };
-
-  // 공연장 필터링
-  const filteredVenues = React.useMemo(() => {
-    if (!venueSearch.trim()) {
-      return venues;
-    }
-    const searchLower = venueSearch.toLowerCase();
-    return venues.filter(venue =>
-      venue.name.toLowerCase().includes(searchLower) ||
-      venue.city?.toLowerCase().includes(searchLower) ||
-      venue.country?.toLowerCase().includes(searchLower)
-    );
-  }, [venues, venueSearch]);
 
   const pickPoster = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -349,7 +331,11 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
                   className="flex-row items-center justify-between h-10 w-full rounded-md border border-input bg-background px-3 py-2"
                 >
                   <Text className={venueId ? "text-base" : "text-base text-muted-foreground"}>
-                    {venueId ? venues.find(v => v.id === venueId)?.name : '공연장을 선택하세요'}
+                    {venueId ?
+                      (venueSearchResults.find(v => v.id === venueId)?.name ||
+                       concert?.venueName ||
+                       '공연장 정보 없음')
+                      : '공연장을 선택하세요'}
                   </Text>
                   <Text className="text-muted-foreground">▼</Text>
                 </TouchableOpacity>
@@ -368,12 +354,14 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
 
                     {/* 공연장 목록 */}
                     <ScrollView className="max-h-48">
-                      {filteredVenues.length === 0 ? (
+                      {venueSearchResults.length === 0 ? (
                         <View className="p-4 items-center">
-                          <Text className="text-sm text-muted-foreground">검색 결과가 없습니다</Text>
+                          <Text className="text-sm text-muted-foreground">
+                            {venuesLoading ? '검색 중...' : '검색 결과가 없습니다'}
+                          </Text>
                         </View>
                       ) : (
-                        filteredVenues.map((venue) => (
+                        venueSearchResults.map((venue) => (
                           <TouchableOpacity
                             key={venue.id}
                             onPress={() => {

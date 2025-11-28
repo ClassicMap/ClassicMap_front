@@ -14,16 +14,19 @@ export const COMPOSER_QUERY_KEYS = {
  * 모든 작곡가 조회 훅 (무한 스크롤)
  * - 페이지당 20개씩 로드
  * - 자동 캐싱 (3분 stale)
+ * - period 필터 지원
  */
-export function useComposers() {
+export function useComposers(period?: string) {
   const PAGE_SIZE = 20;
 
   return useInfiniteQuery({
-    queryKey: COMPOSER_QUERY_KEYS.all,
+    queryKey: ['composers', period],
     queryFn: async ({ pageParam = 0 }) => {
-      console.log(`🔍 [useComposers] Fetching composers - offset: ${pageParam}, limit: ${PAGE_SIZE}`);
-      const result = await ComposerAPI.getAll(pageParam, PAGE_SIZE);
-      console.log(`✅ [useComposers] Received ${result?.length || 0} composers for offset ${pageParam}`);
+      const result = await ComposerAPI.getAll({
+        offset: pageParam,
+        limit: PAGE_SIZE,
+        period: period
+      });
       return result;
     },
     getNextPageParam: (lastPage, allPages) => {
