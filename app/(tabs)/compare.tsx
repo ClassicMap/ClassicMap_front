@@ -136,7 +136,15 @@ export default function CompareScreen() {
         {/* Compact Artist Info */}
         <TouchableOpacity
           className="flex-row items-center gap-2 border-b border-border/30 bg-card px-3 py-2.5"
-          onPress={() => artist && router.push(`/artist/${artist.id}`)}
+          onPress={() => {
+            if (artist) {
+              try {
+                router.push(`/artist/${artist.id}`);
+              } catch (error) {
+                console.error('Navigation error:', error);
+              }
+            }
+          }}
           activeOpacity={0.7}>
           {/* Small Avatar: 32px */}
           {artist?.imageUrl ? (
@@ -398,7 +406,7 @@ export default function CompareScreen() {
     setPiecePerformanceCounts((prev) => ({ ...prev, ...counts }));
   };
 
-  // 곡 선택 시 섹터 목록 로드
+  // 곡 선택 시 섹터 목록 로드 및 첫 번째 섹터 자동 선택
   React.useEffect(() => {
     const loadSectors = async () => {
       if (!selectedPiece) {
@@ -412,7 +420,7 @@ export default function CompareScreen() {
         const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
         setSectors(sectorData);
 
-        // Always select first sector if available
+        // 첫 번째 섹터 자동 선택
         if (sectorData.length > 0) {
           setSelectedSector(sectorData[0]);
         } else {
@@ -439,9 +447,16 @@ export default function CompareScreen() {
       const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
       setSectors(sectorData);
 
-      // Auto-select the last sector (newest created)
-      if (sectorData.length > 0) {
+      // Auto-select the last sector only when creating new (newest created)
+      // This helps user see their newly created sector immediately
+      if (sectorData.length > 0 && !selectedSector) {
         setSelectedSector(sectorData[sectorData.length - 1]);
+      } else if (selectedSector) {
+        // Keep current selection if it still exists
+        const stillExists = sectorData.find(s => s.id === selectedSector.id);
+        if (!stillExists) {
+          setSelectedSector(null);
+        }
       } else {
         setSelectedSector(null);
       }
@@ -462,43 +477,6 @@ export default function CompareScreen() {
       setCurrentPerformanceIndex(0);
     }
   }, [selectedSector]);
-
-  const loadPerformances = async (pieceId: number) => {
-    try {
-      const performanceData = await PerformanceAPI.getByPiece(pieceId);
-      setPerformances(performanceData);
-
-      // 연주 개수 업데이트
-      setPiecePerformanceCounts((prev) => ({
-        ...prev,
-        [pieceId]: performanceData.length,
-      }));
-
-      // 연주자 정보 로드
-      const artistIds = [...new Set(performanceData.map((p) => p.artistId))];
-      const artistData: { [key: number]: Artist } = {};
-      await Promise.all(
-        artistIds.map(async (artistId) => {
-          try {
-            const artist = await ArtistAPI.getById(artistId);
-            if (artist) {
-              artistData[artistId] = artist;
-            }
-          } catch (error) {
-            console.error(`Failed to load artist ${artistId}:`, error);
-          }
-        })
-      );
-      setArtists(artistData);
-    } catch (error) {
-      console.error('Failed to load performances:', error);
-      setPerformances([]);
-      setPiecePerformanceCounts((prev) => ({
-        ...prev,
-        [pieceId]: 0,
-      }));
-    }
-  };
 
   const loadPerformancesBySector = async (sectorId: number) => {
     // Validate sectorId
@@ -522,7 +500,7 @@ export default function CompareScreen() {
       setPerformances(performanceData);
 
       // 연주자 정보 로드
-      const artistIds = [...new Set(performanceData.map((p) => p.artistId).filter(id => id))];
+      const artistIds = [...new Set(performanceData.map((p) => p.artistId).filter((id): id is number => Boolean(id)))];
       const artistData: { [key: number]: Artist } = {};
 
       if (artistIds.length > 0) {
@@ -751,14 +729,16 @@ export default function CompareScreen() {
     setShowPieceList(false);
   };
 
-  const handleSectorSelect = (sector: PerformanceSectorWithCount) => {
+  const handleSectorSelect = React.useCallback((sector: PerformanceSectorWithCount) => {
     // Validate sector has required properties
     if (!sector || !sector.id || !sector.sectorName) {
       console.error('Invalid sector data:', sector);
       return;
     }
+
+    console.log('Selecting sector:', sector.id, sector.sectorName);
     setSelectedSector(sector);
-  };
+  }, []);
 
   // 섹터 추가 버튼 클릭
   const handleAddSector = () => {
