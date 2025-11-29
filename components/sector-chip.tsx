@@ -1,11 +1,10 @@
 // components/sector-chip.tsx
 import * as React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Pressable, View, StyleSheet } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { Edit as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
+import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
 import type { PerformanceSectorWithCount } from '@/lib/types/models';
-import { cn } from '@/lib/utils';
 
 interface SectorChipProps {
   sector: PerformanceSectorWithCount;
@@ -23,63 +22,126 @@ export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipPr
   const performanceCount = sector.performanceCount ?? 0;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      className={cn(
-        "flex-row items-center gap-2 rounded-full px-4 py-2 border",
-        isSelected
-          ? "bg-primary border-primary shadow-sm"
-          : "bg-secondary border-border"
-      )}
-      activeOpacity={0.7}>
-      <Text className={cn(
-        "text-sm font-medium",
-        isSelected ? "text-primary-foreground" : "text-secondary-foreground"
-      )}>
+      style={[
+        styles.chipBase,
+        isSelected ? styles.chipSelected : styles.chipUnselected
+      ]}>
+      <Text style={[
+        styles.chipText,
+        isSelected ? styles.textSelected : styles.textUnselected
+      ]}>
         {sector.sectorName}
       </Text>
 
-      {/* Performance count badge */}
-      <View className={cn(
-        "rounded-full px-1.5 py-0.5",
-        isSelected ? "bg-primary-foreground/20" : "bg-muted"
-      )}>
-        <Text className={cn(
-          "text-xs font-medium",
-          isSelected ? "text-primary-foreground" : "text-muted-foreground"
-        )}>
+      <View style={[
+        styles.badge,
+        isSelected ? styles.badgeSelected : styles.badgeUnselected
+      ]}>
+        <Text style={[
+          styles.badgeText,
+          isSelected ? styles.badgeTextSelected : styles.badgeTextUnselected
+        ]}>
           {performanceCount}
         </Text>
       </View>
 
-      {/* Edit icon - show for admins when selected */}
       {onEdit && isSelected && (
-        <TouchableOpacity
+        <Pressable
           onPress={(e) => {
-            try {
-              e?.stopPropagation?.();
-              onEdit();
-            } catch (error) {
-              console.error('Error in edit handler:', error);
-              onEdit();
-            }
+            e?.stopPropagation?.();
+            onEdit();
           }}
-          className="ml-1">
-          <Icon as={EditIcon} size={12} className="text-primary-foreground" />
-        </TouchableOpacity>
+          style={styles.editButton}>
+          <Icon as={EditIcon} size={12} color="#fff" />
+        </Pressable>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
+const styles = StyleSheet.create({
+  chipBase: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+  },
+  chipSelected: {
+    backgroundColor: '#000',
+    borderColor: '#000',
+  },
+  chipUnselected: {
+    backgroundColor: '#f5f5f5',
+    borderColor: '#e5e5e5',
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  textSelected: {
+    color: '#fff',
+  },
+  textUnselected: {
+    color: '#171717',
+  },
+  badge: {
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  badgeSelected: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  badgeUnselected: {
+    backgroundColor: '#e5e5e5',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  badgeTextSelected: {
+    color: '#fff',
+  },
+  badgeTextUnselected: {
+    color: '#737373',
+  },
+  editButton: {
+    marginLeft: 4,
+  },
+});
+
 export function AddSectorChip({ onPress }: { onPress: () => void }) {
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      className="flex-row items-center gap-2 rounded-full border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-2"
-      activeOpacity={0.7}>
-      <Icon as={PlusIcon} size={14} className="text-primary" />
-      <Text className="text-sm font-medium text-primary">섹터</Text>
-    </TouchableOpacity>
+      style={addStyles.addChip}>
+      <Icon as={PlusIcon} size={14} color="#000" />
+      <Text style={addStyles.addChipText}>섹터</Text>
+    </Pressable>
   );
 }
+
+const addStyles = StyleSheet.create({
+  addChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  addChipText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+  },
+});
