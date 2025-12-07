@@ -95,6 +95,13 @@ export default function TimelineScreen() {
     isRefetching: refreshing,
   } = useComposers();
 
+  // 타임라인에서는 모든 작곡가를 미리 로드
+  React.useEffect(() => {
+    if (!loading && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [loading, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   // 페이지 데이터를 평탄화 및 중복 제거
   const composers = React.useMemo(() => {
     if (!data?.pages) return [];
@@ -384,8 +391,10 @@ export default function TimelineScreen() {
           scrollEventThrottle={16}
           onScroll={(e) => {
             scrollX.value = e.nativeEvent.contentOffset.x;
-            const offsetX = e.nativeEvent.contentOffset.x;
+            const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+            const offsetX = contentOffset.x;
 
+            // Update current era based on scroll position
             ERAS.forEach((era, index) => {
               const { start, width } = eraPositions[era.id];
               const eraEnd = start + width;
@@ -395,6 +404,7 @@ export default function TimelineScreen() {
                 setCurrentEraIndex(index);
               }
             });
+
           }}>
           <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={true} style={{ flex: 1 }}>
             <View style={{ width: totalWidth, paddingHorizontal: TIMELINE_PADDING }}>
@@ -1336,16 +1346,6 @@ export default function TimelineScreen() {
             })}
           </View>
         </ScrollView>
-
-        {/* Loading Indicator for Infinite Scroll */}
-        {isFetchingNextPage && (
-          <View className="py-4">
-            <ActivityIndicator size="small" />
-            <Text className="mt-2 text-center text-sm text-muted-foreground">
-              더 많은 작곡가를 불러오는 중...
-            </Text>
-          </View>
-        )}
 
         {/* Composer Form Modal */}
         {canEdit && (
