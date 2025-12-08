@@ -29,7 +29,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.kang1027.classicmap"
     },
     "web": {
       "bundler": "metro",
