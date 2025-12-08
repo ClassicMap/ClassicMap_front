@@ -18,12 +18,20 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env'
+  );
+}
+
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ClerkProvider tokenCache={tokenCache}>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
         <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <Routes />
