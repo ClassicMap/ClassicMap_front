@@ -23,7 +23,16 @@ export default {
       bundleIdentifier: "com.kang1027.classicmap",
       buildNumber: "1",
       infoPlist: {
-        ITSAppUsesNonExemptEncryption: false
+        ITSAppUsesNonExemptEncryption: false,
+        NSAppTransportSecurity: {
+          NSAllowsArbitraryLoads: true,
+          NSExceptionDomains: {
+            "34.60.221.92": {
+              NSExceptionAllowsInsecureHTTPLoads: true,
+              NSIncludesSubdomains: true
+            }
+          }
+        }
       }
     },
     android: {
@@ -32,7 +41,8 @@ export default {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.kang1027.classicmap"
+      package: "com.kang1027.classicmap",
+      usesCleartextTraffic: true
     },
     web: {
       bundler: "metro",
@@ -51,7 +61,10 @@ export default {
       router: {},
       eas: {
         projectId: "0a9c2f70-6f6f-4729-a934-d10b39d89833"
-      }
+      },
+      // 환경 변수를 명시적으로 extra에 포함
+      clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
+      apiUrl: process.env.EXPO_PUBLIC_API_URL,
     }
   }
 };
