@@ -52,7 +52,16 @@ export default {
     plugins: [
       "expo-router",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            // Release 빌드 시 dSYM 파일 생성
+            debugInfoFormat: "DWARF with dSYM File"
+          }
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true
