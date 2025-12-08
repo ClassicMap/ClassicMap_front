@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "ClassicMap_front",
+    name: "클래식맵",
     slug: "ClassicMap_front",
     version: "1.0.0",
     orientation: "portrait",
