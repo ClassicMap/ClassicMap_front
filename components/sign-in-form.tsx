@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';
 import * as React from 'react';
@@ -37,17 +38,43 @@ export function SignInForm() {
         return;
       }
       // TODO: Handle other statuses
-      console.error(JSON.stringify(signInAttempt, null, 2));
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
-      if (err instanceof Error) {
-        const isEmailMessage =
-          err.message.toLowerCase().includes('identifier') ||
-          err.message.toLowerCase().includes('email');
-        setError(isEmailMessage ? { email: err.message } : { password: err.message });
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const newErrors: { email?: string; password?: string } = {};
+
+        err.errors.forEach((error: any) => {
+          const field = error.meta?.paramName || '';
+          const message = error.message || error.longMessage || '';
+
+          const translatedMessage = translateClerkError(message);
+
+          if (field === 'identifier' || field === 'email_address') {
+            newErrors.email = translatedMessage;
+          } else if (field === 'password') {
+            newErrors.password = translatedMessage;
+          } else {
+            // 필드 특정이 안되면 일반적인 에러로 처리
+            newErrors.password = translatedMessage;
+          }
+        });
+
+        setError(newErrors);
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
+
+      // 기본 에러 처리
+      if (err instanceof Error) {
+        const message = err.message;
+        const translatedMessage = translateClerkError(message);
+        const lowerMessage = message.toLowerCase();
+        const isEmailMessage = lowerMessage.includes('identifier') || lowerMessage.includes('email');
+
+        setError(isEmailMessage ? { email: translatedMessage } : { password: translatedMessage });
+        return;
+      }
     }
   }
 

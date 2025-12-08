@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';
 import * as React from 'react';
@@ -38,28 +39,66 @@ export function SignUpForm() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
       router.push(`/(auth)/sign-up/verify-email?email=${email}`);
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const newErrors: { firstName?: string; lastName?: string; email?: string; password?: string } = {};
+
+        err.errors.forEach((error: any) => {
+          const field = error.meta?.paramName || '';
+          const message = error.message || error.longMessage || '';
+
+          // 패스워드 유출 검증 에러는 무시
+          if (message.toLowerCase().includes('data breach')) {
+            return;
+          }
+
+          const translatedMessage = translateClerkError(message);
+
+          if (field === 'first_name') {
+            newErrors.firstName = translatedMessage;
+          } else if (field === 'last_name') {
+            newErrors.lastName = translatedMessage;
+          } else if (field === 'email_address') {
+            newErrors.email = translatedMessage;
+          } else if (field === 'password') {
+            newErrors.password = translatedMessage;
+          }
+        });
+
+        setError(newErrors);
+        return;
+      }
+
+      // 기본 에러 처리 (이전 방식)
       if (err instanceof Error) {
-        const isEmailMessage =
-          err.message.toLowerCase().includes('identifier') ||
-          err.message.toLowerCase().includes('email');
-        const isPasswordMessage = err.message.toLowerCase().includes('password');
-        const isFirstNameMessage = err.message.toLowerCase().includes('first');
-        const isLastNameMessage = err.message.toLowerCase().includes('last');
-        
+        const message = err.message;
+        const lowerMessage = message.toLowerCase();
+
+        // 패스워드 유출 검증 에러는 무시
+        if (lowerMessage.includes('data breach')) {
+          return;
+        }
+
+        const translatedMessage = translateClerkError(message);
+        const isEmailMessage = lowerMessage.includes('identifier') || lowerMessage.includes('email');
+        const isPasswordMessage = lowerMessage.includes('password');
+        const isFirstNameMessage = lowerMessage.includes('first');
+        const isLastNameMessage = lowerMessage.includes('last');
+
         if (isFirstNameMessage) {
-          setError({ firstName: err.message });
+          setError({ firstName: translatedMessage });
         } else if (isLastNameMessage) {
-          setError({ lastName: err.message });
+          setError({ lastName: translatedMessage });
         } else if (isEmailMessage) {
-          setError({ email: err.message });
+          setError({ email: translatedMessage });
         } else if (isPasswordMessage) {
-          setError({ password: err.message });
+          setError({ password: translatedMessage });
         }
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
     }
   }
 
