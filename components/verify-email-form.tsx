@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
@@ -37,14 +38,21 @@ export function VerifyEmailForm() {
       // TODO: Handle other statuses
       // If the status is not complete, check why. User may need to
       // complete further steps.
-      console.error(JSON.stringify(signUpAttempt, null, 2));
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
-      if (err instanceof Error) {
-        setError(err.message);
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const message = err.errors[0]?.message || err.errors[0]?.longMessage || '';
+        setError(translateClerkError(message));
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
+
+      // 기본 에러 처리
+      if (err instanceof Error) {
+        setError(translateClerkError(err.message));
+        return;
+      }
     }
   }
 
@@ -54,13 +62,21 @@ export function VerifyEmailForm() {
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       restartCountdown();
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
-      if (err instanceof Error) {
-        setError(err.message);
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const message = err.errors[0]?.message || err.errors[0]?.longMessage || '';
+        setError(translateClerkError(message));
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
+
+      // 기본 에러 처리
+      if (err instanceof Error) {
+        setError(translateClerkError(err.message));
+        return;
+      }
     }
   }
 

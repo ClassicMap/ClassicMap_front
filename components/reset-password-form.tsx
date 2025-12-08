@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import * as React from 'react';
@@ -33,14 +34,56 @@ export function ResetPasswordForm() {
         return;
       }
       // TODO: Handle other statuses
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
-      if (err instanceof Error) {
-        const isPasswordMessage = err.message.toLowerCase().includes('password');
-        setError({ code: '', password: isPasswordMessage ? err.message : '' });
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const newErrors: { code: string; password: string } = { code: '', password: '' };
+
+        err.errors.forEach((error: any) => {
+          const field = error.meta?.paramName || '';
+          const message = error.message || error.longMessage || '';
+
+          // 패스워드 유출 검증 에러는 무시
+          if (message.toLowerCase().includes('data breach')) {
+            return;
+          }
+
+          const translatedMessage = translateClerkError(message);
+
+          if (field === 'password') {
+            newErrors.password = translatedMessage;
+          } else if (field === 'code') {
+            newErrors.code = translatedMessage;
+          } else {
+            const isPasswordMessage = message.toLowerCase().includes('password');
+            if (isPasswordMessage) {
+              newErrors.password = translatedMessage;
+            } else {
+              newErrors.code = translatedMessage;
+            }
+          }
+        });
+
+        setError(newErrors);
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
+
+      // 기본 에러 처리
+      if (err instanceof Error) {
+        const message = err.message;
+
+        // 패스워드 유출 검증 에러는 무시
+        if (message.toLowerCase().includes('data breach')) {
+          return;
+        }
+
+        const translatedMessage = translateClerkError(message);
+        const isPasswordMessage = message.toLowerCase().includes('password');
+        setError({ code: '', password: isPasswordMessage ? translatedMessage : '' });
+        return;
+      }
     }
   }
 

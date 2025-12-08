@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router/build/hooks';
@@ -31,13 +32,21 @@ export function ForgotPasswordForm() {
       });
 
       router.push(`/(auth)/reset-password?email=${email}`);
-    } catch (err) {
+    } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
-      if (err instanceof Error) {
-        setError({ email: err.message });
+
+      // Clerk 에러 처리
+      if (err?.errors && Array.isArray(err.errors)) {
+        const message = err.errors[0]?.message || err.errors[0]?.longMessage || '';
+        setError({ email: translateClerkError(message) });
         return;
       }
-      console.error(JSON.stringify(err, null, 2));
+
+      // 기본 에러 처리
+      if (err instanceof Error) {
+        setError({ email: translateClerkError(err.message) });
+        return;
+      }
     }
   };
 
