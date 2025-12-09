@@ -12,6 +12,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Copy .env file for build
+COPY .env .env
+
 # Build web app
 RUN npx expo export --platform web
 
