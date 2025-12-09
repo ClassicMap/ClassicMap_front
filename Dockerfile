@@ -15,7 +15,7 @@ COPY . .
 # Copy .env file for build
 COPY .env .env
 
-# Build web app
+# Build web app with base path
 RUN npx expo export --platform web
 
 # Production stage

@@ -43,6 +43,7 @@ export default {
     },
     plugins: ['expo-router', 'expo-secure-store', 'expo-web-browser'],
     experiments: {
+      baseUrl: '/classicmap',
       typedRoutes: true,
     },
     extra: {
