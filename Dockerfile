@@ -15,7 +15,8 @@ COPY . .
 # Copy .env file for build
 COPY .env .env
 
-# Build web app
+# Build web app with base URL
+ENV EXPO_BASE_URL=/classicmap
 RUN npx expo export --platform web
 
 # Production stage
