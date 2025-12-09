@@ -13,7 +13,7 @@ RUN npm install
 COPY . .
 
 # Build web app
-RUN npx expo export:web
+RUN npx expo export --platform web
 
 # Production stage
 FROM nginx:alpine
