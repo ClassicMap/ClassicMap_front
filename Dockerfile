@@ -19,6 +19,9 @@ COPY .env .env
 ENV EXPO_BASE_URL=/classicmap
 RUN npx expo export --platform web
 
+# Add base tag to HTML for subpath support
+RUN sed -i 's|<head>|<head><base href="/classicmap/">|' /app/dist/index.html
+
 # Production stage
 FROM nginx:alpine
 
