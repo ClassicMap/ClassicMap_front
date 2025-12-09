@@ -15,12 +15,11 @@ COPY . .
 # Copy .env file for build
 COPY .env .env
 
-# Build web app with base URL
-ENV EXPO_BASE_URL=/classicmap
+# Build web app
 RUN npx expo export --platform web
 
-# Add base tag to HTML for subpath support
-RUN sed -i 's|<head>|<head><base href="/classicmap/">|' /app/dist/index.html
+# Add base tag to all HTML files for subpath support
+RUN find /app/dist -name "*.html" -type f -exec sed -i 's|<head>|<head><base href="/classicmap/">|' {} \;
 
 # Production stage
 FROM nginx:alpine
