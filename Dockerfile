@@ -18,9 +18,6 @@ COPY .env .env
 # Build web app
 RUN npx expo export --platform web
 
-# Add base tag to all HTML files for subpath support
-RUN find /app/dist -name "*.html" -type f -exec sed -i 's|<head>|<head><base href="/classicmap/">|' {} \;
-
 # Production stage
 FROM nginx:alpine
 
