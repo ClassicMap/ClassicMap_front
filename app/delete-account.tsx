@@ -9,7 +9,7 @@ import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeftIcon, AlertTriangleIcon, TrashIcon, XCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Alert, ScrollView, View, Linking } from 'react-native';
+import { Alert, ScrollView, View, Linking, Platform } from 'react-native';
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
@@ -20,96 +20,149 @@ export default function DeleteAccountScreen() {
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleDeleteAccount = async () => {
+    console.log('=== 계정 삭제 버튼 클릭됨 ===');
+    console.log('입력된 비밀번호 길이:', password.length);
+    console.log('isDeleting:', isDeleting);
+
     if (!password) {
-      Alert.alert('오류', '비밀번호를 입력해주세요.');
+      console.log('비밀번호가 없어서 Alert 표시');
+      if (Platform.OS === 'web') {
+        window.alert('비밀번호를 입력해주세요.');
+      } else {
+        Alert.alert('오류', '비밀번호를 입력해주세요.');
+      }
       return;
     }
 
-    // 최종 확인 다이얼로그
-    Alert.alert(
-      '계정 삭제',
-      '정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              // Clerk user.delete() 시도
-              if (user?.delete) {
-                await user.delete();
+    console.log('확인 다이얼로그 표시 시도');
 
-                // 로컬 데이터 삭제
-                await clearAllData();
+    // 웹 환경에서는 window.confirm 사용
+    let confirmed = false;
+    if (Platform.OS === 'web') {
+      confirmed = window.confirm('정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
+      console.log('웹 confirm 결과:', confirmed);
+    } else {
+      // 네이티브에서는 Alert.alert 사용
+      return new Promise((resolve) => {
+        Alert.alert(
+          '계정 삭제',
+          '정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+          [
+            {
+              text: '취소',
+              style: 'cancel',
+              onPress: () => resolve(false),
+            },
+            {
+              text: '삭제',
+              style: 'destructive',
+              onPress: () => resolve(true),
+            },
+          ]
+        );
+      }).then(async (result) => {
+        confirmed = result as boolean;
+      });
+    }
 
-                // 로그아웃 및 로그인 화면으로 이동
-                await signOut();
-                router.replace('/(auth)/sign-in');
+    if (!confirmed) {
+      console.log('사용자가 취소함');
+      return;
+    }
 
-                Alert.alert('성공', '계정이 삭제되었습니다.');
-              } else {
-                // user.delete() 메서드가 없는 경우
-                throw new Error('delete_method_not_available');
-              }
-            } catch (error: any) {
-              console.error('Account deletion error:', error);
+    console.log('계정 삭제 진행');
+    setIsDeleting(true);
+    try {
+      // Clerk user.delete() 시도
+      if (user?.delete) {
+        await user.delete();
 
-              // Clerk에서 계정 삭제를 지원하지 않는 경우 이메일 문의 안내
-              if (error?.message === 'delete_method_not_available' ||
-                  error?.code === 'method_not_supported' ||
-                  error?.errors?.[0]?.code === 'not_allowed') {
-                Alert.alert(
-                  '계정 삭제 요청',
-                  '계정 삭제를 원하시면 kang3171611@naver.com으로 아래 정보를 포함하여 문의해주세요.\n\n• 이메일: ' + user?.emailAddresses[0]?.emailAddress + '\n• 삭제 사유',
-                  [
-                    {
-                      text: '확인',
-                      style: 'default',
-                    },
-                    {
-                      text: '이메일 보내기',
-                      onPress: () => {
-                        const email = 'kang3171611@naver.com';
-                        const subject = 'ClassicMap 계정 삭제 요청';
-                        const body = `계정 삭제를 요청합니다.\n\n이메일: ${user?.emailAddresses[0]?.emailAddress}\n삭제 사유: `;
-                        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        // 로컬 데이터 삭제
+        await clearAllData();
 
-                        Linking.canOpenURL(mailtoUrl).then((supported) => {
-                          if (supported) {
-                            Linking.openURL(mailtoUrl);
-                          } else {
-                            Alert.alert('이메일 앱을 열 수 없습니다', `직접 ${email}로 이메일을 보내주세요.`);
-                          }
-                        });
-                      },
-                    },
-                  ]
-                );
-              } else {
-                // 그 외의 오류 (예: 비밀번호 불일치)
-                Alert.alert(
-                  '오류',
-                  error?.errors?.[0]?.message || '계정 삭제에 실패했습니다. 비밀번호를 확인해주세요.'
-                );
-              }
-            } finally {
-              setIsDeleting(false);
-              setPassword('');
-            }
-          },
-        },
-      ]
-    );
+        // 로그아웃 및 로그인 화면으로 이동
+        await signOut();
+        router.replace('/(auth)/sign-in');
+
+        if (Platform.OS === 'web') {
+          window.alert('계정이 삭제되었습니다.');
+        } else {
+          Alert.alert('성공', '계정이 삭제되었습니다.');
+        }
+      } else {
+        // user.delete() 메서드가 없는 경우
+        throw new Error('delete_method_not_available');
+      }
+    } catch (error: any) {
+      console.error('Account deletion error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+
+      // Clerk에서 계정 삭제를 지원하지 않는 경우 이메일 문의 안내
+      if (error?.message === 'delete_method_not_available' ||
+          error?.code === 'method_not_supported' ||
+          error?.errors?.[0]?.code === 'not_allowed') {
+        const message = '계정 삭제를 원하시면 kang3171611@naver.com으로 아래 정보를 포함하여 문의해주세요.\n\n• 이메일: ' + user?.emailAddresses[0]?.emailAddress + '\n• 삭제 사유';
+
+        if (Platform.OS === 'web') {
+          const shouldEmail = window.confirm(message + '\n\n이메일 앱을 여시겠습니까?');
+          if (shouldEmail) {
+            const email = 'kang3171611@naver.com';
+            const subject = 'ClassicMap 계정 삭제 요청';
+            const body = `계정 삭제를 요청합니다.\n\n이메일: ${user?.emailAddresses[0]?.emailAddress}\n삭제 사유: `;
+            const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(mailtoUrl, '_blank');
+          }
+        } else {
+          Alert.alert(
+            '계정 삭제 요청',
+            message,
+            [
+              {
+                text: '확인',
+                style: 'default',
+              },
+              {
+                text: '이메일 보내기',
+                onPress: () => {
+                  const email = 'kang3171611@naver.com';
+                  const subject = 'ClassicMap 계정 삭제 요청';
+                  const body = `계정 삭제를 요청합니다.\n\n이메일: ${user?.emailAddresses[0]?.emailAddress}\n삭제 사유: `;
+                  const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+                  Linking.canOpenURL(mailtoUrl).then((supported) => {
+                    if (supported) {
+                      Linking.openURL(mailtoUrl);
+                    } else {
+                      Alert.alert('이메일 앱을 열 수 없습니다', `직접 ${email}로 이메일을 보내주세요.`);
+                    }
+                  });
+                },
+              },
+            ]
+          );
+        }
+      } else {
+        // 그 외의 오류 (예: 비밀번호 불일치)
+        const errorMsg = error?.errors?.[0]?.message || '계정 삭제에 실패했습니다. 다시 시도해주세요.';
+        if (Platform.OS === 'web') {
+          window.alert(errorMsg);
+        } else {
+          Alert.alert('오류', errorMsg);
+        }
+      }
+    } finally {
+      setIsDeleting(false);
+      setPassword('');
+    }
   };
 
   const handleCancel = () => {
     setPassword('');
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/settings');
+    }
   };
 
   return (
@@ -202,7 +255,10 @@ export default function DeleteAccountScreen() {
                 <Input
                   placeholder="비밀번호를 입력하세요"
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(text) => {
+                    console.log('비밀번호 입력됨:', text.length, '글자');
+                    setPassword(text);
+                  }}
                   secureTextEntry
                   aria-labelledby="password"
                   editable={!isDeleting}
@@ -213,7 +269,10 @@ export default function DeleteAccountScreen() {
               <View className="mt-4 gap-3">
                 <Button
                   variant="destructive"
-                  onPress={handleDeleteAccount}
+                  onPress={() => {
+                    console.log('>>> 버튼 onPress 호출됨');
+                    handleDeleteAccount();
+                  }}
                   disabled={isDeleting || !password}
                 >
                   <View className="flex-row items-center gap-2">
