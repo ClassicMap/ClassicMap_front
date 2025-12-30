@@ -86,7 +86,7 @@ export default function ConcertsScreen() {
   const [statusFilter, setStatusFilter] = React.useState<'all' | 'upcoming' | 'completed'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
   const [selectedCity, setSelectedCity] = React.useState<string>('all');
-  const [selectedAreaCode, setSelectedAreaCode] = React.useState<string | undefined>(undefined); // KOPIS area code
+  const [selectedAreaCode, setSelectedAreaCode] = React.useState<string>('00'); // KOPIS area code (기본값: 전국)
   const [startDate, setStartDate] = React.useState<Date | null>(null);
   const [endDate, setEndDate] = React.useState<Date | null>(null);
   const [showHighRating, setShowHighRating] = React.useState(false);
@@ -574,7 +574,7 @@ export default function ConcertsScreen() {
                         <TouchableOpacity
                           onPress={() => {
                             setSelectedCity('all');
-                            setSelectedAreaCode(undefined);
+                            setSelectedAreaCode('00');
                             setShowCityPicker(false);
                           }}
                           className={`border-b border-border p-3 ${selectedCity === 'all' ? 'bg-primary/10' : ''}`}>

@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { useUser } from '@clerk/clerk-expo';
 import { Stack, useRouter } from 'expo-router';
-import { ChevronLeftIcon, ChevronRightIcon, UserIcon, LockIcon, FileTextIcon } from 'lucide-react-native';
+import { ChevronLeftIcon, ChevronRightIcon, UserIcon, LockIcon, FileTextIcon, HelpCircleIcon, TrashIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { getImageUrl } from '@/lib/utils/image';
@@ -107,6 +107,48 @@ export default function SettingsScreen() {
                   <View>
                     <Text className="text-base">비밀번호 변경</Text>
                     <Text className="text-sm text-muted-foreground">계정 보안 설정</Text>
+                  </View>
+                </View>
+                <Icon as={ChevronRightIcon} className="size-5 text-muted-foreground" />
+              </Button>
+              <Separator />
+              <Button
+                variant="ghost"
+                className="flex-row justify-between items-center px-4"
+                onPress={() => router.push('/delete-account')}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Icon as={TrashIcon} className="size-5 text-destructive" />
+                  <View>
+                    <Text className="text-base text-destructive">계정 삭제</Text>
+                    <Text className="text-sm text-muted-foreground">계정 영구 삭제</Text>
+                  </View>
+                </View>
+                <Icon as={ChevronRightIcon} className="size-5 text-muted-foreground" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* 도움말 및 지원 섹션 */}
+          <Card>
+            <CardHeader>
+              <View className="flex-row items-center gap-2">
+                <Icon as={HelpCircleIcon} className="size-5 text-foreground" />
+                <CardTitle>도움말 및 지원</CardTitle>
+              </View>
+              <CardDescription>서비스 이용 문의 및 도움말</CardDescription>
+            </CardHeader>
+            <CardContent className="gap-2">
+              <Button
+                variant="ghost"
+                className="flex-row justify-between items-center px-4"
+                onPress={() => router.push('/help')}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Icon as={HelpCircleIcon} className="size-5 text-muted-foreground" />
+                  <View>
+                    <Text className="text-base">도움말</Text>
+                    <Text className="text-sm text-muted-foreground">FAQ 및 문의하기</Text>
                   </View>
                 </View>
                 <Icon as={ChevronRightIcon} className="size-5 text-muted-foreground" />
