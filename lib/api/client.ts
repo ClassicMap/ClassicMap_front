@@ -994,7 +994,8 @@ export const BoxofficeAPI = {
   async getTop3(areaCode?: string, genreCode?: string): Promise<BoxofficeConcert[]> {
     if (USE_REAL_API) {
       const queryParams = new URLSearchParams();
-      if (areaCode) queryParams.set('area_code', areaCode);
+      // area_code가 '00'이면 전체 지역으로 처리 (파라미터 추가 안 함)
+      if (areaCode && areaCode !== '00') queryParams.set('area_code', areaCode);
       if (genreCode) queryParams.set('genre_code', genreCode);
 
       const url = `${API_BASE_URL}/concerts/boxoffice/top3${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
