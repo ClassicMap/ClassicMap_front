@@ -647,6 +647,7 @@ export default function ArtistDetailScreen() {
                                 <Image
                                   source={require('@/assets/spotify.png')}
                                   className="h-10 w-10"
+                                  style={{ width: 40, height: 40 }}
                                   resizeMode="contain"
                                   defaultSource={require('@/assets/spotify.png')}
                                 />
@@ -659,6 +660,7 @@ export default function ArtistDetailScreen() {
                                 <Image
                                   source={require('@/assets/apple_music_classical.png')}
                                   className="h-10 w-10"
+                                  style={{ width: 40, height: 40 }}
                                   resizeMode="contain"
                                   defaultSource={require('@/assets/apple_music_classical.png')}
                                 />

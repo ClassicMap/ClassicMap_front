@@ -63,28 +63,29 @@ function Routes() {
 
   return (
     <Stack>
-      {/* Screens only shown when the user is NOT signed in */}
-      <Stack.Protected guard={!isSignedIn}>
+      {/* 일반 로그인/회원가입 화면 - 백엔드 API 제거로 주석처리 */}
+      {/* <Stack.Protected guard={!isSignedIn}>
         <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
         <Stack.Screen name="(auth)/sign-up" options={SIGN_UP_SCREEN_OPTIONS} />
         <Stack.Screen name="(auth)/reset-password" options={DEFAULT_AUTH_SCREEN_OPTIONS} />
         <Stack.Screen name="(auth)/forgot-password" options={DEFAULT_AUTH_SCREEN_OPTIONS} />
-      </Stack.Protected>
+      </Stack.Protected> */}
 
-      {/* Screens only shown when the user IS signed in */}
-      <Stack.Protected guard={isSignedIn}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="settings" options={{ headerShown: false }} />
-        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-        <Stack.Screen name="change-password" options={{ headerShown: false }} />
-        <Stack.Screen name="delete-account" options={{ headerShown: false }} />
-      </Stack.Protected>
+      {/* 관리자 로그인 화면 */}
+      <Stack.Screen name="(auth)/admin-login" options={{ headerShown: false }} />
 
-      {/* Screens outside the guards are accessible to everyone (e.g. not found) */}
+      {/* 모든 화면은 기본적으로 공개 (관리자 기능만 인증 필요) */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+      <Stack.Screen name="change-password" options={{ headerShown: false }} />
+      <Stack.Screen name="delete-account" options={{ headerShown: false }} />
+
+      {/* Screens accessible to everyone */}
       <Stack.Screen name="help" options={{ headerShown: false }} />
       <Stack.Screen name="terms-of-service" options={{ headerShown: false }} />
       <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />

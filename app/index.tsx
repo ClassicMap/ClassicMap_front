@@ -38,21 +38,20 @@ export default function Screen() {
     );
   }
 
-  // 로그인 후 홈 탭으로 리다이렉트
-  if (user) {
-    return (
-      <>
-        <Stack.Screen options={SCREEN_OPTIONS} />
-        <OnboardingModal 
-          visible={isFirstLogin} 
+  // 로그인 여부와 관계없이 홈 탭으로 리다이렉트 (모든 콘텐츠 공개)
+  return (
+    <>
+      <Stack.Screen options={SCREEN_OPTIONS} />
+      {/* 온보딩 모달은 로그인된 사용자에게만 표시 */}
+      {user && (
+        <OnboardingModal
+          visible={isFirstLogin}
           onComplete={handleOnboardingComplete}
         />
-        <Redirect href="/(tabs)/home" />
-      </>
-    );
-  }
-
-  return null;
+      )}
+      <Redirect href="/(tabs)/home" />
+    </>
+  );
 }
 
 const THEME_ICONS = {

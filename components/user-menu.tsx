@@ -13,19 +13,32 @@ import { getImageUrl } from '@/lib/utils/image';
 
 export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const { user } = useUser();
-  const { signOut } = useAuth();
+  const { signOut, isSignedIn } = useAuth();
   const router = useRouter();
   const popoverTriggerRef = React.useRef<TriggerRef>(null);
+
+  // 로그인되지 않은 경우 관리자 로그인 페이지로 이동
+  function onAdminLogin() {
+    router.push('/(auth)/admin-login');
+  }
 
   async function onSignOut() {
     popoverTriggerRef.current?.close();
     await signOut();
-    router.replace('/(auth)/sign-in');
   }
 
   function onManageAccount() {
     popoverTriggerRef.current?.close();
     router.push('/settings');
+  }
+
+  // 로그인되지 않은 경우 관리자 로그인 버튼만 표시
+  if (!isSignedIn) {
+    return (
+      <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onAdminLogin}>
+        <Icon as={SettingsIcon} color={iconColor} className="size-5" />
+      </Button>
+    );
   }
 
   return (
