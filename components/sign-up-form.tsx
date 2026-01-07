@@ -1,4 +1,6 @@
-import { SocialConnections } from '@/components/social-connections';
+// 백엔드 API 제거로 일반 회원가입 기능 주석처리
+
+/* import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -219,4 +221,8 @@ export function SignUpForm() {
       </Card>
     </View>
   );
+} */
+
+export function SignUpForm() {
+  return null;
 }

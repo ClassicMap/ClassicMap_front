@@ -12,7 +12,13 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoaded || !user) {
+    // Clerk가 로드될 때까지 대기
+    if (!isLoaded) {
+      return;
+    }
+
+    // 로그인하지 않은 경우 바로 완료
+    if (!user) {
       setLoading(false);
       return;
     }
