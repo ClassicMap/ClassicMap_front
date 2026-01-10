@@ -8,7 +8,8 @@ import { useRouter } from 'expo-router';
 import type { TriggerRef } from '@rn-primitives/popover';
 import { LogOutIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { View } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
+import { Alert } from '@/lib/utils/alert';
 import { getImageUrl } from '@/lib/utils/image';
 
 export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
@@ -16,6 +17,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const { signOut, isSignedIn } = useAuth();
   const router = useRouter();
   const popoverTriggerRef = React.useRef<TriggerRef>(null);
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   // 로그인되지 않은 경우 관리자 로그인 페이지로 이동
   function onAdminLogin() {
@@ -23,8 +25,21 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   }
 
   async function onSignOut() {
-    popoverTriggerRef.current?.close();
-    await signOut();
+    try {
+      setIsSigningOut(true);
+      popoverTriggerRef.current?.close();
+      await signOut();
+      // 로그아웃 성공 - 조용히 처리 (페이지 전환이 피드백 역할)
+    } catch (error) {
+      console.error('로그아웃 실패:', error);
+      Alert.alert(
+        '로그아웃 실패',
+        '로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.',
+        [{ text: '확인', style: 'default' }]
+      );
+    } finally {
+      setIsSigningOut(false);
+    }
   }
 
   function onManageAccount() {
@@ -67,13 +82,23 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
             <Button
               variant="outline"
               size="sm"
-              onPress={onManageAccount}>
+              onPress={onManageAccount}
+              disabled={isSigningOut}>
               <Icon as={SettingsIcon} className="size-4" />
               <Text>계정 관리</Text>
             </Button>
-            <Button variant="outline" size="sm" className="flex-1" onPress={onSignOut}>
-              <Icon as={LogOutIcon} className="size-4" />
-              <Text>로그아웃</Text>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onPress={onSignOut}
+              disabled={isSigningOut}>
+              {isSigningOut ? (
+                <ActivityIndicator size="small" />
+              ) : (
+                <Icon as={LogOutIcon} className="size-4" />
+              )}
+              <Text>{isSigningOut ? '로그아웃 중...' : '로그아웃'}</Text>
             </Button>
           </View>
         </View>
