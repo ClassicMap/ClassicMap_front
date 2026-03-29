@@ -3,8 +3,8 @@
 
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { useEffect, useState } from 'react';
-import { setAuthToken } from '@/lib/api/client';
-import { setAdminAuthToken } from '@/lib/api/admin';
+import { setTokenProvider } from '@/lib/api/client';
+import { setAdminTokenProvider } from '@/lib/api/admin';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
@@ -23,32 +23,20 @@ export function useAuth() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Clerk 토큰을 가져와서 API 클라이언트에 설정
+  // 토큰 provider 설정 (매 API 요청마다 신선한 토큰을 가져옴)
   useEffect(() => {
     if (!isLoaded) return;
 
-    async function setupAuthToken() {
-      try {
-        if (user) {
-          // Clerk에서 JWT 토큰 가져오기
-          const token = await getToken();
-          setAuthToken(token);
-          setAdminAuthToken(token); // Admin API에도 동일한 토큰 설정
-        } else {
-          // 로그아웃 시 토큰 제거
-          setAuthToken(null);
-          setAdminAuthToken(null);
-        }
-      } catch (error) {
-        console.error('토큰 가져오기 실패:', error);
-        setAuthToken(null);
-        setAdminAuthToken(null);
-      }
+    if (user) {
+      const tokenProvider = () => getToken();
+      setTokenProvider(tokenProvider);
+      setAdminTokenProvider(tokenProvider);
+    } else {
+      setTokenProvider(null);
+      setAdminTokenProvider(null);
     }
-
-    setupAuthToken();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isLoaded]); // getToken 제거, user?.id만 사용
+  }, [user?.id, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !user) {
@@ -60,7 +48,6 @@ export function useAuth() {
       if (!user) return;
 
       try {
-        // Authorization 헤더는 authenticatedFetch에서 자동으로 추가됨
         const response = await fetch(`${API_BASE_URL}/users/clerk/${user.id}`, {
           headers: {
             'Content-Type': 'application/json',
@@ -80,7 +67,7 @@ export function useAuth() {
 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isLoaded]); // getToken 제거, user?.id만 사용
+  }, [user?.id, isLoaded]);
 
   const isAdmin = profile?.role === 'admin';
   const isModerator = profile?.role === 'moderator';

@@ -3,18 +3,19 @@
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
-// 인증 토큰 저장소
-let authToken: string | null = null;
+// 토큰 provider (client.ts와 동일한 provider 사용)
+let getTokenFn: (() => Promise<string | null>) | null = null;
 
 /**
- * 인증 토큰 설정 (client.ts와 동일한 토큰 사용)
+ * 토큰 provider 설정 (useAuth 훅에서 호출)
  */
-export const setAdminAuthToken = (token: string | null) => {
-  authToken = token;
+export const setAdminTokenProvider = (fn: (() => Promise<string | null>) | null) => {
+  getTokenFn = fn;
 };
 
 /**
  * 인증된 fetch 요청
+ * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
   const headers: HeadersInit = {
@@ -22,9 +23,11 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     ...options.headers,
   };
 
-  // 인증 토큰이 있으면 Authorization 헤더 추가
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+  if (getTokenFn) {
+    const token = await getTokenFn();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
   return fetch(url, {

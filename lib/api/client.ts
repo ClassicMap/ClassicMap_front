@@ -336,18 +336,20 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:102
 // 실제 API 사용 여부
 const USE_REAL_API = true;
 
-// 인증 토큰 저장소 (Clerk에서 가져온 토큰)
-let authToken: string | null = null;
+// 토큰 provider (매 요청마다 신선한 토큰을 가져옴)
+let getTokenFn: (() => Promise<string | null>) | null = null;
 
 /**
- * 인증 토큰 설정 (useAuth 훅에서 호출)
+ * 토큰 provider 설정 (useAuth 훅에서 호출)
+ * getToken 함수 자체를 저장하여 매 요청마다 신선한 토큰을 받아옴
  */
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
+export const setTokenProvider = (fn: (() => Promise<string | null>) | null) => {
+  getTokenFn = fn;
 };
 
 /**
  * 인증된 fetch 요청
+ * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
   const headers: HeadersInit = {
@@ -355,9 +357,11 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
     ...options.headers,
   };
 
-  // 인증 토큰이 있으면 Authorization 헤더 추가
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+  if (getTokenFn) {
+    const token = await getTokenFn();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   }
 
   return fetch(url, {
