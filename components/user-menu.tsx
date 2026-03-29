@@ -6,7 +6,7 @@ import { Text } from '@/components/ui/text';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import type { TriggerRef } from '@rn-primitives/popover';
-import { LogOutIcon, SettingsIcon } from 'lucide-react-native';
+import { LogInIcon, LogOutIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
@@ -19,7 +19,10 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const popoverTriggerRef = React.useRef<TriggerRef>(null);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
-  // 로그인되지 않은 경우 관리자 로그인 페이지로 이동
+  function onLogin() {
+    router.push('/(auth)/sign-in');
+  }
+
   function onAdminLogin() {
     router.push('/(auth)/admin-login');
   }
@@ -47,12 +50,16 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
     router.push('/settings');
   }
 
-  // 로그인되지 않은 경우 관리자 로그인 버튼만 표시
   if (!isSignedIn) {
     return (
-      <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onAdminLogin}>
-        <Icon as={SettingsIcon} color={iconColor} className="size-5" />
-      </Button>
+      <View className="flex-row items-center gap-1">
+        <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onLogin}>
+          <Icon as={LogInIcon} color={iconColor} className="size-5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onAdminLogin}>
+          <Icon as={SettingsIcon} color={iconColor} className="size-5" />
+        </Button>
+      </View>
     );
   }
 
