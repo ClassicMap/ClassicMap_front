@@ -66,9 +66,6 @@ function Routes() {
       {/* 로그인 화면 */}
       <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
 
-      {/* 관리자 로그인 화면 */}
-      <Stack.Screen name="(auth)/admin-login" options={{ headerShown: false }} />
-
       {/* 모든 화면은 기본적으로 공개 (관리자 기능만 인증 필요) */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
