@@ -23,10 +23,6 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
     router.push('/(auth)/sign-in');
   }
 
-  function onAdminLogin() {
-    router.push('/(auth)/admin-login');
-  }
-
   async function onSignOut() {
     try {
       setIsSigningOut(true);
@@ -52,14 +48,9 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
 
   if (!isSignedIn) {
     return (
-      <View className="flex-row items-center gap-1">
-        <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onLogin}>
-          <Icon as={LogInIcon} color={iconColor} className="size-5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onAdminLogin}>
-          <Icon as={SettingsIcon} color={iconColor} className="size-5" />
-        </Button>
-      </View>
+      <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onLogin}>
+        <Icon as={LogInIcon} color={iconColor} className="size-5" />
+      </Button>
     );
   }
 
