@@ -49,7 +49,7 @@ export default function RootLayout() {
 SplashScreen.preventAutoHideAsync();
 
 function Routes() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isLoaded } = useAuth();
 
   React.useEffect(() => {
     if (isLoaded) {
@@ -63,13 +63,8 @@ function Routes() {
 
   return (
     <Stack>
-      {/* 일반 로그인/회원가입 화면 - 백엔드 API 제거로 주석처리 */}
-      {/* <Stack.Protected guard={!isSignedIn}>
-        <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
-        <Stack.Screen name="(auth)/sign-up" options={SIGN_UP_SCREEN_OPTIONS} />
-        <Stack.Screen name="(auth)/reset-password" options={DEFAULT_AUTH_SCREEN_OPTIONS} />
-        <Stack.Screen name="(auth)/forgot-password" options={DEFAULT_AUTH_SCREEN_OPTIONS} />
-      </Stack.Protected> */}
+      {/* 로그인 화면 */}
+      <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
 
       {/* 관리자 로그인 화면 */}
       <Stack.Screen name="(auth)/admin-login" options={{ headerShown: false }} />
@@ -98,15 +93,3 @@ const SIGN_IN_SCREEN_OPTIONS = {
   title: 'Sign in',
 };
 
-const SIGN_UP_SCREEN_OPTIONS = {
-  presentation: 'modal',
-  title: '',
-  headerTransparent: true,
-  gestureEnabled: false,
-} as const;
-
-const DEFAULT_AUTH_SCREEN_OPTIONS = {
-  title: '',
-  headerShadowVisible: false,
-  headerTransparent: true,
-};
