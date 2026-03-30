@@ -42,8 +42,8 @@ export default function TabsLayout() {
           backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
           borderTopColor: colorScheme === 'dark' ? '#333' : '#e5e5e5',
           paddingTop: 8,
-          paddingBottom: 32,
-          height: 90,
+          paddingBottom: 20,
+          height: 78,
         },
         // 탭 전환 시 화면 언마운트 방지 (상태 유지)
         unmountOnBlur: false,
