@@ -116,6 +116,7 @@ export function SignInForm() {
               <Input
                 ref={passwordInputRef}
                 id="password"
+                placeholder="비밀번호를 입력하세요"
                 secureTextEntry
                 onChangeText={setPassword}
                 returnKeyType="send"

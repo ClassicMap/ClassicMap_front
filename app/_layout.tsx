@@ -34,7 +34,6 @@ export default function RootLayout() {
       <ClerkProvider
         tokenCache={tokenCache}
         publishableKey={publishableKey}
-        afterSignOutUrl="https://kang1027.com/classicmap"
       >
         <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
