@@ -74,9 +74,6 @@ export function SignInForm() {
     passwordInputRef.current?.focus();
   }
 
-  function onCancel() {
-    router.back();
-  }
 
   return (
     <View className="gap-6">
@@ -128,14 +125,9 @@ export function SignInForm() {
                 <Text className="text-sm font-medium text-destructive">{error.password}</Text>
               ) : null}
             </View>
-            <View className="gap-3">
-              <Button className="w-full" onPress={onSubmit}>
-                <Text>로그인</Text>
-              </Button>
-              <Button variant="outline" className="w-full" onPress={onCancel}>
-                <Text>취소</Text>
-              </Button>
-            </View>
+            <Button className="w-full" onPress={onSubmit}>
+              <Text>로그인</Text>
+            </Button>
           </View>
           <Text className="text-center text-sm">
             아직 계정이 없으신가요?{' '}
