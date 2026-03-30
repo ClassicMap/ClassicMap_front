@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
-import { StarIcon, TrendingUpIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
+import { StarIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import { AdminArtistAPI } from '@/lib/api/admin';
@@ -22,7 +22,6 @@ import { ArtistAPI } from '@/lib/api/client';
 export default function ArtistsScreen() {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
-  const [selectedFilter, setSelectedFilter] = React.useState<'all' | 'S' | 'Rising'>('all');
   const [showFormModal, setShowFormModal] = React.useState(false);
   const [searchResults, setSearchResults] = React.useState<Artist[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
@@ -76,11 +75,8 @@ export default function ArtistsScreen() {
   React.useEffect(() => {
     if (debouncedSearchQuery.trim().length > 0) {
       setIsSearching(true);
-      // Apply tier filter if selected
-      const tier = selectedFilter !== 'all' ? selectedFilter : undefined;
       ArtistAPI.search({
         q: debouncedSearchQuery,
-        tier,
         offset: 0,
         limit: 20,
       })
@@ -101,7 +97,7 @@ export default function ArtistsScreen() {
       setHasMoreSearchResults(true);
       setIsSearching(false);
     }
-  }, [debouncedSearchQuery, selectedFilter]);
+  }, [debouncedSearchQuery]);
 
   // Load more search results
   const loadMoreSearchResults = React.useCallback(() => {
@@ -110,10 +106,8 @@ export default function ArtistsScreen() {
     }
 
     setIsSearching(true);
-    const tier = selectedFilter !== 'all' ? selectedFilter : undefined;
     ArtistAPI.search({
       q: debouncedSearchQuery,
-      tier,
       offset: searchOffset,
       limit: 20,
     })
@@ -134,7 +128,7 @@ export default function ArtistsScreen() {
         console.error('Failed to load more search results:', error);
         setIsSearching(false);
       });
-  }, [debouncedSearchQuery, selectedFilter, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+  }, [debouncedSearchQuery, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
 
   // 새로고침 핸들러 (첫 페이지만 다시 로드) - early return 전에 정의
   const handleRefresh = React.useCallback(() => {
@@ -217,16 +211,8 @@ export default function ArtistsScreen() {
       new Map(filtered.map(artist => [artist.id, artist])).values()
     );
 
-    // Apply tier filter only when NOT searching (search already filters on backend)
-    if (debouncedSearchQuery.trim().length === 0 && selectedFilter !== 'all') {
-      filtered = filtered.filter((artist) =>
-        (selectedFilter === 'S' && artist.tier === 'S') ||
-        (selectedFilter === 'Rising' && artist.tier === 'Rising')
-      );
-    }
-
     return filtered;
-  }, [artists, searchResults, debouncedSearchQuery, selectedFilter]);
+  }, [artists, searchResults, debouncedSearchQuery]);
 
   // 이미지 프리페치 (첫 10개만 - 성능 최적화)
   React.useEffect(() => {
@@ -321,34 +307,6 @@ export default function ArtistsScreen() {
           <View className="absolute left-3 top-3.5">
             <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
           </View>
-        </View>
-
-        {/* Tier Filter */}
-        <View className="flex-row gap-2">
-          <Button 
-            size="sm" 
-            variant={selectedFilter === 'all' ? 'default' : 'outline'}
-            className="rounded-full"
-            onPress={() => setSelectedFilter('all')}
-          >
-            <Text className="text-sm">전체</Text>
-          </Button>
-          <Button 
-            size="sm" 
-            variant={selectedFilter === 'S' ? 'default' : 'outline'}
-            className="rounded-full"
-            onPress={() => setSelectedFilter('S')}
-          >
-            <Text className="text-sm">S급</Text>
-          </Button>
-          <Button 
-            size="sm" 
-            variant={selectedFilter === 'Rising' ? 'default' : 'outline'}
-            className="rounded-full"
-            onPress={() => setSelectedFilter('Rising')}
-          >
-            <Text className="text-sm">라이징 스타</Text>
-          </Button>
         </View>
 
         {/* Artists List */}
@@ -466,26 +424,7 @@ const ArtistCard = React.memo(({
             </AvatarFallback>
           </Avatar>
           <View className="flex-1 gap-2">
-            <View className="flex-row items-center gap-2">
-              <Text className="text-lg font-semibold">{artist.name}</Text>
-              {artist.tier === 'S' ? (
-                <View className="rounded bg-amber-500 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-white">S</Text>
-                </View>
-              ) : artist.tier === 'Rising' ? (
-                <View className="rounded bg-blue-500 px-2 py-0.5">
-                  <Icon as={TrendingUpIcon} size={12} color="white" />
-                </View>
-              ) : artist.tier === 'A' ? (
-                <View className="rounded bg-green-600 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-white">A</Text>
-                </View>
-              ) : artist.tier === 'B' ? (
-                <View className="rounded bg-gray-500 px-2 py-0.5">
-                  <Text className="text-xs font-bold text-white">B</Text>
-                </View>
-              ) : null}
-            </View>
+            <Text className="text-lg font-semibold">{artist.name}</Text>
             <Text className="text-sm text-muted-foreground">{artist.category}</Text>
             <Text className="text-sm text-muted-foreground">{artist.nationality}</Text>
           </View>

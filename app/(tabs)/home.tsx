@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { View, ScrollView, FlatList, Image, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
-import { TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
+import { CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
@@ -25,7 +25,6 @@ interface LegacyArtist {
   id: string;
   name: string;
   category: string;
-  tier: 'S' | 'Rising';
   image: string;
 }
 
@@ -127,7 +126,6 @@ export default function HomeScreen() {
         id: String(artist.id),
         name: artist.name,
         category: artist.category,
-        tier: artist.tier as 'S' | 'Rising',
         image: artist.imageUrl || '',
       }));
       setArtists(legacyArtists);
@@ -449,26 +447,9 @@ const ArtistCard = React.memo(({ artist }: { artist: LegacyArtist }) => {
             </AvatarFallback>
           </Avatar>
           <View className="gap-1">
-            <View className="flex-row items-center gap-1">
-              <Text className="flex-1 font-semibold" numberOfLines={1}>
-                {artist.name}
-              </Text>
-              {artist.tier === 'S' ? (
-                <View className="rounded bg-amber-500 px-1.5 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">S</Text>
-                </View>
-              ) : artist.tier === 'Rising' ? (
-                <Icon as={TrendingUpIcon} size={12} className="text-blue-500" />
-              ) : artist.tier === 'A' ? (
-                <View className="rounded bg-green-600 px-1.5 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">A</Text>
-                </View>
-              ) : artist.tier === 'B' ? (
-                <View className="rounded bg-gray-500 px-1.5 py-0.5">
-                  <Text className="text-[10px] font-bold text-white">B</Text>
-                </View>
-              ) : null}
-            </View>
+            <Text className="font-semibold" numberOfLines={1}>
+              {artist.name}
+            </Text>
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
               {artist.category}
             </Text>

@@ -297,23 +297,6 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
               </View>
 
               <View>
-                <Label>등급 *</Label>
-                <View className="flex-row gap-2">
-                  {['S', 'A', 'B', 'Rising'].map((t) => (
-                    <Button
-                      key={t}
-                      variant={tier === t ? 'default' : 'outline'}
-                      onPress={() => setTier(t)}
-                      className="flex-1"
-                      size="sm"
-                    >
-                      <Text>{t}</Text>
-                    </Button>
-                  ))}
-                </View>
-              </View>
-
-              <View>
                 <Label>국적 *</Label>
                 <Input value={nationality} onChangeText={setNationality} placeholder="대한민국" />
               </View>
