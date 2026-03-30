@@ -9,7 +9,7 @@ import { TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-nativ
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
-import { ArtistAPI, ConcertAPI, ComposerAPI } from '@/lib/api/client';
+import { ArtistAPI, ConcertAPI, ComposerAPI, PieceAPI } from '@/lib/api/client';
 import { getAllPeriods } from '@/lib/data/mockDTO';
 import type { Artist } from '@/lib/types/models';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
@@ -103,7 +103,8 @@ export default function HomeScreen() {
   // 레거시 형식으로 변환
   const [artists, setArtists] = React.useState<LegacyArtist[]>([]);
   const [concerts, setConcerts] = React.useState<LegacyConcert[]>([]);
-  const [composers, setComposers] = React.useState<any[]>([]);
+  const [comparisons, setComparisons] = React.useState<LegacyComparison[]>([]);
+  const [loadingComparisons, setLoadingComparisons] = React.useState(false);
   const [imagesLoaded, setImagesLoaded] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -138,7 +139,40 @@ export default function HomeScreen() {
       }));
       setConcerts(legacyConcerts);
 
-      setComposers(composersData);
+      // 비교 영상 데이터: pieceCount > 0인 작곡가에서 랜덤 10개 선택 후 곡 fetch
+      if (composersData.length > 0) {
+        setLoadingComparisons(true);
+        try {
+          const withPieces = composersData.filter(c => (c.pieceCount ?? 0) > 0);
+          const shuffled = [...withPieces].sort(() => Math.random() - 0.5);
+          const selected = shuffled.slice(0, 10);
+
+          const comparisonResults = await Promise.all(
+            selected.map(async (composer) => {
+              try {
+                const pieces = await PieceAPI.getByComposer(composer.id);
+                if (pieces.length === 0) return null;
+                const piece = pieces[0];
+                return {
+                  id: `${composer.id}-${piece.id}`,
+                  piece: piece.title,
+                  artists: composer.name,
+                  composerId: composer.id,
+                  pieceId: piece.id,
+                };
+              } catch {
+                return null;
+              }
+            })
+          );
+
+          setComparisons(comparisonResults.filter((c): c is LegacyComparison => c !== null));
+        } catch {
+          setComparisons([]);
+        } finally {
+          setLoadingComparisons(false);
+        }
+      }
 
       // 이미지 프리페치 (타임아웃 추가)
       const timeout = setTimeout(() => {
@@ -373,7 +407,7 @@ export default function HomeScreen() {
               <Text className="text-sm text-primary">전체보기</Text>
             </Button>
           </View>
-          {loadingComposers ? (
+          {loadingComposers || loadingComparisons ? (
             <View className="py-8">
               <ActivityIndicator size="large" />
             </View>
@@ -389,22 +423,11 @@ export default function HomeScreen() {
                 <Text>다시 시도</Text>
               </Button>
             </View>
-          ) : !imagesLoaded ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
-            </View>
-          ) : composers.length > 0 ? (
+          ) : comparisons.length > 0 ? (
             <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
-              data={composers.slice(0, 5).map((composer, idx) => ({
-                id: String(idx),
-                piece: `${composer.name} 대표곡`,
-                artists: '다양한 연주자',
-                composerId: composer.id,
-                pieceId: 1,
-              }))}
+              data={comparisons}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => <ComparisonCard comparison={item} />}
               ItemSeparatorComponent={() => <View className="w-3" />}
@@ -516,9 +539,11 @@ const ConcertCard = React.memo(({ concert }: { concert: LegacyConcert }) => {
           </View>
           <View className="gap-3 p-3">
             <View className="gap-1">
-              <Text className="font-semibold" numberOfLines={2}>
-                {concert.title}
-              </Text>
+              <View style={{ height: 40 }}>
+                <Text className="font-semibold" numberOfLines={2}>
+                  {concert.title}
+                </Text>
+              </View>
               <View className="flex-row items-center gap-1">
                 <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
                 <Text className="text-xs text-muted-foreground">{concert.date}</Text>
