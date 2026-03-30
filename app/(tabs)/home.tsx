@@ -9,7 +9,7 @@ import { TrendingUpIcon, CalendarIcon, PlayCircleIcon } from 'lucide-react-nativ
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
-import { ArtistAPI, ConcertAPI, ComposerAPI, PieceAPI } from '@/lib/api/client';
+import { ArtistAPI, ConcertAPI, ComposerAPI } from '@/lib/api/client';
 import { getAllPeriods } from '@/lib/data/mockDTO';
 import type { Artist } from '@/lib/types/models';
 import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
@@ -139,39 +139,21 @@ export default function HomeScreen() {
       }));
       setConcerts(legacyConcerts);
 
-      // 비교 영상 데이터: pieceCount > 0인 작곡가에서 랜덤 10개 선택 후 곡 fetch
-      if (composersData.length > 0) {
-        setLoadingComparisons(true);
-        try {
-          const withPieces = composersData.filter(c => (c.pieceCount ?? 0) > 0);
-          const shuffled = [...withPieces].sort(() => Math.random() - 0.5);
-          const selected = shuffled.slice(0, 10);
-
-          const comparisonResults = await Promise.all(
-            selected.map(async (composer) => {
-              try {
-                const pieces = await PieceAPI.getByComposer(composer.id);
-                if (pieces.length === 0) return null;
-                const piece = pieces[0];
-                return {
-                  id: `${composer.id}-${piece.id}`,
-                  piece: piece.title,
-                  artists: composer.name,
-                  composerId: composer.id,
-                  pieceId: piece.id,
-                };
-              } catch {
-                return null;
-              }
-            })
-          );
-
-          setComparisons(comparisonResults.filter((c): c is LegacyComparison => c !== null));
-        } catch {
-          setComparisons([]);
-        } finally {
-          setLoadingComparisons(false);
-        }
+      // 비교 영상 데이터: 백엔드에서 영상이 등록된 작곡가-곡 랜덤 10개 조회
+      setLoadingComparisons(true);
+      try {
+        const data = await ComposerAPI.getWithPerformances(10);
+        setComparisons(data.map(item => ({
+          id: `${item.composerId}-${item.pieceId}`,
+          piece: item.pieceTitle,
+          artists: item.composerName,
+          composerId: item.composerId,
+          pieceId: item.pieceId,
+        })));
+      } catch {
+        setComparisons([]);
+      } finally {
+        setLoadingComparisons(false);
       }
 
       // 이미지 프리페치 (타임아웃 추가)

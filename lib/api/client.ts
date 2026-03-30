@@ -480,6 +480,26 @@ export const ComposerAPI = {
   },
 
   /**
+   * 비교 영상이 있는 작곡가-곡 조합 랜덤 조회
+   */
+  async getWithPerformances(limit: number = 10): Promise<{
+    composerId: number;
+    composerName: string;
+    pieceId: number;
+    pieceTitle: string;
+    performanceCount: number;
+  }[]> {
+    if (USE_REAL_API) {
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/composers/with-performances?limit=${limit}`
+      );
+      if (!response.ok) throw new Error('Failed to fetch composers with performances');
+      return response.json();
+    }
+    return Promise.resolve([]);
+  },
+
+  /**
    * 시대별 작곡가 조회
    */
   async getByPeriod(period: string): Promise<Composer[]> {
