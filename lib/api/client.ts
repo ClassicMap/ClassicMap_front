@@ -489,6 +489,7 @@ export const ComposerAPI = {
     pieceId: number;
     pieceTitle: string;
     performanceCount: number;
+    artistNames: string[];
   }[]> {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(
