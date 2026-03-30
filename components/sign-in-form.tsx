@@ -1,11 +1,13 @@
+import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import * as React from 'react';
 import { type TextInput, View } from 'react-native';
 
@@ -98,7 +100,7 @@ export function SignInForm() {
               <Label htmlFor="email">이메일</Label>
               <Input
                 id="email"
-                placeholder="your@email.com"
+                placeholder="이메일을 입력하세요"
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -135,6 +137,18 @@ export function SignInForm() {
               </Button>
             </View>
           </View>
+          <Text className="text-center text-sm">
+            아직 계정이 없으신가요?{' '}
+            <Link href="/(auth)/sign-up" className="text-sm underline underline-offset-4">
+              회원가입
+            </Link>
+          </Text>
+          <View className="flex-row items-center">
+            <Separator className="flex-1" />
+            <Text className="px-4 text-sm text-muted-foreground">또는</Text>
+            <Separator className="flex-1" />
+          </View>
+          <SocialConnections />
         </CardContent>
       </Card>
     </View>
