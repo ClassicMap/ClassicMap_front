@@ -88,6 +88,7 @@ function Routes() {
 const SIGN_IN_SCREEN_OPTIONS = {
   headerShown: false,
   title: 'Sign in',
+  gestureEnabled: true,
 };
 
 const SIGN_UP_SCREEN_OPTIONS = {
