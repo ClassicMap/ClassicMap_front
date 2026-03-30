@@ -29,11 +29,12 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
       popoverTriggerRef.current?.close();
       await signOut();
       // 로그아웃 성공 - 조용히 처리 (페이지 전환이 피드백 역할)
-    } catch (error) {
-      console.error('로그아웃 실패:', error);
+    } catch (error: any) {
+      const message = error?.message || error?.toString() || '알 수 없는 오류';
+      console.error('로그아웃 실패:', JSON.stringify(error, null, 2));
       Alert.alert(
         '로그아웃 실패',
-        '로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.',
+        message,
         [{ text: '확인', style: 'default' }]
       );
     } finally {
