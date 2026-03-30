@@ -1,6 +1,4 @@
-// 백엔드 API 제거로 일반 회원가입 기능 주석처리
-
-/* import { SocialConnections } from '@/components/social-connections';
+import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,7 +26,6 @@ export function SignUpForm() {
   async function onSubmit() {
     if (!isLoaded) return;
 
-    // Start sign-up process using email and password provided
     try {
       await signUp.create({
         firstName,
@@ -37,14 +34,10 @@ export function SignUpForm() {
         password,
       });
 
-      // Send user an email with verification code
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
       router.push(`/(auth)/sign-up/verify-email?email=${email}`);
     } catch (err: any) {
-      // See https://go.clerk.com/mRUDrIe for more info on error handling
-
-      // Clerk 에러 처리
       if (err?.errors && Array.isArray(err.errors)) {
         const newErrors: { firstName?: string; lastName?: string; email?: string; password?: string } = {};
 
@@ -52,7 +45,6 @@ export function SignUpForm() {
           const field = error.meta?.paramName || '';
           const message = error.message || error.longMessage || '';
 
-          // 패스워드 유출 검증 에러는 무시
           if (message.toLowerCase().includes('data breach')) {
             return;
           }
@@ -74,12 +66,10 @@ export function SignUpForm() {
         return;
       }
 
-      // 기본 에러 처리 (이전 방식)
       if (err instanceof Error) {
         const message = err.message;
         const lowerMessage = message.toLowerCase();
 
-        // 패스워드 유출 검증 에러는 무시
         if (lowerMessage.includes('data breach')) {
           return;
         }
@@ -138,7 +128,7 @@ export function SignUpForm() {
               <Label htmlFor="firstName">이름</Label>
               <Input
                 id="firstName"
-                placeholder="길동"
+                placeholder="이름을 입력하세요"
                 autoComplete="name-given"
                 autoCapitalize="words"
                 onChangeText={setFirstName}
@@ -155,7 +145,7 @@ export function SignUpForm() {
               <Input
                 ref={lastNameInputRef}
                 id="lastName"
-                placeholder="김"
+                placeholder="성을 입력하세요"
                 autoComplete="name-family"
                 autoCapitalize="words"
                 onChangeText={setLastName}
@@ -172,7 +162,7 @@ export function SignUpForm() {
               <Input
                 ref={emailInputRef}
                 id="email"
-                placeholder="your@email.com"
+                placeholder="이메일을 입력하세요"
                 keyboardType="email-address"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -186,12 +176,11 @@ export function SignUpForm() {
               ) : null}
             </View>
             <View className="gap-1.5">
-              <View className="flex-row items-center">
-                <Label htmlFor="password">비밀번호</Label>
-              </View>
+              <Label htmlFor="password">비밀번호</Label>
               <Input
                 ref={passwordInputRef}
                 id="password"
+                placeholder="비밀번호를 입력하세요"
                 secureTextEntry
                 onChangeText={setPassword}
                 returnKeyType="send"
@@ -221,8 +210,4 @@ export function SignUpForm() {
       </Card>
     </View>
   );
-} */
-
-export function SignUpForm() {
-  return null;
 }

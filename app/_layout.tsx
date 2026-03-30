@@ -62,8 +62,9 @@ function Routes() {
 
   return (
     <Stack>
-      {/* 로그인 화면 */}
+      {/* 로그인/회원가입 화면 */}
       <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
+      <Stack.Screen name="(auth)/sign-up" options={SIGN_UP_SCREEN_OPTIONS} />
 
       {/* 모든 화면은 기본적으로 공개 (관리자 기능만 인증 필요) */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -87,5 +88,10 @@ function Routes() {
 const SIGN_IN_SCREEN_OPTIONS = {
   headerShown: false,
   title: 'Sign in',
+};
+
+const SIGN_UP_SCREEN_OPTIONS = {
+  headerShown: false,
+  title: 'Sign up',
 };
 
