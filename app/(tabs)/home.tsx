@@ -44,6 +44,7 @@ interface LegacyComparison {
   composerId: number;
   pieceId: number;
   imageUrl?: string;
+  artistNames: string[];
 }
 
 const RECOMMENDED_PERIODS = getAllPeriods().map(era => ({
@@ -151,6 +152,7 @@ export default function HomeScreen() {
           composerId: item.composerId,
           pieceId: item.pieceId,
           imageUrl: item.composerAvatarUrl,
+          artistNames: item.artistNames,
         })));
       } catch {
         setComparisons([]);
@@ -597,6 +599,11 @@ const ComparisonCard = React.memo(({ comparison }: { comparison: LegacyCompariso
               {comparison.piece}
             </Text>
           </View>
+          {comparison.artistNames.length > 0 && (
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              🎵 {comparison.artistNames.join(', ')}
+            </Text>
+          )}
           <Button size="sm" variant="outline" onPress={handlePress}>
             <Icon as={PlayCircleIcon} size={14} />
             <Text className="text-xs ml-1">비교 듣기</Text>
