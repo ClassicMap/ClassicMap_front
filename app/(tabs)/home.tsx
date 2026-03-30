@@ -571,12 +571,21 @@ const ComparisonCard = React.memo(({ comparison }: { comparison: LegacyCompariso
       <Card className="w-[200px] p-3">
         <View className="gap-3">
           <View className="flex-row items-center gap-3">
-            <Avatar alt={comparison.artists} className="size-12">
-              <AvatarImage source={comparison.imageUrl ? { uri: getImageUrl(comparison.imageUrl) } : undefined} />
-              <AvatarFallback>
-                <Text>{comparison.artists[0]}</Text>
-              </AvatarFallback>
-            </Avatar>
+            {comparison.imageUrl ? (
+              <View className="size-12 rounded-full overflow-hidden bg-muted">
+                <OptimizedImage
+                  uri={comparison.imageUrl}
+                  style={{ width: 48, height: 48 }}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : (
+              <Avatar alt={comparison.artists} className="size-12">
+                <AvatarFallback>
+                  <Text>{comparison.artists[0]}</Text>
+                </AvatarFallback>
+              </Avatar>
+            )}
             <View className="flex-1">
               <Text className="text-xs text-muted-foreground" numberOfLines={1}>
                 {comparison.artists}
