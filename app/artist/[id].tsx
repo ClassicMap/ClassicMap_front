@@ -22,7 +22,6 @@ import {
   MapPinIcon,
   CalendarIcon,
   AwardIcon,
-  TrendingUpIcon,
   MusicIcon,
   MoonStarIcon,
   SunIcon,
@@ -417,26 +416,7 @@ export default function ArtistDetailScreen() {
             </Avatar>
 
             <View className="items-center gap-2">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-2xl font-bold">{artist.name}</Text>
-                {artist.tier === 'S' ? (
-                  <View className="rounded bg-amber-500 px-2 py-1">
-                    <Text className="text-xs font-bold text-white">S</Text>
-                  </View>
-                ) : artist.tier === 'Rising' ? (
-                  <View className="rounded bg-blue-500 px-2 py-1">
-                    <Icon as={TrendingUpIcon} size={14} color="white" />
-                  </View>
-                ) : artist.tier === 'A' ? (
-                  <View className="rounded bg-green-600 px-2 py-1">
-                    <Text className="text-xs font-bold text-white">A</Text>
-                  </View>
-                ) : artist.tier === 'B' ? (
-                  <View className="rounded bg-gray-500 px-2 py-1">
-                    <Text className="text-xs font-bold text-white">B</Text>
-                  </View>
-                ) : null}
-              </View>
+              <Text className="text-2xl font-bold">{artist.name}</Text>
               <Text className="text-muted-foreground">{artist.englishName}</Text>
               <Text className="text-sm text-muted-foreground">{artist.category}</Text>
             </View>

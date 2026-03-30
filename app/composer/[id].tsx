@@ -803,28 +803,6 @@ export default function ComposerDetailScreen() {
                     {composer.period}
                   </Text>
                 </View>
-                {composer.tier && (
-                  <View
-                    className="rounded-full px-3 py-1.5"
-                    style={{
-                      backgroundColor:
-                        composer.tier === 'S' ? '#fbbf24' :
-                        composer.tier === 'A' ? '#16a34a' :
-                        composer.tier === 'B' ? '#6b7280' :
-                        '#60a5fa',
-                      borderWidth: 2,
-                      borderColor:
-                        composer.tier === 'S' ? '#f59e0b' :
-                        composer.tier === 'A' ? '#15803d' :
-                        composer.tier === 'B' ? '#4b5563' :
-                        '#3b82f6'
-                    }}
-                  >
-                    <Text className="text-sm font-bold text-white">
-                      Tier {composer.tier}
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
           </View>

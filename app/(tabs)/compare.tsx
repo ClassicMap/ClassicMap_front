@@ -165,11 +165,6 @@ export default function CompareScreen() {
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
               <Text className="text-sm font-semibold">{artist?.name || '알 수 없음'}</Text>
-              {artist?.tier && (
-                <View className="rounded-full bg-primary/10 px-2 py-0.5">
-                  <Text className="text-xs font-medium text-primary">T{artist.tier}</Text>
-                </View>
-              )}
             </View>
             <Text className="text-xs text-muted-foreground">
               {formatTime(performance.startTime)} - {formatTime(performance.endTime)}
