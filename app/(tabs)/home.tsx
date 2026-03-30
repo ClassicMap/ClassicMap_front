@@ -144,17 +144,13 @@ export default function HomeScreen() {
       setLoadingComparisons(true);
       try {
         const data = await ComposerAPI.getWithPerformances(10);
-        // composersData에서 이미지 URL 매칭
-        const composerImageMap = new Map(
-          composersData.map(c => [c.id, c.avatarUrl || c.imageUrl])
-        );
         setComparisons(data.map(item => ({
           id: `${item.composerId}-${item.pieceId}`,
           piece: item.pieceTitle,
           artists: item.composerName,
           composerId: item.composerId,
           pieceId: item.pieceId,
-          imageUrl: composerImageMap.get(item.composerId),
+          imageUrl: item.composerAvatarUrl,
         })));
       } catch {
         setComparisons([]);

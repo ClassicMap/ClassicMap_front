@@ -485,6 +485,7 @@ export const ComposerAPI = {
   async getWithPerformances(limit: number = 10): Promise<{
     composerId: number;
     composerName: string;
+    composerAvatarUrl?: string;
     pieceId: number;
     pieceTitle: string;
     performanceCount: number;
