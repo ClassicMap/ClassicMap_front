@@ -43,6 +43,7 @@ interface LegacyComparison {
   artists: string;
   composerId: number;
   pieceId: number;
+  imageUrl?: string;
 }
 
 const RECOMMENDED_PERIODS = getAllPeriods().map(era => ({
@@ -143,12 +144,17 @@ export default function HomeScreen() {
       setLoadingComparisons(true);
       try {
         const data = await ComposerAPI.getWithPerformances(10);
+        // composersData에서 이미지 URL 매칭
+        const composerImageMap = new Map(
+          composersData.map(c => [c.id, c.avatarUrl || c.imageUrl])
+        );
         setComparisons(data.map(item => ({
           id: `${item.composerId}-${item.pieceId}`,
           piece: item.pieceTitle,
           artists: item.composerName,
           composerId: item.composerId,
           pieceId: item.pieceId,
+          imageUrl: composerImageMap.get(item.composerId),
         })));
       } catch {
         setComparisons([]);
@@ -565,20 +571,34 @@ const ComparisonCard = React.memo(({ comparison }: { comparison: LegacyCompariso
   }, [router, comparison.composerId, comparison.pieceId]);
 
   return (
-    <Card className="w-[180px] gap-2 p-3">
-      <View className="gap-1">
-        <Text className="text-sm font-semibold" numberOfLines={2}>
-          {comparison.piece}
-        </Text>
-        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-          {comparison.artists}
-        </Text>
-      </View>
-      <Button size="sm" variant="outline" onPress={handlePress}>
-        <Icon as={PlayCircleIcon} size={14} />
-        <Text className="text-xs ml-1">비교 듣기</Text>
-      </Button>
-    </Card>
+    <Pressable onPress={handlePress}>
+      <Card className="w-[200px] p-3">
+        <View className="gap-3">
+          <View className="flex-row items-center gap-3">
+            <Avatar alt={comparison.artists} className="size-12">
+              <AvatarImage source={comparison.imageUrl ? { uri: getImageUrl(comparison.imageUrl) } : undefined} />
+              <AvatarFallback>
+                <Text>{comparison.artists[0]}</Text>
+              </AvatarFallback>
+            </Avatar>
+            <View className="flex-1">
+              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                {comparison.artists}
+              </Text>
+            </View>
+          </View>
+          <View style={{ height: 36 }}>
+            <Text className="text-sm font-semibold" numberOfLines={2}>
+              {comparison.piece}
+            </Text>
+          </View>
+          <Button size="sm" variant="outline" onPress={handlePress}>
+            <Icon as={PlayCircleIcon} size={14} />
+            <Text className="text-xs ml-1">비교 듣기</Text>
+          </Button>
+        </View>
+      </Card>
+    </Pressable>
   );
 });
 
