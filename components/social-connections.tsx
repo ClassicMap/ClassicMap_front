@@ -49,17 +49,13 @@ export function SocialConnections() {
           redirectUrl: AuthSession.makeRedirectUri({ scheme: 'classicmap-front' }),
         });
 
+        // 웹뷰 닫기
+        WebBrowser.dismissBrowser();
+
         // If sign in was successful, set the active session
         if (createdSessionId && setActive) {
-          setActive({ session: createdSessionId });
-          return;
+          await setActive({ session: createdSessionId });
         }
-
-        // TODO: Handle other statuses
-        // If there is no `createdSessionId`,
-        // there are missing requirements, such as MFA
-        // Use the `signIn` or `signUp` returned from `startSSOFlow`
-        // to handle next steps
       } catch (err) {
         // See https://go.clerk.com/mRUDrIe for more info on error handling
         console.error(JSON.stringify(err, null, 2));
