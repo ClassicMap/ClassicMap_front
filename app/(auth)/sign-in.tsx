@@ -15,7 +15,7 @@ export default function SignInScreen() {
   // 소셜 로그인 등으로 인증 상태가 변하면 자동으로 뒤로가기
   React.useEffect(() => {
     if (isSignedIn) {
-      WebBrowser.dismissBrowser();
+      WebBrowser.dismissBrowser().catch(() => {});
       router.back();
     }
   }, [isSignedIn]);
