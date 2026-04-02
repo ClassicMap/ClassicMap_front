@@ -2,7 +2,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSSO, type StartSSOFlowParams } from '@clerk/clerk-expo';
 import * as AuthSession from 'expo-auth-session';
-import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -40,25 +39,19 @@ export function SocialConnections() {
   function onSocialLoginPress(strategy: SocialConnectionStrategy) {
     return async () => {
       try {
-        // Start the authentication process by calling `startSSOFlow()`
-        const { createdSessionId, setActive, signIn } = await startSSOFlow({
+        const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'classicmap-front' });
+
+        const { createdSessionId, setActive } = await startSSOFlow({
           strategy,
-          // For web, defaults to current path
-          // For native, you must pass a scheme, like AuthSession.makeRedirectUri({ scheme, path })
-          // For more info, see https://docs.expo.dev/versions/latest/sdk/auth-session/#authsessionmakeredirecturioptions
-          redirectUrl: AuthSession.makeRedirectUri({ scheme: 'classicmap-front' }),
+          redirectUrl,
         });
 
-        // 웹뷰 닫기
-        WebBrowser.dismissBrowser();
-
-        // If sign in was successful, set the active session
+        // 세션 활성화 (화면 이동은 sign-in/sign-up의 useEffect에서 처리)
         if (createdSessionId && setActive) {
           await setActive({ session: createdSessionId });
         }
       } catch (err) {
-        // See https://go.clerk.com/mRUDrIe for more info on error handling
-        console.error(JSON.stringify(err, null, 2));
+        console.error('SSO error:', JSON.stringify(err, null, 2));
       }
     };
   }

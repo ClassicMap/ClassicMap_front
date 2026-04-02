@@ -14,7 +14,7 @@ export default function SignUpScreen() {
 
   React.useEffect(() => {
     if (isSignedIn) {
-      WebBrowser.dismissBrowser();
+      WebBrowser.dismissBrowser().catch(() => {});
       router.back();
     }
   }, [isSignedIn]);
