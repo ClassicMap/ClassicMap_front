@@ -3,10 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ChevronLeftIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import * as React from 'react';
 import { ScrollView, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+
+  React.useEffect(() => {
+    if (isSignedIn) {
+      WebBrowser.dismissBrowser();
+      router.back();
+    }
+  }, [isSignedIn]);
 
   return (
     <ScrollView

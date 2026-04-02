@@ -3,10 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ChevronLeftIcon } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import * as React from 'react';
 import { ScrollView, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+
+  // 소셜 로그인 등으로 인증 상태가 변하면 자동으로 뒤로가기
+  React.useEffect(() => {
+    if (isSignedIn) {
+      WebBrowser.dismissBrowser();
+      router.back();
+    }
+  }, [isSignedIn]);
 
   return (
     <ScrollView
