@@ -8,7 +8,13 @@ interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   fallbackComponent?: React.ReactNode;
 }
 
-const OptimizedImageComponent = ({ uri, fallbackUri, fallbackComponent, style, ...props }: OptimizedImageProps) => {
+const OptimizedImageComponent = ({
+  uri,
+  fallbackUri,
+  fallbackComponent,
+  style,
+  ...props
+}: OptimizedImageProps) => {
   // Memoize imageUrl to prevent recalculation on every render
   const imageUrl = React.useMemo(() => {
     return getImageUrl(uri) || fallbackUri || '';
@@ -39,7 +45,17 @@ const OptimizedImageComponent = ({ uri, fallbackUri, fallbackComponent, style, .
   return (
     <View style={style}>
       {loading && (
-        <View style={[style, { position: 'absolute', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0', zIndex: 1 }]}>
+        <View
+          style={[
+            style,
+            {
+              position: 'absolute',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: '#f0f0f0',
+              zIndex: 1,
+            },
+          ]}>
           <ActivityIndicator size="small" />
         </View>
       )}
@@ -63,15 +79,15 @@ const OptimizedImageComponent = ({ uri, fallbackUri, fallbackComponent, style, .
 
 // Memoize component to prevent re-renders when props haven't changed
 export const OptimizedImage = React.memo(OptimizedImageComponent, (prevProps, nextProps) => {
-  return prevProps.uri === nextProps.uri &&
-         prevProps.fallbackUri === nextProps.fallbackUri &&
-         prevProps.style === nextProps.style;
+  return (
+    prevProps.uri === nextProps.uri &&
+    prevProps.fallbackUri === nextProps.fallbackUri &&
+    prevProps.style === nextProps.style
+  );
 });
 
 export function prefetchImages(uris: (string | null | undefined)[]): Promise<void[]> {
-  const validUris = uris
-    .map(uri => getImageUrl(uri))
-    .filter((uri): uri is string => !!uri);
-  
-  return Promise.all(validUris.map(uri => Image.prefetch(uri).catch(() => {})));
+  const validUris = uris.map((uri) => getImageUrl(uri)).filter((uri): uri is string => !!uri);
+
+  return Promise.all(validUris.map((uri) => Image.prefetch(uri).catch(() => {})));
 }

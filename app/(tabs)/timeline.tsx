@@ -860,9 +860,7 @@ export default function TimelineScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-background">
         <ActivityIndicator size="large" />
-        <Text className="text-lg font-semibold">
-          작곡가 정보 로딩 중...
-        </Text>
+        <Text className="text-lg font-semibold">작곡가 정보 로딩 중...</Text>
       </View>
     );
   }
