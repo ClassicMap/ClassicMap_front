@@ -38,7 +38,7 @@ import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
 import { useColorScheme, Platform } from 'react-native';
-import { useComposers } from '@/lib/query/hooks/useComposers';
+import { useAllComposers } from '@/lib/query/hooks/useComposers';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const TIMELINE_HEIGHT = SCREEN_HEIGHT * 0.4;
@@ -83,38 +83,14 @@ export default function TimelineScreen() {
 
   const ERAS = React.useMemo(() => getAllPeriods(), []);
 
-  // React Query 무한 스크롤로 작곡가 데이터 로드
+  // 전체 작곡가 한번에 로드 (타임라인용)
   const {
-    data,
+    data: composers = [],
     isLoading: loading,
     error: queryError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
     refetch,
     isRefetching: refreshing,
-  } = useComposers();
-
-  // 타임라인에서는 모든 작곡가를 미리 로드
-  React.useEffect(() => {
-    if (!loading && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [loading, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  // 페이지 데이터를 평탄화 및 중복 제거
-  const composers = React.useMemo(() => {
-    if (!data?.pages) return [];
-
-    const allComposers = data.pages.flat();
-
-    // ID 기준으로 중복 제거
-    const uniqueComposers = Array.from(
-      new Map(allComposers.map((composer) => [composer.id, composer])).values()
-    );
-
-    return uniqueComposers;
-  }, [data]);
+  } = useAllComposers();
 
   // 에러 처리
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;

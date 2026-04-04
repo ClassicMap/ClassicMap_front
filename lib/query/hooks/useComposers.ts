@@ -53,6 +53,23 @@ export function useComposers(period?: string) {
 }
 
 /**
+ * 전체 작곡가 조회 훅 (타임라인용, 한방에 전체 로드)
+ * - limit=0으로 전체 반환
+ * - 페이징 없이 단일 요청
+ */
+export function useAllComposers() {
+  return useQuery({
+    queryKey: ['composers', 'all'],
+    queryFn: () => ComposerAPI.getAll({ offset: 0, limit: 0 }),
+    staleTime: 1000 * 60 * 5, // 5분
+    gcTime: 1000 * 60 * 15, // 15분
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
+  });
+}
+
+/**
  * 특정 작곡가 조회 훅
  * - id가 없으면 쿼리 비활성화
  * - 작곡가 상세 정보 캐싱
