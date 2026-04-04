@@ -35,6 +35,7 @@ export default {
       },
       package: 'com.kang1027.classicmap',
       usesCleartextTraffic: true,
+      permissions: [],
     },
     web: {
       bundler: 'metro',
