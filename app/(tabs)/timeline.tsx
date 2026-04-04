@@ -2,6 +2,7 @@ import { Text } from '@/components/ui/text';
 import {
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Dimensions,
   Image,
@@ -873,9 +874,25 @@ export default function TimelineScreen() {
     [searchQuery]
   );
 
+  // FlatList용 flat 데이터 생성 (시대별 헤더 + 작곡가 아이템)
+  const composerListData = React.useMemo(() => {
+    const items: any[] = [];
+    ERAS.forEach((era) => {
+      const eraComposers = getComposersForEra(era.id);
+      const filtered = filterComposers(eraComposers);
+      if (filtered.length === 0) return;
+
+      items.push({ key: `header-${era.id}`, type: 'header', era, count: filtered.length });
+      filtered.forEach((composer) => {
+        items.push({ key: `composer-${composer.id}`, type: 'composer', composer, era });
+      });
+    });
+    return items;
+  }, [ERAS, getComposersForEra, filterComposers]);
+
   if (loading || !imagesReady) {
     return (
-      <View className="flex-1 items-center justify-center bg-background gap-4">
+      <View className="flex-1 items-center justify-center gap-4 bg-background">
         <ActivityIndicator size="large" />
         <Text className="text-lg font-semibold">
           {loading ? '작곡가 정보 로딩 중...' : '이미지 로딩 중...'}
@@ -885,9 +902,9 @@ export default function TimelineScreen() {
             <Text className="text-muted-foreground">
               {imageLoadCount} / {totalImageCount}
             </Text>
-            <View className="w-48 h-2 bg-muted rounded-full overflow-hidden">
+            <View className="h-2 w-48 overflow-hidden rounded-full bg-muted">
               <View
-                className="h-full bg-primary rounded-full"
+                className="h-full rounded-full bg-primary"
                 style={{ width: `${(imageLoadCount / totalImageCount) * 100}%` }}
               />
             </View>
@@ -1202,129 +1219,130 @@ export default function TimelineScreen() {
         </Modal>
 
         {/* Composer List */}
-        <ScrollView className="flex-1">
-          <View className="gap-6 p-6">
-            <View className="flex-row items-center">
-              <View className="flex-1" />
-              <View className="items-center gap-2">
-                <Text variant="h1" className="text-center text-2xl font-bold">
-                  작곡가 목록
-                </Text>
-                <Text className="text-center text-sm text-muted-foreground">
-                  시대별로 정리된 작곡가들을 탐험하세요
-                </Text>
-              </View>
-              <View className="flex-1 flex-row items-end justify-end gap-2">
-                {canEdit && (
+        <FlatList
+          className="flex-1"
+          data={composerListData}
+          keyExtractor={(item) => item.key}
+          contentContainerClassName="gap-2 p-6"
+          ListHeaderComponent={
+            <View className="gap-4 mb-2">
+              <View className="flex-row items-center">
+                <View className="flex-1" />
+                <View className="items-center gap-2">
+                  <Text variant="h1" className="text-center text-2xl font-bold">
+                    작곡가 목록
+                  </Text>
+                  <Text className="text-center text-sm text-muted-foreground">
+                    시대별로 정리된 작곡가들을 탐험하세요
+                  </Text>
+                </View>
+                <View className="flex-1 flex-row items-end justify-end gap-2">
+                  {canEdit && (
+                    <TouchableOpacity
+                      onPress={() => setShowComposerForm(true)}
+                      className="rounded-full bg-primary p-2"
+                      activeOpacity={0.7}>
+                      <Icon as={Plus} size={18} color="white" />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
-                    onPress={() => setShowComposerForm(true)}
-                    className="rounded-full bg-primary p-2"
+                    onPress={onRefresh}
+                    disabled={refreshing}
+                    className="rounded-full border border-border bg-card p-2"
                     activeOpacity={0.7}>
-                    <Icon as={Plus} size={18} color="white" />
+                    <Icon
+                      as={RefreshCw}
+                      size={18}
+                      className={`text-foreground ${refreshing ? 'opacity-50' : ''}`}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View className="gap-2">
+                <TextInput
+                  className="rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground"
+                  placeholder="작곡가 검색 (이름, 국적)"
+                  placeholderTextColor="#888"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    className="absolute right-3 top-3">
+                    <View className="rounded-full bg-muted p-1">
+                      <Text className="text-xs text-muted-foreground">✕</Text>
+                    </View>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  onPress={onRefresh}
-                  disabled={refreshing}
-                  className="rounded-full border border-border bg-card p-2"
-                  activeOpacity={0.7}>
-                  <Icon
-                    as={RefreshCw}
-                    size={18}
-                    className={`text-foreground ${refreshing ? 'opacity-50' : ''}`}
-                  />
-                </TouchableOpacity>
               </View>
             </View>
-
-            <View className="gap-2">
-              <TextInput
-                className="rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground"
-                placeholder="작곡가 검색 (이름, 국적)"
-                placeholderTextColor="#888"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
-                  className="absolute right-3 top-3">
-                  <View className="rounded-full bg-muted p-1">
-                    <Text className="text-xs text-muted-foreground">✕</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {ERAS.map((era) => {
-              const composers = getComposersForEra(era.id);
-              const filteredComposers = filterComposers(composers);
-
-              if (filteredComposers.length === 0) return null;
-
+          }
+          renderItem={({ item }) => {
+            if (item.type === 'header') {
               return (
-                <View key={era.id} className="gap-3">
-                  <View className="rounded-xl p-4" style={{ backgroundColor: era.color + '20' }}>
-                    <Text className="text-xl font-bold" style={{ color: era.color }}>
-                      {era.name} ({era.period})
+                <View className="rounded-xl p-4 mt-4" style={{ backgroundColor: item.era.color + '20' }}>
+                  <Text className="text-xl font-bold" style={{ color: item.era.color }}>
+                    {item.era.name} ({item.era.period})
+                  </Text>
+                  {searchQuery.length > 0 && (
+                    <Text className="mt-1 text-xs" style={{ color: item.era.color, opacity: 0.7 }}>
+                      {item.count}명
                     </Text>
-                    {searchQuery.length > 0 && (
-                      <Text className="mt-1 text-xs" style={{ color: era.color, opacity: 0.7 }}>
-                        {filteredComposers.length}명
-                      </Text>
-                    )}
-                  </View>
-
-                  <View className="gap-2">
-                    {filteredComposers.map((composer) => (
-                      <TouchableOpacity
-                        key={composer.id}
-                        onPress={() => handleComposerPress(composer)}
-                        className="flex-row items-center gap-3 rounded-xl bg-card p-3"
-                        style={{
-                          borderLeftWidth: 4,
-                          borderLeftColor: era.color,
-                        }}>
-                        <View
-                          style={{
-                            width: 50,
-                            height: 50,
-                            borderRadius: 25,
-                            overflow: 'hidden',
-                            backgroundColor: era.color + '20',
-                          }}>
-                          {composer.image ? (
-                            <Image
-                              source={{ uri: getImageUrl(composer.image) }}
-                              style={{ width: '100%', height: '100%' }}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View className="size-full items-center justify-center">
-                              <Text className="text-lg font-bold" style={{ color: era.color }}>
-                                {composer.name[0]}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <View className="flex-1">
-                          <Text className="font-bold">{composer.name}</Text>
-                          <Text className="text-xs text-muted-foreground">
-                            {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'}{' '}
-                            · {composer.nationality}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  )}
                 </View>
               );
-            })}
-          </View>
-        </ScrollView>
+            }
+
+            const { composer, era } = item;
+            return (
+              <TouchableOpacity
+                onPress={() => handleComposerPress(composer)}
+                className="flex-row items-center gap-3 rounded-xl bg-card p-3"
+                style={{
+                  borderLeftWidth: 4,
+                  borderLeftColor: era.color,
+                }}>
+                <View
+                  style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    overflow: 'hidden',
+                    backgroundColor: era.color + '20',
+                  }}>
+                  {composer.image ? (
+                    <Image
+                      source={{ uri: getImageUrl(composer.image) }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="size-full items-center justify-center">
+                      <Text className="text-lg font-bold" style={{ color: era.color }}>
+                        {composer.name[0]}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View className="flex-1">
+                  <Text className="font-bold">{composer.name}</Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'}{' '}
+                    · {composer.nationality}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+        />
 
         {/* Composer Form Modal */}
         {canEdit && (
