@@ -42,7 +42,12 @@ export default {
       output: 'static',
       favicon: './assets/images/icon.png',
     },
-    plugins: ['expo-router', 'expo-secure-store', 'expo-web-browser'],
+    plugins: [
+      'expo-router',
+      'expo-secure-store',
+      'expo-web-browser',
+      ['expo-image-picker', { cameraPermission: false }],
+    ],
     experiments: {
       baseUrl: '/classicmap',
       typedRoutes: true,
