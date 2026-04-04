@@ -94,25 +94,39 @@ export default function TimelineScreen() {
   // 에러 처리
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 
-  // 이미지 프리페치 (첫 15개만 - 성능 최적화)
-  React.useEffect(() => {
-    if (composers.length > 0) {
-      const firstBatch = composers
-        .slice(0, 15)
-        .map((c) => c.avatarUrl)
-        .filter(Boolean);
-      if (firstBatch.length > 0) {
-        prefetchImages(firstBatch);
-      }
-    }
-  }, [composers.length]);
+  // 전체 이미지 프리페치 + 프로그레스
+  const [imageLoadCount, setImageLoadCount] = useState(0);
+  const [totalImageCount, setTotalImageCount] = useState(0);
+  const [imagesReady, setImagesReady] = useState(false);
 
-  // 탭을 벗어날 때 쿼리 캐시 정리 (메모리 최적화)
   React.useEffect(() => {
-    return () => {
-      // 언마운트 시 작곡가 쿼리 제거하여 메모리 확보
-    };
-  }, []);
+    if (composers.length === 0 || imagesReady) return;
+
+    const imageUrls = composers
+      .map((c) => c.avatarUrl || c.imageUrl || c.coverImageUrl)
+      .filter((url): url is string => !!url)
+      .map((url) => getImageUrl(url));
+
+    setTotalImageCount(imageUrls.length);
+    setImageLoadCount(0);
+
+    let loaded = 0;
+    const loadPromises = imageUrls.map((uri) =>
+      Image.prefetch(uri)
+        .then(() => {
+          loaded += 1;
+          setImageLoadCount(loaded);
+        })
+        .catch(() => {
+          loaded += 1;
+          setImageLoadCount(loaded);
+        })
+    );
+
+    Promise.all(loadPromises).then(() => {
+      setImagesReady(true);
+    });
+  }, [composers.length]);
 
   // 새로고침 핸들러
   const onRefresh = React.useCallback(() => {
@@ -859,10 +873,26 @@ export default function TimelineScreen() {
     [searchQuery]
   );
 
-  if (loading) {
+  if (loading || !imagesReady) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="flex-1 items-center justify-center bg-background gap-4">
         <ActivityIndicator size="large" />
+        <Text className="text-lg font-semibold">
+          {loading ? '작곡가 정보 로딩 중...' : '이미지 로딩 중...'}
+        </Text>
+        {!loading && totalImageCount > 0 && (
+          <>
+            <Text className="text-muted-foreground">
+              {imageLoadCount} / {totalImageCount}
+            </Text>
+            <View className="w-48 h-2 bg-muted rounded-full overflow-hidden">
+              <View
+                className="h-full bg-primary rounded-full"
+                style={{ width: `${(imageLoadCount / totalImageCount) * 100}%` }}
+              />
+            </View>
+          </>
+        )}
       </View>
     );
   }
