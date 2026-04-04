@@ -4,10 +4,13 @@ import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { useColorScheme } from 'nativewind';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabsLayout() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 20;
 
   const ThemeToggle = () => (
     <Button onPress={toggleColorScheme} size="icon" variant="ghost" className="rounded-full">
@@ -42,8 +45,8 @@ export default function TabsLayout() {
           backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
           borderTopColor: colorScheme === 'dark' ? '#333' : '#e5e5e5',
           paddingTop: 8,
-          paddingBottom: 20,
-          height: 78,
+          paddingBottom: bottomPadding,
+          height: 58 + bottomPadding,
         },
         // 탭 전환 시 화면 언마운트 방지 (상태 유지)
         unmountOnBlur: false,
