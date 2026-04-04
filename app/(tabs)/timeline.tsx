@@ -53,7 +53,7 @@ export default function TimelineScreen() {
   const [isDark, setIsDark] = useState(false);
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
-  const lastFetchRef = useRef<number>(0);
+
 
   // 웹과 네이티브 모두에서 다크모드 감지
   React.useEffect(() => {
@@ -119,28 +119,6 @@ export default function TimelineScreen() {
   const onRefresh = React.useCallback(() => {
     refetch();
   }, [refetch]);
-
-  // 무한 스크롤 핸들러
-  const handleScroll = React.useCallback((event: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const paddingToBottom = 200;
-
-    if (contentSize.height === 0) return; // Not rendered yet
-    if (contentOffset.y < 0) return; // Pulling refresh
-
-    const hasScrolled = contentOffset.y > 200;
-    const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-    if (!hasScrolled || !isNearBottom) return;
-
-    const now = Date.now();
-    if (now - lastFetchRef.current < 1000) return; // Throttle: 1 second
-
-    if (hasNextPage && !isFetchingNextPage) {
-      lastFetchRef.current = now;
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // 2초마다 로테이션 인덱스 변경
   React.useEffect(() => {
@@ -380,7 +358,6 @@ export default function TimelineScreen() {
                 setCurrentEraIndex(index);
               }
             });
-
           }}>
           <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={true} style={{ flex: 1 }}>
             <View style={{ width: totalWidth, paddingHorizontal: TIMELINE_PADDING }}>
@@ -1196,10 +1173,7 @@ export default function TimelineScreen() {
         </Modal>
 
         {/* Composer List */}
-        <ScrollView
-          className="flex-1"
-          onScroll={handleScroll}
-          scrollEventThrottle={400}>
+        <ScrollView className="flex-1">
           <View className="gap-6 p-6">
             <View className="flex-row items-center">
               <View className="flex-1" />
