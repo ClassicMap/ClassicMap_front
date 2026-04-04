@@ -25,7 +25,7 @@ export function useComposers(period?: string) {
       const result = await ComposerAPI.getAll({
         offset: pageParam,
         limit: PAGE_SIZE,
-        period: period
+        period: period,
       });
       return result;
     },

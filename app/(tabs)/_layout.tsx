@@ -1,5 +1,13 @@
 import { Tabs } from 'expo-router';
-import { HomeIcon, MusicIcon, CalendarIcon, PlayCircleIcon, ClockIcon, MoonStarIcon, SunIcon } from 'lucide-react-native';
+import {
+  HomeIcon,
+  MusicIcon,
+  CalendarIcon,
+  PlayCircleIcon,
+  ClockIcon,
+  MoonStarIcon,
+  SunIcon,
+} from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
@@ -27,12 +35,12 @@ export default function TabsLayout() {
           backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
         },
         headerLeft: () => (
-          <View className="ml-4 mb-2">
+          <View className="mb-2 ml-4">
             <ThemeToggle />
           </View>
         ),
         headerRight: () => (
-          <View className="mr-4 mb-2">
+          <View className="mb-2 mr-4">
             <UserMenu />
           </View>
         ),
@@ -50,8 +58,7 @@ export default function TabsLayout() {
         },
         // 탭 전환 시 화면 언마운트 방지 (상태 유지)
         unmountOnBlur: false,
-      }}
-    >
+      }}>
       <Tabs.Screen
         name="home"
         options={{
