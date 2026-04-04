@@ -36,7 +36,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
-import { prefetchImages } from '@/components/optimized-image';
+
 import { getImageUrl } from '@/lib/utils/image';
 import { useColorScheme, Platform } from 'react-native';
 import { useAllComposers } from '@/lib/query/hooks/useComposers';
@@ -94,40 +94,6 @@ export default function TimelineScreen() {
 
   // 에러 처리
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
-
-  // 전체 이미지 프리페치 + 프로그레스
-  const [imageLoadCount, setImageLoadCount] = useState(0);
-  const [totalImageCount, setTotalImageCount] = useState(0);
-  const [imagesReady, setImagesReady] = useState(false);
-
-  React.useEffect(() => {
-    if (composers.length === 0 || imagesReady) return;
-
-    const imageUrls = composers
-      .map((c) => c.avatarUrl || c.imageUrl || c.coverImageUrl)
-      .filter((url): url is string => !!url)
-      .map((url) => getImageUrl(url));
-
-    setTotalImageCount(imageUrls.length);
-    setImageLoadCount(0);
-
-    let loaded = 0;
-    const loadPromises = imageUrls.map((uri) =>
-      Image.prefetch(uri)
-        .then(() => {
-          loaded += 1;
-          setImageLoadCount(loaded);
-        })
-        .catch(() => {
-          loaded += 1;
-          setImageLoadCount(loaded);
-        })
-    );
-
-    Promise.all(loadPromises).then(() => {
-      setImagesReady(true);
-    });
-  }, [composers.length]);
 
   // 새로고침 핸들러
   const onRefresh = React.useCallback(() => {
@@ -890,26 +856,13 @@ export default function TimelineScreen() {
     return items;
   }, [ERAS, getComposersForEra, filterComposers]);
 
-  if (loading || !imagesReady) {
+  if (loading) {
     return (
       <View className="flex-1 items-center justify-center gap-4 bg-background">
         <ActivityIndicator size="large" />
         <Text className="text-lg font-semibold">
-          {loading ? '작곡가 정보 로딩 중...' : '이미지 로딩 중...'}
+          작곡가 정보 로딩 중...
         </Text>
-        {!loading && totalImageCount > 0 && (
-          <>
-            <Text className="text-muted-foreground">
-              {imageLoadCount} / {totalImageCount}
-            </Text>
-            <View className="h-2 w-48 overflow-hidden rounded-full bg-muted">
-              <View
-                className="h-full rounded-full bg-primary"
-                style={{ width: `${(imageLoadCount / totalImageCount) * 100}%` }}
-              />
-            </View>
-          </>
-        )}
       </View>
     );
   }
@@ -1225,7 +1178,7 @@ export default function TimelineScreen() {
           keyExtractor={(item) => item.key}
           contentContainerClassName="gap-2 p-6"
           ListHeaderComponent={
-            <View className="gap-4 mb-2">
+            <View className="mb-2 gap-4">
               <View className="flex-row items-center">
                 <View className="flex-1" />
                 <View className="items-center gap-2">
@@ -1284,7 +1237,9 @@ export default function TimelineScreen() {
           renderItem={({ item }) => {
             if (item.type === 'header') {
               return (
-                <View className="rounded-xl p-4 mt-4" style={{ backgroundColor: item.era.color + '20' }}>
+                <View
+                  className="mt-4 rounded-xl p-4"
+                  style={{ backgroundColor: item.era.color + '20' }}>
                   <Text className="text-xl font-bold" style={{ color: item.era.color }}>
                     {item.era.name} ({item.era.period})
                   </Text>
@@ -1332,8 +1287,8 @@ export default function TimelineScreen() {
                 <View className="flex-1">
                   <Text className="font-bold">{composer.name}</Text>
                   <Text className="text-xs text-muted-foreground">
-                    {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'}{' '}
-                    · {composer.nationality}
+                    {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'} ·{' '}
+                    {composer.nationality}
                   </Text>
                 </View>
               </TouchableOpacity>
