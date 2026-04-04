@@ -54,7 +54,6 @@ export default function TimelineScreen() {
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-
   // 웹과 네이티브 모두에서 다크모드 감지
   React.useEffect(() => {
     if (Platform.OS === 'web') {
@@ -128,27 +127,6 @@ export default function TimelineScreen() {
 
     return () => clearInterval(interval);
   }, []);
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>다시 시도</Text>
-          </Button>
-        </Card>
-      </View>
-    );
-  }
 
   const COMPOSERS = React.useMemo(() => {
     return composers.map((c) => {
@@ -880,6 +858,27 @@ export default function TimelineScreen() {
     },
     [searchQuery]
   );
+
+  if (loading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md p-8">
+          <Text className="mb-4 text-center text-destructive">{error}</Text>
+          <Button variant="outline" onPress={() => refetch()}>
+            <Text>다시 시도</Text>
+          </Button>
+        </Card>
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
