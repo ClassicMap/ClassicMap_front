@@ -45,7 +45,7 @@ const OptimizedImageComponent = ({ uri, fallbackUri, fallbackComponent, style, .
       )}
       <Image
         {...props}
-        source={{ uri: imageUrl, cache: 'force-cache' }}
+        source={{ uri: imageUrl }}
         style={[style, { opacity: loading ? 0 : 1 }]}
         onLoadStart={() => setLoading(true)}
         onLoadEnd={() => {
