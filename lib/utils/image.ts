@@ -15,6 +15,11 @@ export function getImageUrl(
 
   // 이미 완전한 URL인 경우
   if (path.startsWith('http://') || path.startsWith('https://')) {
+    // 위키피디아/위키미디어 이미지는 프록시 경유
+    if (path.includes('wikipedia.org') || path.includes('wikimedia.org')) {
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || `${API_BASE}/api`;
+      return `${apiUrl}/image-proxy?url=${encodeURIComponent(path)}`;
+    }
     return path;
   }
 
