@@ -46,7 +46,7 @@ export default {
       'expo-router',
       'expo-secure-store',
       'expo-web-browser',
-      ['expo-image-picker', { cameraPermission: false }],
+      ['expo-image-picker', { cameraPermission: false, microphonePermission: false }],
     ],
     experiments: {
       baseUrl: '/classicmap',
