@@ -8,6 +8,6 @@ services:
     env_file:
       - .env
     ports:
-      - "4000:80"
+      - '127.0.0.1:4000:80'
     restart: unless-stopped
     container_name: classicmap-front
