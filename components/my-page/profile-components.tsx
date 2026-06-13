@@ -141,6 +141,29 @@ function formatDate(dateText: string): string {
   ).padStart(2, '0')}`;
 }
 
+function PosterFallback() {
+  return (
+    <View className="h-full w-full items-center justify-center bg-muted">
+      <Icon as={CalendarIcon} className="text-muted-foreground" size={36} />
+    </View>
+  );
+}
+
+function PosterImage({ uri }: { uri?: string | null }) {
+  if (!uri) {
+    return <PosterFallback />;
+  }
+
+  return (
+    <OptimizedImage
+      uri={uri}
+      style={{ width: '100%', height: '100%' }}
+      resizeMode="cover"
+      fallbackComponent={<PosterFallback />}
+    />
+  );
+}
+
 export function InlineState({
   title,
   description,
@@ -325,16 +348,7 @@ export function RatedConcertGrid({
             className="w-[47%] overflow-hidden rounded-lg border border-border bg-card web:w-[180px]"
             onPress={() => onOpenConcert?.(rating.concertId)}>
             <View className="aspect-[3/4] bg-muted">
-              <OptimizedImage
-                uri={rating.posterUrl || undefined}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-                fallbackComponent={
-                  <View className="h-full w-full items-center justify-center bg-muted">
-                    <Icon as={CalendarIcon} className="text-muted-foreground" size={36} />
-                  </View>
-                }
-              />
+              <PosterImage uri={rating.posterUrl} />
             </View>
             <View className="gap-1 p-3">
               <Text className="text-sm font-semibold leading-5" numberOfLines={2}>
@@ -428,16 +442,7 @@ function FavoriteSegmentContent({
             className="w-[47%] overflow-hidden rounded-lg border border-border bg-card web:w-[180px]"
             onPress={() => onOpenConcert?.(concert.concertId)}>
             <View className="aspect-[3/4] bg-muted">
-              <OptimizedImage
-                uri={concert.posterUrl || undefined}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-                fallbackComponent={
-                  <View className="h-full w-full items-center justify-center bg-muted">
-                    <Icon as={CalendarIcon} className="text-muted-foreground" size={36} />
-                  </View>
-                }
-              />
+              <PosterImage uri={concert.posterUrl} />
             </View>
             <View className="gap-1 p-3">
               <Text className="text-sm font-semibold leading-5" numberOfLines={2}>
@@ -597,7 +602,7 @@ export function ProfileVisibilitySettings({
   const handleSave = () => {
     onSave({
       displayName: displayName.trim() || defaultDisplayName,
-      bio: bio.trim() || undefined,
+      bio: bio.trim(),
       avatarUrl: profile?.avatarUrl || defaultAvatarUrl || undefined,
       summaryPublic,
       ratingsPublic,
