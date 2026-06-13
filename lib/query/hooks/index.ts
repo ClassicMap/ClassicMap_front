@@ -42,3 +42,13 @@ export {
   useDeletePiece,
   PIECE_QUERY_KEYS,
 } from './usePieces';
+
+// 마이페이지 훅
+export {
+  useMyRatings,
+  useMyFavorites,
+  useProfileVisibility,
+  useUpdateProfileVisibility,
+  usePublicProfile,
+  MY_PAGE_QUERY_KEYS,
+} from './useMyPage';

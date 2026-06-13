@@ -352,15 +352,17 @@ export const setTokenProvider = (fn: (() => Promise<string | null>) | null) => {
  * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const headers = new Headers(options.headers);
+  const isFormDataBody = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+  if (options.body && !headers.has('Content-Type') && !isFormDataBody) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   if (getTokenFn) {
     const token = await getTokenFn();
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers.set('Authorization', `Bearer ${token}`);
     }
   }
 
@@ -370,6 +372,227 @@ const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
   });
 };
 
+const parseJsonResponse = async <T>(response: Response, fallbackMessage: string): Promise<T> => {
+  if (!response.ok) {
+    throw new Error(`${fallbackMessage} (${response.status})`);
+  }
+
+  return response.json() as Promise<T>;
+};
+
+const requestJson = async <T>(path: string, options?: RequestInit): Promise<T> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}${path}`, options);
+  return parseJsonResponse<T>(response, 'API request failed');
+};
+
+const requestEmpty = async (path: string, options?: RequestInit): Promise<void> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}${path}`, options);
+  if (!response.ok) {
+    throw new Error(`API request failed (${response.status})`);
+  }
+};
+
+export interface RatedConcertListItem {
+  concertId: number;
+  title: string;
+  posterUrl?: string | null;
+  startDate: string;
+  facilityName?: string | null;
+  myRating: number;
+  ratedAt: string;
+}
+
+export interface FavoriteConcertItem {
+  concertId: number;
+  title: string;
+  posterUrl?: string | null;
+  startDate: string;
+  facilityName?: string | null;
+  createdAt: string;
+}
+
+export interface FavoriteArtistItem {
+  artistId: number;
+  name: string;
+  englishName: string;
+  category: string;
+  imageUrl?: string | null;
+  createdAt: string;
+}
+
+export interface FavoriteComposerItem {
+  composerId: number;
+  name: string;
+  fullName: string;
+  englishName: string;
+  period: string;
+  avatarUrl?: string | null;
+  createdAt: string;
+}
+
+export interface FavoritePieceItem {
+  pieceId: number;
+  title: string;
+  titleEn?: string | null;
+  composerId: number;
+  composerName: string;
+  createdAt: string;
+}
+
+export interface FavoriteGroups {
+  concerts: FavoriteConcertItem[];
+  artists: FavoriteArtistItem[];
+  composers: FavoriteComposerItem[];
+  pieces: FavoritePieceItem[];
+}
+
+export interface ProfileVisibility {
+  userId: number;
+  displayName?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  summaryPublic: boolean;
+  ratingsPublic: boolean;
+  favoritesPublic: boolean;
+  collectionsPublic: boolean;
+}
+
+export interface UpdateProfileVisibilityInput {
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  summaryPublic?: boolean;
+  ratingsPublic?: boolean;
+  favoritesPublic?: boolean;
+  collectionsPublic?: boolean;
+}
+
+export interface ProfileSummary {
+  ratingsCount: number;
+  averageRating: number;
+  favoritesCount: number;
+  collectionsCount: number;
+}
+
+export interface AutoCollection {
+  id: string;
+  title: string;
+  count: number;
+}
+
+export interface PublicProfileResponse {
+  userId: number;
+  displayName?: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  visibility: Omit<ProfileVisibility, 'userId' | 'displayName' | 'bio' | 'avatarUrl'>;
+  summary?: ProfileSummary | null;
+  ratings?: RatedConcertListItem[] | null;
+  favorites?: FavoriteGroups | null;
+  collections?: AutoCollection[] | null;
+}
+
+export type FavoriteTargetType = 'concerts' | 'artists' | 'composers' | 'pieces';
+
+export const emptyFavoriteGroups = (): FavoriteGroups => ({
+  concerts: [],
+  artists: [],
+  composers: [],
+  pieces: [],
+});
+
+export const MyPageAPI = {
+  async getRatings(): Promise<RatedConcertListItem[]> {
+    return requestJson<RatedConcertListItem[]>('/me/ratings');
+  },
+
+  async getFavoriteConcerts(): Promise<FavoriteConcertItem[]> {
+    return requestJson<FavoriteConcertItem[]>('/me/favorites/concerts');
+  },
+
+  async addFavoriteConcert(concertId: number): Promise<void> {
+    return requestEmpty('/me/favorites/concerts', {
+      method: 'POST',
+      body: JSON.stringify({ concertId }),
+    });
+  },
+
+  async deleteFavoriteConcert(concertId: number): Promise<void> {
+    return requestEmpty(`/me/favorites/concerts/${concertId}`, { method: 'DELETE' });
+  },
+
+  async getFavoriteArtists(): Promise<FavoriteArtistItem[]> {
+    return requestJson<FavoriteArtistItem[]>('/me/favorites/artists');
+  },
+
+  async addFavoriteArtist(artistId: number): Promise<void> {
+    return requestEmpty('/me/favorites/artists', {
+      method: 'POST',
+      body: JSON.stringify({ artistId }),
+    });
+  },
+
+  async deleteFavoriteArtist(artistId: number): Promise<void> {
+    return requestEmpty(`/me/favorites/artists/${artistId}`, { method: 'DELETE' });
+  },
+
+  async getFavoriteComposers(): Promise<FavoriteComposerItem[]> {
+    return requestJson<FavoriteComposerItem[]>('/me/favorites/composers');
+  },
+
+  async addFavoriteComposer(composerId: number): Promise<void> {
+    return requestEmpty('/me/favorites/composers', {
+      method: 'POST',
+      body: JSON.stringify({ composerId }),
+    });
+  },
+
+  async deleteFavoriteComposer(composerId: number): Promise<void> {
+    return requestEmpty(`/me/favorites/composers/${composerId}`, { method: 'DELETE' });
+  },
+
+  async getFavoritePieces(): Promise<FavoritePieceItem[]> {
+    return requestJson<FavoritePieceItem[]>('/me/favorites/pieces');
+  },
+
+  async addFavoritePiece(pieceId: number): Promise<void> {
+    return requestEmpty('/me/favorites/pieces', {
+      method: 'POST',
+      body: JSON.stringify({ pieceId }),
+    });
+  },
+
+  async deleteFavoritePiece(pieceId: number): Promise<void> {
+    return requestEmpty(`/me/favorites/pieces/${pieceId}`, { method: 'DELETE' });
+  },
+
+  async getFavorites(): Promise<FavoriteGroups> {
+    const [concerts, artists, composers, pieces] = await Promise.all([
+      this.getFavoriteConcerts(),
+      this.getFavoriteArtists(),
+      this.getFavoriteComposers(),
+      this.getFavoritePieces(),
+    ]);
+
+    return { concerts, artists, composers, pieces };
+  },
+
+  async getProfileVisibility(): Promise<ProfileVisibility> {
+    return requestJson<ProfileVisibility>('/me/profile-visibility');
+  },
+
+  async updateProfileVisibility(input: UpdateProfileVisibilityInput): Promise<ProfileVisibility> {
+    return requestJson<ProfileVisibility>('/me/profile-visibility', {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+  },
+
+  async getPublicProfile(userId: number): Promise<PublicProfileResponse | null> {
+    return requestJson<PublicProfileResponse | null>(`/users/${userId}/public-profile`);
+  },
+};
+
 /**
  * 작곡가 API
  */
@@ -377,11 +600,7 @@ export const ComposerAPI = {
   /**
    * 모든 작곡가 조회
    */
-  async getAll(params?: {
-    offset?: number;
-    limit?: number;
-    period?: string;
-  }): Promise<Composer[]> {
+  async getAll(params?: { offset?: number; limit?: number; period?: string }): Promise<Composer[]> {
     const offset = params?.offset ?? 0;
     const limit = params?.limit ?? 20;
     const period = params?.period;
@@ -482,15 +701,17 @@ export const ComposerAPI = {
   /**
    * 비교 영상이 있는 작곡가-곡 조합 랜덤 조회
    */
-  async getWithPerformances(limit: number = 10): Promise<{
-    composerId: number;
-    composerName: string;
-    composerAvatarUrl?: string;
-    pieceId: number;
-    pieceTitle: string;
-    performanceCount: number;
-    artistNames: string[];
-  }[]> {
+  async getWithPerformances(limit: number = 10): Promise<
+    {
+      composerId: number;
+      composerName: string;
+      composerAvatarUrl?: string;
+      pieceId: number;
+      pieceTitle: string;
+      performanceCount: number;
+      artistNames: string[];
+    }[]
+  > {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(
         `${API_BASE_URL}/composers/with-performances?limit=${limit}`

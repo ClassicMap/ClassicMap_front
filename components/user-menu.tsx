@@ -4,9 +4,9 @@ import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import type { TriggerRef } from '@rn-primitives/popover';
-import { LogInIcon, LogOutIcon, SettingsIcon } from 'lucide-react-native';
+import { LogInIcon, LogOutIcon, UserIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
@@ -29,22 +29,17 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
       popoverTriggerRef.current?.close();
       await signOut();
       // 로그아웃 성공 - 조용히 처리 (페이지 전환이 피드백 역할)
-    } catch (error: any) {
-      const message = error?.message || error?.toString() || '알 수 없는 오류';
-      console.error('로그아웃 실패:', JSON.stringify(error, null, 2));
-      Alert.alert(
-        '로그아웃 실패',
-        message,
-        [{ text: '확인', style: 'default' }]
-      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '알 수 없는 오류';
+      Alert.alert('로그아웃 실패', message, [{ text: '확인', style: 'default' }]);
     } finally {
       setIsSigningOut(false);
     }
   }
 
-  function onManageAccount() {
+  function onOpenMyPage() {
     popoverTriggerRef.current?.close();
-    router.push('/settings');
+    router.push('/my-page' as Href);
   }
 
   if (!isSignedIn) {
@@ -78,13 +73,9 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
             </View>
           </View>
           <View className="flex-row flex-wrap gap-3 py-0.5">
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={onManageAccount}
-              disabled={isSigningOut}>
-              <Icon as={SettingsIcon} className="size-4" />
-              <Text>계정 관리</Text>
+            <Button variant="outline" size="sm" onPress={onOpenMyPage} disabled={isSigningOut}>
+              <Icon as={UserIcon} className="size-4" />
+              <Text>마이페이지</Text>
             </Button>
             <Button
               variant="outline"
@@ -106,7 +97,9 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   );
 }
 
-function UserAvatar(props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { iconColor?: string }) {
+function UserAvatar(
+  props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { iconColor?: string }
+) {
   const { user } = useUser();
   const { iconColor, ...avatarProps } = props;
 

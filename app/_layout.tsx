@@ -31,10 +31,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ClerkProvider
-        tokenCache={tokenCache}
-        publishableKey={publishableKey}
-      >
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
         <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <Routes />
@@ -72,6 +69,8 @@ function Routes() {
       <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="my-page" options={{ headerShown: false }} />
+      <Stack.Screen name="users/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       <Stack.Screen name="change-password" options={{ headerShown: false }} />
@@ -95,4 +94,3 @@ const SIGN_UP_SCREEN_OPTIONS = {
   headerShown: false,
   title: 'Sign up',
 };
-
