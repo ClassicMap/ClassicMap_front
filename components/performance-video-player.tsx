@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 
 interface PerformanceVideoPlayerProps {
@@ -8,44 +8,15 @@ interface PerformanceVideoPlayerProps {
   endTime: number;
 }
 
-interface InvidiousFormatStream {
-  type: string;
-  url: string;
-  qualityLabel?: string;
-  quality?: string;
-}
+const VIDEO_CLIP_BASE = process.env.EXPO_PUBLIC_VIDEO_CLIP_BASE ?? '/classicmap/clips';
 
-interface InvidiousVideoResponse {
-  formatStreams?: InvidiousFormatStream[];
-}
+function createClipUrl(videoId: string, startTime: number, endTime: number): string {
+  const params = new URLSearchParams({
+    end: String(endTime),
+    start: String(startTime),
+  });
 
-const INVIDIOUS_API_BASE = process.env.EXPO_PUBLIC_INVIDIOUS_API_BASE ?? '/classicmap/invidious';
-
-function qualityRank(stream: InvidiousFormatStream): number {
-  const quality = stream.qualityLabel ?? stream.quality ?? '';
-  const match = quality.match(/(\d{3,4})p/i);
-
-  return match ? Number.parseInt(match[1], 10) : 0;
-}
-
-function selectStream(video: InvidiousVideoResponse): InvidiousFormatStream | null {
-  const candidates = (video.formatStreams ?? []).filter(
-    (stream) => stream.url.length > 0 && stream.type.startsWith('video/')
-  );
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  return [...candidates].sort((left, right) => qualityRank(right) - qualityRank(left))[0];
-}
-
-function toPlayableStreamUrl(streamUrl: string): string {
-  if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
-    return streamUrl;
-  }
-
-  return `${INVIDIOUS_API_BASE}${streamUrl}`;
+  return `${VIDEO_CLIP_BASE}/${encodeURIComponent(videoId)}?${params.toString()}`;
 }
 
 export function PerformanceVideoPlayer({
@@ -53,73 +24,11 @@ export function PerformanceVideoPlayer({
   startTime,
   endTime,
 }: PerformanceVideoPlayerProps) {
-  const [streamUrl, setStreamUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'web') {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function loadStream() {
-      setStreamUrl(null);
-      setError(null);
-
-      try {
-        const response = await fetch(
-          `${INVIDIOUS_API_BASE}/api/v1/videos/${encodeURIComponent(videoId)}?local=true`,
-          { signal: controller.signal }
-        );
-
-        if (!response.ok) {
-          throw new Error(`영상 정보를 불러오지 못했어. (${response.status})`);
-        }
-
-        const video = (await response.json()) as InvidiousVideoResponse;
-        const stream = selectStream(video);
-
-        if (!stream) {
-          throw new Error('재생 가능한 영상 스트림이 없어.');
-        }
-
-        setStreamUrl(toPlayableStreamUrl(stream.url));
-      } catch (caughtError) {
-        if (caughtError instanceof DOMException && caughtError.name === 'AbortError') {
-          return;
-        }
-
-        setError(caughtError instanceof Error ? caughtError.message : '영상 재생을 준비하지 못했어.');
-      }
-    }
-
-    void loadStream();
-
-    return () => controller.abort();
-  }, [videoId]);
-
-  const seekToStart = React.useCallback(() => {
-    const video = videoRef.current;
-
-    if (!video) {
-      return;
-    }
-
-    video.currentTime = startTime;
-  }, [startTime]);
-
-  const stopAtEnd = React.useCallback(() => {
-    const video = videoRef.current;
-
-    if (!video || endTime <= startTime || video.currentTime < endTime) {
-      return;
-    }
-
-    video.pause();
-    video.currentTime = startTime;
-  }, [endTime, startTime]);
+  const clipUrl = React.useMemo(
+    () => createClipUrl(videoId, startTime, endTime),
+    [endTime, startTime, videoId]
+  );
 
   if (Platform.OS !== 'web') {
     return (
@@ -150,24 +59,14 @@ export function PerformanceVideoPlayer({
     );
   }
 
-  if (!streamUrl) {
-    return (
-      <View className="h-full items-center justify-center bg-black">
-        <ActivityIndicator color="#ffffff" />
-      </View>
-    );
-  }
-
   return (
     <video
-      ref={videoRef}
       controls
       playsInline
       preload="metadata"
-      src={streamUrl}
+      src={clipUrl}
       style={{ backgroundColor: '#000000', height: '100%', width: '100%' }}
-      onLoadedMetadata={seekToStart}
-      onTimeUpdate={stopAtEnd}
+      onError={() => setError('영상 구간을 준비하지 못했어. 잠깐 뒤 다시 눌러봐.')}
     />
   );
 }
