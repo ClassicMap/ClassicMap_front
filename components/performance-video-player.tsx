@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import YoutubePlayer from 'react-native-youtube-iframe';
 
 interface PerformanceVideoPlayerProps {
   videoId: string;
@@ -49,6 +50,10 @@ export function PerformanceVideoPlayer({
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
   React.useEffect(() => {
+    if (Platform.OS !== 'web') {
+      return;
+    }
+
     const controller = new AbortController();
 
     async function loadStream() {
@@ -107,6 +112,27 @@ export function PerformanceVideoPlayer({
     video.pause();
     video.currentTime = startTime;
   }, [endTime, startTime]);
+
+  if (Platform.OS !== 'web') {
+    return (
+      <YoutubePlayer
+        videoId={videoId}
+        height={196}
+        play={false}
+        initialPlayerParams={{
+          start: startTime,
+          end: endTime,
+          controls: true,
+          modestbranding: true,
+          rel: false,
+        }}
+        webViewProps={{
+          androidLayerType: 'hardware',
+          allowsInlineMediaPlayback: true,
+        }}
+      />
+    );
+  }
 
   if (error) {
     return (
