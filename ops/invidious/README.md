@@ -11,9 +11,17 @@ This stack is intentionally only reachable through the ClassicMap video API prox
 5. Add a Caddy route before the generic `/classicmap*` route:
 
 ```caddyfile
-handle_path /classicmap/invidious/api/v1/videos/* {
+@classicmap_invidious_api path /classicmap/invidious/api/v1/videos/*
+handle @classicmap_invidious_api {
+  uri strip_prefix /classicmap/invidious
+  reverse_proxy 127.0.0.1:3100
+}
+
+@classicmap_invidious_video path /classicmap/invidious/videoplayback*
+handle @classicmap_invidious_video {
+  uri strip_prefix /classicmap/invidious
   reverse_proxy 127.0.0.1:3100
 }
 ```
 
-The web client requests only `/api/v1/videos/<YouTube video id>`, selects a progressive video stream, and plays it in the browser's native video element. This keeps the Invidious UI and its unrelated routes private.
+The web client requests `/api/v1/videos/<YouTube video id>?local=true`, which makes Invidious return a local `/videoplayback` URL. The browser then streams through the home server instead of attempting an IP-bound YouTube URL directly. This keeps the Invidious UI and its unrelated routes private.

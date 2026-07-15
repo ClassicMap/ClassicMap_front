@@ -40,6 +40,14 @@ function selectStream(video: InvidiousVideoResponse): InvidiousFormatStream | nu
   return [...candidates].sort((left, right) => qualityRank(right) - qualityRank(left))[0];
 }
 
+function toPlayableStreamUrl(streamUrl: string): string {
+  if (streamUrl.startsWith('http://') || streamUrl.startsWith('https://')) {
+    return streamUrl;
+  }
+
+  return `${INVIDIOUS_API_BASE}${streamUrl}`;
+}
+
 export function PerformanceVideoPlayer({
   videoId,
   startTime,
@@ -62,7 +70,7 @@ export function PerformanceVideoPlayer({
 
       try {
         const response = await fetch(
-          `${INVIDIOUS_API_BASE}/api/v1/videos/${encodeURIComponent(videoId)}`,
+          `${INVIDIOUS_API_BASE}/api/v1/videos/${encodeURIComponent(videoId)}?local=true`,
           { signal: controller.signal }
         );
 
@@ -77,7 +85,7 @@ export function PerformanceVideoPlayer({
           throw new Error('재생 가능한 영상 스트림이 없어.');
         }
 
-        setStreamUrl(stream.url);
+        setStreamUrl(toPlayableStreamUrl(stream.url));
       } catch (caughtError) {
         if (caughtError instanceof DOMException && caughtError.name === 'AbortError') {
           return;
