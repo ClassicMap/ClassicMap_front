@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 
 interface PerformanceVideoPlayerProps {
@@ -25,10 +25,21 @@ export function PerformanceVideoPlayer({
   endTime,
 }: PerformanceVideoPlayerProps) {
   const [error, setError] = React.useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = React.useState(0);
   const clipUrl = React.useMemo(
     () => createClipUrl(videoId, startTime, endTime),
     [endTime, startTime, videoId]
   );
+
+  React.useEffect(() => {
+    setError(null);
+    setRetryAttempt(0);
+  }, [clipUrl]);
+
+  const retry = React.useCallback(() => {
+    setError(null);
+    setRetryAttempt((attempt) => attempt + 1);
+  }, []);
 
   if (Platform.OS !== 'web') {
     return (
@@ -53,14 +64,22 @@ export function PerformanceVideoPlayer({
 
   if (error) {
     return (
-      <View className="h-full items-center justify-center bg-black px-4">
+      <View className="h-full items-center justify-center gap-3 bg-black px-4">
         <Text className="text-center text-sm text-white/80">{error}</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.8}
+          className="rounded-full border border-white/40 px-4 py-2"
+          onPress={retry}>
+          <Text className="text-sm font-semibold text-white">다시 시도</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <video
+      key={retryAttempt}
       controls
       playsInline
       preload="metadata"
