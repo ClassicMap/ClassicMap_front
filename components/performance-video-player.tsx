@@ -66,7 +66,7 @@ export function PerformanceVideoPlayer({
       preload="metadata"
       src={clipUrl}
       style={{ backgroundColor: '#000000', height: '100%', width: '100%' }}
-      onError={() => setError('영상 구간을 준비하지 못했어. 잠깐 뒤 다시 눌러봐.')}
+      onError={() => setError('영상 구간을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.')}
     />
   );
 }
