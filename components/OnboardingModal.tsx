@@ -14,9 +14,11 @@ interface OnboardingModalProps {
 }
 
 const PERIODS = [
+  { id: '중세', name: '중세', emoji: '🏰' },
+  { id: '르네상스', name: '르네상스', emoji: '🏛️' },
   { id: '바로크', name: '바로크', emoji: '🎻' },
-  { id: '고전', name: '고전', emoji: '🎹' },
-  { id: '낭만', name: '낭만', emoji: '🎼' },
+  { id: '고전주의', name: '고전주의', emoji: '🎹' },
+  { id: '낭만주의', name: '낭만주의', emoji: '🎼' },
   { id: '근현대', name: '근현대', emoji: '🎵' },
 ];
 

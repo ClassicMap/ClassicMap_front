@@ -224,7 +224,7 @@ const mapComposer = (api: any): Composer => {
     name: api.name,
     fullName: api.fullName,
     englishName: api.englishName,
-    period: api.period as '바로크' | '고전주의' | '낭만주의' | '근현대',
+    period: api.period as '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대',
     birthYear: api.birthYear,
     deathYear: api.deathYear,
     nationality: api.nationality,

@@ -885,6 +885,8 @@ export default function CompareScreen() {
   const getPeriodColor = (period: string): string => {
     const ERAS = getAllPeriods();
     const periodMap: { [key: string]: string } = {
+      중세: 'medieval',
+      르네상스: 'renaissance',
       바로크: 'baroque',
       고전주의: 'classical',
       낭만주의: 'romantic',
@@ -931,13 +933,27 @@ export default function CompareScreen() {
                   </View>
                 </View>
 
-                <View className="flex-row gap-2">
+                <View className="flex-row flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant={periodFilter === 'all' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('all')}>
                     <Text className="text-xs">전체</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '중세' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('중세')}>
+                    <Text className="text-xs">중세</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '르네상스' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('르네상스')}>
+                    <Text className="text-xs">르네상스</Text>
                   </Button>
                   <Button
                     size="sm"

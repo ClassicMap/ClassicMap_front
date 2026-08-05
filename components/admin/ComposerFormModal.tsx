@@ -184,13 +184,12 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
 
               <View>
                 <Label>시대 *</Label>
-                <View className="flex-row gap-2">
-                  {['바로크', '고전주의', '낭만주의', '근현대'].map((p) => (
+                <View className="flex-row flex-wrap gap-2">
+                  {['중세', '르네상스', '바로크', '고전주의', '낭만주의', '근현대'].map((p) => (
                     <Button
                       key={p}
                       variant={period === p ? 'default' : 'outline'}
                       onPress={() => setPeriod(p)}
-                      className="flex-1"
                       size="sm"
                     >
                       <Text className="text-xs">{p}</Text>

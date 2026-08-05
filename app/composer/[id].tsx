@@ -37,6 +37,8 @@ interface ComposerWithPieces extends Composer {
 
 // 시대별 색상 매핑
 const ERA_COLORS: Record<string, string> = {
+  '중세': '#b45309',
+  '르네상스': '#0f766e',
   '바로크': '#9333ea',
   '고전주의': '#3b82f6',
   '낭만주의': '#ec4899',

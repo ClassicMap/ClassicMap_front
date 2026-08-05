@@ -7,7 +7,7 @@ export interface Composer {
   name: string;
   fullName: string;
   englishName: string;
-  period: '바로크' | '고전주의' | '낭만주의' | '근현대';
+  period: '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대';
   birthYear: number;
   deathYear: number | null;
   nationality: string;
