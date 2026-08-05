@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const MAX_CLIP_SECONDS = 600;
+export const DEFAULT_ENCODING_PROFILE_VERSION = 'v1-copy';
 const MAX_START_SECONDS = 4 * 60 * 60;
 const DEFAULT_CONCURRENCY = 1;
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
@@ -20,7 +21,10 @@ function requireValue(args, index, name) {
 export function parseArgs(args) {
   const options = {
     baseUrl: process.env.VIDEO_CLIP_BASE_URL ?? 'http://127.0.0.1:3200',
+    bundlePath: undefined,
     concurrency: DEFAULT_CONCURRENCY,
+    encodingProfileVersion:
+      process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION,
     manifestPath: undefined,
     reportPath: undefined,
     resume: false,
@@ -37,6 +41,12 @@ export function parseArgs(args) {
       index += 1;
     } else if (argument === '--report') {
       options.reportPath = requireValue(args, index, '--report');
+      index += 1;
+    } else if (argument === '--bundle') {
+      options.bundlePath = requireValue(args, index, '--bundle');
+      index += 1;
+    } else if (argument === '--encoding-profile-version') {
+      options.encodingProfileVersion = requireValue(args, index, '--encoding-profile-version');
       index += 1;
     } else if (argument === '--concurrency') {
       options.concurrency = Number.parseInt(requireValue(args, index, '--concurrency'), 10);
@@ -65,9 +75,15 @@ export function parseArgs(args) {
   if (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 1) {
     throw new Error('--timeout-ms는 1 이상의 정수여야 합니다.');
   }
+  if (!/^[a-z0-9][a-z0-9._-]{0,31}$/.test(options.encodingProfileVersion)) {
+    throw new Error('--encoding-profile-version 값이 올바르지 않습니다.');
+  }
 
   options.manifestPath = resolve(options.manifestPath);
   options.reportPath = resolve(options.reportPath ?? `${options.manifestPath}.prewarm-report.json`);
+  options.bundlePath = resolve(
+    options.bundlePath ?? `${options.manifestPath}.clip-assets.jsonl`
+  );
   options.baseUrl = options.baseUrl.replace(/\/+$/, '');
   return options;
 }
@@ -82,7 +98,7 @@ function validationError(line, message) {
   };
 }
 
-function parseManifestRow(value, line) {
+function parseManifestRow(value, line, encodingProfileVersion) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('JSON 객체여야 합니다.');
   }
@@ -107,7 +123,8 @@ function parseManifestRow(value, line) {
   }
 
   return {
-    cacheKey: `${videoId}:${start}:${end}`,
+    cacheKey: `${videoId}:${start}:${end}:${encodingProfileVersion}`,
+    encodingProfileVersion,
     end,
     lines: [line],
     performanceIds: [performanceId],
@@ -116,8 +133,12 @@ function parseManifestRow(value, line) {
   };
 }
 
-export function parseManifest(content) {
+export function parseManifest(
+  content,
+  encodingProfileVersion = DEFAULT_ENCODING_PROFILE_VERSION
+) {
   const clipsByKey = new Map();
+  const cacheKeyByPerformanceId = new Map();
   const invalid = [];
 
   content.split(/\r?\n/).forEach((rawLine, index) => {
@@ -127,7 +148,15 @@ export function parseManifest(content) {
     }
 
     try {
-      const clip = parseManifestRow(JSON.parse(rawLine), line);
+      const clip = parseManifestRow(JSON.parse(rawLine), line, encodingProfileVersion);
+      const performanceId = clip.performanceIds[0];
+      const previousCacheKey = cacheKeyByPerformanceId.get(performanceId);
+      if (previousCacheKey && previousCacheKey !== clip.cacheKey) {
+        throw new Error(
+          `performanceId ${performanceId}가 서로 다른 클립에 중복 지정되었습니다.`
+        );
+      }
+      cacheKeyByPerformanceId.set(performanceId, clip.cacheKey);
       const existing = clipsByKey.get(clip.cacheKey);
       if (existing) {
         existing.lines.push(line);
@@ -149,36 +178,137 @@ export function parseManifest(content) {
 }
 
 export function createClipUrl(baseUrl, clip) {
-  const params = new URLSearchParams({ end: String(clip.end), start: String(clip.start) });
+  const params = new URLSearchParams({
+    end: String(clip.end),
+    profile: clip.encodingProfileVersion ?? DEFAULT_ENCODING_PROFILE_VERSION,
+    start: String(clip.start),
+  });
   return `${baseUrl}/${encodeURIComponent(clip.videoId)}?${params.toString()}`;
 }
 
-export function successfulCacheKeys(report) {
-  if (!report || typeof report !== 'object' || !Array.isArray(report.results)) {
-    return new Set();
-  }
-
-  return new Set(
-    report.results
-      .filter((result) => ['succeeded', 'skipped'].includes(result.status))
-      .map((result) => result.cacheKey)
-      .filter((cacheKey) => typeof cacheKey === 'string')
+function hasVerifiedAssetMetadata(result) {
+  return (
+    result &&
+    typeof result.storageKey === 'string' &&
+    /^[a-f0-9]{64}$/.test(result.sha256 ?? '') &&
+    Number.isInteger(result.fileSize) &&
+    result.fileSize > 0 &&
+    Number.isInteger(result.probedDurationMs) &&
+    result.probedDurationMs > 0 &&
+    typeof result.encodingProfileVersion === 'string' &&
+    typeof result.assetValidatedAt === 'string' &&
+    typeof result.rangeVerifiedAt === 'string'
   );
 }
 
-async function readResumeKeys(reportPath, resume) {
+export function successfulResultsByCacheKey(report) {
+  if (!report || typeof report !== 'object' || !Array.isArray(report.results)) {
+    return new Map();
+  }
+
+  return new Map(
+    report.results
+      .filter(
+        (result) =>
+          ['succeeded', 'skipped'].includes(result.status) &&
+          typeof result.cacheKey === 'string' &&
+          hasVerifiedAssetMetadata(result)
+      )
+      .map((result) => [result.cacheKey, result])
+  );
+}
+
+export function successfulCacheKeys(report) {
+  return new Set(successfulResultsByCacheKey(report).keys());
+}
+
+async function readResumeResults(reportPath, resume) {
   if (!resume) {
-    return new Set();
+    return new Map();
   }
 
   try {
-    return successfulCacheKeys(JSON.parse(await readFile(reportPath, 'utf8')));
+    return successfulResultsByCacheKey(JSON.parse(await readFile(reportPath, 'utf8')));
   } catch (error) {
     if (error && typeof error === 'object' && error.code === 'ENOENT') {
-      return new Set();
+      return new Map();
     }
     throw new Error(`이전 보고서를 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+function requireHeader(response, name) {
+  const value = response.headers.get(name);
+  if (!value) {
+    throw new Error(`클립 메타데이터 헤더가 없습니다: ${name}`);
+  }
+  return value;
+}
+
+function parsePositiveIntegerHeader(response, name) {
+  const raw = requireHeader(response, name);
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`클립 메타데이터 헤더가 올바르지 않습니다: ${name}`);
+  }
+  return value;
+}
+
+function parseAssetHeaders(response, clip, contentRange) {
+  const storageKey = requireHeader(response, 'x-classicmap-clip-storage-key');
+  const sha256 = requireHeader(response, 'x-classicmap-clip-sha256');
+  const fileSize = parsePositiveIntegerHeader(response, 'x-classicmap-clip-file-size');
+  const probedDurationMs = parsePositiveIntegerHeader(
+    response,
+    'x-classicmap-clip-duration-ms'
+  );
+  const responseProfile = requireHeader(
+    response,
+    'x-classicmap-clip-encoding-profile'
+  );
+  const assetValidatedAt = requireHeader(
+    response,
+    'x-classicmap-clip-asset-validated-at'
+  );
+  const contentRangeSize = Number(contentRange.match(/\/(\d+)$/)?.[1]);
+
+  if (
+    !/^[A-Za-z0-9_.-]+\.mp4$/.test(storageKey) ||
+    storageKey.includes('..') ||
+    storageKey.includes('/')
+  ) {
+    throw new Error('클립 storageKey가 올바르지 않습니다.');
+  }
+  if (!/^[a-f0-9]{64}$/.test(sha256)) {
+    throw new Error('클립 SHA-256 값이 올바르지 않습니다.');
+  }
+  if (fileSize !== contentRangeSize) {
+    throw new Error('클립 파일 크기와 Content-Range 전체 크기가 다릅니다.');
+  }
+  if (
+    probedDurationMs > MAX_CLIP_SECONDS * 1000 + 5000 ||
+    Math.abs(probedDurationMs - (clip.end - clip.start) * 1000) >
+      Math.max(3000, (clip.end - clip.start) * 1000 * 0.03)
+  ) {
+    throw new Error('검증된 클립 길이가 manifest 요청과 다릅니다.');
+  }
+  if (responseProfile !== clip.encodingProfileVersion) {
+    throw new Error(
+      `클립 인코딩 프로필이 다릅니다. (요청 ${clip.encodingProfileVersion}, 응답 ${responseProfile})`
+    );
+  }
+  if (Number.isNaN(Date.parse(assetValidatedAt))) {
+    throw new Error('클립 자산 검증 시각이 올바르지 않습니다.');
+  }
+
+  return {
+    assetValidatedAt,
+    encodingProfileVersion: responseProfile,
+    fileSize,
+    probedDurationMs,
+    sha256,
+    storageKey,
+  };
 }
 
 function errorDetails(error) {
@@ -223,14 +353,17 @@ export async function prewarmClip(baseUrl, clip, timeoutMs, fetchImplementation 
     if (acceptRanges !== 'bytes' || !/^bytes 0-0\/\d+$/.test(contentRange ?? '') || body.byteLength !== 1) {
       throw new Error('응답의 Accept-Ranges, Content-Range 또는 본문 길이가 올바르지 않습니다.');
     }
+    const assetMetadata = parseAssetHeaders(response, clip, contentRange);
 
     return {
+      ...assetMetadata,
       cacheKey: clip.cacheKey,
       contentRange,
       durationMs: Date.now() - startedTime,
       finishedAt: new Date().toISOString(),
       lines: clip.lines,
       performanceIds: clip.performanceIds,
+      rangeVerifiedAt: new Date().toISOString(),
       startedAt,
       status: 'succeeded',
       url,
@@ -266,11 +399,51 @@ function countResults(results) {
   );
 }
 
-async function writeReportAtomic(reportPath, report) {
-  const tempPath = `${reportPath}.${process.pid}.tmp`;
-  await mkdir(dirname(reportPath), { recursive: true });
-  await writeFile(tempPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
-  await rename(tempPath, reportPath);
+export function createAssetBundleRows(report) {
+  const rows = [];
+  for (const result of report.results ?? []) {
+    if (
+      !['succeeded', 'skipped'].includes(result.status) ||
+      !hasVerifiedAssetMetadata(result)
+    ) {
+      continue;
+    }
+    for (const performanceId of result.performanceIds ?? []) {
+      rows.push({
+        assetValidatedAt: result.assetValidatedAt,
+        encodingProfileVersion: result.encodingProfileVersion,
+        fileSize: result.fileSize,
+        performanceId,
+        probedDurationMs: result.probedDurationMs,
+        rangeVerifiedAt: result.rangeVerifiedAt,
+        sha256: result.sha256,
+        storageKey: result.storageKey,
+      });
+    }
+  }
+
+  return rows.sort(
+    (left, right) =>
+      left.performanceId - right.performanceId ||
+      left.storageKey.localeCompare(right.storageKey)
+  );
+}
+
+export function serializeAssetBundle(report) {
+  const rows = createAssetBundleRows(report);
+  return rows.length > 0 ? `${rows.map((row) => JSON.stringify(row)).join('\n')}\n` : '';
+}
+
+async function writeTextAtomic(outputPath, contents) {
+  const tempPath = `${outputPath}.${process.pid}.tmp`;
+  await mkdir(dirname(outputPath), { recursive: true });
+  try {
+    await writeFile(tempPath, contents, 'utf8');
+    await rename(tempPath, outputPath);
+  } catch (error) {
+    await unlink(tempPath).catch(() => undefined);
+    throw error;
+  }
 }
 
 async function runWorkers(items, concurrency, worker) {
@@ -285,21 +458,27 @@ async function runWorkers(items, concurrency, worker) {
   await Promise.all(workers);
 }
 
-export async function runPrewarm(options) {
+export async function runPrewarm(options, fetchImplementation = fetch) {
   const manifestContent = await readFile(options.manifestPath, 'utf8');
-  const { clips, invalid } = parseManifest(manifestContent);
-  const resumeKeys = await readResumeKeys(options.reportPath, options.resume);
+  const { clips, invalid } = parseManifest(
+    manifestContent,
+    options.encodingProfileVersion
+  );
+  const resumeResults = await readResumeResults(options.reportPath, options.resume);
   const startedAt = new Date().toISOString();
   const results = [...invalid];
   const pending = [];
 
   for (const clip of clips) {
-    if (resumeKeys.has(clip.cacheKey)) {
+    const previousResult = resumeResults.get(clip.cacheKey);
+    if (previousResult) {
       results.push({
+        ...previousResult,
         cacheKey: clip.cacheKey,
         lines: clip.lines,
         performanceIds: clip.performanceIds,
         status: 'skipped',
+        url: createClipUrl(options.baseUrl, clip),
       });
     } else {
       pending.push(clip);
@@ -308,28 +487,40 @@ export async function runPrewarm(options) {
 
   const buildReport = (completedAt = null) => ({
     baseUrl: options.baseUrl,
+    bundlePath: options.bundlePath,
     completedAt,
     concurrency: options.concurrency,
     counts: countResults(results),
+    encodingProfileVersion: options.encodingProfileVersion,
     manifestPath: options.manifestPath,
     maxClipSeconds: MAX_CLIP_SECONDS,
-    reportVersion: 1,
+    reportVersion: 2,
     results,
     resume: options.resume,
     startedAt,
   });
 
-  await writeReportAtomic(options.reportPath, buildReport());
+  const writeCheckpoint = async (completedAt = null) => {
+    const report = buildReport(completedAt);
+    await writeTextAtomic(
+      options.reportPath,
+      `${JSON.stringify(report, null, 2)}\n`
+    );
+    await writeTextAtomic(options.bundlePath, serializeAssetBundle(report));
+    return report;
+  };
+
+  await writeCheckpoint();
   let reportWrite = Promise.resolve();
   await runWorkers(pending, options.concurrency, async (clip) => {
-    results.push(await prewarmClip(options.baseUrl, clip, options.timeoutMs));
-    reportWrite = reportWrite.then(() => writeReportAtomic(options.reportPath, buildReport()));
+    results.push(
+      await prewarmClip(options.baseUrl, clip, options.timeoutMs, fetchImplementation)
+    );
+    reportWrite = reportWrite.then(() => writeCheckpoint());
     await reportWrite;
   });
 
-  const report = buildReport(new Date().toISOString());
-  await writeReportAtomic(options.reportPath, report);
-  return report;
+  return writeCheckpoint(new Date().toISOString());
 }
 
 function printHelp() {
@@ -339,6 +530,9 @@ function printHelp() {
 옵션:
   --base-url <url>       클리퍼 주소 (기본: VIDEO_CLIP_BASE_URL 또는 http://127.0.0.1:3200)
   --report <path>        JSON 검증 보고서 경로
+  --bundle <path>        clip_assets 적재용 JSONL 경로
+  --encoding-profile-version <version>
+                         기대하는 인코딩 프로필 (기본: ${DEFAULT_ENCODING_PROFILE_VERSION})
   --concurrency <n>      동시 요청 수 (기본: 1)
   --timeout-ms <n>       클립 하나의 제한 시간 (기본: ${DEFAULT_TIMEOUT_MS})
   --resume               이전 성공 항목을 보고서에서 읽어 건너뜁니다.
@@ -356,6 +550,7 @@ async function main() {
     const report = await runPrewarm(options);
     console.info(`클립 선생성 완료: 성공 ${report.counts.succeeded}, 재사용 ${report.counts.skipped}, 실패 ${report.counts.failed}, 입력 오류 ${report.counts.invalid}`);
     console.info(`검증 보고서: ${options.reportPath}`);
+    console.info(`clip_assets 적재 번들: ${options.bundlePath}`);
     if (report.counts.failed > 0 || report.counts.invalid > 0) {
       process.exitCode = 1;
     }
