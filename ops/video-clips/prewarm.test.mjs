@@ -74,6 +74,40 @@ test('Range 206과 1바이트 응답을 검증한다', async () => {
   assert.equal(result.contentRange, 'bytes 0-0/1024');
 });
 
+test('Range가 무시된 전체 영상 응답은 본문을 내려받지 않고 중단한다', async () => {
+  let cancelled = false;
+  const mockFetch = async () => ({
+    body: {
+      async cancel() {
+        cancelled = true;
+      },
+    },
+    headers: new Headers({ 'Content-Type': 'video/mp4' }),
+    status: 200,
+    async text() {
+      throw new Error('영상 본문을 읽으면 안 됩니다.');
+    },
+  });
+
+  const result = await prewarmClip(
+    'https://example.com/clips',
+    {
+      cacheKey: 'abcdefghijk:10:20',
+      end: 20,
+      lines: [1],
+      performanceIds: [1],
+      start: 10,
+      videoId: 'abcdefghijk',
+    },
+    1000,
+    mockFetch
+  );
+
+  assert.equal(result.status, 'failed');
+  assert.equal(result.error.httpStatus, 200);
+  assert.equal(cancelled, true);
+});
+
 test('resume은 이전 성공과 건너뛴 캐시키만 재사용한다', () => {
   const keys = successfulCacheKeys({
     results: [

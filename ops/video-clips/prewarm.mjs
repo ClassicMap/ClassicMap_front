@@ -205,14 +205,21 @@ export async function prewarmClip(baseUrl, clip, timeoutMs, fetchImplementation 
     });
     const contentRange = response.headers.get('content-range');
     const acceptRanges = response.headers.get('accept-ranges');
-    const body = new Uint8Array(await response.arrayBuffer());
 
     if (response.status !== 206) {
-      const responseText = new TextDecoder().decode(body).slice(0, 500);
+      const contentType = response.headers.get('content-type') ?? '';
+      const responseText = /application\/json|text\//i.test(contentType)
+        ? (await response.text()).slice(0, 500)
+        : '';
+      if (!responseText) {
+        await response.body?.cancel();
+      }
       const error = new Error(`HTTP Range 검증에 실패했습니다. (${response.status})${responseText ? ` ${responseText}` : ''}`);
       error.httpStatus = response.status;
       throw error;
     }
+
+    const body = new Uint8Array(await response.arrayBuffer());
     if (acceptRanges !== 'bytes' || !/^bytes 0-0\/\d+$/.test(contentRange ?? '') || body.byteLength !== 1) {
       throw new Error('응답의 Accept-Ranges, Content-Range 또는 본문 길이가 올바르지 않습니다.');
     }
