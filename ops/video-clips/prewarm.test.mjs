@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -24,6 +24,7 @@ const VERIFIED_ASSET = {
   rangeVerifiedAt: '2026-08-05T00:01:00.000Z',
   sha256: 'a'.repeat(64),
   storageKey: 'abcdefghijk-10000-10000-v1-copy.mp4',
+  url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
 };
 
 function testClip() {
@@ -178,6 +179,7 @@ test('검증 보고서에서 performanceId 순서의 결정적 clip_assets 번�
         cacheKey: 'asset-b',
         performanceIds: [20, 10],
         status: 'succeeded',
+        url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
       },
       {
         cacheKey: 'failed',
@@ -190,6 +192,10 @@ test('검증 보고서에서 performanceId 순서의 결정적 clip_assets 번�
   const rows = createAssetBundleRows(report);
   assert.deepEqual(rows.map((row) => row.performanceId), [10, 20]);
   assert.equal(rows[0].storageKey, VERIFIED_ASSET.storageKey);
+  assert.equal(
+    rows[0].publicUrl,
+    'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10'
+  );
   assert.equal(
     serializeAssetBundle(report),
     `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`
@@ -221,6 +227,7 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
     assert.equal(firstReport.counts.succeeded, 1);
     assert.equal(JSON.parse(bundle).performanceId, 1);
     assert.equal(JSON.parse(bundle).storageKey, VERIFIED_ASSET.storageKey);
+    assert.match(JSON.parse(bundle).publicUrl, /profile=v1-copy/);
 
     const resumedReport = await runPrewarm(
       { ...options, resume: true },
@@ -230,6 +237,40 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
     );
     assert.equal(resumedReport.counts.skipped, 1);
     assert.equal(resumedReport.results[0].rangeVerifiedAt, firstReport.results[0].rangeVerifiedAt);
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
+test('실패나 입력 오류가 있으면 최종 clip_assets 번들을 남기지 않는다', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'classicmap-prewarm-failure-test-'));
+  const manifestPath = join(directory, 'clips.jsonl');
+  const reportPath = join(directory, 'report.json');
+  const bundlePath = join(directory, 'bundle.jsonl');
+  await writeFile(
+    manifestPath,
+    `${JSON.stringify({ performanceId: 1, videoId: 'abcdefghijk', start: 10, end: 20 })}\n`
+  );
+  await writeFile(bundlePath, '이전 성공 번들은 제거되어야 합니다.\n');
+
+  try {
+    const options = parseArgs([
+      '--manifest',
+      manifestPath,
+      '--report',
+      reportPath,
+      '--bundle',
+      bundlePath,
+    ]);
+    const report = await runPrewarm(options, async () =>
+      new Response(JSON.stringify({ error: '생성 실패' }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 502,
+      })
+    );
+
+    assert.equal(report.counts.failed, 1);
+    await assert.rejects(access(bundlePath), { code: 'ENOENT' });
   } finally {
     await rm(directory, { force: true, recursive: true });
   }

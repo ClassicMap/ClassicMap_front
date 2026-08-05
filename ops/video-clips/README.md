@@ -135,17 +135,18 @@ npm run video-clips:prewarm -- \
 
 ## clip_assets 적재 번들
 
-CLI는 보고서와 함께 백엔드 `clip_assets` 적재용 JSONL을 원자 기록합니다. 행은 `performanceId`, `storageKey` 순서로 결정적으로 정렬됩니다.
+CLI는 완료된 보고서와 함께 백엔드 `clip_assets` 적재용 JSONL을 원자 기록합니다. 행은 `performanceId`, `storageKey` 순서로 결정적으로 정렬됩니다. `publicUrl`에는 인코딩 프로필 쿼리가 포함된 결정적 클립 URL이 들어갑니다.
 
 ```jsonl
-{"assetValidatedAt":"2026-08-05T00:00:00.000Z","encodingProfileVersion":"v1-copy","fileSize":1024,"performanceId":101,"probedDurationMs":62000,"rangeVerifiedAt":"2026-08-05T00:01:00.000Z","sha256":"...","storageKey":"abcdefghijk-358000-62000-v1-copy.mp4"}
+{"assetValidatedAt":"2026-08-05T00:00:00.000Z","encodingProfileVersion":"v1-copy","fileSize":1024,"performanceId":101,"probedDurationMs":62000,"publicUrl":"https://kang1027.com/classicmap/clips/abcdefghijk?end=420&profile=v1-copy&start=358","rangeVerifiedAt":"2026-08-05T00:01:00.000Z","sha256":"...","storageKey":"abcdefghijk-358000-62000-v1-copy.mp4"}
 ```
 
-실패하지 않은 행만 번들에 들어갑니다. 다만 보고서에 실패 또는 입력 오류가 하나라도 있으면 CLI 종료 코드는 1입니다. 이때 생성된 부분 번들을 운영 DB에 적재하면 안 됩니다. 다음 조건을 모두 만족한 보고서의 번들만 적재합니다.
+재개용 중간 체크포인트에는 보고서만 기록합니다. 완료 전이거나 실패 또는 입력 오류가 하나라도 있으면 이전 `bundlePath`도 제거합니다. 다음 조건을 모두 만족한 경우에만 최종 번들을 원자 기록합니다.
 
 ```text
 counts.failed = 0
 counts.invalid = 0
+completedAt != null
 ```
 
 백엔드는 번들 적재와 `clip_assets.status = READY` 전환을 한 트랜잭션 경계에서 처리해야 합니다. READY가 아닌 performance는 사용자 화면에 공개하지 않습니다.

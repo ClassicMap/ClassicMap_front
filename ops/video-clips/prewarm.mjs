@@ -197,7 +197,9 @@ function hasVerifiedAssetMetadata(result) {
     result.probedDurationMs > 0 &&
     typeof result.encodingProfileVersion === 'string' &&
     typeof result.assetValidatedAt === 'string' &&
-    typeof result.rangeVerifiedAt === 'string'
+    typeof result.rangeVerifiedAt === 'string' &&
+    typeof result.url === 'string' &&
+    result.url.includes(`profile=${encodeURIComponent(result.encodingProfileVersion)}`)
   );
 }
 
@@ -415,6 +417,7 @@ export function createAssetBundleRows(report) {
         fileSize: result.fileSize,
         performanceId,
         probedDurationMs: result.probedDurationMs,
+        publicUrl: result.url,
         rangeVerifiedAt: result.rangeVerifiedAt,
         sha256: result.sha256,
         storageKey: result.storageKey,
@@ -506,7 +509,15 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
       options.reportPath,
       `${JSON.stringify(report, null, 2)}\n`
     );
-    await writeTextAtomic(options.bundlePath, serializeAssetBundle(report));
+    const isPublishable =
+      completedAt !== null &&
+      report.counts.failed === 0 &&
+      report.counts.invalid === 0;
+    if (isPublishable) {
+      await writeTextAtomic(options.bundlePath, serializeAssetBundle(report));
+    } else {
+      await unlink(options.bundlePath).catch(() => undefined);
+    }
     return report;
   };
 
