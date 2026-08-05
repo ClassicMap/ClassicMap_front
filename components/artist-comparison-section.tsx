@@ -95,7 +95,10 @@ function ComparisonCard({
 }) {
   const router = useRouter();
   const artistCredit = performance.credits.find((credit) => credit.artistId === artistId);
-  const canPlay = typeof performance.clipUrl === 'string';
+  const canPlay =
+    Platform.OS === 'web'
+      ? typeof performance.clipUrl === 'string'
+      : typeof performance.videoId === 'string';
 
   const openComparison = React.useCallback(() => {
     router.push(
@@ -127,7 +130,12 @@ function ComparisonCard({
 
         {isSelected && canPlay && (
           <View className="overflow-hidden rounded-lg bg-black" style={{ height: 220 }}>
-            <PerformanceVideoPlayer clipUrl={performance.clipUrl} />
+            <PerformanceVideoPlayer
+              clipUrl={performance.clipUrl}
+              endTime={performance.endMs / 1000}
+              startTime={performance.startMs / 1000}
+              videoId={performance.videoId}
+            />
           </View>
         )}
         {isSelected && !canPlay && (
@@ -141,12 +149,10 @@ function ComparisonCard({
         <View className="gap-2 sm:flex-row">
           <Button
             className="flex-1"
-            disabled={!canPlay || Platform.OS !== 'web'}
+            disabled={!canPlay}
             onPress={onSelect}>
             <Icon as={PlayCircleIcon} size={16} className="mr-2 text-primary-foreground" />
-            <Text>
-              {isSelected ? '영상 닫기' : Platform.OS === 'web' ? '영상 보기' : '웹에서 영상 보기'}
-            </Text>
+            <Text>{isSelected ? '영상 닫기' : '영상 보기'}</Text>
           </Button>
           <Button className="flex-1" variant="outline" onPress={openComparison}>
             <Text>다른 연주자와 비교하기</Text>

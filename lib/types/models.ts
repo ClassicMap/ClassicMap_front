@@ -177,6 +177,7 @@ export interface ComparisonPerformance {
   endMs: number;
   clipStatus: ClipStatus;
   clipUrl?: string;
+  videoId?: string;
   credits: PerformanceCredit[];
 }
 

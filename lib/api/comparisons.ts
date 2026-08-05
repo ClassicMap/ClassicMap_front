@@ -39,6 +39,7 @@ interface ApiComparisonPerformance {
   endMs: number;
   clipStatus: ClipStatus;
   clipUrl?: string | null;
+  videoId?: string | null;
   credits: ApiPerformanceCredit[];
 }
 
@@ -122,6 +123,13 @@ function parseComparison(value: unknown): ComparisonPerformance {
   if (value.clipUrl !== undefined && value.clipUrl !== null && typeof value.clipUrl !== 'string') {
     throw new Error('비교영상 응답의 clipUrl 값이 올바르지 않습니다.');
   }
+  if (
+    value.videoId !== undefined &&
+    value.videoId !== null &&
+    (typeof value.videoId !== 'string' || !/^[A-Za-z0-9_-]{11}$/.test(value.videoId))
+  ) {
+    throw new Error('비교영상 응답의 videoId 값이 올바르지 않습니다.');
+  }
 
   return {
     clipStatus: clipStatus as ClipStatus,
@@ -140,6 +148,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
     sectorName: requireString(value.sectorName, 'sectorName'),
     sourceId: requireInteger(value.sourceId, 'sourceId'),
     startMs,
+    videoId: typeof value.videoId === 'string' ? value.videoId : undefined,
   };
 }
 
