@@ -101,6 +101,7 @@ X-ClassicMap-Clip-Asset-Validated-At
 npm run video-clips:prewarm -- \
   --manifest ./seed-clips.jsonl \
   --base-url https://kang1027.com/classicmap/clips \
+  --public-base-url https://kang1027.com/classicmap/clips \
   --encoding-profile-version v1-copy \
   --report ./seed-clips.report.json \
   --bundle ./seed-clips.clip-assets.jsonl
@@ -112,6 +113,7 @@ npm run video-clips:prewarm -- \
 npm run video-clips:prewarm -- \
   --manifest ./seed-clips.jsonl \
   --base-url https://kang1027.com/classicmap/clips \
+  --public-base-url https://kang1027.com/classicmap/clips \
   --encoding-profile-version v1-copy \
   --report ./seed-clips.report.json \
   --bundle ./seed-clips.clip-assets.jsonl \
@@ -135,7 +137,7 @@ npm run video-clips:prewarm -- \
 
 ## clip_assets 적재 번들
 
-CLI는 완료된 보고서와 함께 백엔드 `clip_assets` 적재용 JSONL을 원자 기록합니다. 행은 `performanceId`, `storageKey` 순서로 결정적으로 정렬됩니다. `publicUrl`에는 인코딩 프로필 쿼리가 포함된 결정적 클립 URL이 들어갑니다.
+CLI는 완료된 보고서와 함께 백엔드 `clip_assets` 적재용 JSONL을 원자 기록합니다. 행은 `performanceId`, `storageKey` 순서로 결정적으로 정렬됩니다. `publicUrl`에는 `--public-base-url`과 인코딩 프로필 쿼리로 만든 결정적 클립 URL이 들어갑니다. 공개 기본 주소는 외부에서 접근 가능한 HTTPS URL이어야 하며 `localhost`와 loopback 주소는 거부합니다. 선생성 요청을 내부 주소로 보내더라도 공개 URL은 별도로 안전하게 지정할 수 있습니다.
 
 ```jsonl
 {"assetValidatedAt":"2026-08-05T00:00:00.000Z","encodingProfileVersion":"v1-copy","fileSize":1024,"performanceId":101,"probedDurationMs":62000,"publicUrl":"https://kang1027.com/classicmap/clips/abcdefghijk?end=420&profile=v1-copy&start=358","rangeVerifiedAt":"2026-08-05T00:01:00.000Z","sha256":"...","storageKey":"abcdefghijk-358000-62000-v1-copy.mp4"}

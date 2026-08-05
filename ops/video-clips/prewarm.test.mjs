@@ -24,6 +24,8 @@ const VERIFIED_ASSET = {
   rangeVerifiedAt: '2026-08-05T00:01:00.000Z',
   sha256: 'a'.repeat(64),
   storageKey: 'abcdefghijk-10000-10000-v1-copy.mp4',
+  publicUrl:
+    'https://cdn.example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
   url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
 };
 
@@ -86,12 +88,31 @@ test('같은 performanceId가 서로 다른 클립에 있으면 입력 오류로
 });
 
 test('CLI 기본 동시성은 1이고 보고서 기본 경로를 만든다', () => {
-  const options = parseArgs(['--manifest', './clips.jsonl']);
+  const options = parseArgs([
+    '--manifest',
+    './clips.jsonl',
+    '--public-base-url',
+    'https://cdn.example.com/clips',
+  ]);
 
   assert.equal(options.concurrency, 1);
   assert.equal(options.reportPath, `${options.manifestPath}.prewarm-report.json`);
   assert.equal(options.bundlePath, `${options.manifestPath}.clip-assets.jsonl`);
   assert.equal(options.encodingProfileVersion, 'v1-copy');
+  assert.equal(options.publicBaseUrl, 'https://cdn.example.com/clips');
+});
+
+test('localhost를 backend public_url 기본 주소로 허용하지 않는다', () => {
+  assert.throws(
+    () =>
+      parseArgs([
+        '--manifest',
+        './clips.jsonl',
+        '--public-base-url',
+        'http://127.0.0.1:3200',
+      ]),
+    /외부에서 접근 가능한 HTTPS/
+  );
 });
 
 test('클립 URL에 원본 타임라인의 시작과 끝을 넣는다', () => {
@@ -179,7 +200,6 @@ test('검증 보고서에서 performanceId 순서의 결정적 clip_assets 번�
         cacheKey: 'asset-b',
         performanceIds: [20, 10],
         status: 'succeeded',
-        url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
       },
       {
         cacheKey: 'failed',
@@ -194,7 +214,7 @@ test('검증 보고서에서 performanceId 순서의 결정적 clip_assets 번�
   assert.equal(rows[0].storageKey, VERIFIED_ASSET.storageKey);
   assert.equal(
     rows[0].publicUrl,
-    'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10'
+    'https://cdn.example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10'
   );
   assert.equal(
     serializeAssetBundle(report),
@@ -220,6 +240,8 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
       reportPath,
       '--bundle',
       bundlePath,
+      '--public-base-url',
+      'https://cdn.example.com/clips',
     ]);
     const firstReport = await runPrewarm(options, async () => successfulRangeResponse());
     const bundle = await readFile(bundlePath, 'utf8');
@@ -261,6 +283,8 @@ test('실패나 입력 오류가 있으면 최종 clip_assets 번들을 남기�
       reportPath,
       '--bundle',
       bundlePath,
+      '--public-base-url',
+      'https://cdn.example.com/clips',
     ]);
     const report = await runPrewarm(options, async () =>
       new Response(JSON.stringify({ error: '생성 실패' }), {

@@ -26,6 +26,7 @@ export function parseArgs(args) {
     encodingProfileVersion:
       process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION,
     manifestPath: undefined,
+    publicBaseUrl: process.env.VIDEO_CLIP_PUBLIC_BASE_URL,
     reportPath: undefined,
     resume: false,
     timeoutMs: DEFAULT_TIMEOUT_MS,
@@ -38,6 +39,9 @@ export function parseArgs(args) {
       index += 1;
     } else if (argument === '--base-url') {
       options.baseUrl = requireValue(args, index, '--base-url');
+      index += 1;
+    } else if (argument === '--public-base-url') {
+      options.publicBaseUrl = requireValue(args, index, '--public-base-url');
       index += 1;
     } else if (argument === '--report') {
       options.reportPath = requireValue(args, index, '--report');
@@ -85,6 +89,30 @@ export function parseArgs(args) {
     options.bundlePath ?? `${options.manifestPath}.clip-assets.jsonl`
   );
   options.baseUrl = options.baseUrl.replace(/\/+$/, '');
+  if (!options.publicBaseUrl) {
+    try {
+      const requestUrl = new URL(options.baseUrl);
+      if (requestUrl.protocol === 'https:' && !['127.0.0.1', 'localhost', '::1'].includes(requestUrl.hostname)) {
+        options.publicBaseUrl = options.baseUrl;
+      }
+    } catch {
+      // 아래 공개 URL 검증에서 일관된 오류를 반환합니다.
+    }
+  }
+  try {
+    const publicUrl = new URL(options.publicBaseUrl);
+    if (
+      publicUrl.protocol !== 'https:' ||
+      ['127.0.0.1', 'localhost', '::1'].includes(publicUrl.hostname)
+    ) {
+      throw new Error();
+    }
+    options.publicBaseUrl = options.publicBaseUrl.replace(/\/+$/, '');
+  } catch {
+    throw new Error(
+      '--public-base-url에는 외부에서 접근 가능한 HTTPS 클립 기본 주소가 필요합니다.'
+    );
+  }
   return options;
 }
 
@@ -199,7 +227,8 @@ function hasVerifiedAssetMetadata(result) {
     typeof result.assetValidatedAt === 'string' &&
     typeof result.rangeVerifiedAt === 'string' &&
     typeof result.url === 'string' &&
-    result.url.includes(`profile=${encodeURIComponent(result.encodingProfileVersion)}`)
+    typeof result.publicUrl === 'string' &&
+    result.publicUrl.includes(`profile=${encodeURIComponent(result.encodingProfileVersion)}`)
   );
 }
 
@@ -417,7 +446,7 @@ export function createAssetBundleRows(report) {
         fileSize: result.fileSize,
         performanceId,
         probedDurationMs: result.probedDurationMs,
-        publicUrl: result.url,
+        publicUrl: result.publicUrl,
         rangeVerifiedAt: result.rangeVerifiedAt,
         sha256: result.sha256,
         storageKey: result.storageKey,
@@ -481,6 +510,7 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
         lines: clip.lines,
         performanceIds: clip.performanceIds,
         status: 'skipped',
+        publicUrl: createClipUrl(options.publicBaseUrl, clip),
         url: createClipUrl(options.baseUrl, clip),
       });
     } else {
@@ -497,6 +527,7 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
     encodingProfileVersion: options.encodingProfileVersion,
     manifestPath: options.manifestPath,
     maxClipSeconds: MAX_CLIP_SECONDS,
+    publicBaseUrl: options.publicBaseUrl,
     reportVersion: 2,
     results,
     resume: options.resume,
@@ -524,9 +555,14 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
   await writeCheckpoint();
   let reportWrite = Promise.resolve();
   await runWorkers(pending, options.concurrency, async (clip) => {
-    results.push(
-      await prewarmClip(options.baseUrl, clip, options.timeoutMs, fetchImplementation)
+    const result = await prewarmClip(
+      options.baseUrl,
+      clip,
+      options.timeoutMs,
+      fetchImplementation
     );
+    result.publicUrl = createClipUrl(options.publicBaseUrl, clip);
+    results.push(result);
     reportWrite = reportWrite.then(() => writeCheckpoint());
     await reportWrite;
   });
@@ -540,6 +576,8 @@ function printHelp() {
 
 옵션:
   --base-url <url>       클리퍼 주소 (기본: VIDEO_CLIP_BASE_URL 또는 http://127.0.0.1:3200)
+  --public-base-url <url>
+                         backend public_url에 저장할 외부 HTTPS 기본 주소
   --report <path>        JSON 검증 보고서 경로
   --bundle <path>        clip_assets 적재용 JSONL 경로
   --encoding-profile-version <version>
