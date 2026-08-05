@@ -45,6 +45,7 @@ import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { prefetchImages } from '@/components/optimized-image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
+import { ArtistComparisonSection } from '@/components/artist-comparison-section';
 
 // Recording Cover Component with error handling (small)
 function RecordingCover({ coverUrl }: { coverUrl?: string | null }) {
@@ -563,6 +564,8 @@ export default function ArtistDetailScreen() {
               </View>
             </Card>
           )}
+
+          <ArtistComparisonSection artistId={artist.id} />
 
           {/* Recordings/Albums */}
           <View className="gap-3">

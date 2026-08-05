@@ -403,9 +403,15 @@ export default function CompareScreen() {
         const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
         setSectors(sectorData);
 
-        // 첫 번째 섹터 자동 선택
+        const requestedSectorId = Number(
+          Array.isArray(params.sectorId) ? params.sectorId[0] : params.sectorId
+        );
+
+        // URL에 섹터가 지정되면 해당 섹터를 선택하고, 없으면 첫 번째 섹터를 선택한다.
         if (sectorData.length > 0) {
-          setSelectedSector(sectorData[0]);
+          setSelectedSector(
+            sectorData.find((sector) => sector.id === requestedSectorId) ?? sectorData[0]
+          );
         } else {
           setSelectedSector(null);
         }
@@ -419,7 +425,7 @@ export default function CompareScreen() {
     };
 
     loadSectors();
-  }, [selectedPiece]);
+  }, [params.sectorId, selectedPiece]);
 
   // 섹터 재로드 함수 (생성/수정/삭제 후 사용)
   const reloadSectors = async () => {

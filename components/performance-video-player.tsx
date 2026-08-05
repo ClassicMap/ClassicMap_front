@@ -3,9 +3,10 @@ import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import YoutubePlayer from 'react-native-youtube-iframe';
 
 interface PerformanceVideoPlayerProps {
-  videoId: string;
-  startTime: number;
-  endTime: number;
+  videoId?: string;
+  startTime?: number;
+  endTime?: number;
+  clipUrl?: string;
 }
 
 const VIDEO_CLIP_BASE = process.env.EXPO_PUBLIC_VIDEO_CLIP_BASE ?? '/classicmap/clips';
@@ -23,13 +24,19 @@ export function PerformanceVideoPlayer({
   videoId,
   startTime,
   endTime,
+  clipUrl: preparedClipUrl,
 }: PerformanceVideoPlayerProps) {
   const [error, setError] = React.useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = React.useState(0);
-  const clipUrl = React.useMemo(
-    () => createClipUrl(videoId, startTime, endTime),
-    [endTime, startTime, videoId]
-  );
+  const clipUrl = React.useMemo(() => {
+    if (preparedClipUrl) {
+      return preparedClipUrl;
+    }
+    if (videoId && startTime !== undefined && endTime !== undefined) {
+      return createClipUrl(videoId, startTime, endTime);
+    }
+    return null;
+  }, [endTime, preparedClipUrl, startTime, videoId]);
 
   React.useEffect(() => {
     setError(null);
@@ -42,23 +49,43 @@ export function PerformanceVideoPlayer({
   }, []);
 
   if (Platform.OS !== 'web') {
+    if (videoId && startTime !== undefined && endTime !== undefined) {
+      return (
+        <YoutubePlayer
+          videoId={videoId}
+          height={196}
+          play={false}
+          initialPlayerParams={{
+            start: startTime,
+            end: endTime,
+            controls: true,
+            modestbranding: true,
+            rel: false,
+          }}
+          webViewProps={{
+            androidLayerType: 'hardware',
+            allowsInlineMediaPlayback: true,
+          }}
+        />
+      );
+    }
+
     return (
-      <YoutubePlayer
-        videoId={videoId}
-        height={196}
-        play={false}
-        initialPlayerParams={{
-          start: startTime,
-          end: endTime,
-          controls: true,
-          modestbranding: true,
-          rel: false,
-        }}
-        webViewProps={{
-          androidLayerType: 'hardware',
-          allowsInlineMediaPlayback: true,
-        }}
-      />
+      <View className="h-full items-center justify-center bg-black px-4">
+        <Text className="text-center text-sm text-white/80">
+          이 영상은 현재 웹에서 재생할 수 있어요.
+        </Text>
+      </View>
+    );
+  }
+
+  if (!clipUrl) {
+    return (
+      <View className="h-full items-center justify-center bg-black px-4">
+        <Text className="text-center text-sm text-white/80">
+          재생할 영상 주소가 없어요.
+        </Text>
+      </View>
     );
   }
 

@@ -139,6 +139,52 @@ export interface Performance {
   updatedAt?: Date;
 }
 
+export type ClipStatus =
+  | 'pending'
+  | 'queued'
+  | 'generating'
+  | 'ready'
+  | 'failed'
+  | 'retired';
+
+export type PerformanceCreditRole =
+  | 'soloist'
+  | 'conductor'
+  | 'orchestra'
+  | 'ensemble'
+  | 'accompanist'
+  | 'vocalist'
+  | 'other';
+
+export interface PerformanceCredit {
+  artistId: number;
+  artistName: string;
+  role: PerformanceCreditRole;
+  isPrimary: boolean;
+  displayOrder: number;
+}
+
+export interface ComparisonPerformance {
+  id: number;
+  sourceId: number;
+  sectorId: number;
+  pieceId: number;
+  pieceTitle: string;
+  composerId: number;
+  composerName: string;
+  sectorName: string;
+  startMs: number;
+  endMs: number;
+  clipStatus: ClipStatus;
+  clipUrl?: string;
+  credits: PerformanceCredit[];
+}
+
+export interface ComparisonPerformancePage {
+  items: ComparisonPerformance[];
+  nextCursor: string | null;
+}
+
 // ============================================
 // DTOs (Data Transfer Objects - API 응답용)
 // ============================================
