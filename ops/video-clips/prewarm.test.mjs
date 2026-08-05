@@ -16,6 +16,9 @@ import {
   successfulCacheKeys,
 } from './prewarm.mjs';
 
+const BUILD_TOKEN = 'test-build-token-0123456789abcdef';
+process.env.VIDEO_CLIP_BUILD_TOKEN = BUILD_TOKEN;
+
 const VERIFIED_ASSET = {
   assetValidatedAt: '2026-08-05T00:00:00.000Z',
   encodingProfileVersion: 'v1-copy',
@@ -28,6 +31,20 @@ const VERIFIED_ASSET = {
     'https://cdn.example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
   url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
 };
+
+function approvedManifestRow(overrides = {}) {
+  return {
+    candidateStatus: 'APPROVED',
+    end: 20,
+    performanceId: 1,
+    rightsEvidence: 'rights-review:test-fixture',
+    rightsMode: 'permission_granted',
+    rightsReviewedAt: '2026-08-05T00:00:00.000Z',
+    start: 10,
+    videoId: 'abcdefghijk',
+    ...overrides,
+  };
+}
 
 function testClip() {
   return {
@@ -59,9 +76,11 @@ function successfulRangeResponse() {
 
 test('manifest를 검증하고 동일 클립을 하나로 합친다', () => {
   const content = [
-    JSON.stringify({ performanceId: 11, videoId: 'abcdefghijk', start: 10, end: 70 }),
-    JSON.stringify({ performanceId: 12, videoId: 'abcdefghijk', start: 10, end: 70 }),
-    JSON.stringify({ performanceId: 13, videoId: 'abcdefghijk', start: 0, end: MAX_CLIP_SECONDS + 1 }),
+    JSON.stringify(approvedManifestRow({ performanceId: 11, end: 70 })),
+    JSON.stringify(approvedManifestRow({ performanceId: 12, end: 70 })),
+    JSON.stringify(
+      approvedManifestRow({ performanceId: 13, start: 0, end: MAX_CLIP_SECONDS + 1 })
+    ),
     '{broken',
   ].join('\n');
 
@@ -77,14 +96,30 @@ test('manifest를 검증하고 동일 클립을 하나로 합친다', () => {
 test('같은 performanceId가 서로 다른 클립에 있으면 입력 오류로 분리한다', () => {
   const parsed = parseManifest(
     [
-      JSON.stringify({ performanceId: 11, videoId: 'abcdefghijk', start: 10, end: 20 }),
-      JSON.stringify({ performanceId: 11, videoId: 'lmnopqrstuv', start: 10, end: 20 }),
+      JSON.stringify(approvedManifestRow({ performanceId: 11 })),
+      JSON.stringify(approvedManifestRow({ performanceId: 11, videoId: 'lmnopqrstuv' })),
     ].join('\n')
   );
 
   assert.equal(parsed.clips.length, 1);
   assert.equal(parsed.invalid.length, 1);
   assert.match(parsed.invalid[0].error.message, /서로 다른 클립/);
+});
+
+test('자체 호스팅 권리 검토가 끝나지 않은 후보는 거부한다', () => {
+  const parsed = parseManifest(
+    `${JSON.stringify(
+      approvedManifestRow({
+        rightsEvidence: undefined,
+        rightsMode: 'unknown',
+        rightsReviewedAt: undefined,
+      })
+    )}\n`
+  );
+
+  assert.equal(parsed.clips.length, 0);
+  assert.equal(parsed.invalid.length, 1);
+  assert.match(parsed.invalid[0].error.message, /자체 호스팅 권리/);
 });
 
 test('CLI 기본 동시성은 1이고 보고서 기본 경로를 만든다', () => {
@@ -174,6 +209,7 @@ test('클립 URL에 원본 타임라인의 시작과 끝을 넣는다', () => {
 
 test('Range 206과 1바이트 응답을 검증한다', async () => {
   const mockFetch = async (_url, options) => {
+    assert.equal(options.headers.Authorization, `Bearer ${BUILD_TOKEN}`);
     assert.equal(options.headers.Range, 'bytes=0-0');
     return successfulRangeResponse();
   };
@@ -182,6 +218,7 @@ test('Range 206과 1바이트 응답을 검증한다', async () => {
     'https://example.com/clips',
     testClip(),
     1000,
+    BUILD_TOKEN,
     mockFetch
   );
 
@@ -214,6 +251,7 @@ test('Range가 무시된 전체 영상 응답은 본문을 내려받지 않고 �
     'https://example.com/clips',
     testClip(),
     1000,
+    BUILD_TOKEN,
     mockFetch
   );
 
@@ -272,7 +310,7 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
   const bundlePath = join(directory, 'bundle.jsonl');
   await writeFile(
     manifestPath,
-    `${JSON.stringify({ performanceId: 1, videoId: 'abcdefghijk', start: 10, end: 20 })}\n`
+    `${JSON.stringify(approvedManifestRow())}\n`
   );
 
   try {
@@ -314,7 +352,7 @@ test('실패나 입력 오류가 있으면 최종 clip_assets 번들을 남기�
   const bundlePath = join(directory, 'bundle.jsonl');
   await writeFile(
     manifestPath,
-    `${JSON.stringify({ performanceId: 1, videoId: 'abcdefghijk', start: 10, end: 20 })}\n`
+    `${JSON.stringify(approvedManifestRow())}\n`
   );
   await writeFile(bundlePath, '이전 성공 번들은 제거되어야 합니다.\n');
 

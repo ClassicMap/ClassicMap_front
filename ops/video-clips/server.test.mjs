@@ -9,10 +9,20 @@ import {
   DEFAULT_ENCODING_PROFILE_VERSION,
   createClipIdentity,
   describeClipAsset,
+  isBuildAuthorized,
   metadataHeaders,
   parseClipRequest,
   parseProbeOutput,
 } from './server.mjs';
+
+test('클립 생성은 32자 이상의 생성 전용 토큰으로만 허용한다', () => {
+  const token = 'test-build-token-0123456789abcdef';
+
+  assert.equal(isBuildAuthorized(`Bearer ${token}`, token), true);
+  assert.equal(isBuildAuthorized('Bearer wrong-token', token), false);
+  assert.equal(isBuildAuthorized(undefined, token), false);
+  assert.equal(isBuildAuthorized('Bearer short', 'short'), false);
+});
 
 test('인코딩 프로필을 포함한 결정적 저장 키를 만든다', () => {
   const identity = createClipIdentity({

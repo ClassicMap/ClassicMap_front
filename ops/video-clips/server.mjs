@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -16,6 +16,7 @@ const port = Number.parseInt(process.env.CLIP_PORT ?? '3200', 10);
 const maxStartSeconds = 4 * 60 * 60;
 const encodingProfileVersion =
   process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION;
+const clipBuildToken = process.env.CLIP_BUILD_TOKEN?.trim() ?? '';
 const activeBuilds = new Map();
 
 if (!SUPPORTED_ENCODING_PROFILES.has(encodingProfileVersion)) {
@@ -97,6 +98,20 @@ export function parseClipRequest(requestUrl) {
   }
 
   return { duration, end, start, videoId };
+}
+
+export function isBuildAuthorized(authorization, configuredToken = clipBuildToken) {
+  if (configuredToken.length < 32 || typeof authorization !== 'string') {
+    return false;
+  }
+  const prefix = 'Bearer ';
+  if (!authorization.startsWith(prefix)) {
+    return false;
+  }
+  const suppliedToken = authorization.slice(prefix.length);
+  const expected = Buffer.from(configuredToken);
+  const supplied = Buffer.from(suppliedToken);
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
 async function getSourceUrl(videoId) {
@@ -447,7 +462,7 @@ function sendError(response, statusCode, message) {
   response.end(JSON.stringify({ error: message }));
 }
 
-export function createClipServer() {
+export function createClipServer({ buildToken = clipBuildToken } = {}) {
   return createServer(async (request, response) => {
     if (request.method !== 'GET') {
       response.writeHead(405, { Allow: 'GET' });
@@ -457,7 +472,15 @@ export function createClipServer() {
 
     try {
       const clipRequest = parseClipRequest(request.url ?? '/');
-      const asset = await buildClip(clipRequest);
+      const identity = createClipIdentity(clipRequest, encodingProfileVersion);
+      let asset = await loadExistingAsset(identity);
+      if (!asset) {
+        if (!isBuildAuthorized(request.headers.authorization, buildToken)) {
+          sendError(response, 404, '준비된 클립 자산이 없습니다.');
+          return;
+        }
+        asset = await buildClip(clipRequest);
+      }
       await sendClip(request, response, asset);
     } catch (error) {
       const message =

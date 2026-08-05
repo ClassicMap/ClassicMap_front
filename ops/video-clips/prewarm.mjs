@@ -6,6 +6,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const MAX_CLIP_SECONDS = 600;
 export const DEFAULT_ENCODING_PROFILE_VERSION = 'v1-copy';
+export const SELF_HOSTED_RIGHTS_MODES = new Set([
+  'licensed_self_hosted',
+  'permission_granted',
+  'public_domain',
+]);
 const MAX_START_SECONDS = 4 * 60 * 60;
 const DEFAULT_CONCURRENCY = 1;
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1000;
@@ -68,6 +73,7 @@ export function parseArgs(args) {
   const options = {
     baseUrl: process.env.VIDEO_CLIP_BASE_URL ?? 'http://127.0.0.1:3200',
     bundlePath: undefined,
+    buildToken: process.env.VIDEO_CLIP_BUILD_TOKEN?.trim(),
     concurrency: DEFAULT_CONCURRENCY,
     encodingProfileVersion:
       process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION,
@@ -128,6 +134,9 @@ export function parseArgs(args) {
   if (!/^[a-z0-9][a-z0-9._-]{0,31}$/.test(options.encodingProfileVersion)) {
     throw new Error('--encoding-profile-version 값이 올바르지 않습니다.');
   }
+  if (typeof options.buildToken !== 'string' || options.buildToken.length < 32) {
+    throw new Error('VIDEO_CLIP_BUILD_TOKEN에는 32자 이상의 생성 전용 토큰이 필요합니다.');
+  }
 
   options.manifestPath = resolve(options.manifestPath);
   options.reportPath = resolve(options.reportPath ?? `${options.manifestPath}.prewarm-report.json`);
@@ -186,6 +195,10 @@ function parseManifestRow(value, line, encodingProfileVersion) {
   const end = Number(value.end);
   const videoId = value.videoId;
   const duration = end - start;
+  const candidateStatus = value.candidateStatus;
+  const rightsMode = value.rightsMode;
+  const rightsReviewedAt = value.rightsReviewedAt;
+  const rightsEvidence = value.rightsEvidence;
 
   if (!Number.isInteger(performanceId) || performanceId <= 0) {
     throw new Error('performanceId는 1 이상의 정수여야 합니다.');
@@ -199,6 +212,18 @@ function parseManifestRow(value, line, encodingProfileVersion) {
   if (!Number.isFinite(end) || duration <= 0 || duration > MAX_CLIP_SECONDS) {
     throw new Error(`end는 start보다 크고 구간은 ${MAX_CLIP_SECONDS}초 이하여야 합니다.`);
   }
+  if (candidateStatus !== 'APPROVED') {
+    throw new Error('candidateStatus가 APPROVED인 후보만 선생성할 수 있습니다.');
+  }
+  if (!SELF_HOSTED_RIGHTS_MODES.has(rightsMode)) {
+    throw new Error('자체 호스팅 권리가 검증된 rightsMode가 필요합니다.');
+  }
+  if (typeof rightsReviewedAt !== 'string' || Number.isNaN(Date.parse(rightsReviewedAt))) {
+    throw new Error('유효한 rightsReviewedAt이 필요합니다.');
+  }
+  if (typeof rightsEvidence !== 'string' || rightsEvidence.trim() === '') {
+    throw new Error('자체 호스팅 권리 근거인 rightsEvidence가 필요합니다.');
+  }
 
   return {
     cacheKey: `${videoId}:${start}:${end}:${encodingProfileVersion}`,
@@ -206,6 +231,9 @@ function parseManifestRow(value, line, encodingProfileVersion) {
     end,
     lines: [line],
     performanceIds: [performanceId],
+    rightsEvidence: rightsEvidence.trim(),
+    rightsMode,
+    rightsReviewedAt,
     start,
     videoId,
   };
@@ -402,7 +430,13 @@ function errorDetails(error) {
   return { code: 'REQUEST_FAILED', message: '알 수 없는 요청 오류입니다.' };
 }
 
-export async function prewarmClip(baseUrl, clip, timeoutMs, fetchImplementation = fetch) {
+export async function prewarmClip(
+  baseUrl,
+  clip,
+  timeoutMs,
+  buildToken,
+  fetchImplementation = fetch
+) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const url = createClipUrl(baseUrl, clip);
@@ -411,7 +445,10 @@ export async function prewarmClip(baseUrl, clip, timeoutMs, fetchImplementation 
 
   try {
     const response = await fetchImplementation(url, {
-      headers: { Range: 'bytes=0-0' },
+      headers: {
+        Authorization: `Bearer ${buildToken}`,
+        Range: 'bytes=0-0',
+      },
       signal: controller.signal,
     });
     const contentRange = response.headers.get('content-range');
@@ -609,6 +646,7 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
       options.baseUrl,
       clip,
       options.timeoutMs,
+      options.buildToken,
       fetchImplementation
     );
     result.publicUrl = createClipUrl(options.publicBaseUrl, clip);
