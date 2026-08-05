@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "build:web": "expo export --platform web",
     "video-clips:prewarm": "node ops/video-clips/prewarm.mjs",
-    "video-clips:test": "node --test ops/video-clips/prewarm.test.mjs"
+    "video-clips:test": "node --test ops/video-clips/*.test.mjs"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.16.1",
