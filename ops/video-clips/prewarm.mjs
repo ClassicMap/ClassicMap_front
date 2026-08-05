@@ -18,6 +18,16 @@ function requireValue(args, index, name) {
   return value;
 }
 
+function isLoopbackHostname(hostname) {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return (
+    normalized === '::1' ||
+    normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
+    /^127(?:\.\d{1,3}){3}$/.test(normalized)
+  );
+}
+
 export function parseArgs(args) {
   const options = {
     baseUrl: process.env.VIDEO_CLIP_BASE_URL ?? 'http://127.0.0.1:3200',
@@ -92,7 +102,7 @@ export function parseArgs(args) {
   if (!options.publicBaseUrl) {
     try {
       const requestUrl = new URL(options.baseUrl);
-      if (requestUrl.protocol === 'https:' && !['127.0.0.1', 'localhost', '::1'].includes(requestUrl.hostname)) {
+      if (requestUrl.protocol === 'https:' && !isLoopbackHostname(requestUrl.hostname)) {
         options.publicBaseUrl = options.baseUrl;
       }
     } catch {
@@ -103,7 +113,11 @@ export function parseArgs(args) {
     const publicUrl = new URL(options.publicBaseUrl);
     if (
       publicUrl.protocol !== 'https:' ||
-      ['127.0.0.1', 'localhost', '::1'].includes(publicUrl.hostname)
+      isLoopbackHostname(publicUrl.hostname) ||
+      publicUrl.username !== '' ||
+      publicUrl.password !== '' ||
+      publicUrl.search !== '' ||
+      publicUrl.hash !== ''
     ) {
       throw new Error();
     }

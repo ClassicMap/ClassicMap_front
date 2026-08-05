@@ -113,6 +113,26 @@ test('localhost를 backend public_url 기본 주소로 허용하지 않는다', 
       ]),
     /외부에서 접근 가능한 HTTPS/
   );
+  assert.throws(
+    () =>
+      parseArgs([
+        '--manifest',
+        './clips.jsonl',
+        '--public-base-url',
+        'https://127.0.0.2/clips',
+      ]),
+    /외부에서 접근 가능한 HTTPS/
+  );
+  assert.throws(
+    () =>
+      parseArgs([
+        '--manifest',
+        './clips.jsonl',
+        '--public-base-url',
+        'https://[::1]/clips',
+      ]),
+    /외부에서 접근 가능한 HTTPS/
+  );
 });
 
 test('클립 URL에 원본 타임라인의 시작과 끝을 넣는다', () => {
