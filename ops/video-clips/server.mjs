@@ -7,7 +7,7 @@ import { join } from 'node:path';
 const cacheDirectory = process.env.CLIP_CACHE_DIR ?? '/var/cache/classicmap-video-clips';
 const invidiousApiBase = process.env.INVIDIOUS_API_BASE ?? 'http://127.0.0.1:3100';
 const port = Number.parseInt(process.env.CLIP_PORT ?? '3200', 10);
-const maxClipSeconds = 120;
+const maxClipSeconds = 600;
 const maxStartSeconds = 4 * 60 * 60;
 const activeBuilds = new Map();
 
