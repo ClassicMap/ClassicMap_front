@@ -135,6 +135,29 @@ test('localhost를 backend public_url 기본 주소로 허용하지 않는다', 
   );
 });
 
+test('private 및 link-local 주소를 backend public_url로 허용하지 않는다', () => {
+  for (const publicBaseUrl of [
+    'https://10.0.0.1/clips',
+    'https://172.16.0.1/clips',
+    'https://192.168.0.1/clips',
+    'https://169.254.1.1/clips',
+    'https://[fc00::1]/clips',
+    'https://[fe80::1]/clips',
+    'https://[::ffff:127.0.0.1]/clips',
+  ]) {
+    assert.throws(
+      () =>
+        parseArgs([
+          '--manifest',
+          './clips.jsonl',
+          '--public-base-url',
+          publicBaseUrl,
+        ]),
+      /외부에서 접근 가능한 HTTPS/
+    );
+  }
+});
+
 test('클립 URL에 원본 타임라인의 시작과 끝을 넣는다', () => {
   const url = createClipUrl('https://example.com/clips', {
     encodingProfileVersion: 'v1-copy',

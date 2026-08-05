@@ -18,13 +18,49 @@ function requireValue(args, index, name) {
   return value;
 }
 
-function isLoopbackHostname(hostname) {
-  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+function isLocalIpv4(hostname) {
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) {
+    return false;
+  }
+  const [first, second, ...rest] = hostname
+    .split('.')
+    .map((value) => Number.parseInt(value, 10));
+  if ([first, second, ...rest].some((value) => value < 0 || value > 255)) {
+    return false;
+  }
   return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  );
+}
+
+function isLocalHostname(hostname) {
+  const normalized = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const mappedIpv4 = normalized.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/)?.[1];
+  const mappedHex = normalized.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  const mappedHexIpv4 = mappedHex
+    ? [Number.parseInt(mappedHex[1], 16), Number.parseInt(mappedHex[2], 16)]
+        .flatMap((value) => [value >> 8, value & 0xff])
+        .join('.')
+    : undefined;
+  const firstIpv6Segment = normalized.includes(':')
+    ? Number.parseInt(normalized.split(':', 1)[0], 16)
+    : Number.NaN;
+  return (
+    normalized === '::' ||
     normalized === '::1' ||
     normalized === 'localhost' ||
     normalized.endsWith('.localhost') ||
-    /^127(?:\.\d{1,3}){3}$/.test(normalized)
+    isLocalIpv4(normalized) ||
+    (mappedIpv4 !== undefined && isLocalIpv4(mappedIpv4)) ||
+    (mappedHexIpv4 !== undefined && isLocalIpv4(mappedHexIpv4)) ||
+    (normalized.includes(':') && normalized.startsWith('fc')) ||
+    (normalized.includes(':') && normalized.startsWith('fd')) ||
+    (Number.isInteger(firstIpv6Segment) && (firstIpv6Segment & 0xffc0) === 0xfe80)
   );
 }
 
@@ -102,7 +138,7 @@ export function parseArgs(args) {
   if (!options.publicBaseUrl) {
     try {
       const requestUrl = new URL(options.baseUrl);
-      if (requestUrl.protocol === 'https:' && !isLoopbackHostname(requestUrl.hostname)) {
+      if (requestUrl.protocol === 'https:' && !isLocalHostname(requestUrl.hostname)) {
         options.publicBaseUrl = options.baseUrl;
       }
     } catch {
@@ -113,7 +149,7 @@ export function parseArgs(args) {
     const publicUrl = new URL(options.publicBaseUrl);
     if (
       publicUrl.protocol !== 'https:' ||
-      isLoopbackHostname(publicUrl.hostname) ||
+      isLocalHostname(publicUrl.hostname) ||
       publicUrl.username !== '' ||
       publicUrl.password !== '' ||
       publicUrl.search !== '' ||
