@@ -1,0 +1,13 @@
+services:
+  clipper:
+    build: .
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CLIP_CACHE_DIR: /var/cache/classicmap-video-clips
+      CLIP_BUILD_TOKEN: ${CLIP_BUILD_TOKEN:?CLIP_BUILD_TOKEN must be set}
+      CLIP_ENCODING_PROFILE_VERSION: v1-copy
+      CLIP_PORT: '3200'
+      INVIDIOUS_API_BASE: http://127.0.0.1:3100
+    volumes:
+      - ./cache:/var/cache/classicmap-video-clips

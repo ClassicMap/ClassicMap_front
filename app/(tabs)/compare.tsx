@@ -24,7 +24,6 @@ import {
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import YoutubePlayer from 'react-native-youtube-iframe';
 import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -32,6 +31,7 @@ import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount }
 import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
 import { SectorFormModal } from '@/components/admin/SectorFormModal';
 import { SectorChip, AddSectorChip } from '@/components/sector-chip';
+import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { getImageUrl } from '@/lib/utils/image';
 import { getAllPeriods } from '@/lib/data/mockDTO';
 import { useComposers } from '@/lib/query/hooks/useComposers';
@@ -197,24 +197,12 @@ export default function CompareScreen() {
           )}
         </TouchableOpacity>
 
-        {/* YouTube Player - 더 큰 크기 */}
+        {/* 웹에서는 자체 Invidious 스트림으로 광고 없이 재생한다. */}
         <View style={{ width: '100%', height: 196 }}>
-          <YoutubePlayer
-            key={`youtube-${performance.id}`}
+          <PerformanceVideoPlayer
             videoId={performance.videoId}
-            height={196}
-            play={false}
-            initialPlayerParams={{
-              start: performance.startTime,
-              end: performance.endTime,
-              controls: true,
-              modestbranding: true,
-              rel: false,
-            }}
-            webViewProps={{
-              androidLayerType: 'hardware',
-              allowsInlineMediaPlayback: true,
-            }}
+            startTime={performance.startTime}
+            endTime={performance.endTime}
           />
         </View>
 
@@ -415,9 +403,15 @@ export default function CompareScreen() {
         const sectorData = await PerformanceSectorAPI.getByPiece(selectedPiece.id);
         setSectors(sectorData);
 
-        // 첫 번째 섹터 자동 선택
+        const requestedSectorId = Number(
+          Array.isArray(params.sectorId) ? params.sectorId[0] : params.sectorId
+        );
+
+        // URL에 섹터가 지정되면 해당 섹터를 선택하고, 없으면 첫 번째 섹터를 선택한다.
         if (sectorData.length > 0) {
-          setSelectedSector(sectorData[0]);
+          setSelectedSector(
+            sectorData.find((sector) => sector.id === requestedSectorId) ?? sectorData[0]
+          );
         } else {
           setSelectedSector(null);
         }
@@ -431,7 +425,7 @@ export default function CompareScreen() {
     };
 
     loadSectors();
-  }, [selectedPiece]);
+  }, [params.sectorId, selectedPiece]);
 
   // 섹터 재로드 함수 (생성/수정/삭제 후 사용)
   const reloadSectors = async () => {
@@ -891,6 +885,8 @@ export default function CompareScreen() {
   const getPeriodColor = (period: string): string => {
     const ERAS = getAllPeriods();
     const periodMap: { [key: string]: string } = {
+      중세: 'medieval',
+      르네상스: 'renaissance',
       바로크: 'baroque',
       고전주의: 'classical',
       낭만주의: 'romantic',
@@ -937,13 +933,27 @@ export default function CompareScreen() {
                   </View>
                 </View>
 
-                <View className="flex-row gap-2">
+                <View className="flex-row flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant={periodFilter === 'all' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('all')}>
                     <Text className="text-xs">전체</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '중세' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('중세')}>
+                    <Text className="text-xs">중세</Text>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={periodFilter === '르네상스' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onPress={() => setPeriodFilter('르네상스')}>
+                    <Text className="text-xs">르네상스</Text>
                   </Button>
                   <Button
                     size="sm"
@@ -1426,4 +1436,3 @@ export default function CompareScreen() {
     </>
   );
 }
-

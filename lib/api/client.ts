@@ -224,7 +224,7 @@ const mapComposer = (api: any): Composer => {
     name: api.name,
     fullName: api.fullName,
     englishName: api.englishName,
-    period: api.period as '바로크' | '고전주의' | '낭만주의' | '근현대',
+    period: api.period as '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대',
     birthYear: api.birthYear,
     deathYear: api.deathYear,
     nationality: api.nationality,
@@ -331,7 +331,7 @@ const mapConcert = (api: APIConcert): Concert => ({
 });
 
 // API Base URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
 // 실제 API 사용 여부
 const USE_REAL_API = true;
@@ -351,7 +351,7 @@ export const setTokenProvider = (fn: (() => Promise<string | null>) | null) => {
  * 인증된 fetch 요청
  * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
-const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
   const isFormDataBody = typeof FormData !== 'undefined' && options.body instanceof FormData;
 

@@ -2,6 +2,8 @@ import { Period } from '../types/models';
 
 // 시대별 색상 매핑
 export const ERA_COLORS: Record<string, string> = {
+  '중세': '#b45309',
+  '르네상스': '#0f766e',
   '바로크': '#9333ea',
   '고전주의': '#3b82f6',
   '고전주의/낭만주의': '#ec4899',
@@ -11,6 +13,38 @@ export const ERA_COLORS: Record<string, string> = {
 
 // 시대 정보 (타임라인 탭용)
 export const PERIODS: Period[] = [
+  {
+    id: 'medieval',
+    name: '중세',
+    period: '500-1400',
+    startYear: 500,
+    endYear: 1400,
+    color: '#b45309',
+    description: '중세 음악은 단선율 성가에서 출발해 다성음악과 초기 기보법이 발전한 시대입니다.',
+    characteristics: [
+      '그레고리오 성가와 단선율',
+      '초기 다성음악의 발달',
+      '교회선법 중심의 선율',
+      '기보법과 세속음악의 성장',
+    ],
+    keyComposers: ['힐데가르트 폰 빙엔', '레오냉', '페로탱', '기욤 드 마쇼'],
+  },
+  {
+    id: 'renaissance',
+    name: '르네상스',
+    period: '1400-1600',
+    startYear: 1400,
+    endYear: 1600,
+    color: '#0f766e',
+    description: '르네상스 음악은 성부 간 균형과 모방 대위법이 정교해지고 세속 성악곡이 널리 발전한 시대입니다.',
+    characteristics: [
+      '모방 대위법의 발달',
+      '성부 간 균형과 부드러운 음향',
+      '미사와 모테트의 발전',
+      '마드리갈 등 세속 성악곡의 성장',
+    ],
+    keyComposers: ['뒤파이', '조스캥 데 프레', '팔레스트리나', '라수스'],
+  },
   {
     id: 'baroque',
     name: '바로크',
@@ -64,7 +98,7 @@ export const PERIODS: Period[] = [
     name: '근현대',
     period: '1890-현재',
     startYear: 1890,
-    endYear: 2024,
+    endYear: new Date().getFullYear(),
     color: '#22c55e',
     description: '근현대 음악은 전통적 조성에서 벗어나 새로운 음악 언어를 탐구합니다. 인상주의, 표현주의, 신고전주의 등 다양한 사조가 나타났습니다.',
     characteristics: [

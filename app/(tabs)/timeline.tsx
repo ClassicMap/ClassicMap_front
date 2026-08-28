@@ -132,6 +132,8 @@ export default function TimelineScreen() {
     ERAS.forEach((era) => {
       composersByEra[era.id] = COMPOSERS.filter((c) => {
         const periodMap: { [key: string]: string } = {
+          중세: 'medieval',
+          르네상스: 'renaissance',
           바로크: 'baroque',
           고전주의: 'classical',
           낭만주의: 'romantic',
@@ -531,6 +533,8 @@ export default function TimelineScreen() {
                   const displayComposer = allComposers[currentComposerIndex];
 
                   const periodMap: { [key: string]: string } = {
+                    중세: 'medieval',
+                    르네상스: 'renaissance',
                     바로크: 'baroque',
                     고전주의: 'classical',
                     낭만주의: 'romantic',
@@ -812,6 +816,8 @@ export default function TimelineScreen() {
   const getComposersForEra = React.useCallback(
     (eraId: string) => {
       const periodMap: { [key: string]: string[] } = {
+        medieval: ['중세'],
+        renaissance: ['르네상스'],
         baroque: ['바로크'],
         classical: ['고전주의'],
         romantic: ['낭만주의'],

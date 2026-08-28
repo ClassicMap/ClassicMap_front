@@ -7,7 +7,7 @@ export interface Composer {
   name: string;
   fullName: string;
   englishName: string;
-  period: '바로크' | '고전주의' | '낭만주의' | '근현대';
+  period: '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대';
   birthYear: number;
   deathYear: number | null;
   nationality: string;
@@ -137,6 +137,53 @@ export interface Performance {
   rating: number;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export type ClipStatus =
+  | 'pending'
+  | 'queued'
+  | 'generating'
+  | 'ready'
+  | 'failed'
+  | 'retired';
+
+export type PerformanceCreditRole =
+  | 'soloist'
+  | 'conductor'
+  | 'orchestra'
+  | 'ensemble'
+  | 'accompanist'
+  | 'vocalist'
+  | 'other';
+
+export interface PerformanceCredit {
+  artistId: number;
+  artistName: string;
+  role: PerformanceCreditRole;
+  isPrimary: boolean;
+  displayOrder: number;
+}
+
+export interface ComparisonPerformance {
+  id: number;
+  sourceId: number;
+  sectorId: number;
+  pieceId: number;
+  pieceTitle: string;
+  composerId: number;
+  composerName: string;
+  sectorName: string;
+  startMs: number;
+  endMs: number;
+  clipStatus: ClipStatus;
+  clipUrl?: string;
+  videoId?: string;
+  credits: PerformanceCredit[];
+}
+
+export interface ComparisonPerformancePage {
+  items: ComparisonPerformance[];
+  nextCursor: string | null;
 }
 
 // ============================================
