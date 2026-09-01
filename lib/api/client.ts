@@ -59,6 +59,7 @@ interface APIComposer {
 interface APIPiece {
   id: number;
   composerId: number;
+  type: 'album' | 'song';
   title: string;
   titleEn?: string;
   description?: string;
@@ -185,9 +186,10 @@ interface APIVenue {
 // Performance API 타입
 interface APIPerformance {
   id: number;
+  sectorId: number;
   pieceId: number;
   artistId: number;
-  videoPlatform: string;
+  videoPlatform: 'youtube' | 'vimeo' | 'other';
   videoId: string;
   startTime: number;
   endTime: number;
