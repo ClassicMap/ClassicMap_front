@@ -75,16 +75,16 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         // 수정 모드
         await AdminPieceAPI.update(piece.id, {
           title,
-          titleEn: titleEn || null,
+          titleEn: titleEn || undefined,
           type,
-          description: description || null,
-          opusNumber: opusNumber || null,
-          compositionYear: compositionYear ? parseInt(compositionYear) : null,
-          difficultyLevel: difficultyLevel ? parseInt(difficultyLevel) : null,
-          durationMinutes: durationMinutes ? parseInt(durationMinutes) : null,
-          spotifyUrl: spotifyUrl || null,
-          appleMusicUrl: appleMusicUrl || null,
-          youtubeMusicUrl: youtubeMusicUrl || null,
+          description: description || undefined,
+          opusNumber: opusNumber || undefined,
+          compositionYear: compositionYear ? parseInt(compositionYear) : undefined,
+          difficultyLevel: difficultyLevel ? parseInt(difficultyLevel) : undefined,
+          durationMinutes: durationMinutes ? parseInt(durationMinutes) : undefined,
+          spotifyUrl: spotifyUrl || undefined,
+          appleMusicUrl: appleMusicUrl || undefined,
+          youtubeMusicUrl: youtubeMusicUrl || undefined,
         });
         Alert.alert('성공', '작품이 수정되었습니다.');
       } else {
