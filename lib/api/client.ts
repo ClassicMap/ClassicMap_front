@@ -331,9 +331,9 @@ export const setTokenProvider = (fn: (() => Promise<string | null>) | null) => {
  * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> | undefined),
   };
 
   if (getTokenFn) {

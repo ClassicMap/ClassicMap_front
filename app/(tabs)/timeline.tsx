@@ -111,7 +111,7 @@ export default function TimelineScreen() {
 
   const COMPOSERS = React.useMemo(() => {
     return composers.map((c) => {
-      const imageUrl = c.avatarUrl || c.imageUrl || c.coverImageUrl;
+      const imageUrl = c.avatarUrl || c.coverImageUrl;
       return {
         id: c.id,
         name: c.name,
@@ -153,7 +153,9 @@ export default function TimelineScreen() {
     // 각 연도별로 작곡가가 있는지 확인
     const hasComposerInYear: { [year: number]: boolean } = {};
     COMPOSERS.forEach((composer) => {
-      for (let year = composer.birthYear; year <= composer.deathYear; year++) {
+      // 생존 작곡가는 사망 연도가 비어 있어 현재 연도까지 채운다
+      const lastYear = composer.deathYear ?? new Date().getFullYear();
+      for (let year = composer.birthYear; year <= lastYear; year++) {
         hasComposerInYear[year] = true;
       }
     });

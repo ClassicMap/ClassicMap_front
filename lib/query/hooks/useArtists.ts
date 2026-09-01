@@ -1,5 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
+import { AdminArtistAPI } from '@/lib/api/admin';
 import type { Artist } from '@/lib/types/models';
 
 /**
@@ -67,7 +68,7 @@ export function useCreateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Artist>) => ArtistAPI.create(data),
+    mutationFn: (data: Partial<Artist>) => AdminArtistAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });
     },
@@ -81,7 +82,7 @@ export function useUpdateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Artist> }) => ArtistAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Artist> }) => AdminArtistAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });
@@ -96,7 +97,7 @@ export function useDeleteArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => ArtistAPI.delete(id),
+    mutationFn: (id: number) => AdminArtistAPI.delete(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });

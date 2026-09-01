@@ -1,5 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConcertAPI } from '@/lib/api/client';
+import { AdminConcertAPI } from '@/lib/api/admin';
 import type { Concert } from '@/lib/types/models';
 
 /**
@@ -81,7 +82,7 @@ export function useCreateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Concert>) => ConcertAPI.create(data),
+    mutationFn: (data: Partial<Concert>) => AdminConcertAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
@@ -96,7 +97,7 @@ export function useUpdateConcert() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Concert> }) =>
-      ConcertAPI.update(id, data),
+      AdminConcertAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
@@ -111,7 +112,7 @@ export function useDeleteConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => ConcertAPI.delete(id),
+    mutationFn: (id: number) => AdminConcertAPI.delete(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
