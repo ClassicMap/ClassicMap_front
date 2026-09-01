@@ -78,6 +78,8 @@ export interface Artist {
   awards?: ArtistAward[];
   concertCount: number;
   albumCount: number;
+  /** 관리자 API에서 입력받는 활동 국가 수. 조회 응답에는 포함되지 않는다. */
+  countryCount?: number;
   topAwardId?: number;
   createdAt?: Date;
   updatedAt?: Date;
