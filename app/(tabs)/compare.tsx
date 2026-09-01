@@ -24,7 +24,6 @@ import {
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import YoutubePlayer from 'react-native-youtube-iframe';
 import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -32,6 +31,7 @@ import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount }
 import { PerformanceFormModal } from '@/components/admin/PerformanceFormModal';
 import { SectorFormModal } from '@/components/admin/SectorFormModal';
 import { SectorChip, AddSectorChip } from '@/components/sector-chip';
+import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { getImageUrl } from '@/lib/utils/image';
 import { getAllPeriods } from '@/lib/data/mockDTO';
 import { useComposers } from '@/lib/query/hooks/useComposers';
@@ -197,24 +197,12 @@ export default function CompareScreen() {
           )}
         </TouchableOpacity>
 
-        {/* YouTube Player - 더 큰 크기 */}
+        {/* 웹에서는 자체 Invidious 스트림으로 광고 없이 재생한다. */}
         <View style={{ width: '100%', height: 196 }}>
-          <YoutubePlayer
-            key={`youtube-${performance.id}`}
+          <PerformanceVideoPlayer
             videoId={performance.videoId}
-            height={196}
-            play={false}
-            initialPlayerParams={{
-              start: performance.startTime,
-              end: performance.endTime,
-              controls: true,
-              modestbranding: true,
-              rel: false,
-            }}
-            webViewProps={{
-              androidLayerType: 'hardware',
-              allowsInlineMediaPlayback: true,
-            }}
+            startTime={performance.startTime}
+            endTime={performance.endTime}
           />
         </View>
 
@@ -1426,4 +1414,3 @@ export default function CompareScreen() {
     </>
   );
 }
-
