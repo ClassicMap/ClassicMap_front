@@ -68,7 +68,7 @@ export function useCreateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Artist>) => AdminArtistAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminArtistAPI.create>[0]) => AdminArtistAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });
     },
@@ -82,7 +82,7 @@ export function useUpdateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Artist> }) => AdminArtistAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminArtistAPI.update>[1] }) => AdminArtistAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });

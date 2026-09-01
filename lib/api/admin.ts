@@ -213,7 +213,7 @@ export const AdminPieceAPI = {
     id: number,
     data: {
       title?: string;
-    titleEn?: string;
+      titleEn?: string;
       type?: 'album' | 'song';
       description?: string;
       opusNumber?: string;
@@ -267,7 +267,7 @@ export const AdminConcertAPI = {
     id: number,
     data: {
       title?: string;
-    titleEn?: string;
+      titleEn?: string;
       composerInfo?: string;
       venueId?: number;
       concertDate?: string;
@@ -300,8 +300,14 @@ export const AdminRecordingAPI = {
     title: string;
     year: string;
     releaseDate?: string;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    youtubeMusicUrl?: string;
+    externalUrl?: string;
     label?: string;
     coverUrl?: string;
+    trackCount?: number;
+    isSingle?: boolean;
   }): Promise<number> {
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings`, {
       method: 'POST',
@@ -316,10 +322,17 @@ export const AdminRecordingAPI = {
     id: number,
     data: {
       title?: string;
-    titleEn?: string;
+      titleEn?: string;
       year?: string;
+      releaseDate?: string;
       label?: string;
       coverUrl?: string;
+      trackCount?: number;
+      isSingle?: boolean;
+      spotifyUrl?: string;
+      appleMusicUrl?: string;
+      youtubeMusicUrl?: string;
+      externalUrl?: string;
     }
   ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {

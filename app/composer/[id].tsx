@@ -963,7 +963,7 @@ export default function ComposerDetailScreen() {
                                 // Piece 전체 정보를 API로 가져오기
                                 try {
                                   const pieceData = await ComposerAPI.getPieceById(work.id);
-                                  setEditingPiece(pieceData);
+                                  setEditingPiece(pieceData ?? undefined);
                                   setShowPieceFormModal(true);
                                 } catch (error) {
                                   console.error('Failed to load piece:', error);

@@ -425,7 +425,7 @@ export const ComposerAPI = {
       const pieceData: APIPiece = await response.json();
       return pieceData;
     }
-    return Promise.resolve(getPieceById(id));
+    return Promise.resolve(getPieceById(id) ?? null);
   },
 
   /**

@@ -82,7 +82,7 @@ export function useCreateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Concert>) => AdminConcertAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminConcertAPI.create>[0]) => AdminConcertAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
@@ -96,7 +96,7 @@ export function useUpdateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Concert> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminConcertAPI.update>[1] }) =>
       AdminConcertAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });

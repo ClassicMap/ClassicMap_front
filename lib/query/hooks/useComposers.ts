@@ -90,7 +90,7 @@ export function useCreateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Composer>) => AdminComposerAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminComposerAPI.create>[0]) => AdminComposerAPI.create(data),
     onSuccess: () => {
       // 작곡가 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.all });
@@ -105,7 +105,7 @@ export function useUpdateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Composer> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminComposerAPI.update>[1] }) =>
       AdminComposerAPI.update(id, data),
     onSuccess: (_, { id }) => {
       // 해당 작곡가 및 목록 캐시 무효화

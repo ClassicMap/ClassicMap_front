@@ -89,5 +89,12 @@ export const OptimizedImage = React.memo(OptimizedImageComponent, (prevProps, ne
 export function prefetchImages(uris: (string | null | undefined)[]): Promise<void[]> {
   const validUris = uris.map((uri) => getImageUrl(uri)).filter((uri): uri is string => !!uri);
 
-  return Promise.all(validUris.map((uri) => Image.prefetch(uri).catch(() => {})));
+  return Promise.all(
+    validUris.map((uri) =>
+      Image.prefetch(uri).then(
+        () => undefined,
+        () => undefined
+      )
+    )
+  );
 }
