@@ -159,6 +159,7 @@ export const AdminArtistAPI = {
     artistId: number,
     award: {
       year: string;
+      releaseDate?: string;
       awardName: string;
       displayOrder?: number;
     }
@@ -188,6 +189,7 @@ export const AdminPieceAPI = {
   async create(data: {
     composerId: number;
     title: string;
+    titleEn?: string;
     type: 'album' | 'song';
     description?: string;
     opusNumber?: string;
@@ -211,6 +213,7 @@ export const AdminPieceAPI = {
     id: number,
     data: {
       title?: string;
+    titleEn?: string;
       type?: 'album' | 'song';
       description?: string;
       opusNumber?: string;
@@ -242,6 +245,7 @@ export const AdminPieceAPI = {
 export const AdminConcertAPI = {
   async create(data: {
     title: string;
+    titleEn?: string;
     composerInfo?: string;
     venueId: number;
     startDate: string;
@@ -263,6 +267,7 @@ export const AdminConcertAPI = {
     id: number,
     data: {
       title?: string;
+    titleEn?: string;
       composerInfo?: string;
       venueId?: number;
       concertDate?: string;
@@ -294,6 +299,7 @@ export const AdminRecordingAPI = {
     artistId: number;
     title: string;
     year: string;
+    releaseDate?: string;
     label?: string;
     coverUrl?: string;
   }): Promise<number> {
@@ -310,6 +316,7 @@ export const AdminRecordingAPI = {
     id: number,
     data: {
       title?: string;
+    titleEn?: string;
       year?: string;
       label?: string;
       coverUrl?: string;
