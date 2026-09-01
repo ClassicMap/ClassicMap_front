@@ -1,6 +1,6 @@
 // components/sector-chip.tsx
 import * as React from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
 import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
@@ -23,26 +23,27 @@ export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipPr
 
   return (
     <Pressable
-      onPress={onPress}
-      style={[
-        styles.chipBase,
-        isSelected ? styles.chipSelected : styles.chipUnselected
-      ]}>
-      <Text style={[
-        styles.chipText,
-        isSelected ? styles.textSelected : styles.textUnselected
-      ]}>
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected }}
+      className={`flex-row items-center gap-2 rounded-full border px-4 py-2 ${
+        isSelected ? 'border-primary bg-primary' : 'border-border bg-secondary'
+      }`}
+      onPress={onPress}>
+      <Text
+        className={`text-sm font-medium ${
+          isSelected ? 'text-primary-foreground' : 'text-secondary-foreground'
+        }`}>
         {sector.sectorName}
       </Text>
 
-      <View style={[
-        styles.badge,
-        isSelected ? styles.badgeSelected : styles.badgeUnselected
-      ]}>
-        <Text style={[
-          styles.badgeText,
-          isSelected ? styles.badgeTextSelected : styles.badgeTextUnselected
-        ]}>
+      <View
+        className={`rounded-full px-1.5 py-0.5 ${
+          isSelected ? 'bg-primary-foreground/20' : 'bg-background/70'
+        }`}>
+        <Text
+          className={`text-xs font-medium ${
+            isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
+          }`}>
           {performanceCount}
         </Text>
       </View>
@@ -53,95 +54,22 @@ export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipPr
             e?.stopPropagation?.();
             onEdit();
           }}
-          style={styles.editButton}>
-          <Icon as={EditIcon} size={12} color="#fff" />
+          className="ml-1">
+          <Icon as={EditIcon} size={12} className="text-primary-foreground" />
         </Pressable>
       )}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  chipBase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-  },
-  chipSelected: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  chipUnselected: {
-    backgroundColor: '#f5f5f5',
-    borderColor: '#e5e5e5',
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  textSelected: {
-    color: '#fff',
-  },
-  textUnselected: {
-    color: '#171717',
-  },
-  badge: {
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  badgeSelected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  badgeUnselected: {
-    backgroundColor: '#e5e5e5',
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  badgeTextSelected: {
-    color: '#fff',
-  },
-  badgeTextUnselected: {
-    color: '#737373',
-  },
-  editButton: {
-    marginLeft: 4,
-  },
-});
-
 export function AddSectorChip({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
-      onPress={onPress}
-      style={addStyles.addChip}>
-      <Icon as={PlusIcon} size={14} color="#000" />
-      <Text style={addStyles.addChipText}>섹터</Text>
+      accessibilityRole="button"
+      className="flex-row items-center gap-2 rounded-full border-2 border-dashed border-foreground/40 bg-foreground/5 px-4 py-2"
+      onPress={onPress}>
+      <Icon as={PlusIcon} size={14} className="text-foreground" />
+      <Text className="text-sm font-medium text-foreground">섹터</Text>
     </Pressable>
   );
 }
-
-const addStyles = StyleSheet.create({
-  addChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(0, 0, 0, 0.4)',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  addChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000',
-  },
-});
