@@ -274,7 +274,7 @@ export default function CompareScreen() {
     setComposers(displayedComposers.map(c => ({
       ...c,
       // Don't override majorPieces if it exists, otherwise leave undefined to show pieceCount
-      majorPieces: c.majorPieces || undefined,
+      majorPieces: (c as Partial<ComposerWithPieces>).majorPieces || undefined,
     })));
 
     // Mark initial mount as complete once we have composers

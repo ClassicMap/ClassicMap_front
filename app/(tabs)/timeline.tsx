@@ -930,7 +930,7 @@ export default function TimelineScreen() {
                           style={{
                             backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
                           }}>
-                          <Icon as={XIcon} size={24} style={{ color: selectedEra.color }} />
+                          <Icon as={XIcon} size={24} color={selectedEra.color} />
                         </TouchableOpacity>
                       </View>
                     </View>

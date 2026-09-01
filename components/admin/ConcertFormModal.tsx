@@ -333,7 +333,6 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
                   <Text className={venueId ? "text-base" : "text-base text-muted-foreground"}>
                     {venueId ?
                       (venueSearchResults.find(v => v.id === venueId)?.name ||
-                       concert?.venueName ||
                        '공연장 정보 없음')
                       : '공연장을 선택하세요'}
                   </Text>

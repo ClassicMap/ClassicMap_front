@@ -116,6 +116,7 @@ export function getPerformanceDTO(performanceId: number): PerformanceDTO | null 
 
   return {
     id: performance.id,
+    sectorId: performance.sectorId,
     pieceId: performance.pieceId,
     artist: {
       id: artist.id,
@@ -221,7 +222,7 @@ export function getTimelineComposers(): TimelineComposer[] {
     fullName: c.fullName,
     period: c.period,
     birthYear: c.birthYear,
-    deathYear: c.deathYear,
+    deathYear: c.deathYear ?? new Date().getFullYear(),
     nationality: c.nationality,
     image: c.avatarUrl,
   }));

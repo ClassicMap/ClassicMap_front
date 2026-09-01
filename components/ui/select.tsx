@@ -25,7 +25,7 @@ const SelectTrigger = React.forwardRef<
     )}
     {...props}
   >
-    {children}
+    {children as React.ReactNode}
     <ChevronDown className="h-4 w-4 opacity-50" /> 
   </SelectPrimitive.Trigger>
 ))
@@ -84,7 +84,7 @@ const SelectItem = React.forwardRef<
       </SelectPrimitive.ItemIndicator>
     </View>
 
-    <Text>{children}</Text>
+    <Text>{children as React.ReactNode}</Text>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName

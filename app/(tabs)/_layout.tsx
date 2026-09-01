@@ -56,8 +56,6 @@ export default function TabsLayout() {
           paddingBottom: bottomPadding,
           height: 58 + bottomPadding,
         },
-        // 탭 전환 시 화면 언마운트 방지 (상태 유지)
-        unmountOnBlur: false,
       }}>
       <Tabs.Screen
         name="home"
