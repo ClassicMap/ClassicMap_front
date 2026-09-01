@@ -113,6 +113,7 @@ export const PERFORMANCES: Performance[] = [
   // 쇼팽 발라드 1번 (piece_id: 18)
   {
     id: 1,
+    sectorId: 18,
     pieceId: 18,
     artistId: 1,
     videoPlatform: 'youtube',
@@ -125,6 +126,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 2,
+    sectorId: 18,
     pieceId: 18,
     artistId: 2,
     videoPlatform: 'youtube',
@@ -137,6 +139,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 3,
+    sectorId: 18,
     pieceId: 18,
     artistId: 3,
     videoPlatform: 'youtube',
@@ -151,6 +154,7 @@ export const PERFORMANCES: Performance[] = [
   // 바흐 골드베르크 변주곡 (piece_id: 3)
   {
     id: 4,
+    sectorId: 3,
     pieceId: 3,
     artistId: 4,
     videoPlatform: 'youtube',
@@ -163,6 +167,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 5,
+    sectorId: 3,
     pieceId: 3,
     artistId: 4,
     videoPlatform: 'youtube',
@@ -177,6 +182,7 @@ export const PERFORMANCES: Performance[] = [
   // 라흐마니노프 피아노 협주곡 2번 (piece_id: 33)
   {
     id: 6,
+    sectorId: 33,
     pieceId: 33,
     artistId: 1,
     videoPlatform: 'youtube',
@@ -189,6 +195,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 7,
+    sectorId: 33,
     pieceId: 33,
     artistId: 3,
     videoPlatform: 'youtube',
@@ -203,6 +210,7 @@ export const PERFORMANCES: Performance[] = [
   // 라흐마니노프 피아노 협주곡 3번 (piece_id: 34)
   {
     id: 8,
+    sectorId: 34,
     pieceId: 34,
     artistId: 6,
     videoPlatform: 'youtube',
@@ -215,6 +223,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 9,
+    sectorId: 34,
     pieceId: 34,
     artistId: 2,
     videoPlatform: 'youtube',
@@ -229,6 +238,7 @@ export const PERFORMANCES: Performance[] = [
   // 베토벤 피아노 소나타 "월광" (piece_id: 16)
   {
     id: 10,
+    sectorId: 16,
     pieceId: 16,
     artistId: 5,
     videoPlatform: 'youtube',
@@ -241,6 +251,7 @@ export const PERFORMANCES: Performance[] = [
   },
   {
     id: 11,
+    sectorId: 16,
     pieceId: 16,
     artistId: 7,
     videoPlatform: 'youtube',
