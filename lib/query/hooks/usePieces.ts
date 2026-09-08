@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ComposerAPI } from '@/lib/api/client';
+import { PieceAPI } from '@/lib/api/client';
+import { AdminPieceAPI } from '@/lib/api/admin';
 import type { Piece } from '@/lib/types/models';
 
 /**
@@ -19,7 +20,7 @@ export const PIECE_QUERY_KEYS = {
 export function usePiece(id: number | undefined) {
   return useQuery({
     queryKey: PIECE_QUERY_KEYS.detail(id!),
-    queryFn: () => ComposerAPI.getPieceById(id!),
+    queryFn: () => PieceAPI.getById(id!),
     enabled: !!id && id > 0,
   });
 }
@@ -30,7 +31,7 @@ export function usePiece(id: number | undefined) {
 export function usePiecesByComposer(composerId: number | undefined) {
   return useQuery({
     queryKey: PIECE_QUERY_KEYS.byComposer(composerId!),
-    queryFn: () => ComposerAPI.getPiecesByComposerId(composerId!),
+    queryFn: () => PieceAPI.getByComposer(composerId!),
     enabled: !!composerId && composerId > 0,
   });
 }
@@ -42,7 +43,8 @@ export function useCreatePiece() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Piece>) => ComposerAPI.createPiece(data),
+    mutationFn: (data: Parameters<typeof AdminPieceAPI.create>[0]) =>
+      AdminPieceAPI.create(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.all });
       if (variables.composerId) {
@@ -61,16 +63,11 @@ export function useUpdatePiece() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Piece> }) =>
-      ComposerAPI.updatePiece(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminPieceAPI.update>[1] }) =>
+      AdminPieceAPI.update(id, data),
     onSuccess: (_, { id, data }) => {
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.all });
-      if (data.composerId) {
-        queryClient.invalidateQueries({
-          queryKey: PIECE_QUERY_KEYS.byComposer(data.composerId)
-        });
-      }
     },
   });
 }
@@ -82,7 +79,7 @@ export function useDeletePiece() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => ComposerAPI.deletePiece(id),
+    mutationFn: (id: number) => AdminPieceAPI.delete(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.all });

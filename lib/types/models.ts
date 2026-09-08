@@ -78,6 +78,8 @@ export interface Artist {
   awards?: ArtistAward[];
   concertCount: number;
   albumCount: number;
+  /** 관리자 API에서 입력받는 활동 국가 수. 조회 응답에는 포함되지 않는다. */
+  countryCount?: number;
   topAwardId?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -254,7 +256,11 @@ export interface ComposerWithPieces extends Composer {
 
 export interface PieceWithPerformances extends Piece {
   composer: Composer;
-  performances: PerformanceWithArtist[];
+  /**
+   * 백엔드는 연주 목록에 artistId만 담아 보낸다.
+   * 아티스트 정보가 필요하면 호출 측에서 별도로 조회해 PerformanceWithArtist로 채운다.
+   */
+  performances: Performance[];
 }
 
 export interface PerformanceWithArtist extends Performance {

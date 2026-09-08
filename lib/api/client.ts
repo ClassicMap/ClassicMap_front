@@ -30,6 +30,11 @@ import type {
   PerformanceWithArtist,
   Recording,
   Venue,
+  Concert,
+  ConcertArtist,
+  ConcertImage,
+  TicketVendor,
+  BoxofficeRanking,
 } from '../types/models';
 
 // API 응답 타입 정의
@@ -54,6 +59,7 @@ interface APIComposer {
 interface APIPiece {
   id: number;
   composerId: number;
+  type: 'album' | 'song';
   title: string;
   titleEn?: string;
   description?: string;
@@ -175,40 +181,15 @@ interface APIVenue {
   capacity?: number;
 }
 
-interface TicketVendor {
-  id: number;
-  concertId: number;
-  vendorName?: string;
-  vendorUrl: string;
-  displayOrder: number;
-}
 
-interface Concert {
-  id: number;
-  title: string;
-  composerInfo?: string;
-  venueId: number;
-  startDate: string;
-  endDate?: string;
-  concertTime?: string;
-  priceInfo?: string;
-  posterUrl?: string;
-  program?: string;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  rating?: number;
-  ratingCount?: number;
-  facilityName?: string;
-  area?: string;
-  boxofficeRanking?: APIBoxofficeRanking;
-  ticketVendors?: TicketVendor[];
-}
 
 // Performance API 타입
 interface APIPerformance {
   id: number;
+  sectorId: number;
   pieceId: number;
   artistId: number;
-  videoPlatform: string;
+  videoPlatform: 'youtube' | 'vimeo' | 'other';
   videoId: string;
   startTime: number;
   endTime: number;
@@ -663,7 +644,7 @@ export const ComposerAPI = {
       const pieceData: APIPiece = await response.json();
       return pieceData;
     }
-    return Promise.resolve(getPieceById(id));
+    return Promise.resolve(getPieceById(id) ?? null);
   },
 
   /**

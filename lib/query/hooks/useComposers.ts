@@ -1,5 +1,6 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComposerAPI } from '@/lib/api/client';
+import { AdminComposerAPI } from '@/lib/api/admin';
 import type { Composer } from '@/lib/types/models';
 
 /**
@@ -89,7 +90,7 @@ export function useCreateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Partial<Composer>) => ComposerAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminComposerAPI.create>[0]) => AdminComposerAPI.create(data),
     onSuccess: () => {
       // 작곡가 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.all });
@@ -104,8 +105,8 @@ export function useUpdateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Composer> }) =>
-      ComposerAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminComposerAPI.update>[1] }) =>
+      AdminComposerAPI.update(id, data),
     onSuccess: (_, { id }) => {
       // 해당 작곡가 및 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.detail(id) });
@@ -121,7 +122,7 @@ export function useDeleteComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => ComposerAPI.delete(id),
+    mutationFn: (id: number) => AdminComposerAPI.delete(id),
     onSuccess: (_, id) => {
       // 해당 작곡가 및 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.detail(id) });

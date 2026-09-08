@@ -23,7 +23,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1685,
     deathYear: 1750,
     nationality: '독일',
-    imageUrl: 'https://i.pravatar.cc/150?img=33',
+    avatarUrl: 'https://i.pravatar.cc/150?img=33',
     bio: '바로크 시대의 가장 위대한 작곡가 중 한 명. 대위법의 대가로, 종교 음악과 기악 음악 모든 분야에서 뛰어난 작품을 남겼습니다.',
     style: '정교한 대위법, 깊은 종교성, 수학적 구조미',
     influence: '모차르트, 베토벤, 멘델스존 등 후대 작곡가들에게 지대한 영향',
@@ -37,7 +37,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1756,
     deathYear: 1791,
     nationality: '오스트리아',
-    imageUrl: 'https://i.pravatar.cc/150?img=12',
+    avatarUrl: 'https://i.pravatar.cc/150?img=12',
     bio: '천재 음악가의 대명사. 35년이라는 짧은 생애 동안 600곡이 넘는 작품을 남겼으며, 오페라, 교향곡, 협주곡 모든 분야에서 걸작을 창조했습니다.',
     style: '완벽한 형식미, 맑고 우아한 선율, 균형잡힌 구조',
     influence: '고전주의 음악의 정점, 베토벤과 슈베르트에게 큰 영향',
@@ -51,7 +51,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1770,
     deathYear: 1827,
     nationality: '독일',
-    imageUrl: 'https://i.pravatar.cc/150?img=59',
+    avatarUrl: 'https://i.pravatar.cc/150?img=59',
     bio: '고전주의에서 낭만주의로 넘어가는 교량 역할을 한 위대한 작곡가. 청각 장애를 극복하고 인류 역사상 가장 위대한 음악을 남겼습니다.',
     style: '영웅적이고 극적인 표현, 형식의 확대와 혁신',
     influence: '이후 모든 작곡가들에게 절대적 영향',
@@ -65,7 +65,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1810,
     deathYear: 1849,
     nationality: '폴란드',
-    imageUrl: 'https://i.pravatar.cc/150?img=13',
+    avatarUrl: 'https://i.pravatar.cc/150?img=13',
     bio: '피아노의 시인. 거의 모든 작품을 피아노를 위해 작곡했으며, 피아노 음악의 가능성을 극대화한 작곡가입니다.',
     style: '서정적 선율, 섬세한 화성, 폴란드 민족 정서',
     influence: '피아노 음악의 혁명, 리스트, 드뷔시 등에게 영향',
@@ -79,7 +79,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1840,
     deathYear: 1893,
     nationality: '러시아',
-    imageUrl: 'https://i.pravatar.cc/150?img=60',
+    avatarUrl: 'https://i.pravatar.cc/150?img=60',
     bio: '러시아 낭만주의의 거장. 발레 음악과 교향곡, 협주곡에서 뛰어난 업적을 남겼습니다.',
     style: '정열적이고 극적인 표현, 러시아 민족적 색채',
     influence: '러시아 음악의 세계화에 기여',
@@ -93,7 +93,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1873,
     deathYear: 1943,
     nationality: '러시아',
-    imageUrl: 'https://i.pravatar.cc/150?img=65',
+    avatarUrl: 'https://i.pravatar.cc/150?img=65',
     bio: '낭만주의의 마지막 거장. 피아니스트이자 작곡가로서 풍부한 화성과 서정적 선율의 작품을 남겼습니다.',
     style: '풍부한 화성, 서정적 선율, 러시아적 우수',
     influence: '20세기 피아노 음악에 지대한 영향',
@@ -107,7 +107,7 @@ export const MOCK_COMPOSERS: Composer[] = [
     birthYear: 1862,
     deathYear: 1918,
     nationality: '프랑스',
-    imageUrl: 'https://i.pravatar.cc/150?img=56',
+    avatarUrl: 'https://i.pravatar.cc/150?img=56',
     bio: '인상주의 음악의 창시자. 전통적인 화성과 형식에서 벗어나 새로운 음악 언어를 창조했습니다.',
     style: '색채적 화성, 섬세한 음향, 자유로운 형식',
     influence: '20세기 현대 음악의 문을 연 선구자',
@@ -121,6 +121,7 @@ export const MOCK_PIECES: Piece[] = [
   // 바흐 곡들
   {
     id: 1,
+    type: 'album',
     composerId: 1,
     title: '골드베르크 변주곡',
     description: '바흐의 건반 음악 중 최고봉으로 평가받는 작품입니다. 아리아 주제와 30개의 변주로 구성되어 있으며, 연주자의 해석에 따라 완전히 다른 곡이 됩니다.',
@@ -129,6 +130,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 2,
+    type: 'album',
     composerId: 1,
     title: '평균율 클라비어 1권',
     description: '24개 장조와 단조의 전주곡과 푸가 모음집으로, 서양 음악의 구약성경이라 불립니다.',
@@ -137,6 +139,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 3,
+    type: 'album',
     composerId: 1,
     title: '토카타와 푸가 D단조',
     description: '바흐의 오르간 작품 중 가장 유명한 곡으로, 극적인 토카타 도입부가 인상적입니다.',
@@ -146,6 +149,7 @@ export const MOCK_PIECES: Piece[] = [
   // 모차르트 곡들
   {
     id: 4,
+    type: 'album',
     composerId: 2,
     title: '피아노 협주곡 21번',
     description: '모차르트의 협주곡 중 가장 서정적이고 아름다운 작품입니다. 2악장은 영화 "엘비라 마디간"에 사용되어 유명해졌습니다.',
@@ -154,6 +158,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 5,
+    type: 'album',
     composerId: 2,
     title: '레퀴엠',
     description: '모차르트가 생전에 완성하지 못하고 세상을 떠난 작품입니다. 죽음에 대한 명상과 구원의 메시지가 담겨 있습니다.',
@@ -162,6 +167,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 6,
+    type: 'album',
     composerId: 2,
     title: '터키 행진곡',
     description: '피아노 소나타 11번의 3악장으로, 경쾌하고 귀여운 선율로 사랑받는 곡입니다.',
@@ -171,6 +177,7 @@ export const MOCK_PIECES: Piece[] = [
   // 베토벤 곡들
   {
     id: 7,
+    type: 'album',
     composerId: 3,
     title: '피아노 소나타 23번 "열정"',
     description: '베토벤의 가장 극적이고 격렬한 소나타 중 하나입니다. 1악장의 강렬한 리듬과 3악장의 폭풍 같은 전개가 인상적입니다.',
@@ -179,6 +186,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 8,
+    type: 'album',
     composerId: 3,
     title: '피아노 소나타 14번 "월광"',
     description: '베토벤이 사랑했던 여제자에게 헌정한 작품입니다. 1악장의 명상적인 분위기와 3악장의 격정적인 대비가 특징입니다.',
@@ -187,6 +195,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 9,
+    type: 'album',
     composerId: 3,
     title: '교향곡 9번 "합창"',
     description: '베토벤의 마지막 교향곡이자 인류 역사상 가장 위대한 작품 중 하나입니다. 4악장의 "환희의 송가"는 전 세계인이 사랑하는 선율입니다.',
@@ -196,6 +205,7 @@ export const MOCK_PIECES: Piece[] = [
   // 쇼팽 곡들
   {
     id: 10,
+    type: 'album',
     composerId: 4,
     title: '발라드 1번',
     description: '쇼팽의 4개 발라드 중 첫 번째 작품으로, 서정적인 선율과 극적인 전개가 특징입니다.',
@@ -204,6 +214,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 11,
+    type: 'album',
     composerId: 4,
     title: '녹턴 Op.9 No.2',
     description: '쇼팽의 가장 유명한 녹턴 중 하나로, 밤의 정취를 담은 서정적인 작품입니다.',
@@ -212,6 +223,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 12,
+    type: 'album',
     composerId: 4,
     title: '영웅 폴로네즈',
     description: '쇼팽의 폴로네즈 중 가장 웅장하고 화려한 곡으로, 폴란드의 영웅적 정신을 담았습니다.',
@@ -220,6 +232,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 13,
+    type: 'album',
     composerId: 4,
     title: '피아노 협주곡 1번',
     description: '쇼팽이 20세에 작곡한 협주곡으로, 2악장의 로맨틱한 선율이 특히 유명합니다.',
@@ -229,6 +242,7 @@ export const MOCK_PIECES: Piece[] = [
   // 차이콥스키 곡들
   {
     id: 14,
+    type: 'album',
     composerId: 5,
     title: '피아노 협주곡 1번',
     description: '웅장한 호른의 서주로 시작하는 차이콥스키의 대표작입니다.',
@@ -237,6 +251,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 15,
+    type: 'album',
     composerId: 5,
     title: '백조의 호수',
     description: '클래식 발레의 걸작으로, 백조로 변한 공주의 슬픈 사랑 이야기를 담았습니다.',
@@ -245,6 +260,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 16,
+    type: 'album',
     composerId: 5,
     title: '교향곡 6번 "비창"',
     description: '차이콥스키의 마지막 교향곡으로, 죽음을 예감한 듯한 비극적 정서가 담겨 있습니다.',
@@ -254,6 +270,7 @@ export const MOCK_PIECES: Piece[] = [
   // 라흐마니노프 곡들
   {
     id: 17,
+    type: 'album',
     composerId: 6,
     title: '피아노 협주곡 2번',
     description: '라흐마니노프의 가장 유명한 작품으로, 풍부한 화성과 서정적인 선율이 특징입니다.',
@@ -262,6 +279,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 18,
+    type: 'album',
     composerId: 6,
     title: '피아노 협주곡 3번',
     description: '피아노 협주곡 중 가장 어려운 곡으로 손꼽히는 작품입니다.',
@@ -270,6 +288,7 @@ export const MOCK_PIECES: Piece[] = [
   },
   {
     id: 19,
+    type: 'album',
     composerId: 6,
     title: '보칼리제',
     description: '가사 없이 모음으로만 부르는 성악곡으로, 라흐마니노프 특유의 애절한 선율이 돋보입니다.',
@@ -434,6 +453,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 쇼팽 발라드 1번 연주들
   {
     id: 1,
+    sectorId: 10,
     pieceId: 10,
     artistId: 3,
     videoPlatform: 'youtube',
@@ -446,6 +466,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 2,
+    sectorId: 10,
     pieceId: 10,
     artistId: 2,
     videoPlatform: 'youtube',
@@ -458,6 +479,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 3,
+    sectorId: 10,
     pieceId: 10,
     artistId: 4,
     videoPlatform: 'youtube',
@@ -471,6 +493,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 쇼팽 녹턴 Op.9 No.2 연주들
   {
     id: 4,
+    sectorId: 11,
     pieceId: 11,
     artistId: 1,
     videoPlatform: 'youtube',
@@ -484,6 +507,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 베토벤 열정 소나타 연주들
   {
     id: 5,
+    sectorId: 7,
     pieceId: 7,
     artistId: 6,
     videoPlatform: 'youtube',
@@ -496,6 +520,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 6,
+    sectorId: 7,
     pieceId: 7,
     artistId: 1,
     videoPlatform: 'youtube',
@@ -509,6 +534,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 라흐마니노프 협주곡 2번 연주들
   {
     id: 7,
+    sectorId: 17,
     pieceId: 17,
     artistId: 5,
     videoPlatform: 'youtube',
@@ -521,6 +547,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 8,
+    sectorId: 17,
     pieceId: 17,
     artistId: 4,
     videoPlatform: 'youtube',
@@ -534,6 +561,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 골드베르크 변주곡 연주들
   {
     id: 9,
+    sectorId: 1,
     pieceId: 1,
     artistId: 7,
     videoPlatform: 'youtube',
@@ -546,6 +574,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 10,
+    sectorId: 1,
     pieceId: 1,
     artistId: 7,
     videoPlatform: 'youtube',
@@ -559,6 +588,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   // 차이콥스키 협주곡 1번 연주들
   {
     id: 11,
+    sectorId: 14,
     pieceId: 14,
     artistId: 5,
     videoPlatform: 'youtube',
@@ -571,6 +601,7 @@ export const MOCK_PERFORMANCES: Performance[] = [
   },
   {
     id: 12,
+    sectorId: 14,
     pieceId: 14,
     artistId: 3,
     videoPlatform: 'youtube',

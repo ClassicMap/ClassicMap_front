@@ -44,7 +44,7 @@ export function getComposerDTO(composerId: number): ComposerDTO | null {
     birthYear: composer.birthYear,
     deathYear: composer.deathYear,
     nationality: composer.nationality,
-    imageUrl: composer.imageUrl,
+    imageUrl: composer.avatarUrl,
     avatarUrl: composer.avatarUrl,
     coverImageUrl: composer.coverImageUrl,
     bio: composer.bio,
@@ -70,6 +70,7 @@ export function getPieceDTO(pieceId: number): PieceDTO | null {
 
   return {
     id: piece.id,
+    type: 'album',
     composerId: piece.composerId,
     title: piece.title,
     description: piece.description,
@@ -115,6 +116,7 @@ export function getPerformanceDTO(performanceId: number): PerformanceDTO | null 
 
   return {
     id: performance.id,
+    sectorId: performance.sectorId,
     pieceId: performance.pieceId,
     artist: {
       id: artist.id,
@@ -220,9 +222,9 @@ export function getTimelineComposers(): TimelineComposer[] {
     fullName: c.fullName,
     period: c.period,
     birthYear: c.birthYear,
-    deathYear: c.deathYear,
+    deathYear: c.deathYear ?? new Date().getFullYear(),
     nationality: c.nationality,
-    image: c.imageUrl,
+    image: c.avatarUrl,
   }));
 }
 

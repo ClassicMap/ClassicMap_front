@@ -18,9 +18,9 @@ export const setAdminTokenProvider = (fn: (() => Promise<string | null>) | null)
  * 매 요청마다 Clerk에서 유효한 토큰을 받아옴 (만료시 자동 갱신)
  */
 const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> | undefined),
   };
 
   if (getTokenFn) {
@@ -159,6 +159,7 @@ export const AdminArtistAPI = {
     artistId: number,
     award: {
       year: string;
+      releaseDate?: string;
       awardName: string;
       displayOrder?: number;
     }
@@ -188,6 +189,7 @@ export const AdminPieceAPI = {
   async create(data: {
     composerId: number;
     title: string;
+    titleEn?: string;
     type: 'album' | 'song';
     description?: string;
     opusNumber?: string;
@@ -211,6 +213,7 @@ export const AdminPieceAPI = {
     id: number,
     data: {
       title?: string;
+      titleEn?: string;
       type?: 'album' | 'song';
       description?: string;
       opusNumber?: string;
@@ -242,6 +245,7 @@ export const AdminPieceAPI = {
 export const AdminConcertAPI = {
   async create(data: {
     title: string;
+    titleEn?: string;
     composerInfo?: string;
     venueId: number;
     startDate: string;
@@ -263,6 +267,7 @@ export const AdminConcertAPI = {
     id: number,
     data: {
       title?: string;
+      titleEn?: string;
       composerInfo?: string;
       venueId?: number;
       concertDate?: string;
@@ -294,8 +299,15 @@ export const AdminRecordingAPI = {
     artistId: number;
     title: string;
     year: string;
+    releaseDate?: string;
+    spotifyUrl?: string;
+    appleMusicUrl?: string;
+    youtubeMusicUrl?: string;
+    externalUrl?: string;
     label?: string;
     coverUrl?: string;
+    trackCount?: number;
+    isSingle?: boolean;
   }): Promise<number> {
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings`, {
       method: 'POST',
@@ -310,9 +322,17 @@ export const AdminRecordingAPI = {
     id: number,
     data: {
       title?: string;
+      titleEn?: string;
       year?: string;
+      releaseDate?: string;
       label?: string;
       coverUrl?: string;
+      trackCount?: number;
+      isSingle?: boolean;
+      spotifyUrl?: string;
+      appleMusicUrl?: string;
+      youtubeMusicUrl?: string;
+      externalUrl?: string;
     }
   ): Promise<void> {
     const response = await authenticatedFetch(`${API_BASE_URL}/recordings/${id}`, {
