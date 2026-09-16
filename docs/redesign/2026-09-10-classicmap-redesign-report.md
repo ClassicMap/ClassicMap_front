@@ -1657,6 +1657,7 @@ curl -s "$API/concerts/areas"
 | D-10 | `안스네스 → "안스"` | 이니셜을 앞 두 글자로 자름 | 이니셜은 **성(姓)** 기준 |
 | D-11 | 칩·버튼만 폰트가 다르게 렌더됨 (Arial 폴백) | `button` 등 폼 요소는 `font-family`를 상속하지 않습니다. `.pill`이 `font-size`·`font-weight`만 지정해 UA 기본 폰트로 떨어졌습니다 | 전역에 `button,input,select,textarea{font-family:inherit;}` |
 | D-12 | 필터 바 둘째 줄이 정렬 버튼 하나 때문에 통째로 빔 | 필터 축과 정렬 버튼을 같은 wrap 컨테이너에 둠 | 축 영역과 정렬 영역을 분리하고 바깥은 `flex-wrap: nowrap` |
+| D-13 | 모바일 구간 칩 라벨이 칩 안에서 줄바꿈돼 `장 / 카덴`처럼 보임 | 칩이 flex 자식인데 `flex-shrink`가 기본값(1)이라 **min-content 아래로 찌그러지고**, `white-space`가 `normal`이라 라벨이 칩 안에서 줄바꿈됨. 칩 높이는 고정이라 위아래가 잘림 | `.pill`에 `white-space: nowrap; flex-shrink: 0`. 폭이 모자라는 줄은 잘라내지 말고 **가로 스크롤**로 처리 |
 
 **검증 절차**: 게시 → 브라우저에서 렌더 → `getBoundingClientRect` / `scrollWidth` vs `clientWidth` / 이미지 `naturalWidth` 대비 렌더 배율을 숫자로 측정 → 수정 → 재검증. 스크린샷만으로는 축소 캡처 아티팩트와 실제 깨짐을 구분할 수 없습니다.
 
