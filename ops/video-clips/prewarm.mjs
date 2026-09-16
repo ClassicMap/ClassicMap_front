@@ -472,6 +472,12 @@ export async function prewarmClip(
       throw new Error('응답의 Accept-Ranges, Content-Range 또는 본문 길이가 올바르지 않습니다.');
     }
     const assetMetadata = parseAssetHeaders(response, clip, contentRange);
+    // assetValidatedAt 은 클리퍼 서버 시계, 검증 시각은 이 프로세스 시계다.
+    // 두 시계가 조금 어긋나면 순서가 뒤집혀 보이므로 자산 검증 시각 아래로는
+    // 내려가지 않게 맞춘다. 검증은 언제나 자산이 준비된 뒤에 일어난다.
+    const rangeVerifiedAt = new Date(
+      Math.max(Date.now(), Date.parse(assetMetadata.assetValidatedAt))
+    ).toISOString();
 
     return {
       ...assetMetadata,
@@ -481,7 +487,7 @@ export async function prewarmClip(
       finishedAt: new Date().toISOString(),
       lines: clip.lines,
       performanceIds: clip.performanceIds,
-      rangeVerifiedAt: new Date().toISOString(),
+      rangeVerifiedAt,
       startedAt,
       status: 'succeeded',
       url,
