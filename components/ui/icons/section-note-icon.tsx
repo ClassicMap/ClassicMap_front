@@ -30,26 +30,33 @@ export function sectionNoteValueFromClips(
   return sectionNoteValue(lengths[Math.floor(lengths.length / 2)]);
 }
 
-const HEAD = { cx: 9.2, cy: 16.8, rx: 4.9, ry: 3.5, rotation: -18, originX: 9.2, originY: 16.8 } as const;
+const HEAD_FILLED = { cx: 9.2, cy: 16.8, rx: 4.9, ry: 3.5, rotation: -18, originX: 9.2, originY: 16.8 } as const;
 
-const EighthNote = createClassicIcon('EighthNoteIcon', ({ color }) => (
+// 빈 머리는 작은 크기에서 구멍이 메워져 채운 머리와 같아 보인다.
+// 머리를 키우고 선을 얇게 해서 구멍을 남긴다. 기둥(x=13.9)에는 그대로 닿는다.
+const HEAD_OPEN = { cx: 9, cy: 16.8, rx: 5.5, ry: 3.9, rotation: -18, originX: 9, originY: 16.8 } as const;
+
+const EighthNote = createClassicIcon('EighthNoteIcon', ({ color, strokeWidth }) => (
   <>
-    <Ellipse {...HEAD} fill={color} stroke="none" />
+    <Ellipse {...HEAD_FILLED} fill={color} stroke="none" />
     <Path d="M13.9 15.4V4.4" />
-    <Path d="M13.9 5c3.5 1.7 5.1 4.1 3.8 7.2" />
+    <Path
+      d="M13.9 4.6c4.3 2 6.1 4.9 4.1 8.7"
+      strokeWidth={(strokeWidth / CLASSIC_ICON_STROKE) * 2.2}
+    />
   </>
 ));
 
 const QuarterNote = createClassicIcon('QuarterNoteIcon', ({ color }) => (
   <>
-    <Ellipse {...HEAD} fill={color} stroke="none" />
+    <Ellipse {...HEAD_FILLED} fill={color} stroke="none" />
     <Path d="M13.9 15.4V4.4" />
   </>
 ));
 
-const HalfNote = createClassicIcon('HalfNoteIcon', () => (
+const HalfNote = createClassicIcon('HalfNoteIcon', ({ strokeWidth }) => (
   <>
-    <Ellipse {...HEAD} />
+    <Ellipse {...HEAD_OPEN} strokeWidth={(strokeWidth / CLASSIC_ICON_STROKE) * 1.5} />
     <Path d="M13.9 15.4V4.4" />
   </>
 ));
