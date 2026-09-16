@@ -12,7 +12,24 @@ export const MAX_CLIP_SECONDS = 600;
 const SUPPORTED_ENCODING_PROFILES = new Set([DEFAULT_ENCODING_PROFILE_VERSION]);
 const cacheDirectory = process.env.CLIP_CACHE_DIR ?? '/var/cache/classicmap-video-clips';
 const invidiousApiBase = process.env.INVIDIOUS_API_BASE ?? 'http://127.0.0.1:3100';
+// YouTube 가 익명 요청을 봇으로 막으면서 invidious 의 PO token 검증이 통과하지 못한다.
+// yt-dlp 는 로그인 쿠키로 같은 관문을 지나므로 기본 경로로 둔다.
+// CLIP_SOURCE_RESOLVER=invidious 로 되돌릴 수 있다.
+const sourceResolver = process.env.CLIP_SOURCE_RESOLVER ?? 'ytdlp';
+const ytdlpBinary = process.env.YTDLP_BIN ?? 'yt-dlp';
+const configuredCookiesPath = process.env.YTDLP_COOKIES?.trim() ?? '';
+// yt-dlp 는 실행을 마치면 쿠키 파일을 갱신하려 한다. 쿠키는 Secret 으로 들어와
+// 읽기 전용으로 붙으므로, 시작할 때 쓸 수 있는 곳으로 옮겨 두고 그 사본을 넘긴다.
+const ytdlpCookiesPath = configuredCookiesPath
+  ? join(process.env.CLIP_RUNTIME_DIR ?? '/tmp', 'yt-cookies.txt')
+  : '';
+const ytdlpFormat =
+  process.env.YTDLP_FORMAT ??
+  'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4]';
 const port = Number.parseInt(process.env.CLIP_PORT ?? '3200', 10);
+// 컨테이너에서는 서비스가 붙을 수 있게 0.0.0.0 으로 열어야 한다.
+// 기본값은 로컬 개발을 생각해 loopback 으로 둔다.
+const host = process.env.CLIP_HOST?.trim() || '127.0.0.1';
 const maxStartSeconds = 4 * 60 * 60;
 const encodingProfileVersion =
   process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION;
@@ -21,6 +38,15 @@ const activeBuilds = new Map();
 
 if (!SUPPORTED_ENCODING_PROFILES.has(encodingProfileVersion)) {
   throw new Error(`지원하지 않는 인코딩 프로필입니다: ${encodingProfileVersion}`);
+}
+
+async function prepareCookies() {
+  if (!configuredCookiesPath) {
+    return;
+  }
+
+  const contents = await readFile(configuredCookiesPath);
+  await writeFile(ytdlpCookiesPath, contents, { mode: 0o600 });
 }
 
 function selectStream(video) {
@@ -114,32 +140,125 @@ export function isBuildAuthorized(authorization, configuredToken = clipBuildToke
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-async function getSourceUrl(videoId) {
+async function getInvidiousSourceUrls(videoId) {
   const response = await fetch(`${invidiousApiBase}/api/v1/videos/${encodeURIComponent(videoId)}`);
 
   if (!response.ok) {
     throw new Error(`영상 정보를 불러오지 못했습니다. (${response.status})`);
   }
 
-  return selectStream(await response.json()).url;
+  return [selectStream(await response.json()).url];
 }
 
-function runFfmpeg(sourceUrl, start, duration, outputPath) {
+function runYtdlp(args) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(ytdlpBinary, args);
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout = `${stdout}${chunk}`;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr = `${stderr}${chunk}`.slice(-4000);
+    });
+    child.on('error', rejectPromise);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolvePromise(stdout);
+        return;
+      }
+      rejectPromise(new Error(stderr || `yt-dlp가 종료되었습니다. (${code})`));
+    });
+  });
+}
+
+// googlevideo 주소는 쿠키와 User-Agent 까지 함께 검증한다. 주소만 뽑아
+// ffmpeg 에 넘기면 403 이 돌아오므로, 구간 자르기까지 yt-dlp 에 맡긴다.
+async function downloadClipWithYtdlp(videoId, start, duration, outputPath) {
+  const args = [
+    '--no-update',
+    '--no-playlist',
+    '--remote-components',
+    'ejs:github',
+    '-f',
+    ytdlpFormat,
+    '--download-sections',
+    `*${start}-${start + duration}`,
+    '--merge-output-format',
+    'mp4',
+    '-o',
+    outputPath,
+  ];
+
+  if (ytdlpCookiesPath) {
+    args.push('--cookies', ytdlpCookiesPath);
+  }
+  args.push('--', videoId);
+
+  await runYtdlp(args);
+}
+
+// 720 는 영상과 소리가 따로 제공되므로 URL 이 둘 나올 수 있다.
+async function getYtdlpSourceUrls(videoId) {
+  // YouTube 는 스트림 주소를 JS 챌린지로 가린다. 푸는 스크립트는 yt-dlp 에 들어 있지 않고
+  // 처음 한 번 내려받아 캐시에 둬야 한다. 캐시가 비면 포맷 자체를 받지 못한다.
+  const args = [
+    '--no-update',
+    '--no-playlist',
+    '--remote-components',
+    'ejs:github',
+    '-f',
+    ytdlpFormat,
+    '-g',
+  ];
+
+  if (ytdlpCookiesPath) {
+    args.push('--cookies', ytdlpCookiesPath);
+  }
+  args.push('--', videoId);
+
+  const urls = (await runYtdlp(args))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('https://'));
+
+  if (urls.length === 0) {
+    throw new Error('재생 가능한 영상 스트림이 없습니다.');
+  }
+
+  return urls;
+}
+
+function getSourceUrls(videoId) {
+  return sourceResolver === 'invidious'
+    ? getInvidiousSourceUrls(videoId)
+    : getYtdlpSourceUrls(videoId);
+}
+
+function runFfmpeg(sourceUrls, start, duration, outputPath) {
+  const inputs = [];
+
+  // -ss 를 각 입력 앞에 둬야 입력 단계에서 탐색한다 (디코딩 없이 빠르다).
+  for (const sourceUrl of sourceUrls) {
+    inputs.push('-ss', String(start), '-i', sourceUrl);
+  }
+
+  // 영상과 소리가 따로 오면 각각 다른 입력에서 가져온다.
+  const maps =
+    sourceUrls.length > 1
+      ? ['-map', '0:v:0', '-map', '1:a:0']
+      : ['-map', '0:v:0', '-map', '0:a:0?'];
+
   return new Promise((resolvePromise, rejectPromise) => {
     const process = spawn('ffmpeg', [
       '-hide_banner',
       '-loglevel',
       'error',
-      '-ss',
-      String(start),
-      '-i',
-      sourceUrl,
+      ...inputs,
       '-t',
       String(duration),
-      '-map',
-      '0:v:0',
-      '-map',
-      '0:a:0?',
+      ...maps,
       '-c',
       'copy',
       '-movflags',
@@ -388,8 +507,17 @@ async function buildClip(clipRequest) {
     const tempPath = `${clipPath}.${process.pid}.${randomUUID()}.tmp.mp4`;
 
     try {
-      const sourceUrl = await getSourceUrl(clipRequest.videoId);
-      await runFfmpeg(sourceUrl, clipRequest.start, clipRequest.duration, tempPath);
+      if (sourceResolver === 'invidious') {
+        const sourceUrls = await getSourceUrls(clipRequest.videoId);
+        await runFfmpeg(sourceUrls, clipRequest.start, clipRequest.duration, tempPath);
+      } else {
+        await downloadClipWithYtdlp(
+          clipRequest.videoId,
+          clipRequest.start,
+          clipRequest.duration,
+          tempPath
+        );
+      }
       const metadata = await describeClipAsset(tempPath, identity);
       await rename(tempPath, clipPath);
       try {
@@ -493,8 +621,15 @@ export function createClipServer({ buildToken = clipBuildToken } = {}) {
 const currentFile = pathToFileURL(fileURLToPath(import.meta.url)).href;
 const entryFile = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';
 if (currentFile === entryFile) {
-  const server = createClipServer();
-  server.listen(port, '127.0.0.1', () => {
-    console.info(`ClassicMap video clipper is listening on 127.0.0.1:${port}`);
-  });
+  prepareCookies()
+    .then(() => {
+      const server = createClipServer();
+      server.listen(port, host, () => {
+        console.info(`ClassicMap video clipper is listening on ${host}:${port}`);
+      });
+    })
+    .catch((error) => {
+      console.error('쿠키를 준비하지 못했습니다.', error);
+      process.exitCode = 1;
+    });
 }
