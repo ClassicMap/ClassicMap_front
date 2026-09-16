@@ -678,6 +678,7 @@ A·B는 **추가 없이 구현 가능**합니다. `/composers/with-performances`
 | **B21** | **`GET /composers?sort=recommended`** — 현재 기본 정렬이 `birthYear` 오름차순이라 목록 진입 첫 화면이 곰베르·카베손·세르통 등 이미지도 비교 데이터도 없는 항목으로 채워집니다. `tier`(S>A>없음>B>C) → 완성도 → `pieceCount` 정렬이 서버에 있으면 프론트 전량 로드 없이 해결됩니다 | 리디자인 1.7.4 | **높음** |
 | **B22** | **연주 ↔ 음반 연결** — 재생 바 아트워크에 앨범 표지를 쓰려면 `Performance`/`ComparisonPerformance`에 `recordingId`(또는 `GET /performances/{id}/recording`)가 필요합니다. `Recording.coverUrl`로 표지 자체는 이미 옵니다(임윤찬 음반 12건, 그중 라흐 3번 Decca 2025가 시안 곡과 일치). **제목 문자열 매칭은 추측이라 프론트에서 하지 않습니다.** 연결이 없으면 앨범 칸은 작곡가 초상 폴백이고, 그러면 작곡가 원과 같은 그림이 됩니다 | 리디자인 6.5 | 중간 |
 | **B23** | **연주 참여자(credits) — 특히 지휘자** — `GET /sectors/{id}/performances`가 지금 `artistId` 하나만 줍니다. 협주곡은 독주자만으로 성립하지 않는데 **지휘자·오케스트라를 받을 방법이 없습니다.** 프론트에는 `PerformanceCredit`(`role: soloist / conductor / orchestra / ensemble / accompanist / vocalist / other`, `isPrimary`, `displayOrder`) 타입이 이미 있으므로 **이 엔드포인트 응답에 `credits` 배열을 실어 주기만 하면 됩니다.** B16(비교 계약 전체)의 일부지만 재생 바·비교 화면에 바로 필요하므로 따로 뺍니다. 없는 동안 지휘자는 **비워 둡니다. 곡명이나 상식으로 추론해 채우지 않습니다** | 리디자인 6.5 · 7.4 | **높음** |
+| **B24** | **작품의 악보 메타데이터** — 구간 오선지 머리에 조표와 빠르기말을 그리려면 `Piece`에 `key`(으뜸음+장단조), `tempoMarking`, `timeSignature`가 필요합니다. 지금은 조성이 **제목 문자열에만**(`피아노 협주곡 3번 D단조`) 있고 나머지는 없습니다. 악장별 경계 시각도 없어 겹세로줄을 구간 사이 중간값으로 추정합니다. **제목 파싱이나 곡 상식으로 채우지 않습니다** | 리디자인 4.7.5·4.7.6 | 중간 |
 
 **원칙 재확인**: `CLAUDE.md`에 따라 위 항목 중 확정되지 않은 계약에 대해서는 프론트에서 필드를 추측하거나 임시 fallback을 만들지 않습니다. 확정 전까지 해당 UI 섹션은 렌더하지 않습니다.
 

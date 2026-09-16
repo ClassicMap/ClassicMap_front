@@ -8,9 +8,3 @@ export { TicketIcon } from './ticket-icon';
 export { SwitchTakeIcon } from './switch-take-icon';
 export { ComposerKindIcon, PerformerKindIcon } from './kind-icon';
 export { NextSectionIcon, PrevSectionIcon } from './transport-icon';
-export {
-  SectionNoteIcon,
-  sectionNoteValue,
-  sectionNoteValueFromClips,
-} from './section-note-icon';
-export type { SectionNoteValue } from './section-note-icon';
