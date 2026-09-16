@@ -1597,6 +1597,8 @@ lib/design/
 | `components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
 | `components/artist-comparison-section.tsx` | 4.5 | 빈 배열이면 섹션 숨김 (버그 D2) |
 | `lib/design/artist-category.ts` | 2.x | **신규** category 라벨·alias 매핑 (C5) |
+| `components/ui/icons/` | 2.x | **작업 완료** 고유 아이콘 9종 + `createClassicIcon`. 4.7절 |
+| `components/ui/fallback-art.tsx` | 2.x | **신규** 폴백 타일 (C10). 목록의 절반 이상이 이 상태 |
 
 ## 부록 C. 2026-09-12 데이터 조사 재현 방법
 
@@ -1652,10 +1654,10 @@ curl -s "$API/concerts/areas"
 
 ## 부록 E. 시안 참조
 
-| 산출물 | 내용 |
-|---|---|
-| 화면 시안 | 데스크톱 6종(비교 · 홈 · 작곡가 · 공연 · 공연 상세 · 탐색/정렬) + 모바일 4종(홈 · 비교 · 작곡가 · 공연). 실제 API 데이터와 실제 이미지를 인라인으로 넣은 정적 HTML |
-| 아이콘 가이드 | 4.7절의 근거. 고유 아이콘의 기하·크기·금지 사항 |
+| 산출물 | 링크 | 내용 |
+|---|---|---|
+| 화면 시안 | https://claude.ai/artifact/76B94Zm7nS7fdsY2Mg7dWa | 데스크톱 6종(비교 · 홈 · 작곡가 · 공연 · 공연 상세 · 탐색/정렬) + 모바일 4종(홈 · 비교 · 작곡가 · 공연). 실제 API 데이터와 실제 이미지를 인라인으로 넣은 정적 HTML |
+| 아이콘 가이드 | https://claude.ai/artifact/FsnrRqM67HjKw67hvmfnwQ | 4.7절의 근거. 고유 아이콘의 기하·크기·금지 사항 |
 
 - 시안의 데이터는 **2026-09-16 기준 프로덕션 API 실응답**입니다. 공연은 KOPIS 원본, 비교 화면은 실제 연주 3건(임윤찬 1:41 / 랑랑 2:28 / 유자 왕 1:32)입니다.
 - 시안은 **레이아웃과 시각 언어의 기준**이며 구현 코드가 아닙니다. 픽셀 값은 4장 토큰과 4.7절 규격을 따릅니다.
