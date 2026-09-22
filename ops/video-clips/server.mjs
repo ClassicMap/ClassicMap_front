@@ -338,7 +338,11 @@ function getSourceUrls(videoId) {
     : getYtdlpSourceUrls(videoId);
 }
 
-function runFfmpeg(sourceUrls, start, duration, outputPath) {
+// 로컬 원본은 입력 앞 -ss 로 자르면 바로 앞 키프레임부터 복사된다. -avoid_negative_ts
+// make_zero 를 주면 그 앞부분까지 재생 길이에 들어가, 30초 요청이 36.7초가 되어 자산
+// 검증에서 거부됐다. 빼면 편집 목록이 앞부분을 가려 요청한 길이로 나온다. 예전 yt-dlp
+// 구간 받기와 같은 구조다.
+export function ffmpegCutArgs(sourceUrls, start, duration, outputPath, { keepEditList = false } = {}) {
   const inputs = [];
 
   // -ss 를 각 입력 앞에 둬야 입력 단계에서 탐색한다 (디코딩 없이 빠르다).
@@ -352,24 +356,27 @@ function runFfmpeg(sourceUrls, start, duration, outputPath) {
       ? ['-map', '0:v:0', '-map', '1:a:0']
       : ['-map', '0:v:0', '-map', '0:a:0?'];
 
+  return [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    ...inputs,
+    '-t',
+    String(duration),
+    ...maps,
+    '-c',
+    'copy',
+    '-movflags',
+    '+faststart',
+    ...(keepEditList ? [] : ['-avoid_negative_ts', 'make_zero']),
+    '-y',
+    outputPath,
+  ];
+}
+
+function runFfmpeg(sourceUrls, start, duration, outputPath, options) {
   return new Promise((resolvePromise, rejectPromise) => {
-    const process = spawn('ffmpeg', [
-      '-hide_banner',
-      '-loglevel',
-      'error',
-      ...inputs,
-      '-t',
-      String(duration),
-      ...maps,
-      '-c',
-      'copy',
-      '-movflags',
-      '+faststart',
-      '-avoid_negative_ts',
-      'make_zero',
-      '-y',
-      outputPath,
-    ]);
+    const process = spawn('ffmpeg', ffmpegCutArgs(sourceUrls, start, duration, outputPath, options));
     let stderr = '';
 
     process.stderr.on('data', (chunk) => {
@@ -614,7 +621,9 @@ async function buildClip(clipRequest) {
         await runFfmpeg(sourceUrls, clipRequest.start, clipRequest.duration, tempPath);
       } else if (sourceCacheEnabled) {
         const sourcePath = await ensureSource(clipRequest.videoId);
-        await runFfmpeg([sourcePath], clipRequest.start, clipRequest.duration, tempPath);
+        await runFfmpeg([sourcePath], clipRequest.start, clipRequest.duration, tempPath, {
+          keepEditList: true,
+        });
       } else {
         await downloadClipWithYtdlp(
           clipRequest.videoId,

@@ -9,6 +9,7 @@ import {
   DEFAULT_ENCODING_PROFILE_VERSION,
   createClipIdentity,
   describeClipAsset,
+  ffmpegCutArgs,
   isBuildAuthorized,
   isSourceStale,
   metadataHeaders,
@@ -141,4 +142,15 @@ test('영상 원본은 보관 시간이 지나면 오래된 것으로 본다', (
   assert.equal(isSourceStale(now - 23 * hour, now, 24 * hour), false);
   assert.equal(isSourceStale(now - 24 * hour, now, 24 * hour), true);
   assert.equal(isSourceStale(now, now, 24 * hour), false);
+});
+
+test('로컬 원본에서 자를 때는 편집 목록을 남겨 요청한 길이로 나오게 한다', () => {
+  const local = ffmpegCutArgs(['/cache/sources/a.mp4'], 1500, 30, '/tmp/out.mp4', { keepEditList: true });
+  assert.equal(local.includes('-avoid_negative_ts'), false);
+  assert.deepEqual(local.slice(local.indexOf('-ss'), local.indexOf('-ss') + 4), ['-ss', '1500', '-i', '/cache/sources/a.mp4']);
+  assert.deepEqual(local.slice(local.indexOf('-t'), local.indexOf('-t') + 2), ['-t', '30']);
+
+  const stream = ffmpegCutArgs(['https://v', 'https://a'], 10, 20, '/tmp/out.mp4');
+  assert.deepEqual(stream.slice(stream.indexOf('-avoid_negative_ts'), stream.indexOf('-avoid_negative_ts') + 2), ['-avoid_negative_ts', 'make_zero']);
+  assert.deepEqual(stream.slice(stream.indexOf('-map'), stream.indexOf('-map') + 4), ['-map', '0:v:0', '-map', '1:a:0']);
 });
