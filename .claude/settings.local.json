@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:clerk.com)",
+      "Bash(ls:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

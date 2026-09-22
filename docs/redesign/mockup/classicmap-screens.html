@@ -1,0 +1,1187 @@
+<title>ClassicMap 화면 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   페이지 크롬 토큰 — 뷰어 테마를 따름
+   ============================================================ */
+:root{
+  --pg-bg:#F7F5F1; --pg-surface:#FFFFFF; --pg-surface-2:#EFEBE4;
+  --pg-ink:#1C1917; --pg-muted:#6B635B; --pg-subtle:#8B8279;
+  --pg-border:#E3DDD3; --pg-border-strong:#C9C1B5;
+  --pg-accent:#A67426;
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:10px; --r-xl:14px;
+  --ease:cubic-bezier(.2,0,0,1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --pg-bg:#0B0A09; --pg-surface:#131211; --pg-surface-2:#1B1917;
+    --pg-ink:#F7F4F0; --pg-muted:#A9A29A; --pg-subtle:#7B756E;
+    --pg-border:#2B2724; --pg-border-strong:#47413B;
+    --pg-accent:#DDAA55;
+  }
+}
+:root[data-theme="dark"]{
+  --pg-bg:#0B0A09; --pg-surface:#131211; --pg-surface-2:#1B1917;
+  --pg-ink:#F7F4F0; --pg-muted:#A9A29A; --pg-subtle:#7B756E;
+  --pg-border:#2B2724; --pg-border-strong:#47413B;
+  --pg-accent:#DDAA55;
+}
+
+/* ============================================================
+   앱 목업 토큰 — 뷰어 테마와 독립. data-app 으로 전환
+   보고서 4.1절 값 그대로
+   ============================================================ */
+.app[data-app="dark"]{
+  --bg:#0B0A09; --s1:#131211; --s2:#1B1917; --s3:#262321;
+  --fg:#F7F4F0; --fg-muted:#A9A29A; --fg-subtle:#7B756E; --fg-faint:#56514C;
+  --border:#2B2724; --border-strong:#47413B;
+  --primary:#DDAA55; --primary-fg:#1A140D; --primary-muted:#5C441D;
+  --success:#3FBE83; --warning:#F5A524; --danger:#E2564B; --info:#4CA3E0;
+  --era-baroque:#B77BF0; --era-classical:#7BAAF9; --era-romantic:#F281BC; --era-modern:#5FD98D;
+  --card-hi:rgba(255,255,255,.04);
+  --shadow-pop:0 16px 48px -12px rgba(0,0,0,.7);
+  --video-a:#201D1A; --video-b:#15120F;
+}
+.app[data-app="light"]{
+  --bg:#FBFAF7; --s1:#FFFFFF; --s2:#F6F4EF; --s3:#EDE9E1;
+  --fg:#1C1917; --fg-muted:#6B635B; --fg-subtle:#8B8279; --fg-faint:#B4ADA6;
+  --border:#E5E0D8; --border-strong:#C7C0B5;
+  --primary:#A67426; --primary-fg:#FDFBF6; --primary-muted:#F5E7CE;
+  --success:#2A8355; --warning:#B06F0C; --danger:#C4372C; --info:#2A6FA8;
+  --era-baroque:#7726BE; --era-classical:#2A64C7; --era-romantic:#C22B75; --era-modern:#177F3C;
+  --card-hi:rgba(0,0,0,0);
+  --shadow-pop:0 12px 32px -8px rgba(28,25,23,.14);
+  --video-a:#DAD4C9; --video-b:#C4BDB0;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--pg-bg);
+  color:var(--pg-ink);
+  font-family:"IBM Plex Sans KR",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+
+.wrap{max-width:1200px;margin:0 auto;padding:40px 24px 80px;}
+
+/* ---------- 페이지 헤더 ---------- */
+.pghead{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;
+  padding-bottom:20px;border-bottom:1px solid var(--pg-border);margin-bottom:28px;}
+.pghead h1{margin:0;font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.02em;text-wrap:balance;}
+.pghead .sub{margin:6px 0 0;color:var(--pg-muted);font-size:14px;max-width:62ch;}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--pg-accent);margin:0 0 8px;}
+
+.themeswitch{display:flex;gap:0;border:1px solid var(--pg-border-strong);border-radius:var(--r-md);overflow:hidden;flex-shrink:0;}
+.themeswitch button{appearance:none;border:0;background:transparent;color:var(--pg-muted);
+  font:500 12px/1 "IBM Plex Sans KR",sans-serif;padding:9px 14px;cursor:pointer;transition:background .09s var(--ease),color .09s var(--ease);}
+.themeswitch button+button{border-left:1px solid var(--pg-border-strong);}
+.themeswitch button[aria-pressed="true"]{background:var(--pg-accent);color:var(--pg-bg);}
+.themeswitch button:focus-visible{outline:2px solid var(--pg-accent);outline-offset:-2px;}
+
+/* ---------- 토큰 스트립 ---------- */
+.tokens{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:32px;}
+.tokencard{border:1px solid var(--pg-border);border-radius:var(--r-lg);padding:14px 16px;background:var(--pg-surface);}
+.tokencard h3{margin:0 0 10px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pg-subtle);}
+.swatches{display:flex;gap:6px;flex-wrap:wrap;}
+.sw{width:30px;height:30px;border-radius:var(--r-sm);border:1px solid var(--pg-border-strong);position:relative;}
+.sw::after{content:attr(data-l);position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);
+  font:500 9px/1 "IBM Plex Mono",monospace;color:var(--pg-subtle);white-space:nowrap;}
+.swatches.labeled{margin-bottom:18px;}
+.typerow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:3px 0;}
+.typerow span:last-child{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--pg-subtle);flex-shrink:0;}
+
+/* ---------- 화면 전환 탭 ---------- */
+.screentabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:14px;
+  border:1px solid var(--pg-border);border-radius:var(--r-lg);padding:4px;background:var(--pg-surface);width:fit-content;}
+.screentabs button{appearance:none;border:0;background:transparent;color:var(--pg-muted);
+  font:500 13px/1 "IBM Plex Sans KR",sans-serif;padding:9px 15px;border-radius:var(--r-sm);cursor:pointer;
+  transition:background .09s var(--ease),color .09s var(--ease);}
+.screentabs button:hover{background:var(--pg-surface-2);color:var(--pg-ink);}
+.screentabs button[aria-selected="true"]{background:var(--pg-accent);color:var(--pg-bg);}
+.screentabs button:focus-visible{outline:2px solid var(--pg-accent);outline-offset:2px;}
+
+.viewportlabel{display:flex;align-items:center;gap:8px;margin-bottom:8px;
+  font:500 11px/1 "IBM Plex Mono",monospace;color:var(--pg-subtle);letter-spacing:.04em;}
+.viewportlabel::before{content:"";width:20px;height:1px;background:var(--pg-border-strong);}
+
+/* 시안 프레임 */
+.frame{border:1px solid var(--pg-border-strong);border-radius:var(--r-xl);overflow:hidden;
+  box-shadow:0 18px 48px -20px rgba(0,0,0,.35);}
+.panel[hidden]{display:none;}
+
+/* 시안 하단 주석 */
+.notes{margin:16px 0 44px;border-left:2px solid var(--pg-accent);padding:2px 0 2px 16px;}
+.notes h4{margin:0 0 8px;font-size:13px;font-weight:600;letter-spacing:.01em;}
+.notes ul{margin:0;padding-left:17px;color:var(--pg-muted);font-size:13.5px;line-height:1.65;}
+.notes li{margin-bottom:4px;}
+.notes b{color:var(--pg-ink);font-weight:600;}
+.notes code{font:500 12px/1 "IBM Plex Mono",monospace;background:var(--pg-surface-2);
+  padding:2px 5px;border-radius:var(--r-xs);color:var(--pg-ink);}
+
+/* ============================================================
+   앱 셸
+   ============================================================ */
+.app{background:var(--bg);color:var(--fg);display:flex;min-height:620px;font-size:13px;}
+.app.mob{display:block;min-height:0;}
+
+/* --- SideNav --- */
+.side{width:210px;flex-shrink:0;background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;padding:12px 10px;gap:2px;}
+.brand{display:flex;align-items:center;gap:8px;padding:5px 8px 14px;}
+.brandmark{width:22px;height:22px;border-radius:var(--r-sm);background:var(--primary);
+  display:grid;place-items:center;color:var(--primary-fg);font:700 12px/1 "IBM Plex Mono",monospace;}
+.brand b{font-size:14px;font-weight:600;letter-spacing:-.01em;}
+.navsec{font:600 10px/1 "IBM Plex Sans KR",sans-serif;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-faint);padding:14px 9px 6px;}
+.navitem{display:flex;align-items:center;gap:9px;height:31px;padding:0 9px;border-radius:var(--r-sm);
+  color:var(--fg-muted);cursor:pointer;position:relative;transition:background .09s var(--ease),color .09s var(--ease);font-size:13px;}
+.navitem:hover{background:var(--s3);color:var(--fg);}
+.navitem.on{background:var(--primary-muted);color:var(--primary);font-weight:500;}
+.navitem.on::before{content:"";position:absolute;left:-10px;top:6px;bottom:6px;width:2px;
+  background:var(--primary);border-radius:0 2px 2px 0;}
+.navitem .ic{width:15px;height:15px;flex-shrink:0;opacity:.9;}
+.navitem .ct{margin-left:auto;font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-faint);}
+.sidefoot{margin-top:auto;border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:2px;}
+.kbdhint{display:flex;align-items:center;gap:8px;padding:0 9px;height:31px;color:var(--fg-subtle);font-size:12px;cursor:pointer;border-radius:var(--r-sm);}
+.kbdhint:hover{background:var(--s3);}
+kbd{font:500 10px/1 "IBM Plex Mono",monospace;background:var(--s3);border:1px solid var(--border-strong);
+  border-bottom-width:2px;border-radius:var(--r-xs);padding:3px 5px;color:var(--fg-muted);}
+
+/* --- Main --- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{height:44px;flex-shrink:0;border-bottom:1px solid var(--border);background:var(--s1);
+  display:flex;align-items:center;gap:12px;padding:0 14px;}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--fg-subtle);font-size:12px;}
+.crumb b{color:var(--fg);font-weight:500;}
+.crumb .sep{color:var(--fg-faint);}
+.searchtrig{margin-left:auto;margin-right:auto;width:min(340px,40%);height:27px;border:1px solid var(--border);
+  background:var(--bg);border-radius:var(--r-sm);display:flex;align-items:center;gap:7px;padding:0 8px;
+  color:var(--fg-subtle);font-size:12px;cursor:pointer;transition:border-color .09s var(--ease);}
+.searchtrig:hover{border-color:var(--border-strong);}
+.searchtrig kbd{margin-left:auto;}
+.tbactions{display:flex;align-items:center;gap:6px;}
+
+.content{flex:1;overflow:hidden;display:flex;min-height:0;}
+.colpane{width:206px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 10px;
+  display:flex;flex-direction:column;gap:9px;overflow:hidden;}
+.body{flex:1;min-width:0;padding:18px 20px;overflow:hidden;}
+.inspector{width:230px;flex-shrink:0;border-left:1px solid var(--border);background:var(--s1);padding:14px 14px;}
+
+/* --- 공통 프리미티브 --- */
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:var(--r-sm);
+  border:1px solid var(--border-strong);background:var(--s2);color:var(--fg);
+  font:500 12px/1 "IBM Plex Sans KR",sans-serif;cursor:pointer;white-space:nowrap;
+  transition:background .09s var(--ease),border-color .09s var(--ease);}
+.btn:hover{background:var(--s3);}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:var(--primary-fg);font-weight:600;}
+.btn.pri:hover{filter:brightness(1.07);}
+.btn.gho{background:transparent;border-color:transparent;color:var(--fg-muted);}
+.btn.gho:hover{background:var(--s3);color:var(--fg);}
+.btn.sm{height:24px;padding:0 9px;font-size:11px;}
+.icbtn{width:28px;height:28px;display:grid;place-items:center;border-radius:var(--r-sm);
+  border:1px solid transparent;background:transparent;color:var(--fg-muted);cursor:pointer;}
+.icbtn:hover{background:var(--s3);color:var(--fg);}
+
+.chip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;
+  border:1px solid var(--border);background:var(--s2);color:var(--fg-muted);
+  font:500 12px/1 "IBM Plex Sans KR",sans-serif;cursor:pointer;white-space:nowrap;
+  transition:background .09s var(--ease),color .09s var(--ease);}
+.chip:hover{background:var(--s3);color:var(--fg);}
+.chip.on{background:var(--fg);border-color:var(--fg);color:var(--bg);font-weight:600;}
+.chip .n{font:500 10px/1 "IBM Plex Mono",monospace;opacity:.7;}
+.chip .dot{width:6px;height:6px;border-radius:999px;flex-shrink:0;}
+
+.badge{display:inline-flex;align-items:center;gap:5px;height:19px;padding:0 7px;border-radius:var(--r-xs);
+  font:500 11px/1 "IBM Plex Sans KR",sans-serif;border:1px solid transparent;white-space:nowrap;}
+.badge.brass{background:var(--primary-muted);color:var(--primary);}
+.badge.neutral{background:var(--s3);color:var(--fg-muted);}
+.badge.ok{background:color-mix(in srgb,var(--success) 16%,transparent);color:var(--success);}
+.badge.warn{background:color-mix(in srgb,var(--warning) 16%,transparent);color:var(--warning);}
+
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:inset 0 1px 0 0 var(--card-hi);}
+
+.av{border-radius:999px;display:grid;place-items:center;flex-shrink:0;
+  background:var(--s3);color:var(--fg-muted);font:600 11px/1 "IBM Plex Sans KR",sans-serif;overflow:hidden;}
+.av.sq{border-radius:var(--r-sm);}
+.av.ring{border:2px solid var(--era-romantic);}
+
+.sechead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;}
+.sechead h3{margin:0;font-size:14px;font-weight:600;letter-spacing:-.005em;}
+.sechead .more{font-size:12px;color:var(--fg-subtle);cursor:pointer;}
+.sechead .more:hover{color:var(--primary);}
+
+.paneltitle{font:600 10px/1 "IBM Plex Sans KR",sans-serif;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-faint);}
+
+/* 필터 토글 */
+.filtertoggle{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r-sm);
+  background:var(--primary-muted);color:var(--primary);font-size:12px;font-weight:500;cursor:pointer;}
+.switch{width:26px;height:15px;border-radius:999px;background:var(--primary);position:relative;flex-shrink:0;margin-left:auto;}
+.switch::after{content:"";position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:999px;background:var(--primary-fg);}
+
+/* 리스트 행 */
+.lrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-sm);
+  cursor:pointer;color:var(--fg-muted);transition:background .09s var(--ease);}
+.lrow:hover{background:var(--s3);}
+.lrow.on{background:var(--s3);color:var(--fg);}
+.lrow .nm{font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lrow .sup{font:500 9px/1 "IBM Plex Mono",monospace;color:var(--primary);margin-left:auto;flex-shrink:0;}
+.lrow .meta{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-faint);margin-left:auto;}
+
+/* --- 비교 화면 --- */
+.piecehead{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.piecehead h2{margin:0 0 5px;font-size:22px;font-weight:650;letter-spacing:-.015em;line-height:1.2;}
+.metaline{display:flex;align-items:center;gap:9px;flex-wrap:wrap;color:var(--fg-subtle);font-size:12px;}
+.metaline .dv{width:1px;height:10px;background:var(--border-strong);}
+.diffbar{display:inline-flex;gap:2px;align-items:center;}
+.diffbar i{width:3px;height:9px;border-radius:1px;background:var(--fg-faint);display:block;}
+.diffbar i.f{background:var(--primary);}
+
+.sectabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;}
+.sectab{appearance:none;border:0;background:transparent;position:relative;cursor:pointer;
+  padding:8px 11px 10px;color:var(--fg-subtle);font:500 12.5px/1 "IBM Plex Sans KR",sans-serif;
+  white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:7px;transition:color .09s var(--ease);}
+.sectab:hover{color:var(--fg);}
+.sectab[aria-selected="true"]{color:var(--fg);font-weight:600;}
+.sectab[aria-selected="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;
+  background:var(--primary);border-radius:2px 2px 0 0;}
+.sectab .n{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-faint);
+  background:var(--s3);border-radius:var(--r-xs);padding:2px 4px;}
+.sectab:focus-visible{outline:2px solid var(--primary);outline-offset:-3px;border-radius:var(--r-xs);}
+
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.slot{border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--s1);
+  box-shadow:inset 0 1px 0 0 var(--card-hi);transition:border-color .14s var(--ease);}
+.slot.live{border-color:var(--primary);}
+.slottop{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid var(--border);}
+.video{aspect-ratio:16/9;position:relative;display:grid;place-items:center;
+  background:linear-gradient(155deg,var(--video-a),var(--video-b));cursor:pointer;}
+.video::before{content:"";position:absolute;inset:0;
+  background-image:repeating-linear-gradient(112deg,transparent 0 13px,rgba(221,170,85,.045) 13px 14px);}
+.playbtn{width:38px;height:38px;border-radius:999px;display:grid;place-items:center;position:relative;
+  background:rgba(11,10,9,.62);border:1px solid rgba(247,244,240,.22);color:#F7F4F0;backdrop-filter:blur(3px);}
+.slot.live .playbtn{background:var(--primary);border-color:var(--primary);color:var(--primary-fg);}
+.vstate{position:absolute;left:8px;bottom:8px;font:500 10px/1 "IBM Plex Mono",monospace;
+  background:rgba(11,10,9,.7);color:#F7F4F0;padding:3px 6px;border-radius:var(--r-xs);}
+.slotbody{padding:9px;display:flex;flex-direction:column;gap:7px;}
+.slotartist{display:flex;align-items:center;gap:8px;}
+.slotartist .nm{font-size:13px;font-weight:600;}
+.slotartist .role{font-size:11px;color:var(--fg-subtle);}
+.timecode{display:flex;align-items:center;gap:7px;font:500 11px/1 "IBM Plex Mono",monospace;color:var(--fg-subtle);}
+
+.transport{margin-top:14px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--s1);
+  padding:10px 12px;display:flex;align-items:center;gap:12px;box-shadow:inset 0 1px 0 0 var(--card-hi);}
+.tbar{flex:1;height:3px;border-radius:2px;background:var(--s3);position:relative;}
+.tbar i{position:absolute;left:0;top:0;bottom:0;width:38%;background:var(--primary);border-radius:2px;}
+.tbar i::after{content:"";position:absolute;right:-4px;top:-3px;width:9px;height:9px;border-radius:999px;
+  background:var(--primary);border:2px solid var(--s1);}
+.abtoggle{display:flex;gap:4px;}
+.abtoggle .chip.on{background:var(--primary);border-color:var(--primary);color:var(--primary-fg);}
+
+/* Inspector */
+.insprow{padding:7px 0;border-bottom:1px solid var(--border);}
+.insprow:last-child{border-bottom:0;}
+.insprow dt{font-size:11px;color:var(--fg-subtle);margin-bottom:2px;}
+.insprow dd{margin:0;font-size:12.5px;font-weight:500;}
+
+/* --- 홈 Bento --- */
+.bento{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+.hero{padding:18px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;}
+.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:220px;height:220px;border-radius:999px;
+  background:radial-gradient(circle,color-mix(in srgb,var(--primary) 20%,transparent),transparent 68%);}
+.hero h2{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;position:relative;}
+.avstack{display:flex;}
+.avstack .av{border:2px solid var(--s1);margin-left:-8px;}
+.avstack .av:first-child{margin-left:0;}
+.eratile{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;
+  transition:background .09s var(--ease);}
+.eratile:hover{background:var(--s3);}
+.erabar{width:3px;height:24px;border-radius:2px;flex-shrink:0;}
+.eratile .nm{font-size:12.5px;font-weight:500;}
+.eratile .yr{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-faint);}
+.eratile .n{margin-left:auto;font:500 11px/1 "IBM Plex Mono",monospace;color:var(--fg-subtle);}
+.hscroll{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.poster{aspect-ratio:3/4;border-radius:var(--r-sm);background:linear-gradient(160deg,var(--video-a),var(--video-b));
+  display:grid;place-items:center;color:var(--fg-faint);}
+.concertcard .t{font-size:12px;font-weight:600;margin-top:7px;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.concertcard .d{font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-subtle);margin-top:4px;}
+
+/* --- 테이블 --- */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.tbl th{text-align:left;font-weight:500;font-size:11px;color:var(--fg-subtle);
+  padding:0 10px 7px;border-bottom:1px solid var(--border);white-space:nowrap;}
+.tbl th.num,.tbl td.num{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;}
+.tbl td{padding:0 10px;height:42px;border-bottom:1px solid var(--border);color:var(--fg-muted);}
+.tbl tr{cursor:pointer;}
+.tbl tbody tr:hover td{background:var(--s2);}
+.tbl .who{display:flex;align-items:center;gap:9px;}
+.tbl .who b{color:var(--fg);font-weight:600;font-size:13px;}
+.tbl .who i{font-style:normal;font-size:10.5px;color:var(--fg-faint);display:block;line-height:1.3;}
+
+/* --- 작품 상세 --- */
+.worklayout{display:grid;grid-template-columns:232px 1fr;gap:20px;}
+.blurhead{position:relative;border-radius:var(--r-lg);overflow:hidden;padding:16px;
+  border:1px solid var(--border);background:var(--s1);}
+.blurhead::before{content:"";position:absolute;inset:0;
+  background:radial-gradient(120% 100% at 20% 0%,color-mix(in srgb,var(--era-romantic) 26%,transparent),transparent 62%);
+  filter:blur(6px);}
+.portrait{width:78px;aspect-ratio:3/4;border-radius:var(--r-md);position:relative;
+  background:linear-gradient(160deg,var(--s3),var(--s2));border:1px solid var(--border-strong);
+  display:grid;place-items:center;font:600 20px/1 "IBM Plex Sans KR",sans-serif;color:var(--fg-subtle);}
+.seclist{display:flex;flex-direction:column;}
+.secrow{display:flex;align-items:center;gap:11px;padding:11px 10px;border-bottom:1px solid var(--border);cursor:pointer;}
+.secrow:hover{background:var(--s2);}
+.secrow .nm{font-size:13px;font-weight:500;}
+.secrow .ds{font-size:11.5px;color:var(--fg-subtle);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44ch;}
+.streamrow{display:flex;gap:7px;flex-wrap:wrap;}
+
+/* --- 모바일 --- */
+.mobrow{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;}
+.mobframe{width:328px;flex-shrink:0;}
+.mobcap{font:500 11px/1 "IBM Plex Mono",monospace;color:var(--pg-subtle);
+  text-align:center;margin-top:9px;letter-spacing:.03em;}
+.mobshell{border:1px solid var(--pg-border-strong);border-radius:24px;overflow:hidden;
+  box-shadow:0 16px 40px -18px rgba(0,0,0,.4);}
+.mobtop{height:32px;background:var(--s1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;
+  font:500 10px/1 "IBM Plex Mono",monospace;color:var(--fg-subtle);}
+.mobbody{padding:13px;display:flex;flex-direction:column;gap:13px;min-height:428px;background:var(--bg);}
+.mobsearch{height:34px;border:1px solid var(--border);background:var(--s1);border-radius:var(--r-md);
+  display:flex;align-items:center;gap:8px;padding:0 11px;color:var(--fg-subtle);font-size:12.5px;}
+.mobtabbar{height:50px;border-top:1px solid var(--border);background:var(--s1);
+  display:flex;align-items:center;justify-content:space-around;padding:0 6px;}
+.mobtab{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--fg-faint);font-size:9.5px;}
+.mobtab.on{color:var(--primary);}
+.mobperf{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid var(--border);
+  border-radius:var(--r-md);background:var(--s1);}
+.mobperf .thumb{width:52px;aspect-ratio:16/9;border-radius:var(--r-xs);flex-shrink:0;
+  background:linear-gradient(150deg,var(--video-a),var(--video-b));display:grid;place-items:center;color:var(--fg-faint);}
+
+svg{display:block;}
+.i{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+.i.lg{width:17px;height:17px;}
+
+@media (prefers-reduced-motion: reduce){*{transition-duration:0ms !important;}}
+@media (max-width:980px){
+  .app{font-size:12px;}
+  .side{width:172px;} .inspector{display:none;} .colpane{width:170px;}
+  .slots{grid-template-columns:repeat(2,1fr);}
+  .bento{grid-template-columns:1fr;}
+  .worklayout{grid-template-columns:1fr;}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="pghead">
+    <div>
+      <p class="eyebrow">리디자인 시안 · 2026-09-12</p>
+      <h1>ClassicMap 화면 설계</h1>
+      <p class="sub">보고서 4.1절 토큰과 프로덕션 API 실측 데이터로 구성한 화면 시안입니다. 곡·연주자·구간·개수는 모두 실제 값입니다.</p>
+    </div>
+    <div class="themeswitch" role="group" aria-label="앱 테마">
+      <button id="t-dark" aria-pressed="true">다크</button>
+      <button id="t-light" aria-pressed="false">라이트</button>
+    </div>
+  </header>
+
+  <section class="tokens" aria-label="디자인 토큰">
+    <div class="tokencard">
+      <h3>표면 · 전경</h3>
+      <div class="swatches labeled">
+        <div class="sw" style="background:#0B0A09" data-l="bg"></div>
+        <div class="sw" style="background:#131211" data-l="s1"></div>
+        <div class="sw" style="background:#1B1917" data-l="s2"></div>
+        <div class="sw" style="background:#262321" data-l="s3"></div>
+        <div class="sw" style="background:#F7F4F0" data-l="fg"></div>
+        <div class="sw" style="background:#A9A29A" data-l="mut"></div>
+      </div>
+    </div>
+    <div class="tokencard">
+      <h3>액센트 — Brass Gold</h3>
+      <div class="swatches labeled">
+        <div class="sw" style="background:#DDAA55" data-l="dark"></div>
+        <div class="sw" style="background:#A67426" data-l="light"></div>
+        <div class="sw" style="background:#5C441D" data-l="muted"></div>
+      </div>
+      <p style="margin:0;font-size:11.5px;color:var(--pg-muted);line-height:1.5;">선택 상태와 주요 액션에만. 장식 사용 금지.</p>
+    </div>
+    <div class="tokencard">
+      <h3>시대 — 데이터 전용</h3>
+      <div class="swatches labeled">
+        <div class="sw" style="background:#9333ea" data-l="바로크"></div>
+        <div class="sw" style="background:#3b82f6" data-l="고전"></div>
+        <div class="sw" style="background:#ec4899" data-l="낭만"></div>
+        <div class="sw" style="background:#22c55e" data-l="근현대"></div>
+      </div>
+      <p style="margin:0;font-size:11.5px;color:var(--pg-muted);line-height:1.5;">실재 4종. 중세·르네상스는 작곡가 0명.</p>
+    </div>
+    <div class="tokencard">
+      <h3>타입 스케일</h3>
+      <div class="typerow"><span style="font-size:17px;font-weight:650;letter-spacing:-.015em;">제목</span><span>title-2 / 24</span></div>
+      <div class="typerow"><span style="font-size:14px;font-weight:600;">카드 제목</span><span>headline / 16</span></div>
+      <div class="typerow"><span style="font-size:13px;">본문 텍스트</span><span>body / 15</span></div>
+      <div class="typerow"><span class="mono" style="font-size:12px;">11:10–12:51</span><span>mono / 12</span></div>
+    </div>
+  </section>
+
+  <div class="screentabs" role="tablist" aria-label="화면">
+    <button role="tab" aria-selected="true" data-p="compare">비교</button>
+    <button role="tab" aria-selected="false" data-p="home">홈</button>
+    <button role="tab" aria-selected="false" data-p="artists">아티스트</button>
+    <button role="tab" aria-selected="false" data-p="work">작품 상세</button>
+    <button role="tab" aria-selected="false" data-p="mobile">모바일</button>
+  </div>
+
+  <!-- ======================= 비교 ======================= -->
+  <div class="panel" data-panel="compare">
+    <p class="viewportlabel">데스크톱 1440 · 3열 슬롯 + Inspector</p>
+    <div class="frame">
+      <div class="app" data-app="dark">
+
+        <nav class="side">
+          <div class="brand"><div class="brandmark">C</div><b>ClassicMap</b></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트<span class="ct">185</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+          <div class="navitem on"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교<span class="ct">8</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+          <div class="navsec">내 서재</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>즐겨찾기</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M4 19.5V6a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M9 8h6"/></svg>내 노트</div>
+          <div class="sidefoot">
+            <div class="kbdhint"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>검색<kbd>⌘K</kbd></div>
+            <div class="navitem"><div class="av" style="width:18px;height:18px;font-size:9px;">강</div>내 계정</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb">비교<span class="sep">/</span>라흐마니노프<span class="sep">/</span><b>피아노 협주곡 3번</b></div>
+            <div class="searchtrig"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>작곡가 · 곡 · 아티스트 검색<kbd>⌘K</kbd></div>
+            <div class="tbactions">
+              <button class="icbtn" aria-label="테마 전환"><svg class="i lg" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg></button>
+            </div>
+          </div>
+
+          <div class="content">
+            <aside class="colpane">
+              <div class="filtertoggle">비교 가능한 작곡가만<span class="switch"></span></div>
+              <div>
+                <div class="paneltitle" style="padding:2px 8px 6px;">작곡가 <span class="mono" style="color:var(--fg-subtle);">5 / 112</span></div>
+                <div class="lrow"><div class="av" style="width:22px;height:22px;font-size:9px;">쇼</div><span class="nm">쇼팽</span><span class="sup">3곡</span></div>
+                <div class="lrow on"><div class="av ring" style="width:22px;height:22px;font-size:9px;border-color:var(--era-romantic);">라</div><span class="nm">라흐마니노프</span><span class="sup">2곡</span></div>
+                <div class="lrow"><div class="av" style="width:22px;height:22px;font-size:9px;">바</div><span class="nm">바흐</span><span class="sup">1곡</span></div>
+                <div class="lrow"><div class="av" style="width:22px;height:22px;font-size:9px;">그</div><span class="nm">그리그</span><span class="sup">1곡</span></div>
+                <div class="lrow"><div class="av" style="width:22px;height:22px;font-size:9px;">슈</div><span class="nm">슈만</span><span class="sup">1곡</span></div>
+              </div>
+              <div style="border-top:1px solid var(--border);padding-top:9px;">
+                <div class="paneltitle" style="padding:2px 8px 6px;">곡 <span class="mono" style="color:var(--fg-subtle);">2 / 152</span></div>
+                <div class="lrow on"><span class="nm">피아노 협주곡 3번</span><span class="meta">12</span></div>
+                <div class="lrow"><span class="nm">피아노 협주곡 2번</span><span class="meta">9</span></div>
+                <div style="padding:8px;font-size:11px;color:var(--fg-faint);line-height:1.45;">
+                  비교 없는 150곡 <span style="color:var(--primary);cursor:pointer;">모두 보기</span>
+                </div>
+              </div>
+            </aside>
+
+            <main class="body">
+              <div class="piecehead">
+                <div style="flex:1;min-width:0;">
+                  <h2>피아노 협주곡 3번 D단조</h2>
+                  <div class="metaline">
+                    <span class="mono">Op. 30</span><span class="dv"></span>
+                    <span class="mono">1909</span><span class="dv"></span>
+                    <span class="mono">40분</span><span class="dv"></span>
+                    <span>난이도</span>
+                    <span class="diffbar" title="10 / 10">
+                      <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+                      <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+                    </span>
+                    <span class="mono" style="color:var(--fg-muted);">10/10</span>
+                  </div>
+                </div>
+                <button class="btn"><svg class="i" viewBox="0 0 24 24"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>저장</button>
+                <button class="btn"><svg class="i" viewBox="0 0 24 24"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3m0 0L8 7m4-4 4 4"/></svg>공유</button>
+              </div>
+
+              <div class="sectabs" role="tablist" aria-label="비교 구간">
+                <button class="sectab" role="tab" aria-selected="true">1악장 카덴챠<span class="n">3</span></button>
+                <button class="sectab" role="tab" aria-selected="false">2악장<span class="n">3</span></button>
+                <button class="sectab" role="tab" aria-selected="false">3악장 · 도입부<span class="n">3</span></button>
+                <button class="sectab" role="tab" aria-selected="false">3악장 · 클라이맥스<span class="n">3</span></button>
+              </div>
+
+              <div class="slots">
+                <div class="slot live">
+                  <div class="slottop">
+                    <span class="badge brass">오리지널 카덴챠</span>
+                    <span class="badge ok" style="margin-left:auto;">재생 중</span>
+                  </div>
+                  <div class="video"><div class="playbtn"><svg class="i lg" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg></div><span class="vstate">1:24 / 1:41</span></div>
+                  <div class="slotbody">
+                    <div class="slotartist">
+                      <div class="av" style="width:26px;height:26px;">임</div>
+                      <div><div class="nm">임윤찬</div><div class="role">피아노</div></div>
+                    </div>
+                    <div class="timecode"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>11:10–12:51 · 1:41</div>
+                  </div>
+                </div>
+
+                <div class="slot">
+                  <div class="slottop">
+                    <span class="badge brass">오시아 카덴챠</span>
+                  </div>
+                  <div class="video"><div class="playbtn"><svg class="i lg" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><path d="M8 5.5v13l11-6.5z"/></svg></div><span class="vstate">눌러서 불러오기</span></div>
+                  <div class="slotbody">
+                    <div class="slotartist">
+                      <div class="av" style="width:26px;height:26px;">유</div>
+                      <div><div class="nm">유자 왕</div><div class="role">피아노</div></div>
+                    </div>
+                    <div class="timecode"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>11:12–13:40 · 2:28</div>
+                  </div>
+                </div>
+
+                <div class="slot">
+                  <div class="slottop">
+                    <span class="badge brass">오리지널 카덴챠</span>
+                  </div>
+                  <div class="video"><div class="playbtn"><svg class="i lg" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><path d="M8 5.5v13l11-6.5z"/></svg></div><span class="vstate">눌러서 불러오기</span></div>
+                  <div class="slotbody">
+                    <div class="slotartist">
+                      <div class="av" style="width:26px;height:26px;">랑</div>
+                      <div><div class="nm">랑랑</div><div class="role">피아노</div></div>
+                    </div>
+                    <div class="timecode"><svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>11:12–12:44 · 1:32</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transport">
+                <button class="icbtn" style="background:var(--primary);color:var(--primary-fg);border-color:var(--primary);" aria-label="일시정지">
+                  <svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg>
+                </button>
+                <span class="mono" style="font-size:11px;color:var(--fg-subtle);">1:24</span>
+                <div class="tbar"><i></i></div>
+                <span class="mono" style="font-size:11px;color:var(--fg-subtle);">1:41</span>
+                <div class="abtoggle">
+                  <span class="chip on">A 임윤찬</span>
+                  <span class="chip">B 유자 왕</span>
+                </div>
+                <span class="mono" style="font-size:10px;color:var(--fg-faint);">비율 매핑</span>
+                <kbd>Space</kbd>
+              </div>
+            </main>
+
+            <aside class="inspector">
+              <div class="paneltitle" style="margin-bottom:9px;">연주 정보</div>
+              <dl style="margin:0;">
+                <div class="insprow"><dt>아티스트</dt><dd>임윤찬</dd></div>
+                <div class="insprow"><dt>해석</dt><dd>오리지널 카덴챠</dd></div>
+                <div class="insprow"><dt>구간</dt><dd class="mono">11:10 – 12:51</dd></div>
+                <div class="insprow"><dt>길이</dt><dd class="mono">1:41</dd></div>
+                <div class="insprow"><dt>출처</dt><dd>YouTube</dd></div>
+              </dl>
+              <div style="margin-top:14px;padding:10px;border:1px dashed var(--border-strong);border-radius:var(--r-sm);">
+                <div class="paneltitle" style="margin-bottom:6px;">크레딧</div>
+                <p style="margin:0;font-size:11.5px;color:var(--fg-subtle);line-height:1.5;">
+                  지휘·오케스트라 표기는 비교 계약(B16) 구현 후 켜집니다.
+                </p>
+              </div>
+              <button class="btn sm" style="margin-top:12px;width:100%;justify-content:center;">
+                <svg class="i" viewBox="0 0 24 24" style="width:12px;height:12px;"><path d="M4 19.5V6a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M9 8h6"/></svg>이 연주에 메모
+              </button>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h4>이 화면에서 바뀐 것</h4>
+      <ul>
+        <li><b>3열 그리드.</b> 2×2가 아닙니다. 섹터당 연주 수 실측이 3개(12섹터) 또는 5개(3섹터)이고 4개인 섹터는 없습니다.</li>
+        <li><b><code>characteristic</code>을 슬롯 최상단 배지로.</b> "오리지널 카덴챠 / 오시아 카덴챠"가 바로 사용자가 비교하려는 대상입니다. 하단 인용문에 묻어두지 않습니다.</li>
+        <li><b>슬롯 기본은 포스터 상태.</b> 누를 때만 로드합니다 — "목록 진입 시 모든 영상을 동시에 로드하지 않습니다" 지침 준수.</li>
+        <li><b>A/B 전환은 비율 매핑.</b> 같은 구간인데 임윤찬 1:41, 유자 왕 2:28로 1.6배 차이가 납니다. 절대 매핑이면 짧은 쪽이 먼저 끝납니다.</li>
+        <li><b>"비교 가능한 작곡가만" 기본 ON.</b> 112명 중 5명만 비교를 가집니다. 필터가 없으면 빈손 경험이 기본값이 됩니다.</li>
+        <li><b>크레딧 칸은 자리만.</b> 계약 미구현 상태에서 없는 필드를 추측해 채우지 않습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ======================= 홈 ======================= -->
+  <div class="panel" data-panel="home" hidden>
+    <p class="viewportlabel">데스크톱 1440 · Bento 대시보드</p>
+    <div class="frame">
+      <div class="app" data-app="dark">
+        <nav class="side">
+          <div class="brand"><div class="brandmark">C</div><b>ClassicMap</b></div>
+          <div class="navitem on"><svg class="i ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트<span class="ct">185</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교<span class="ct">8</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+          <div class="navsec">내 서재</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>즐겨찾기</div>
+          <div class="sidefoot">
+            <div class="kbdhint"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>검색<kbd>⌘K</kbd></div>
+            <div class="navitem"><div class="av" style="width:18px;height:18px;font-size:9px;">강</div>내 계정</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb"><b>홈</b></div>
+            <div class="searchtrig"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>작곡가 · 곡 · 아티스트 검색<kbd>⌘K</kbd></div>
+            <div class="tbactions"><button class="icbtn" aria-label="테마 전환"><svg class="i lg" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg></button></div>
+          </div>
+
+          <main class="body" style="display:flex;flex-direction:column;gap:16px;">
+            <div class="bento">
+              <div class="card hero">
+                <div style="display:flex;align-items:center;gap:8px;position:relative;">
+                  <span class="badge brass">오늘의 비교</span>
+                  <span class="badge neutral"><span class="mono">연주 12개</span></span>
+                </div>
+                <div style="position:relative;">
+                  <div style="font-size:12px;color:var(--fg-subtle);margin-bottom:5px;">라흐마니노프 · 1909</div>
+                  <h2>피아노 협주곡 3번<br>D단조</h2>
+                  <div style="font-size:12.5px;color:var(--fg-muted);margin-top:9px;">1악장 카덴챠 — 오리지널과 오시아, 두 판본을 나란히</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:auto;position:relative;">
+                  <div class="avstack">
+                    <div class="av" style="width:30px;height:30px;">임</div>
+                    <div class="av" style="width:30px;height:30px;">유</div>
+                    <div class="av" style="width:30px;height:30px;">랑</div>
+                  </div>
+                  <span style="font-size:11.5px;color:var(--fg-subtle);">임윤찬 · 유자 왕 · 랑랑</span>
+                  <button class="btn pri" style="margin-left:auto;height:32px;">
+                    <svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><path d="M8 5.5v13l11-6.5z"/></svg>비교 듣기
+                  </button>
+                </div>
+              </div>
+
+              <div class="card" style="padding:14px;">
+                <div class="sechead"><h3>시대별 둘러보기</h3></div>
+                <div class="eratile"><div class="erabar" style="background:var(--era-baroque);"></div><div><div class="nm">바로크</div><div class="yr">1600–1750</div></div><span class="n">9</span></div>
+                <div class="eratile"><div class="erabar" style="background:var(--era-classical);"></div><div><div class="nm">고전주의</div><div class="yr">1730–1820</div></div><span class="n">12</span></div>
+                <div class="eratile"><div class="erabar" style="background:var(--era-romantic);"></div><div><div class="nm">낭만주의</div><div class="yr">1800–1910</div></div><span class="n">49</span></div>
+                <div class="eratile"><div class="erabar" style="background:var(--era-modern);"></div><div><div class="nm">근현대</div><div class="yr">1890–현재</div></div><span class="n">42</span></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="sechead"><h3>다가오는 공연</h3><span class="more">전체 보기</span></div>
+              <div class="hscroll">
+                <div class="concertcard">
+                  <div class="poster"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+                  <div class="t">서울시립교향악단 정기연주회</div><div class="d">10.04 · 예술의전당</div>
+                </div>
+                <div class="concertcard">
+                  <div class="poster"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+                  <div class="t">임윤찬 피아노 리사이틀</div><div class="d">10.11 · 롯데콘서트홀</div>
+                </div>
+                <div class="concertcard">
+                  <div class="poster"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+                  <div class="t">KBS교향악단 브람스 전곡</div><div class="d">10.18 · 예술의전당</div>
+                </div>
+                <div class="concertcard">
+                  <div class="poster"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+                  <div class="t">부산시립교향악단 말러 5번</div><div class="d">10.25 · 부산문화회관</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento">
+              <div class="card" style="padding:14px;">
+                <div class="sechead"><h3>비교 카탈로그</h3><span class="more">8곡 전체</span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                  <div class="lrow" style="border:1px solid var(--border);border-radius:var(--r-sm);"><span class="nm">쇼팽 · 발라드 1번</span><span class="meta">15</span></div>
+                  <div class="lrow" style="border:1px solid var(--border);border-radius:var(--r-sm);"><span class="nm">라흐 · 피협 3번</span><span class="meta">12</span></div>
+                  <div class="lrow" style="border:1px solid var(--border);border-radius:var(--r-sm);"><span class="nm">라흐 · 피협 2번</span><span class="meta">9</span></div>
+                  <div class="lrow" style="border:1px solid var(--border);border-radius:var(--r-sm);"><span class="nm">바흐 · 골드베르크</span><span class="meta">3</span></div>
+                </div>
+              </div>
+              <div class="card" style="padding:14px;">
+                <div class="sechead"><h3>주목받는 아티스트</h3></div>
+                <div class="lrow"><div class="av" style="width:26px;height:26px;">조</div><div><div class="nm">조성진</div><div style="font-size:10.5px;color:var(--fg-faint);">피아노 · 대한민국</div></div></div>
+                <div class="lrow"><div class="av" style="width:26px;height:26px;">임</div><div><div class="nm">임윤찬</div><div style="font-size:10.5px;color:var(--fg-faint);">피아노 · 대한민국</div></div></div>
+                <div class="lrow"><div class="av sq" style="width:26px;height:26px;">베</div><div><div class="nm">베를린 필하모닉</div><div style="font-size:10.5px;color:var(--fg-faint);">오케스트라 · 독일</div></div></div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h4>이 화면에서 바뀐 것</h4>
+      <ul>
+        <li><b>3초 인사말 애니메이션 제거.</b> 손 흔드는 이모지 루프도 함께. 대신 상단 검색과 히어로가 첫 화면을 잡습니다.</li>
+        <li><b>"오늘의 비교"를 히어로로 승격.</b> 제품의 유일한 차별화 기능인데 지금은 세 번째 캐러셀에 작은 카드로 들어가 있습니다.</li>
+        <li><b><code>performanceCount</code> 노출.</b> API가 이미 주는데 현재 매핑이 버리고 있습니다. "연주 12개"가 클릭 동기입니다.</li>
+        <li><b>시대 타일 4개.</b> 6개가 아닙니다. 중세·르네상스는 작곡가가 0명입니다.</li>
+        <li><b>비교 카탈로그 블록.</b> 비교 가능한 게 8곡뿐이면 숨기지 말고 다 보여주는 편이 낫습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ======================= 아티스트 ======================= -->
+  <div class="panel" data-panel="artists" hidden>
+    <p class="viewportlabel">데스크톱 1440 · 밀도 테이블 (행 높이 42)</p>
+    <div class="frame">
+      <div class="app" data-app="dark">
+        <nav class="side">
+          <div class="brand"><div class="brandmark">C</div><b>ClassicMap</b></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+          <div class="navitem on"><svg class="i ic" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트<span class="ct">185</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교<span class="ct">8</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+          <div class="sidefoot">
+            <div class="kbdhint"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>검색<kbd>⌘K</kbd></div>
+            <div class="navitem"><div class="av" style="width:18px;height:18px;font-size:9px;">강</div>내 계정</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb"><b>아티스트</b><span class="sep">·</span><span class="mono">185</span></div>
+            <div class="searchtrig"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>아티스트 검색<kbd>⌘K</kbd></div>
+            <div class="tbactions"><button class="btn sm pri">추가</button></div>
+          </div>
+
+          <main class="body">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+              <span class="chip on">전체 <span class="n">185</span></span>
+              <span class="chip">피아노 <span class="n">62</span></span>
+              <span class="chip">바이올린 <span class="n">26</span></span>
+              <span class="chip">첼로 <span class="n">13</span></span>
+              <span class="chip">지휘 <span class="n">13</span></span>
+              <span class="chip">소프라노 <span class="n">9</span></span>
+              <span class="chip">테너 <span class="n">5</span></span>
+              <span style="width:1px;background:var(--border);margin:0 4px;"></span>
+              <span class="chip"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px;"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>오케스트라 <span class="n">47</span></span>
+            </div>
+
+            <div style="overflow-x:auto;">
+              <table class="tbl">
+                <thead><tr>
+                  <th style="width:34%;">이름</th><th>분류</th><th>국적</th>
+                  <th class="num">출생</th><th class="num">공연</th><th class="num">앨범</th><th style="width:34px;"></th>
+                </tr></thead>
+                <tbody>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">조</div><div><b>조성진</b><i>Seong-Jin Cho</i></div></div></td>
+                    <td>피아노</td><td>대한민국</td><td class="num">1994</td><td class="num">100</td><td class="num">8</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">임</div><div><b>임윤찬</b><i>Yunchan Lim</i></div></div></td>
+                    <td>피아노</td><td>대한민국</td><td class="num">2004</td><td class="num">62</td><td class="num">4</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--primary);fill:currentColor;"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">유</div><div><b>유자 왕</b><i>Yuja Wang</i></div></div></td>
+                    <td>피아노</td><td>중국</td><td class="num">1987</td><td class="num">140</td><td class="num">16</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av sq" style="width:28px;height:28px;">베</div><div><b>베를린 필하모닉</b><i>Berliner Philharmoniker</i></div></div></td>
+                    <td>오케스트라</td><td>독일</td><td class="num">1882</td><td class="num">—</td><td class="num">42</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">마</div><div><b>마르타 아르헤리치</b><i>Martha Argerich</i></div></div></td>
+                    <td>피아노</td><td>아르헨티나</td><td class="num">1941</td><td class="num">210</td><td class="num">58</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">힐</div><div><b>힐러리 한</b><i>Hilary Hahn</i></div></div></td>
+                    <td>바이올린</td><td>미국</td><td class="num">1979</td><td class="num">124</td><td class="num">22</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                  <tr><td><div class="who"><div class="av" style="width:28px;height:28px;">요</div><div><b>요요 마</b><i>Yo-Yo Ma</i></div></div></td>
+                    <td>첼로</td><td>미국</td><td class="num">1955</td><td class="num">300</td><td class="num">90</td>
+                    <td><svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="margin:12px 0 0;font-size:11.5px;color:var(--fg-faint);">185명 중 7명 표시 · 스크롤하면 계속 불러옵니다</p>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h4>이 화면에서 바뀐 것</h4>
+      <ul>
+        <li><b>카드 스택 → 테이블.</b> 데스크톱에서 한 화면에 들어가는 항목 수가 3배가 됩니다. 행 높이 42, 헤더 고정, 열 정렬.</li>
+        <li><b>필터 칩은 실제 <code>category</code> 값에서 생성.</b> 한글 라벨은 매핑 테이블로 붙입니다 — 실제 값은 <code>pianist</code> 같은 영문 slug이고 <code>피아니스트</code>·<code>피아노</code>가 9건 섞여 있어 alias로 흡수합니다.</li>
+        <li><b>오케스트라 47건은 분리.</b> 사람이 아니므로 사각 썸네일 + 창단 연도이고, 공연 수는 <code>—</code>로 둡니다. 필터 칩도 구분선 뒤로 뺐습니다.</li>
+        <li><b>"수상" 열 제외.</b> 목록 응답의 <code>topAwardId</code>·<code>awards</code>가 0%입니다. 수상은 상세에서만 보여줍니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ======================= 작품 상세 ======================= -->
+  <div class="panel" data-panel="work" hidden>
+    <p class="viewportlabel">데스크톱 1440 · 신설 라우트 <span style="color:var(--pg-accent);">/piece/[id]</span></p>
+    <div class="frame">
+      <div class="app" data-app="dark">
+        <nav class="side">
+          <div class="brand"><div class="brandmark">C</div><b>ClassicMap</b></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트<span class="ct">185</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+          <div class="navitem on"><svg class="i ic" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교<span class="ct">8</span></div>
+          <div class="navitem"><svg class="i ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+          <div class="sidefoot">
+            <div class="kbdhint"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>검색<kbd>⌘K</kbd></div>
+            <div class="navitem"><div class="av" style="width:18px;height:18px;font-size:9px;">강</div>내 계정</div>
+          </div>
+        </nav>
+
+        <div class="main">
+          <div class="topbar">
+            <div class="crumb">작곡가<span class="sep">/</span>라흐마니노프<span class="sep">/</span><b>피아노 협주곡 3번</b></div>
+            <div class="searchtrig"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>작곡가 · 곡 · 아티스트 검색<kbd>⌘K</kbd></div>
+            <div class="tbactions"><button class="icbtn" aria-label="테마 전환"><svg class="i lg" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg></button></div>
+          </div>
+
+          <main class="body">
+            <div class="worklayout">
+              <aside style="display:flex;flex-direction:column;gap:12px;">
+                <div class="blurhead">
+                  <div style="position:relative;display:flex;gap:12px;align-items:flex-start;">
+                    <div class="portrait">라</div>
+                    <div style="padding-top:3px;">
+                      <div style="font-size:14px;font-weight:600;">라흐마니노프</div>
+                      <div style="font-size:11px;color:var(--fg-subtle);margin-top:2px;">Sergei Rachmaninoff</div>
+                      <span class="badge" style="margin-top:7px;background:color-mix(in srgb,var(--era-romantic) 16%,transparent);color:var(--era-romantic);">낭만주의</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card" style="padding:12px;">
+                  <div class="paneltitle" style="margin-bottom:8px;">작품 정보</div>
+                  <dl style="margin:0;">
+                    <div class="insprow"><dt>작품번호</dt><dd class="mono">Op. 30</dd></div>
+                    <div class="insprow"><dt>작곡</dt><dd class="mono">1909</dd></div>
+                    <div class="insprow"><dt>연주 시간</dt><dd class="mono">약 40분</dd></div>
+                    <div class="insprow"><dt>난이도</dt><dd style="display:flex;align-items:center;gap:7px;">
+                      <span class="diffbar"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i></span>
+                      <span class="mono" style="font-size:11px;">10/10</span></dd></div>
+                    <div class="insprow"><dt>형식</dt><dd>협주곡 · 3악장</dd></div>
+                  </dl>
+                </div>
+
+                <div class="streamrow">
+                  <button class="btn sm">Spotify</button>
+                  <button class="btn sm">Apple Music</button>
+                </div>
+                <button class="btn" style="justify-content:center;">
+                  <svg class="i" viewBox="0 0 24 24"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>즐겨찾기에 저장
+                </button>
+              </aside>
+
+              <div>
+                <h2 style="margin:0 0 6px;font-size:30px;font-weight:700;letter-spacing:-.022em;line-height:1.12;">피아노 협주곡 3번 D단조</h2>
+                <p style="margin:0 0 16px;font-size:13px;color:var(--fg-subtle);">Piano Concerto No. 3 in D minor</p>
+
+                <p style="margin:0 0 20px;font-size:13.5px;line-height:1.7;color:var(--fg-muted);max-width:62ch;">
+                  피아니스트에게 극한의 기교와 지구력을 요구하는, 가장 어렵기로 소문난 협주곡 중 하나. 영화 &lt;샤인&gt;을 통해 대중적으로도 유명해졌다.
+                </p>
+
+                <div class="sechead" style="margin-bottom:0;">
+                  <h3>비교 구간</h3>
+                  <span class="badge brass"><span class="mono">연주 12개</span></span>
+                </div>
+                <div class="seclist" style="border-top:1px solid var(--border);margin-top:9px;">
+                  <div class="secrow">
+                    <span class="mono" style="color:var(--fg-faint);font-size:11px;width:18px;">01</span>
+                    <div style="flex:1;min-width:0;">
+                      <div class="nm">1악장 카덴챠</div>
+                      <div class="ds">오시아 버전과 오리지널 버전을 연주자마다 선택해 연주하기 때문에, 비교에 좋다.</div>
+                    </div>
+                    <span class="badge neutral"><span class="mono">3</span></span>
+                    <button class="btn sm pri">비교</button>
+                  </div>
+                  <div class="secrow">
+                    <span class="mono" style="color:var(--fg-faint);font-size:11px;width:18px;">02</span>
+                    <div style="flex:1;min-width:0;"><div class="nm">2악장</div><div class="ds">2악장 하이라이트 비교</div></div>
+                    <span class="badge neutral"><span class="mono">3</span></span>
+                    <button class="btn sm">비교</button>
+                  </div>
+                  <div class="secrow">
+                    <span class="mono" style="color:var(--fg-faint);font-size:11px;width:18px;">03</span>
+                    <div style="flex:1;min-width:0;"><div class="nm">3악장 · 도입부</div></div>
+                    <span class="badge neutral"><span class="mono">3</span></span>
+                    <button class="btn sm">비교</button>
+                  </div>
+                  <div class="secrow">
+                    <span class="mono" style="color:var(--fg-faint);font-size:11px;width:18px;">04</span>
+                    <div style="flex:1;min-width:0;"><div class="nm">3악장 · 클라이맥스</div></div>
+                    <span class="badge neutral"><span class="mono">3</span></span>
+                    <button class="btn sm">비교</button>
+                  </div>
+                </div>
+
+                <div class="sechead" style="margin-top:22px;"><h3>이 곡의 연주자</h3></div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:58px;">
+                    <div class="av" style="width:44px;height:44px;font-size:14px;">임</div>
+                    <span style="font-size:11px;text-align:center;line-height:1.3;">임윤찬</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:58px;">
+                    <div class="av" style="width:44px;height:44px;font-size:14px;">유</div>
+                    <span style="font-size:11px;text-align:center;line-height:1.3;">유자 왕</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;width:58px;">
+                    <div class="av" style="width:44px;height:44px;font-size:14px;">랑</div>
+                    <span style="font-size:11px;text-align:center;line-height:1.3;">랑랑</span></div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h4>이 화면에 대해</h4>
+      <ul>
+        <li><b>지금 없는 화면입니다.</b> <code>Composer → Piece → Sector → Performance</code> 계층에서 Piece만 대응 화면이 없습니다. 곡을 공유할 URL이 없어 ⌘K 검색 결과에서 곡을 눌러도 갈 곳이 없습니다.</li>
+        <li><b>모든 필드가 실제 데이터입니다.</b> 설명·Op.30·1909·40분·난이도 10/10·Spotify·Apple Music이 <code>/pieces/226</code>에 전부 채워져 있습니다. 원안대로 구현 가능합니다.</li>
+        <li><b>난이도는 10단계 막대.</b> 별 5개가 아닙니다. <code>difficultyLevel</code>이 1~10 스케일입니다.</li>
+        <li><b>커버 히어로 대신 블러 배경 + 초상 카드.</b> 작곡가 110/112가 <code>coverImageUrl == avatarUrl</code>이라 세로 초상화를 와이드로 늘리면 얼굴이 잘립니다.</li>
+        <li><b>구간 번호 01–04는 실제 <code>displayOrder</code>입니다.</b> 악장 순서라 번호가 정보를 담습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ======================= 모바일 ======================= -->
+  <div class="panel" data-panel="mobile" hidden>
+    <p class="viewportlabel">모바일 375 · 탭바 유지, 밀도만 comfortable</p>
+    <div class="mobrow">
+
+      <div class="mobframe">
+        <div class="mobshell">
+          <div class="app mob" data-app="dark">
+            <div class="mobtop"><span>9:41</span><span>ClassicMap</span></div>
+            <div class="mobbody">
+              <div class="mobsearch"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>작곡가 · 곡 · 아티스트</div>
+              <div class="card" style="padding:13px;display:flex;flex-direction:column;gap:11px;">
+                <div style="display:flex;gap:6px;">
+                  <span class="badge brass">오늘의 비교</span><span class="badge neutral"><span class="mono">12</span></span>
+                </div>
+                <div>
+                  <div style="font-size:11px;color:var(--fg-subtle);">라흐마니노프 · 1909</div>
+                  <div style="font-size:19px;font-weight:700;letter-spacing:-.018em;line-height:1.2;margin-top:3px;">피아노 협주곡 3번 D단조</div>
+                  <div style="font-size:11.5px;color:var(--fg-muted);margin-top:6px;">1악장 카덴챠</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <div class="avstack">
+                    <div class="av" style="width:26px;height:26px;font-size:10px;">임</div>
+                    <div class="av" style="width:26px;height:26px;font-size:10px;">유</div>
+                    <div class="av" style="width:26px;height:26px;font-size:10px;">랑</div>
+                  </div>
+                  <button class="btn pri sm" style="margin-left:auto;">비교 듣기</button>
+                </div>
+              </div>
+              <div>
+                <div class="sechead"><h3 style="font-size:13px;">시대별 둘러보기</h3></div>
+                <div class="eratile" style="padding:7px 6px;"><div class="erabar" style="background:var(--era-romantic);height:20px;"></div><div><div class="nm" style="font-size:12px;">낭만주의</div></div><span class="n">49</span></div>
+                <div class="eratile" style="padding:7px 6px;"><div class="erabar" style="background:var(--era-modern);height:20px;"></div><div><div class="nm" style="font-size:12px;">근현대</div></div><span class="n">42</span></div>
+                <div class="eratile" style="padding:7px 6px;"><div class="erabar" style="background:var(--era-classical);height:20px;"></div><div><div class="nm" style="font-size:12px;">고전주의</div></div><span class="n">12</span></div>
+              </div>
+            </div>
+            <div class="mobtabbar">
+              <div class="mobtab on"><svg class="i lg" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+            </div>
+          </div>
+        </div>
+        <p class="mobcap">홈 — 인사말 제거, 히어로 승격</p>
+      </div>
+
+      <div class="mobframe">
+        <div class="mobshell">
+          <div class="app mob" data-app="dark">
+            <div class="mobtop"><span>9:41</span><span>비교</span></div>
+            <div class="mobbody" style="gap:11px;">
+              <div class="card" style="padding:9px 11px;display:flex;align-items:center;gap:9px;cursor:pointer;">
+                <div class="av ring" style="width:26px;height:26px;font-size:10px;border-color:var(--era-romantic);">라</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:12.5px;font-weight:600;">피아노 협주곡 3번</div>
+                  <div style="font-size:10.5px;color:var(--fg-subtle);">라흐마니노프</div>
+                </div>
+                <svg class="i" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+
+              <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;">
+                <span class="chip on">1악장 카덴챠 <span class="n">3</span></span>
+                <span class="chip">2악장 <span class="n">3</span></span>
+                <span class="chip">3악장 <span class="n">3</span></span>
+              </div>
+
+              <div class="slot live" style="border-radius:var(--r-md);">
+                <div class="slottop" style="padding:7px 8px;"><span class="badge brass">오리지널 카덴챠</span></div>
+                <div class="video"><div class="playbtn" style="width:34px;height:34px;"><svg class="i" viewBox="0 0 24 24" style="fill:currentColor;stroke:none;"><rect x="7" y="5" width="3.5" height="14" rx="1"/><rect x="13.5" y="5" width="3.5" height="14" rx="1"/></svg></div><span class="vstate">1:24 / 1:41</span></div>
+                <div class="slotbody" style="padding:8px;">
+                  <div class="slotartist">
+                    <div class="av" style="width:24px;height:24px;font-size:10px;">임</div>
+                    <div><div class="nm" style="font-size:12.5px;">임윤찬</div></div>
+                    <span class="timecode" style="margin-left:auto;">11:10–12:51</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="sechead" style="margin-bottom:7px;"><h3 style="font-size:12.5px;">이 구간의 다른 연주 <span class="mono" style="color:var(--fg-subtle);font-weight:400;">2</span></h3></div>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                  <div class="mobperf">
+                    <div class="thumb"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px;fill:currentColor;stroke:none;"><path d="M8 5.5v13l11-6.5z"/></svg></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12px;font-weight:600;">유자 왕</div>
+                      <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">오시아 카덴챠 · <span class="mono">2:28</span></div>
+                    </div>
+                  </div>
+                  <div class="mobperf">
+                    <div class="thumb"><svg class="i" viewBox="0 0 24 24" style="width:11px;height:11px;fill:currentColor;stroke:none;"><path d="M8 5.5v13l11-6.5z"/></svg></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12px;font-weight:600;">랑랑</div>
+                      <div style="font-size:10px;color:var(--fg-subtle);margin-top:1px;">오리지널 카덴챠 · <span class="mono">1:32</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="mobtabbar">
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+              <div class="mobtab on"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+            </div>
+          </div>
+        </div>
+        <p class="mobcap">비교 — 주 영상 1개 + 후보 리스트</p>
+      </div>
+
+      <div class="mobframe">
+        <div class="mobshell">
+          <div class="app mob" data-app="dark">
+            <div class="mobtop"><span>9:41</span><span>아티스트</span></div>
+            <div class="mobbody" style="gap:11px;">
+              <div class="mobsearch"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>아티스트 검색</div>
+              <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;">
+                <span class="chip on">전체 <span class="n">185</span></span>
+                <span class="chip">피아노 <span class="n">62</span></span>
+                <span class="chip">바이올린 <span class="n">26</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border);">
+                  <div class="av" style="width:38px;height:38px;font-size:13px;">조</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;">조성진</div>
+                    <div style="font-size:11px;color:var(--fg-subtle);margin-top:1px;">피아노 · 대한민국</div>
+                  </div>
+                  <svg class="i lg" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border);">
+                  <div class="av" style="width:38px;height:38px;font-size:13px;">임</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;">임윤찬</div>
+                    <div style="font-size:11px;color:var(--fg-subtle);margin-top:1px;">피아노 · 대한민국</div>
+                  </div>
+                  <svg class="i lg" viewBox="0 0 24 24" style="color:var(--primary);fill:currentColor;"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border);">
+                  <div class="av sq" style="width:38px;height:38px;font-size:13px;">베</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;">베를린 필하모닉</div>
+                    <div style="font-size:11px;color:var(--fg-subtle);margin-top:1px;">오케스트라 · 독일</div>
+                  </div>
+                  <svg class="i lg" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border);">
+                  <div class="av" style="width:38px;height:38px;font-size:13px;">마</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;">마르타 아르헤리치</div>
+                    <div style="font-size:11px;color:var(--fg-subtle);margin-top:1px;">피아노 · 아르헨티나</div>
+                  </div>
+                  <svg class="i lg" viewBox="0 0 24 24" style="color:var(--fg-faint);"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l8.8 8.8 8.8-8.8a5 5 0 0 0 0-7.1z"/></svg>
+                </div>
+              </div>
+            </div>
+            <div class="mobtabbar">
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>홈</div>
+              <div class="mobtab on"><svg class="i lg" viewBox="0 0 24 24"><circle cx="8" cy="17" r="3"/><path d="M11 17V5l9-2v12"/><circle cx="17" cy="15" r="3"/></svg>아티스트</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>공연</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>비교</div>
+              <div class="mobtab"><svg class="i lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>타임라인</div>
+            </div>
+          </div>
+        </div>
+        <p class="mobcap">아티스트 — 카드 → 행, 즐겨찾기 노출</p>
+      </div>
+    </div>
+
+    <div class="notes">
+      <h4>모바일에서 지키는 것</h4>
+      <ul>
+        <li><b>탭바 구조는 그대로.</b> 웹만 셸이 바뀝니다. 5개 탭과 라우팅은 손대지 않습니다.</li>
+        <li><b>밀도는 comfortable.</b> 터치 타깃 44pt를 지키고, compact 밀도는 데스크톱에서만 적용합니다.</li>
+        <li><b>비교는 주 영상 1개 + 후보 리스트.</b> 3열 그리드는 데스크톱 전용입니다. 모바일에서 동시 재생은 대역폭과 지침 양쪽에서 무리입니다.</li>
+        <li><b>즐겨찾기 버튼이 드디어 존재합니다.</b> 추가 API 8종이 이미 있는데 호출하는 화면이 0곳이었습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // 화면 전환
+  var tabs = document.querySelectorAll('.screentabs button');
+  var panels = document.querySelectorAll('.panel');
+  tabs.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      tabs.forEach(function(b){ b.setAttribute('aria-selected', String(b === btn)); });
+      panels.forEach(function(p){ p.hidden = (p.dataset.panel !== btn.dataset.p); });
+    });
+  });
+
+  // 앱 테마 토글 (뷰어 테마와 독립)
+  var dk = document.getElementById('t-dark');
+  var lt = document.getElementById('t-light');
+  function setApp(mode){
+    document.querySelectorAll('.app').forEach(function(a){ a.dataset.app = mode; });
+    dk.setAttribute('aria-pressed', String(mode === 'dark'));
+    lt.setAttribute('aria-pressed', String(mode === 'light'));
+  }
+  dk.addEventListener('click', function(){ setApp('dark'); });
+  lt.addEventListener('click', function(){ setApp('light'); });
+
+  // 섹터 탭 (비교 화면)
+  document.querySelectorAll('.sectabs').forEach(function(group){
+    var st = group.querySelectorAll('.sectab');
+    st.forEach(function(t){
+      t.addEventListener('click', function(){
+        st.forEach(function(x){ x.setAttribute('aria-selected', String(x === t)); });
+      });
+    });
+  });
+
+  // 필터 칩
+  document.querySelectorAll('.body .chip, .mobbody .chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      var sibs = c.parentElement.querySelectorAll('.chip');
+      sibs.forEach(function(s){ s.classList.toggle('on', s === c); });
+    });
+  });
+})();
+</script>
