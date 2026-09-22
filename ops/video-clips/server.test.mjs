@@ -10,9 +10,11 @@ import {
   createClipIdentity,
   describeClipAsset,
   isBuildAuthorized,
+  isSourceStale,
   metadataHeaders,
   parseClipRequest,
   parseProbeOutput,
+  sourceFileName,
 } from './server.mjs';
 
 test('클립 생성은 32자 이상의 생성 전용 토큰으로만 허용한다', () => {
@@ -123,4 +125,20 @@ test('자산 메타데이터에 해시와 파일 크기를 기록하고 경로�
   } finally {
     await rm(directory, { force: true, recursive: true });
   }
+});
+
+test('영상 원본 파일 이름은 영상과 포맷이 같으면 같고 포맷이 다르면 다르다', () => {
+  const format = 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]';
+  assert.equal(sourceFileName('DPJL488cfRw', format), sourceFileName('DPJL488cfRw', format));
+  assert.notEqual(sourceFileName('DPJL488cfRw', format), sourceFileName('DPJL488cfRw', 'best'));
+  assert.notEqual(sourceFileName('DPJL488cfRw', format), sourceFileName('KUbi0nEnUi4', format));
+  assert.match(sourceFileName('-Bxpm0EmOMU', format), /^-Bxpm0EmOMU-[0-9a-f]{12}\.mp4$/);
+});
+
+test('영상 원본은 보관 시간이 지나면 오래된 것으로 본다', () => {
+  const hour = 60 * 60 * 1000;
+  const now = Date.UTC(2026, 8, 22, 12);
+  assert.equal(isSourceStale(now - 23 * hour, now, 24 * hour), false);
+  assert.equal(isSourceStale(now - 24 * hour, now, 24 * hour), true);
+  assert.equal(isSourceStale(now, now, 24 * hour), false);
 });

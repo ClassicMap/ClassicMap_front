@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -35,6 +35,18 @@ const encodingProfileVersion =
   process.env.CLIP_ENCODING_PROFILE_VERSION ?? DEFAULT_ENCODING_PROFILE_VERSION;
 const clipBuildToken = process.env.CLIP_BUILD_TOKEN?.trim() ?? '';
 const activeBuilds = new Map();
+// 같은 영상에서 구간을 여러 개 뽑을 때 영상을 한 번만 받는다. 구간마다 스트림을 받으면
+// 실시간의 1.2~1.6배로만 내려와 45분 영상의 네 구간에 6분 넘게 걸렸다. 원본을 통째로
+// 받으면 조각을 나눠 받아 71초였고, 재인코딩 없이 자르는 데는 1초였다. 유튜브 요청도
+// 구간 수만큼 줄어든다. CLIP_SOURCE_CACHE=off 면 예전처럼 구간만 받는다.
+const sourceCacheEnabled = (process.env.CLIP_SOURCE_CACHE ?? 'on') !== 'off';
+const sourceDirectory = join(cacheDirectory, 'sources');
+// 원본은 같은 영상의 구간을 이어서 뽑는 동안만 쓰고 지운다. 45분 720p 가 150MB 안팎이다.
+const sourceMaxAgeMs =
+  Number.parseFloat(process.env.CLIP_SOURCE_MAX_AGE_HOURS ?? '24') * 60 * 60 * 1000;
+// 받다가 끊긴 임시 파일은 이보다 오래되면 지운다.
+const sourceTempMaxAgeMs = 60 * 60 * 1000;
+const activeSources = new Map();
 
 if (!SUPPORTED_ENCODING_PROFILES.has(encodingProfileVersion)) {
   throw new Error(`지원하지 않는 인코딩 프로필입니다: ${encodingProfileVersion}`);
@@ -197,6 +209,96 @@ async function downloadClipWithYtdlp(videoId, start, duration, outputPath) {
   args.push('--', videoId);
 
   await runYtdlp(args);
+}
+
+export function sourceFileName(videoId, format) {
+  // 포맷이 바뀌면 다른 원본이다. 같은 이름으로 덮지 않게 포맷을 이름에 넣는다.
+  const formatHash = createHash('sha256').update(format).digest('hex').slice(0, 12);
+  return `${videoId}-${formatHash}.mp4`;
+}
+
+export function isSourceStale(modifiedAtMs, nowMs, maxAgeMs) {
+  return nowMs - modifiedAtMs >= maxAgeMs;
+}
+
+async function pruneSources(nowMs = Date.now()) {
+  let names;
+  try {
+    names = await readdir(sourceDirectory);
+  } catch {
+    return;
+  }
+
+  await Promise.all(
+    names.map(async (name) => {
+      const path = join(sourceDirectory, name);
+      const maxAgeMs = name.includes('.tmp.') ? sourceTempMaxAgeMs : sourceMaxAgeMs;
+      try {
+        const info = await stat(path);
+        if (isSourceStale(info.mtimeMs, nowMs, maxAgeMs)) {
+          await unlink(path);
+        }
+      } catch {
+        // 다른 요청이 먼저 지웠다.
+      }
+    })
+  );
+}
+
+async function ensureSource(videoId) {
+  const sourcePath = join(sourceDirectory, sourceFileName(videoId, ytdlpFormat));
+  try {
+    const info = await stat(sourcePath);
+    if (!isSourceStale(info.mtimeMs, Date.now(), sourceMaxAgeMs)) {
+      return sourcePath;
+    }
+  } catch {
+    // 아직 받지 않았다.
+  }
+
+  // 같은 영상의 구간 요청이 동시에 들어오면 원본은 한 번만 받는다.
+  const existingDownload = activeSources.get(sourcePath);
+  if (existingDownload) {
+    return existingDownload;
+  }
+
+  const download = (async () => {
+    await mkdir(sourceDirectory, { recursive: true });
+    await pruneSources();
+    const tempPath = `${sourcePath}.${process.pid}.${randomUUID()}.tmp.mp4`;
+    const args = [
+      '--no-update',
+      '--no-playlist',
+      '--remote-components',
+      'ejs:github',
+      '-f',
+      ytdlpFormat,
+      '--concurrent-fragments',
+      '4',
+      '--merge-output-format',
+      'mp4',
+      '-o',
+      tempPath,
+    ];
+    if (ytdlpCookiesPath) {
+      args.push('--cookies', ytdlpCookiesPath);
+    }
+    args.push('--', videoId);
+
+    try {
+      await runYtdlp(args);
+      await rename(tempPath, sourcePath);
+      return sourcePath;
+    } catch (error) {
+      await unlink(tempPath).catch(() => undefined);
+      throw error;
+    } finally {
+      activeSources.delete(sourcePath);
+    }
+  })();
+
+  activeSources.set(sourcePath, download);
+  return download;
 }
 
 // 720 는 영상과 소리가 따로 제공되므로 URL 이 둘 나올 수 있다.
@@ -510,6 +612,9 @@ async function buildClip(clipRequest) {
       if (sourceResolver === 'invidious') {
         const sourceUrls = await getSourceUrls(clipRequest.videoId);
         await runFfmpeg(sourceUrls, clipRequest.start, clipRequest.duration, tempPath);
+      } else if (sourceCacheEnabled) {
+        const sourcePath = await ensureSource(clipRequest.videoId);
+        await runFfmpeg([sourcePath], clipRequest.start, clipRequest.duration, tempPath);
       } else {
         await downloadClipWithYtdlp(
           clipRequest.videoId,
