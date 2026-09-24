@@ -40,6 +40,7 @@ import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
 import { useAuth } from '@/lib/hooks/useAuth';
 import type { Artist, Recording, Concert, TicketVendor } from '@/lib/types/models';
 import { getImageUrl } from '@/lib/utils/image';
+import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
@@ -419,7 +420,7 @@ export default function ArtistDetailScreen() {
             <View className="items-center gap-2">
               <Text className="text-2xl font-bold">{artist.name}</Text>
               <Text className="text-muted-foreground">{artist.englishName}</Text>
-              <Text className="text-sm text-muted-foreground">{artist.category}</Text>
+              <Text className="text-sm text-muted-foreground">{getArtistCategoryLabel(artist.category)}</Text>
             </View>
           </View>
 
@@ -428,7 +429,7 @@ export default function ArtistDetailScreen() {
             <View className="gap-3">
               <View className="flex-row items-center gap-2">
                 <Icon as={MusicIcon} size={16} className="text-muted-foreground" />
-                <Text className="text-sm font-medium">{artist.category}</Text>
+                <Text className="text-sm font-medium">{getArtistCategoryLabel(artist.category)}</Text>
               </View>
               <View className="flex-row items-center gap-2">
                 <Icon as={MapPinIcon} size={16} className="text-muted-foreground" />

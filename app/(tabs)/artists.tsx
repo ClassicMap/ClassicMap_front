@@ -15,6 +15,7 @@ import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import type { Artist } from '@/lib/types/models';
 import { prefetchImages } from '@/components/optimized-image';
 import { getImageUrl } from '@/lib/utils/image';
+import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useArtists, ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
@@ -425,7 +426,7 @@ const ArtistCard = React.memo(({
           </Avatar>
           <View className="flex-1 gap-2">
             <Text className="text-lg font-semibold">{artist.name}</Text>
-            <Text className="text-sm text-muted-foreground">{artist.category}</Text>
+            <Text className="text-sm text-muted-foreground">{getArtistCategoryLabel(artist.category)}</Text>
             <Text className="text-sm text-muted-foreground">{artist.nationality}</Text>
           </View>
           {canEdit && (

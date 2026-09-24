@@ -19,6 +19,7 @@ import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useConcerts } from '@/lib/query/hooks/useConcerts';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { Alert } from '@/lib/utils/alert';
+import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 
 // 레거시 형식으로 변환 (타입 호환성 유지)
 interface LegacyArtist {
@@ -451,7 +452,7 @@ const ArtistCard = React.memo(({ artist }: { artist: LegacyArtist }) => {
               {artist.name}
             </Text>
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {artist.category}
+              {getArtistCategoryLabel(artist.category)}
             </Text>
           </View>
         </View>
