@@ -15,6 +15,7 @@ import type {
   RatedConcertListItem,
   UpdateProfileVisibilityInput,
 } from '@/lib/api/client';
+import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { getImageUrl } from '@/lib/utils/image';
 import {
   CalendarIcon,
@@ -468,7 +469,7 @@ function FavoriteSegmentContent({
           <FavoriteRow
             key={artist.artistId}
             title={artist.name}
-            subtitle={`${artist.englishName} · ${artist.category}`}
+            subtitle={`${artist.englishName} · ${getArtistCategoryLabel(artist.category)}`}
             imageUrl={artist.imageUrl || undefined}
             onPress={() => onOpenArtist?.(artist.artistId)}
           />
