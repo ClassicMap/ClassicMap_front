@@ -682,6 +682,28 @@ A·B는 **추가 없이 구현 가능**합니다. `/composers/with-performances`
 | **B25** | **`GET /pieces/search?q=`** — 작곡가·연주자·공연은 전부 `/{kind}/search?q=`가 동작하는데 **작품만 없습니다(404).** 비교의 단위가 작품인데 이름으로 찾을 수가 없습니다. 지금은 작곡가 검색 결과에서 파생해 보여주는 우회밖에 없습니다 | 리디자인 7.12 | **높음** |
 | **B26** | **검색 결과 관련도 정렬** — `/artists/search?q=임`이 뉴욕 필하모닉·사이먼 래틀을 먼저 주고 **임윤찬이 4번째**입니다. tier 우선 정렬로 보입니다. 접두사·완전 일치를 앞세우는 관련도 정렬이 필요합니다 | 리디자인 7.12 | 중간 |
 
+### 20.1 백엔드 구현 현황 (2026-09-17)
+
+`ClassicMap_back` 로컬 master에 커밋했고 **아직 배포 전**입니다(master push가 곧 배포).
+
+| # | 커밋 | 확정된 계약 |
+|---|---|---|
+| B16 + B23 | `2f5a69f` | `GET /pieces/{id}/comparison-sectors` → 공개 섹터 배열(`sectorName`, `sectorNameEn`, `description`, `displayOrder`, `measureStart`, `measureEnd`, `readyPerformanceCount`, `primaryArtistCount`). 작품 없음 404, 공개 섹터 없음 빈 배열. `GET /sectors/{id}/comparison-performances` → 페이지 없는 배열, `credits[]`·`clipUrl`·`videoId` 포함. 세 비교 조회가 공개 기준 하나(발행 + 현재 클립 ready + 섹터 편집 승인 + 서로 다른 primary artist 3명 이상)를 공유합니다 |
+| B15 | `4d042f4` | `offset`·`limit`(기본 20, 최대 100). **파라미터가 없으면 기존처럼 전체 반환** → 프론트 호출부를 페이지 방식으로 바꿔야 지침을 지킵니다 |
+| B25 | `a434566` | `GET /pieces/search?q=&offset=&limit=` → `Piece` + `composerName`. 정렬은 제목 완전일치 > 접두사 > 포함·별칭 > 작품번호 > 작곡가 이름. **`comparableSectorCount`는 포함되지 않았습니다** → 검색 결과의 "비교 가능" 배지는 달지 않습니다 |
+| B26 | `b1d968a` | 아티스트·작곡가·작품 검색 관련도 정렬. `임` 검색에서 임윤찬 4위 → 1위 |
+| B21 | `137330f` | `sort=recommended`: tier → 공개 비교 보유 → 초상 → 소개 → 작품 수 → id. 모르는 sort는 400 |
+| B17 | `86f3167` | `category`는 코드 20종(`pianist` … `orchestra`, `other`)으로 응답하고 필터도 코드로 받습니다(모르는 코드 400). `rating`은 숫자 또는 null. `/concerts/areas` 정리는 제외됐습니다 |
+
+**확인된 사실과 결정**
+
+- **D2는 옛 정보입니다.** `/artists/{id}/comparison-performances`는 운영에서 정상 동작 중이었고, 당시엔 클립 자산 없는 수동 연주만 있어서 비어 있었습니다. 현재 공개 섹터 36개, 연주 108건입니다.
+- **라흐마니노프 협주곡 2·3번, 쇼팽 발라드 1번은 새 비교 API에 나오지 않습니다.** 클립 자산이 없는 수동 레거시 연주 36건이기 때문입니다. **결정: 레거시에 클립을 등록하지 않고, 새 시드 파이프라인으로 다시 수집합니다.** 그전까지 새 비교 화면에는 공개 섹터만 나오고, 시안의 임윤찬 라흐 3번은 실데이터로 재현되지 않습니다.
+- **배포 순서**: 프론트 분류 라벨(`lib/design/artist-category.ts`, 커밋 `447a9eb`)을 먼저 배포한 뒤 백엔드를 push합니다. 순서가 바뀌면 화면에 `pianist` 같은 코드가 그대로 보입니다.
+- 섹터 `measureStart`에 `"unknown"` 문자열이 들어간 데이터가 있습니다(섹터 37). API에서 가리지 않고 데이터를 null로 고칩니다.
+- 아직 문자열로 나가는 Decimal: `Concert.rating`, `ConcertListItem.rating`, `UserConcertRating.rating`, `BoxofficeConcert.rating`, `GET /concerts/{id}/user-rating`.
+- 바흐·헨델은 tier가 비어 추천순에서 A 뒤로 갑니다. 규칙이 아니라 데이터를 고칩니다.
+
 **원칙 재확인**: `CLAUDE.md`에 따라 위 항목 중 확정되지 않은 계약에 대해서는 프론트에서 필드를 추측하거나 임시 fallback을 만들지 않습니다. 확정 전까지 해당 UI 섹션은 렌더하지 않습니다.
 
 ---
