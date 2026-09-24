@@ -906,6 +906,45 @@ lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 �
 
 ## 5. 플랫폼 분기 전략
 
+### 5.0 구조 결정 — 지금은 한 코드베이스, 쪼갤 신호는 정해 둔다
+
+이 리디자인의 웹 화면은 사실상 데스크톱 앱입니다(사이드바 셸, 커맨드 팔레트, 호버 인터랙션, 3열 비교 그리드). 그래서 **"웹을 Vite React로 떼어내고 앱은 Expo로 둘까"** 라는 질문이 자연스럽게 나옵니다. 아래가 그 판단입니다.
+
+#### 5.0.1 현재 코드베이스 실측 (2026-09-17)
+
+| 영역 | 줄 수 | 파일 | 성격 |
+|---|---:|---:|---|
+| `lib/` | 5,414 | 32 | API 클라이언트 · 타입 · 쿼리 훅 — **플랫폼 무관** |
+| `app/` | 9,685 | 28 | 라우트 22개 |
+| `components/` | 5,973 | 43 | UI |
+| **UI 합계** | **15,658** | 71 | |
+| `*.web.tsx` 분기 | **0** | — | 아직 한 번도 안 씀 |
+| `Platform.OS` 분기 | 22곳 | 8 | 적음 |
+
+**UI가 플랫폼 무관 로직의 3배**입니다. 지금 쪼개면 그 3배짜리를 두 벌 유지하게 됩니다.
+
+#### 5.0.2 결정: 현 구조 유지 + `.web.tsx` 분기
+
+| # | 이유 |
+|---|---|
+| 1 | **`.web.tsx`를 아직 한 번도 안 썼습니다.** 웹이 "늘어난 모바일"인 건 구조가 막아서가 아니라 만들지 않아서입니다. 데이터 훅·라우팅·상태는 한 벌로 두고 **프레젠테이션만** 가를 수 있습니다 |
+| 2 | NativeWind 4는 웹에서 실제 CSS를 생성하므로 호버·sticky·그라디언트·backdrop-blur가 웹 전용 파일 안에서 동작합니다. **다만 `display: grid`는 마찰이 있습니다** — react-native-web이 `View`에 `display: flex`를 기본으로 넣어 덮어써야 합니다(7.1 참고). 자유도가 Vite와 같지는 않습니다 |
+| 3 | 재생 경로가 **웹=클립 서버 / 네이티브=YouTube IFrame** 이중이고 프로젝트 지침상 변경에 별도 승인이 필요합니다. 지금 쪼개면 여기가 가장 먼저 깨집니다 |
+
+#### 5.0.3 쪼갤 신호 — 이 중 하나가 오면 웹을 Vite로 분리
+
+1. **검색 유입이 필요해질 때.** 가장 강한 이유입니다. 작품 18,642 · 작곡가 358 · 공연 500+가 전부 색인 대상인데 **react-native-web은 SSR이 안 되고 의미 없는 `div` 트리로 렌더**되어 구조화 데이터를 붙일 수 없습니다. 공연 정보는 특히 검색 유입 비중이 큰 영역입니다.
+2. **`.web.tsx` 분기가 화면의 절반을 넘을 때.** 그 시점에는 이미 두 벌이고 껍데기만 공유하는 셈이라 쪼개는 쪽이 이득입니다.
+3. 웹 초기 로딩이 제품 문제로 올라올 때.
+
+**완전 네이티브(Swift/Kotlin)는 검토 대상이 아닙니다.** 인력 대비 과하고, 비교 재생 이중 경로를 또 두 벌 만들어야 합니다.
+
+#### 5.0.4 지금 지켜야 할 것 — 나중에 쪼갤 때 싸지도록
+
+- **`lib/`을 플랫폼 무관으로 유지합니다.** `Platform.OS` 분기가 22곳뿐인 지금 상태가 좋습니다. 이 선만 안 넘으면 분리 시 `lib/`이 그대로 공유 패키지가 됩니다.
+- **`react-native` import를 `lib/` 안에 새로 들이지 않습니다.** 필요하면 어댑터를 화면 쪽에 둡니다.
+- 웹 전용 코드는 `*.web.tsx`와 `components/shell/`에 모읍니다. 분리할 때 **이 두 곳만 들어내면 되도록** 경계를 유지합니다.
+
 ### 5.1 원칙
 
 **공유하는 것**: 데이터 훅(`lib/query/hooks/*`), API 클라이언트, 타입, 디자인 토큰, 프리미티브 컴포넌트(Button/Text/Card/Input/Chip/Badge), 도메인 컴포넌트의 표현 로직.
@@ -927,6 +966,17 @@ expo-router는 플랫폼별 확장자를 지원합니다. 아래 두 방식을 �
    if (layout === 'desktop' || layout === 'wide') return <ArtistsDesktop … />;
    return <ArtistsMobile … />;
    ```
+
+**분기할 파일 (확정)**
+
+| 파일 | 분기 | 이유 |
+|---|---|---|
+| `app/(tabs)/_layout.web.tsx` | **신규** | 탭바 → 사이드바 셸. 구조가 근본적으로 다름 |
+| `app/(tabs)/compare.web.tsx` | **신규** | 3열 슬롯 · 오선지 · 하단 플레이어. 웹/모바일 차이가 가장 크고 시안에서 가장 많이 검증된 화면 |
+| `components/shell/*` | **웹 전용 디렉터리** | `AppShell` · `SideNav` · `TopBar` · `PlayerBar` · `CommandPalette` |
+| 나머지 화면 | 분기 안 함 | `useBreakpoint()`로 같은 파일 안에서 열 구성만 바꿈 |
+
+**웹 전용 코드는 `*.web.tsx`와 `components/shell/` 두 곳에만 둡니다.** 5.0.3의 분리 시점이 오면 이 두 곳만 들어내면 됩니다.
 
 **중요**: 페이지 컴포넌트를 통째로 두 벌 만들지 않습니다. 데이터 로직은 페이지 파일에 남기고, `*.mobile.tsx` / `*.desktop.tsx` **뷰 컴포넌트만** 분리합니다. 그렇지 않으면 `compare.tsx`의 1438줄이 2876줄이 됩니다.
 
@@ -971,6 +1021,33 @@ export default function TabsLayoutWeb() {
 | 번들 | 웹 번들에 두 번째 UI 라이브러리가 통째로 들어갑니다 |
 
 **대신 이렇게 씁니다**: Astryx의 **컴포넌트 분류·명명·조합 규칙을 설계 규격으로 차용**합니다. `AppShell`, `SideNav`, `LayoutPanel`, `MetadataList`, `CommandPalette`, `SelectableCard`, `OverflowList` 같은 이름을 그대로 쓰면 향후 팀이 커지거나 Figma 라이브러리를 붙일 때 매핑이 자연스럽습니다. Figma 쪽은 커뮤니티의 Astryx Figma 라이브러리를 참고 자료로 열어두되, 우리 토큰(4.1)으로 테마를 갈아끼운 로컬 라이브러리를 만드는 것을 권장합니다.
+
+### 5.6 시안의 CSS 기능을 각 플랫폼에서 어떻게 구현하나
+
+시안은 순수 CSS로 만들었습니다. 그대로 옮길 수 없는 것들이 있으므로 미리 대응을 정해 둡니다.
+
+| 시안 기능 | 웹 (react-native-web + NativeWind) | 네이티브 (RN) |
+|---|---|---|
+| 오선 5줄 (`repeating-linear-gradient`) | arbitrary value 클래스로 가능 | **불가** → `react-native-svg`의 `<Line>` 5개 |
+| 음자리표 · 조표 · 박자표 | `@font-face` + `.woff2` | `expo-font` + `.otf` |
+| 구간 블록 (브라스 채움 + 좌우 인셋) | 가능 | `View` + `backgroundColor` + 좌우 `borderWidth` |
+| **호버** (CD 빼내기, 아바타 확대) | `hover:` 가능 | **없음.** 탭하면 펼쳐지는 방식으로 대체하거나 항상 노출 |
+| ⌘K 커맨드 팔레트 | 웹 전용 | 해당 없음 |
+| `display: grid` (카드 그리드) | **마찰 있음** — `View` 기본값이 `flex`라 덮어써야 함. flex 기반 권장 | flex |
+| `position: sticky` (모바일 공연 헤더) | 가능 | **없음** → 헤더를 `ScrollView` 밖으로 빼서 고정 |
+| `backdrop-filter` (썸네일 태그 블러) | 가능 | `expo-blur`의 `BlurView` |
+| `text-overflow: ellipsis` / `-webkit-line-clamp` | 가능 | `numberOfLines={1|2}` |
+| 가로 스크롤 셸프 | `overflow-x: auto` | `ScrollView horizontal` |
+
+**공통 규칙**: 두 플랫폼에서 형태가 달라지는 건 허용하되 **의미는 같아야 합니다.** 호버로만 드러나는 정보는 네이티브에서 사라지므로, 호버는 **이미 보이는 것을 더 잘 보여 주는 용도**로만 씁니다(재생 바 인물 원이 평소 8px 비치는 이유).
+
+### 5.7 악보 폰트 — Bravura
+
+- **채택 승인됨.** `assets/fonts/`에 둡니다.
+- 네이티브는 `Bravura.otf`(expo-font), 웹은 `Bravura.woff2`(`@font-face`). 같은 폰트라 글리프가 어긋나지 않습니다.
+- **SIL Open Font License 1.1**. `assets/fonts/OFL.txt`를 함께 두고 제거하지 않습니다.
+- 용량은 woff2 323KB / otf 약 1MB. 웹은 woff2만 로드하므로 초기 번들 영향은 323KB입니다. **오선지가 보이는 화면에서만 로드**합니다(`font-display: block`으로 글리프가 폴백으로 잠깐 튀는 것을 막습니다).
+- 직접 그리지 않는 이유는 4.7.6절에 있습니다.
 
 ---
 
@@ -1570,13 +1647,17 @@ lib/design/
 
 | # | 작업 | 파일 |
 |---|---|---|
-| 1.1 | `global.css` 색상 변수 전면 교체 (4.1) | `global.css` |
-| 1.2 | `lib/design/tokens.ts` 신설, `lib/theme.ts`를 이것의 파생으로 | `lib/design/tokens.ts`, `lib/theme.ts` |
-| 1.3 | `tailwind.config.js`에 신규 색상(surface-1~3, foreground-muted/subtle/faint, border-strong, success/warning/info, primary-muted), 타이포 스케일, 반경, 모션 확장 | `tailwind.config.js` |
+| ~~1.1~~ | ~~`global.css` 색상 변수 전면 교체 (4.1)~~ → **완료 (2026-09-17)** | `global.css` |
+| ~~1.2~~ | ~~`lib/design/tokens.ts` 신설, `lib/theme.ts`를 이것의 파생으로~~ → **완료.** 쓰이지 않던 `chart1~5` 제거 | `lib/design/tokens.ts`, `lib/theme.ts` |
+| ~~1.3~~ | ~~`tailwind.config.js` 신규 색상~~ → **색상 완료.** 타이포 스케일·반경·모션 확장은 남음 | `tailwind.config.js` |
 | 1.4 | `era-palette.ts`, `rank-palette.ts` 신설. `periods.ts`가 재수출하도록 | `lib/design/*`, `lib/data/periods.ts` |
 | 1.5 | `breakpoints.ts`, `density.ts`, `motion.ts` 신설 | `lib/design/*` |
 
 **검증**: 기존 화면이 새 색으로 렌더되고 tsc/export 통과. 이 시점에서 앱이 이미 "다른 제품"처럼 보입니다.
+
+> **진행 (2026-09-17)**: 1.1~1.3의 색상 부분 완료. `npx tsc --noEmit`, `npx expo export --platform web` 통과. 고유 아이콘 세트(`components/ui/icons/`)와 악보 유틸(`lib/design/smufl.ts`, `section-timeline.ts`), 악보 폰트 에셋(`assets/fonts/`)도 선행 완료 상태입니다.
+>
+> **다음 순서 (5.0.2 결정에 따름)**: ① 프리미티브 `chip` / `badge` / `skeleton` / `empty-state` → ② 웹 셸(`components/shell/` + `_layout.web.tsx`) → ③ 커맨드 팔레트 → ④ `compare.web.tsx`. **웹 전용 코드는 `*.web.tsx`와 `components/shell/`에만 둡니다.**
 
 ### 단계 2 — 프리미티브 (1.5일)
 
@@ -1733,7 +1814,15 @@ lib/design/
 | `components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
 | `components/artist-comparison-section.tsx` | 4.5 | 빈 배열이면 섹션 숨김 (버그 D2) |
 | `lib/design/artist-category.ts` | 2.x | **신규** category 라벨·alias 매핑 (C5) |
-| `components/ui/icons/` | 2.x | **작업 완료** 고유 아이콘 9종 + `createClassicIcon`. 4.7절 |
+| `components/ui/icons/` | 2.x | **작업 완료** 고유 아이콘 8종 + `createClassicIcon`. 4.7절 |
+| `lib/design/tokens.ts` | 1.2 | **작업 완료** JS 쪽 색상 단일 소스. `global.css`와 값을 함께 유지 |
+| `lib/design/smufl.ts` | — | **작업 완료** SMuFL 글리프 · 조표 계산. 4.7.6절 |
+| `lib/design/section-timeline.ts` | — | **작업 완료** 구간 위치 계산. 4.7.5절 |
+| `components/ui/notation-glyph.tsx` | — | **작업 완료** 악보 글리프 렌더 |
+| `assets/fonts/` | — | **작업 완료** Bravura otf/woff2 + OFL 라이선스. 5.7절 |
+| `app/(tabs)/_layout.web.tsx` | 3.2 | **신규 · 웹 전용** 사이드바 셸. 5.2절 |
+| `app/(tabs)/compare.web.tsx` | 4.1 | **신규 · 웹 전용** 3열 슬롯 · 오선지. 5.2절 |
+| `components/shell/` | 3.x | **신규 · 웹 전용** AppShell · SideNav · TopBar · PlayerBar · CommandPalette |
 | `components/ui/fallback-art.tsx` | 2.x | **신규** 폴백 타일 (C10). 목록의 절반 이상이 이 상태 |
 
 ## 부록 C. 2026-09-12 데이터 조사 재현 방법
