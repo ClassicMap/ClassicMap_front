@@ -37,8 +37,12 @@ export function youtubeThumbnailUrl(performance: ComparisonPerformance): string 
   return performance.videoId ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg` : undefined;
 }
 
+/**
+ * 표시 순서만 맞춘다. 같은 순서끼리는 API가 준 순서(실제 연주 시작 시각 순)를 그대로 둔다.
+ * id로 다시 정렬하면 3악장 클라이맥스가 도입부보다 앞에 온다.
+ */
 export function sortComparisonSectors(sectors: readonly ComparisonSector[]): ComparisonSector[] {
-  return [...sectors].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0) || a.id - b.id);
+  return [...sectors].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 }
 
 /**
