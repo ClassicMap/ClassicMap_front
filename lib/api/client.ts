@@ -27,6 +27,7 @@ import type {
   Period,
   ComposerWithPieces,
   PieceWithPerformances,
+  PieceSearchResult,
   PerformanceWithArtist,
   Recording,
   Venue,
@@ -70,6 +71,10 @@ interface APIPiece {
   spotifyUrl?: string;
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
+}
+
+interface APIPieceSearchResult extends APIPiece {
+  composerName: string;
 }
 
 interface APIArtistAward {
@@ -757,6 +762,25 @@ export const PieceAPI = {
       return { ...perf, artist: artist! };
     });
     return Promise.resolve({ ...piece, composer, performances });
+  },
+
+  /**
+   * 작품 이름 검색. 제목 일치 > 접두사 > 포함·별칭 > 작품번호 > 작곡가 이름 순으로 온다.
+   */
+  async search(params: { q: string; offset?: number; limit?: number }): Promise<PieceSearchResult[]> {
+    if (USE_REAL_API) {
+      const queryParams = new URLSearchParams({ q: params.q });
+      if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
+      if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/pieces/search?${queryParams.toString()}`
+      );
+      if (!response.ok) throw new Error('Failed to search pieces');
+      const data: APIPieceSearchResult[] = await response.json();
+      return data.map((item) => ({ ...mapPiece(item), composerName: item.composerName }));
+    }
+    return Promise.resolve([]);
   },
 
   /**

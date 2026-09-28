@@ -254,6 +254,11 @@ export interface ComposerWithPieces extends Composer {
   majorPieces: Piece[]; // 작곡가의 모든 작품 목록
 }
 
+/** `/pieces/search` 결과. 목록에 작곡가 이름을 함께 보여주려고 서버가 싣는다. */
+export interface PieceSearchResult extends Piece {
+  composerName: string;
+}
+
 export interface PieceWithPerformances extends Piece {
   composer: Composer;
   /**
