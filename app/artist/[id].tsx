@@ -1,6 +1,7 @@
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
 import { ArtistComparisons } from '@/components/artist/artist-comparisons';
+import { FavoriteButton } from '@/components/favorite-button';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -316,18 +317,21 @@ export default function ArtistDetailScreen() {
           </View>
         </View>
 
-        {canEdit ? (
-          <View className={cn('mt-5 flex-row gap-2', !wide && 'justify-center')}>
-            <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
-              <Icon as={EditIcon} size={14} className="text-foreground" />
-              <Text>수정</Text>
-            </Button>
-            <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
-              <Icon as={TrashIcon} size={14} className="text-destructive" />
-              <Text className="text-destructive">삭제</Text>
-            </Button>
-          </View>
-        ) : null}
+        <View className={cn('mt-6 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
+          <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
+          {canEdit ? (
+            <>
+              <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
+                <Icon as={EditIcon} size={14} className="text-foreground" />
+                <Text>수정</Text>
+              </Button>
+              <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
+                <Icon as={TrashIcon} size={14} className="text-destructive" />
+                <Text className="text-destructive">삭제</Text>
+              </Button>
+            </>
+          ) : null}
+        </View>
 
         {/* 본문: 넓으면 두 열 (비교 | 공연·수상) */}
         <View className={cn('mt-10', wide ? 'flex-row gap-10' : 'gap-10')}>

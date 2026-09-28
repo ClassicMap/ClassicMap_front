@@ -9,6 +9,7 @@ import {
   parsePrices,
 } from '@/components/concert/concert-parts';
 import { StarRating } from '@/components/StarRating';
+import { FavoriteButton } from '@/components/favorite-button';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -288,6 +289,7 @@ export default function ConcertDetailScreen() {
             <View className="w-[320px] gap-4">
               <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={320} aspect={4 / 3} />
               {bookButton}
+              <FavoriteButton kind="concerts" id={concert.id} name={concert.title} variant="labeled" className="justify-center" />
             </View>
             <View className="min-w-0 flex-1">
               {headerBadges}
@@ -328,7 +330,10 @@ export default function ConcertDetailScreen() {
             <View className="flex-row gap-3.5">
               <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={120} aspect={4 / 3} />
               <View className="min-w-0 flex-1">
-                {headerBadges}
+                <View className="flex-row items-start justify-between gap-2">
+                  {headerBadges}
+                  <FavoriteButton kind="concerts" id={concert.id} name={concert.title} className="-mr-2 -mt-2" />
+                </View>
                 <Text className="mt-2 text-[21px] font-extrabold leading-7 text-foreground">{concert.title}</Text>
               </View>
             </View>

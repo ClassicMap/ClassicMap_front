@@ -1,3 +1,4 @@
+import { FavoriteButton } from '@/components/favorite-button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -198,13 +199,16 @@ export function ComparePieceView({
                 <Text className="mt-2 text-[44px] font-extrabold leading-[46px] tracking-tight text-foreground">
                   {first.pieceTitle}
                 </Text>
-                <Text variant="bodySm" className="mt-3 text-foreground-muted">
-                  <Text className="font-semibold text-foreground">{first.composerName}</Text>
-                  {[pieceInfo?.opusNumber, `연주자 ${pieceInfo?.performerCount ?? first.credits.length}`, `구간 ${sectors.length}`]
-                    .filter(Boolean)
-                    .map((part) => `  ·  ${part}`)
-                    .join('')}
-                </Text>
+                <View className="mt-3 flex-row items-center gap-2">
+                  <Text variant="bodySm" className="text-foreground-muted">
+                    <Text className="font-semibold text-foreground">{first.composerName}</Text>
+                    {[pieceInfo?.opusNumber, `연주자 ${pieceInfo?.performerCount ?? first.credits.length}`, `구간 ${sectors.length}`]
+                      .filter(Boolean)
+                      .map((part) => `  ·  ${part}`)
+                      .join('')}
+                  </Text>
+                  <FavoriteButton kind="pieces" id={pieceId} name={first.pieceTitle} />
+                </View>
               </>
             ) : (
               <Skeleton className="mt-3 h-10 w-2/3" />
