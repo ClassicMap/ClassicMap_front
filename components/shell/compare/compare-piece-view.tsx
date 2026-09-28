@@ -1,3 +1,4 @@
+import { SectionStaff } from '@/components/compare/section-staff';
 import { FavoriteButton } from '@/components/favorite-button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -232,8 +233,17 @@ export function ComparePieceView({
           </View>
         </View>
 
+        <View className="mt-8 max-w-[880px]">
+          <SectionStaff
+            sectors={sectors}
+            activeSectorId={activeSector?.id}
+            reference={active ?? performances[0]}
+            onSelect={onSelectSector}
+          />
+        </View>
+
         {/* 구간 선택 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-8" contentContainerClassName="gap-2">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2" contentContainerClassName="gap-2">
           {sectors.map((sector) => (
             <Chip
               key={sector.id}

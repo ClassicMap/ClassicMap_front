@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
 
@@ -42,6 +42,17 @@ export function useSectorComparisonPerformances(sectorId: number | undefined) {
     queryFn: () => ComparisonAPI.getSectorPerformances(sectorId ?? 0),
     enabled: (sectorId ?? 0) > 0,
     staleTime: 5 * 60_000,
+  });
+}
+
+/** 한 작품의 모든 구간 연주. 오선 위 구간 위치를 한 연주 기준으로 잡을 때 쓴다 (캐시는 구간 훅과 같다) */
+export function useAllSectorPerformances(sectorIds: readonly number[]) {
+  return useQueries({
+    queries: sectorIds.map((sectorId) => ({
+      queryKey: COMPARISON_QUERY_KEYS.sectorPerformances(sectorId),
+      queryFn: () => ComparisonAPI.getSectorPerformances(sectorId),
+      staleTime: 5 * 60_000,
+    })),
   });
 }
 

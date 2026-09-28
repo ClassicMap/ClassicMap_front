@@ -1,6 +1,7 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { PieceCard } from '@/components/home/cards';
 import { Grid, ScrollShelf } from '@/components/home/shelf';
+import { SectionStaff } from '@/components/compare/section-staff';
 import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -204,8 +205,18 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         </View>
       </View>
 
+      <View className="mt-5">
+        <SectionStaff
+          sectors={sectors}
+          activeSectorId={activeSector?.id}
+          reference={active ?? preview}
+          labels="active"
+          onSelect={onSelectSector}
+        />
+      </View>
+
       {/* 구간: 줄바꿈하지 않고 가로로 흘린다 (부록 D-13) */}
-      <ScrollShelf className="mt-5" gap={8}>
+      <ScrollShelf className="mt-1" gap={8}>
         {sectorsQuery.isLoading
           ? Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-8 w-24 rounded-full" />)
           : sectors.map((sector) => (
