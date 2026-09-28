@@ -131,7 +131,7 @@ function BrandPanel() {
                 <EntityThumb name={line.name} image={line.image} shape="circle" size={32} />
                 <Text
                   numberOfLines={1}
-                  className={cn('w-20 text-body-sm font-semibold', index === 0 ? 'text-primary' : 'text-foreground')}>
+                  className={cn('w-36 text-body-sm font-semibold', index === 0 ? 'text-primary' : 'text-foreground')}>
                   {line.name}
                 </Text>
                 <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
