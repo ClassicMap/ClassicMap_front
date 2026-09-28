@@ -9,10 +9,13 @@ import {
   DEFAULT_ENCODING_PROFILE_VERSION,
   createClipIdentity,
   describeClipAsset,
+  ffmpegCutArgs,
   isBuildAuthorized,
+  isSourceStale,
   metadataHeaders,
   parseClipRequest,
   parseProbeOutput,
+  sourceFileName,
 } from './server.mjs';
 
 test('클립 생성은 32자 이상의 생성 전용 토큰으로만 허용한다', () => {
@@ -123,4 +126,31 @@ test('자산 메타데이터에 해시와 파일 크기를 기록하고 경로�
   } finally {
     await rm(directory, { force: true, recursive: true });
   }
+});
+
+test('영상 원본 파일 이름은 영상과 포맷이 같으면 같고 포맷이 다르면 다르다', () => {
+  const format = 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]';
+  assert.equal(sourceFileName('DPJL488cfRw', format), sourceFileName('DPJL488cfRw', format));
+  assert.notEqual(sourceFileName('DPJL488cfRw', format), sourceFileName('DPJL488cfRw', 'best'));
+  assert.notEqual(sourceFileName('DPJL488cfRw', format), sourceFileName('KUbi0nEnUi4', format));
+  assert.match(sourceFileName('-Bxpm0EmOMU', format), /^-Bxpm0EmOMU-[0-9a-f]{12}\.mp4$/);
+});
+
+test('영상 원본은 보관 시간이 지나면 오래된 것으로 본다', () => {
+  const hour = 60 * 60 * 1000;
+  const now = Date.UTC(2026, 8, 22, 12);
+  assert.equal(isSourceStale(now - 23 * hour, now, 24 * hour), false);
+  assert.equal(isSourceStale(now - 24 * hour, now, 24 * hour), true);
+  assert.equal(isSourceStale(now, now, 24 * hour), false);
+});
+
+test('로컬 원본에서 자를 때는 편집 목록을 남겨 요청한 길이로 나오게 한다', () => {
+  const local = ffmpegCutArgs(['/cache/sources/a.mp4'], 1500, 30, '/tmp/out.mp4', { keepEditList: true });
+  assert.equal(local.includes('-avoid_negative_ts'), false);
+  assert.deepEqual(local.slice(local.indexOf('-ss'), local.indexOf('-ss') + 4), ['-ss', '1500', '-i', '/cache/sources/a.mp4']);
+  assert.deepEqual(local.slice(local.indexOf('-t'), local.indexOf('-t') + 2), ['-t', '30']);
+
+  const stream = ffmpegCutArgs(['https://v', 'https://a'], 10, 20, '/tmp/out.mp4');
+  assert.deepEqual(stream.slice(stream.indexOf('-avoid_negative_ts'), stream.indexOf('-avoid_negative_ts') + 2), ['-avoid_negative_ts', 'make_zero']);
+  assert.deepEqual(stream.slice(stream.indexOf('-map'), stream.indexOf('-map') + 4), ['-map', '0:v:0', '-map', '1:a:0']);
 });
