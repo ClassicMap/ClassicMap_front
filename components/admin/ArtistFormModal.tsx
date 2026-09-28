@@ -122,12 +122,8 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   };
   const shown: FieldErrors<ArtistField> = attempted ? errors : {};
 
-  const awardErrors: FieldErrors<'year' | 'awardName'> = awardAttempted
-    ? {
-        year: newAwardYear ? undefined : '수상 연도를 입력해 주세요.',
-        awardName: newAwardName ? undefined : '수상 내역을 입력해 주세요.',
-      }
-    : {};
+  const awardYearMissing = awardAttempted && !newAwardYear;
+  const awardNameMissing = awardAttempted && !newAwardName;
 
   const handleAddAward = () => {
     if (!newAwardYear || !newAwardName) {
@@ -356,7 +352,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
                 <Text numberOfLines={2} className="min-w-0 flex-1 text-body-sm text-foreground">
                   {award.awardName}
                 </Text>
-                {award.isNew ? <Badge tone="accent" label="새로 추가" /> : null}
+                {award.isNew ? <Badge tone="accent" label="새로 추가" className="self-center" /> : null}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -384,7 +380,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
               onChangeText={setNewAwardYear}
               placeholder="2015"
               keyboardType="numeric"
-              error={awardErrors.year}
+              inputClassName={awardYearMissing ? 'border-destructive' : undefined}
               className="w-24"
             />
             <TextField
@@ -392,10 +388,15 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
               value={newAwardName}
               onChangeText={setNewAwardName}
               placeholder="쇼팽 국제 피아노 콩쿠르 1위"
-              error={awardErrors.awardName}
+              inputClassName={awardNameMissing ? 'border-destructive' : undefined}
               className="min-w-0 flex-1"
             />
           </View>
+          {awardYearMissing || awardNameMissing ? (
+            <Text variant="caption" role="alert" className="text-destructive">
+              수상 연도와 내역을 모두 입력해 주세요.
+            </Text>
+          ) : null}
           <Button variant="outline" size="sm" onPress={handleAddAward} className="self-start">
             <Icon as={PlusIcon} size={14} className="text-foreground" />
             <Text>목록에 추가</Text>
