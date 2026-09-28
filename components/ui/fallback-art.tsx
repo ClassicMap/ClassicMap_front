@@ -41,7 +41,9 @@ function FallbackArt({ name, shape = 'circle', size, className }: FallbackArtPro
   const from = `hsl(${hue}, 22%, 34%)`;
   const to = `hsl(${(hue + 40) % 360}, 26%, 20%)`;
   const gradientId = `fallback-${hash}`;
-  const radius = shape === 'circle' ? size / 2 : Math.max(4, size * 0.12);
+  const radius = shape === 'circle' ? size / 2 : Math.max(4, size * 0.08);
+  // 큰 타일에서 글자가 화면을 누르지 않게 비율을 줄인다
+  const fontSize = Math.round(size * (size > 96 ? 0.28 : 0.4));
 
   return (
     <View
@@ -59,7 +61,7 @@ function FallbackArt({ name, shape = 'circle', size, className }: FallbackArtPro
         <Rect width={size} height={size} fill={`url(#${gradientId})`} />
       </Svg>
       <Text
-        style={{ fontSize: Math.round(size * 0.4), lineHeight: Math.round(size * 0.48) }}
+        style={{ fontSize, lineHeight: Math.round(fontSize * 1.2) }}
         className="font-semibold text-white/85">
         {fallbackInitial(name)}
       </Text>
