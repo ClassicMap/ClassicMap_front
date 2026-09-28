@@ -254,7 +254,17 @@ function ProfileForm({
   );
   const [draft, setDraft] = React.useState(initial);
   const [error, setError] = React.useState<string | null>(null);
-  React.useEffect(() => setDraft(initial), [initial]);
+  const previousInitial = React.useRef(initial);
+  // 서버 값이 바뀌어도(공개 범위 토글 저장 등) 입력 중인 내용은 지우지 않는다
+  React.useEffect(() => {
+    const before = previousInitial.current;
+    previousInitial.current = initial;
+    setDraft((current) =>
+      current.displayName === before.displayName && current.bio === before.bio && current.avatarUrl === before.avatarUrl
+        ? initial
+        : current
+    );
+  }, [initial]);
 
   const dirty =
     draft.displayName !== initial.displayName || draft.bio !== initial.bio || draft.avatarUrl !== initial.avatarUrl;
@@ -271,7 +281,8 @@ function ProfileForm({
     }
     setError(null);
     update.mutate(
-      { displayName: draft.displayName.trim(), bio: draft.bio.trim(), avatarUrl: avatarUrl || undefined },
+      // 빈 문자열을 보내야 기존 사진 주소가 지워진다 (undefined는 JSON에서 빠져 그대로 남는다)
+      { displayName: draft.displayName.trim(), bio: draft.bio.trim(), avatarUrl },
       {
         onError: () =>
           setError('저장하지 못했어요. 연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 저장해 주세요.'),

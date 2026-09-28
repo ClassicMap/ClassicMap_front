@@ -6,7 +6,8 @@ import { Text } from '@/components/ui/text';
 import { clearAllData } from '@/lib/api/mock-db';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { type Href, useRouter } from 'expo-router';
+import { useAuth as useAppAuth } from '@/lib/hooks/useAuth';
+import { type Href, Redirect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Linking, View } from 'react-native';
 
@@ -35,6 +36,7 @@ export default function DeleteAccountScreen() {
   const [deleting, setDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const email = user?.emailAddresses[0]?.emailAddress ?? '';
+  const { isSignedIn, loading } = useAppAuth();
 
   const openMail = () => {
     const subject = 'ClassicMap 계정 삭제 요청';
@@ -50,18 +52,24 @@ export default function DeleteAccountScreen() {
     try {
       if (!user?.delete) throw new Error('delete_method_not_available');
       await user.delete();
-      await clearAllData();
-      await signOut();
-      router.replace('/home' as Href);
     } catch (err) {
       if (isUnsupported(err)) {
         setError(`이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 ${SUPPORT_EMAIL}에 삭제를 요청해 주세요.`);
       } else {
         setError('계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.');
       }
-    } finally {
       setDeleting(false);
+      return;
     }
+    // 계정은 이미 지워졌다. 뒷정리가 실패해도 "지우지 못했어요"를 띄우지 않는다
+    try {
+      await clearAllData();
+      await signOut();
+    } catch {
+      // 로컬 정리에 실패해도 계정 삭제 결과는 그대로다
+    }
+    setDeleting(false);
+    router.replace('/home' as Href);
   };
 
   const confirmRemove = () =>
@@ -69,6 +77,10 @@ export default function DeleteAccountScreen() {
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => void remove() },
     ]);
+
+  if (!loading && !isSignedIn) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
 
   return (
     <SubPage title="계정 삭제" description="계정을 지우면 별점, 레퍼토리, 공개 프로필이 모두 사라지고 되돌릴 수 없어요.">
