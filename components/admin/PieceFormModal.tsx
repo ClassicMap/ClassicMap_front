@@ -1,15 +1,19 @@
-// components/admin/PieceFormModal.tsx
-import * as React from 'react';
-import { View, Modal, ScrollView, Alert, TextInput, Platform, TouchableOpacity } from 'react-native';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Icon } from '@/components/ui/icon';
-import { XIcon } from 'lucide-react-native';
+import {
+  ChoiceField,
+  FormRow,
+  FormSection,
+  TextAreaField,
+  TextField,
+  hasErrors,
+  useSubmitAttempt,
+  type ChoiceOption,
+  type FieldErrors,
+} from '@/components/admin/form-field';
+import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
 import { AdminPieceAPI } from '@/lib/api/admin';
 import type { Piece } from '@/lib/types/models';
+import { Alert } from '@/lib/utils/alert';
+import * as React from 'react';
 
 interface PieceFormModalProps {
   visible: boolean;
@@ -18,6 +22,11 @@ interface PieceFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const TYPE_OPTIONS: ReadonlyArray<ChoiceOption<Piece['type']>> = [
+  { value: 'song', label: '단일곡' },
+  { value: 'album', label: '앨범·모음집' },
+];
 
 export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess }: PieceFormModalProps) {
   const [title, setTitle] = React.useState('');
@@ -32,6 +41,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
   const [appleMusicUrl, setAppleMusicUrl] = React.useState('');
   const [youtubeMusicUrl, setYoutubeMusicUrl] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
+  const { attempted, setAttempted } = useSubmitAttempt(visible);
 
   React.useEffect(() => {
     if (visible && piece) {
@@ -63,9 +73,14 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
     }
   }, [visible, piece]);
 
+  const errors: FieldErrors<'title'> = {
+    title: title ? undefined : '제목을 입력해 주세요.',
+  };
+  const shown: FieldErrors<'title'> = attempted ? errors : {};
+
   const handleSubmit = async () => {
-    if (!title) {
-      Alert.alert('오류', '제목을 입력해주세요.');
+    if (hasErrors(errors)) {
+      setAttempted(true);
       return;
     }
 
@@ -86,7 +101,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
         });
-        Alert.alert('성공', '작품이 수정되었습니다.');
+        Alert.alert('작품을 수정했어요');
       } else {
         // 생성 모드
         await AdminPieceAPI.create({
@@ -103,147 +118,112 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
         });
-        Alert.alert('성공', '작품이 추가되었습니다.');
+        Alert.alert('작품을 추가했어요');
       }
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save piece:', error);
-      Alert.alert('오류', piece ? '작품 수정에 실패했습니다.' : '작품 추가에 실패했습니다.');
+      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-background">
-        {/* Header */}
-        <View className="bg-background border-b border-border">
-          <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-            <Text className="text-2xl font-bold">{piece ? '작품 수정' : '작품 추가'}</Text>
-            <TouchableOpacity onPress={onClose} className="p-2">
-              <Icon as={XIcon} size={24} className="text-foreground" />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <FormModal
+      visible={visible}
+      title={piece ? '작품 수정' : '작품 추가'}
+      subtitle={piece?.title}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
+      <FormSection title="기본 정보">
+        <TextField
+          label="제목"
+          required
+          value={title}
+          onChangeText={setTitle}
+          placeholder="피아노 소나타 14번"
+          error={shown.title}
+        />
+        <TextField
+          label="영문 제목"
+          value={titleEn}
+          onChangeText={setTitleEn}
+          placeholder="Piano Sonata No. 14"
+        />
+        <ChoiceField label="작품 유형" required options={TYPE_OPTIONS} value={type} onChange={setType} />
+        <TextAreaField
+          label="설명"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="어떤 작품인지 적어 주세요"
+          numberOfLines={3}
+        />
+      </FormSection>
 
-        <ScrollView className="flex-1 p-4">
-          <Card className="p-4 mb-4">
+      <FormSection title="세부 정보">
+        <FormRow>
+          <TextField
+            label="작품 번호"
+            value={opusNumber}
+            onChangeText={setOpusNumber}
+            placeholder="Op. 27 No. 2"
+          />
+          <TextField
+            label="작곡 연도"
+            value={compositionYear}
+            onChangeText={setCompositionYear}
+            placeholder="1801"
+            keyboardType="numeric"
+          />
+        </FormRow>
+        <FormRow>
+          <TextField
+            label="난이도 (1–10)"
+            value={difficultyLevel}
+            onChangeText={setDifficultyLevel}
+            placeholder="8"
+            keyboardType="numeric"
+          />
+          <TextField
+            label="연주 시간 (분)"
+            value={durationMinutes}
+            onChangeText={setDurationMinutes}
+            placeholder="15"
+            keyboardType="numeric"
+          />
+        </FormRow>
+      </FormSection>
 
-            <View className="gap-4">
-              <View>
-                <Label>제목 *</Label>
-                <Input value={title} onChangeText={setTitle} placeholder="피아노 소나타 14번" />
-              </View>
-
-              <View>
-                <Label>영문 제목</Label>
-                <Input value={titleEn} onChangeText={setTitleEn} placeholder="Piano Sonata No. 14" />
-              </View>
-
-              <View>
-                <Label>작품 타입 *</Label>
-                <View className="flex-row gap-2 mt-2">
-                  <TouchableOpacity
-                    onPress={() => setType('song')}
-                    className={`flex-1 py-3 px-4 rounded-md border ${type === 'song' ? 'bg-primary border-primary' : 'bg-background border-input'}`}
-                  >
-                    <Text className={`text-center font-medium ${type === 'song' ? 'text-primary-foreground' : 'text-foreground'}`}>
-                      단일곡
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setType('album')}
-                    className={`flex-1 py-3 px-4 rounded-md border ${type === 'album' ? 'bg-primary border-primary' : 'bg-background border-input'}`}
-                  >
-                    <Text className={`text-center font-medium ${type === 'album' ? 'text-primary-foreground' : 'text-foreground'}`}>
-                      앨범/모음집
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View>
-                <Label>설명</Label>
-                <TextInput
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="작품 설명..."
-                  multiline
-                  numberOfLines={3}
-                  className="min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
-                  placeholderTextColor={Platform.select({ ios: '#999999', android: '#999999', default: undefined })}
-                  style={{ textAlignVertical: 'top' }}
-                />
-              </View>
-
-              <View>
-                <Label>작품 번호</Label>
-                <Input value={opusNumber} onChangeText={setOpusNumber} placeholder="Op. 27 No. 2" />
-              </View>
-
-              <View>
-                <Label>작곡 연도</Label>
-                <Input value={compositionYear} onChangeText={setCompositionYear} placeholder="1801" keyboardType="numeric" />
-              </View>
-
-              <View>
-                <Label>난이도 (1-10)</Label>
-                <Input value={difficultyLevel} onChangeText={setDifficultyLevel} placeholder="8" keyboardType="numeric" />
-              </View>
-
-              <View>
-                <Label>연주 시간 (분)</Label>
-                <Input value={durationMinutes} onChangeText={setDurationMinutes} placeholder="15" keyboardType="numeric" />
-              </View>
-
-              <View className="border-t border-border pt-4 mt-2">
-                <Text className="text-sm font-medium mb-3">음악 스트리밍 링크</Text>
-
-                <View>
-                  <Label>Spotify URL</Label>
-                  <Input
-                    value={spotifyUrl}
-                    onChangeText={setSpotifyUrl}
-                    placeholder="https://open.spotify.com/..."
-                    autoCapitalize="none"
-                  />
-                </View>
-
-                <View className="mt-3">
-                  <Label>Apple Music Classical URL</Label>
-                  <Input
-                    value={appleMusicUrl}
-                    onChangeText={setAppleMusicUrl}
-                    placeholder="https://music.apple.com/..."
-                    autoCapitalize="none"
-                  />
-                </View>
-
-                <View className="mt-3">
-                  <Label>YouTube Music URL</Label>
-                  <Input
-                    value={youtubeMusicUrl}
-                    onChangeText={setYoutubeMusicUrl}
-                    placeholder="https://music.youtube.com/..."
-                    autoCapitalize="none"
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View className="flex-row gap-2 mt-6">
-              <Button variant="outline" onPress={onClose} className="flex-1" disabled={submitting}>
-                <Text>취소</Text>
-              </Button>
-              <Button onPress={handleSubmit} className="flex-1" disabled={submitting}>
-                <Text>{submitting ? '저장 중...' : '저장'}</Text>
-              </Button>
-            </View>
-          </Card>
-        </ScrollView>
-      </View>
-    </Modal>
+      <FormSection title="스트리밍 링크">
+        <TextField
+          label="Spotify URL"
+          value={spotifyUrl}
+          onChangeText={setSpotifyUrl}
+          placeholder="https://open.spotify.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextField
+          label="Apple Music Classical URL"
+          value={appleMusicUrl}
+          onChangeText={setAppleMusicUrl}
+          placeholder="https://music.apple.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextField
+          label="YouTube Music URL"
+          value={youtubeMusicUrl}
+          onChangeText={setYoutubeMusicUrl}
+          placeholder="https://music.youtube.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+      </FormSection>
+    </FormModal>
   );
 }

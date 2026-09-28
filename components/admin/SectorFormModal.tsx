@@ -1,22 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
 import {
-  Modal,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  TextInput,
-  Animated,
-  Dimensions,
-} from 'react-native';
-import { Text } from '@/components/ui/text';
+  FormSection,
+  TextAreaField,
+  TextField,
+  hasErrors,
+  useSubmitAttempt,
+  type FieldErrors,
+} from '@/components/admin/form-field';
+import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Icon } from '@/components/ui/icon';
-import { X as XIcon, Trash2 as TrashIcon } from 'lucide-react-native';
-import { Alert } from '@/lib/utils/alert';
+import { Text } from '@/components/ui/text';
 import { AdminPerformanceSectorAPI } from '@/lib/api/admin';
 import type { PerformanceSectorWithCount } from '@/lib/types/models';
+import { Alert } from '@/lib/utils/alert';
+import { Trash2 as TrashIcon } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
 interface SectorFormModalProps {
   visible: boolean;
@@ -25,6 +24,10 @@ interface SectorFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const SECTOR_NAME_MAX = 200;
+
+type SectorField = 'sectorName' | 'displayOrder';
 
 export function SectorFormModal({
   visible,
@@ -36,25 +39,12 @@ export function SectorFormModal({
   const [sectorName, setSectorName] = useState('');
   const [description, setDescription] = useState('');
   const [displayOrder, setDisplayOrder] = useState('0');
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { attempted, setAttempted } = useSubmitAttempt(visible);
 
   const isEditMode = !!sector;
-  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
-
-  // 슬라이드 애니메이션
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 90,
-      }).start();
-    } else {
-      slideAnim.setValue(Dimensions.get('window').height);
-    }
-  }, [visible]);
+  const loading = saving || deleting;
 
   // 모달이 열릴 때 데이터 초기화
   useEffect(() => {
@@ -70,37 +60,33 @@ export function SectorFormModal({
         setDescription('');
         setDisplayOrder('0');
       }
-      setErrors({});
     }
   }, [visible, sector]);
 
-  const validate = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!sectorName.trim()) {
-      newErrors.sectorName = '섹터명을 입력해주세요.';
-    } else if (sectorName.length > 200) {
-      newErrors.sectorName = '섹터명은 200자 이내로 입력해주세요.';
-    }
-
-    const orderNum = parseInt(displayOrder);
-    if (isNaN(orderNum) || orderNum < 0) {
-      newErrors.displayOrder = '표시 순서는 0 이상의 숫자여야 합니다.';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const orderNum = parseInt(displayOrder);
+  const errors: FieldErrors<SectorField> = {
+    sectorName: !sectorName.trim()
+      ? '구간 이름을 입력해 주세요.'
+      : sectorName.length > SECTOR_NAME_MAX
+        ? `구간 이름은 ${SECTOR_NAME_MAX}자 이내로 적어 주세요.`
+        : undefined,
+    displayOrder:
+      isNaN(orderNum) || orderNum < 0 ? '표시 순서는 0 이상의 숫자로 적어 주세요.' : undefined,
   };
+  const shown: FieldErrors<SectorField> = attempted ? errors : {};
 
   const handleSubmit = async () => {
-    if (!validate()) return;
-
-    if (!isEditMode && !pieceId) {
-      Alert.alert('오류', '곡 정보가 없습니다.');
+    if (hasErrors(errors)) {
+      setAttempted(true);
       return;
     }
 
-    setLoading(true);
+    if (!isEditMode && !pieceId) {
+      Alert.alert('곡 정보가 없어요', '곡을 먼저 고른 뒤 다시 시도해 주세요.');
+      return;
+    }
+
+    setSaving(true);
     try {
       if (isEditMode && sector) {
         // 수정
@@ -109,7 +95,7 @@ export function SectorFormModal({
           description: description.trim() || undefined,
           displayOrder: parseInt(displayOrder),
         });
-        Alert.alert('성공', '섹터가 수정되었습니다.');
+        Alert.alert('구간을 수정했어요');
       } else if (pieceId) {
         // 생성
         await AdminPerformanceSectorAPI.create({
@@ -118,14 +104,14 @@ export function SectorFormModal({
           description: description.trim() || undefined,
           displayOrder: parseInt(displayOrder),
         });
-        Alert.alert('성공', '섹터가 생성되었습니다.');
+        Alert.alert('구간을 추가했어요');
       }
       onSuccess();
     } catch (error) {
       console.error('Failed to save sector:', error);
-      Alert.alert('오류', `섹터 저장에 실패했습니다.`);
+      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -133,24 +119,24 @@ export function SectorFormModal({
     if (!sector) return;
 
     Alert.alert(
-      '섹터 삭제',
-      `"${sector.sectorName}" 섹터를 삭제하시겠습니까?\n\n⚠️ 이 섹터에 연결된 ${sector.performanceCount}개의 연주가 함께 삭제됩니다.\n\n이 작업은 되돌릴 수 없습니다.`,
+      '구간을 삭제할까요?',
+      `"${sector.sectorName}" 구간과 연결된 연주 ${sector.performanceCount}개가 함께 삭제돼요. 삭제한 뒤에는 되돌릴 수 없어요.`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '삭제',
           style: 'destructive',
           onPress: async () => {
-            setLoading(true);
+            setDeleting(true);
             try {
               await AdminPerformanceSectorAPI.delete(sector.id);
-              Alert.alert('성공', '섹터가 삭제되었습니다.');
+              Alert.alert('구간을 삭제했어요');
               onSuccess();
             } catch (error) {
               console.error('Failed to delete sector:', error);
-              Alert.alert('오류', '섹터 삭제에 실패했습니다.');
+              Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
             } finally {
-              setLoading(false);
+              setDeleting(false);
             }
           },
         },
@@ -158,123 +144,71 @@ export function SectorFormModal({
     );
   };
 
-  const maxHeight = Dimensions.get('window').height * 0.9;
-
   return (
-    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Animated.View
-          style={{
-            transform: [{ translateY: slideAnim }],
-            height: maxHeight,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          className="rounded-t-3xl bg-background">
-          {/* 헤더 */}
-          <View className="flex-row items-center justify-between border-b border-border p-4">
-            <Text className="text-xl font-bold">
-              {isEditMode ? '섹터 수정' : '섹터 추가'}
+    <FormModal
+      visible={visible}
+      title={isEditMode ? '구간 수정' : '구간 추가'}
+      subtitle={sector?.sectorName}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitting={saving}
+      busy={deleting}
+      error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
+      <FormSection title="구간 정보">
+        <TextField
+          label="구간 이름"
+          required
+          value={sectorName}
+          onChangeText={setSectorName}
+          placeholder="예: 1악장, 빠른 템포, 라이브 버전"
+          maxLength={SECTOR_NAME_MAX}
+          error={shown.sectorName}
+          aside={
+            <Text variant="mono" className="text-foreground-subtle">
+              {`${sectorName.length}/${SECTOR_NAME_MAX}`}
             </Text>
-            <TouchableOpacity onPress={onClose} className="p-2">
-              <Icon as={XIcon} size={24} />
-            </TouchableOpacity>
-          </View>
+          }
+        />
+        <TextAreaField
+          label="설명"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="구간을 설명해 주세요 (선택)"
+        />
+        <TextField
+          label="표시 순서"
+          value={displayOrder}
+          onChangeText={setDisplayOrder}
+          placeholder="0"
+          keyboardType="numeric"
+          error={shown.displayOrder}
+          help="숫자가 작을수록 앞에 보여요. 기본값은 0이에요."
+        />
+      </FormSection>
 
-          {/* 폼 */}
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, flexGrow: 1 }}>
-            <View className="gap-6">
-              {/* 섹터명 */}
-              <View className="gap-2">
-                <Text className="text-sm font-medium">
-                  섹터명 <Text className="text-destructive">*</Text>
-                </Text>
-                <Input
-                  value={sectorName}
-                  onChangeText={setSectorName}
-                  placeholder="예: 1악장, 빠른 템포, 라이브 버전"
-                  maxLength={200}
-                />
-                {errors.sectorName && (
-                  <Text className="text-sm text-destructive">{errors.sectorName}</Text>
-                )}
-              </View>
-
-              {/* 설명 */}
-              <View className="gap-2">
-                <Text className="text-sm font-medium">설명</Text>
-                <TextInput
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder="섹터에 대한 추가 설명 (선택사항)"
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                  className="min-h-[100px] rounded-lg border border-border bg-background p-3 text-foreground"
-                />
-              </View>
-
-              {/* 표시 순서 */}
-              <View className="gap-2">
-                <Text className="text-sm font-medium">표시 순서</Text>
-                <Input
-                  value={displayOrder}
-                  onChangeText={setDisplayOrder}
-                  placeholder="0"
-                  keyboardType="numeric"
-                />
-                {errors.displayOrder && (
-                  <Text className="text-sm text-destructive">{errors.displayOrder}</Text>
-                )}
-                <Text className="text-xs text-muted-foreground">
-                  낮은 숫자가 먼저 표시됩니다 (기본값: 0)
-                </Text>
-              </View>
-
-              {/* 연주 개수 정보 (수정 모드일 때만) */}
-              {isEditMode && sector && (
-                <View className="rounded-lg bg-muted/50 p-4">
-                  <Text className="text-sm text-muted-foreground">
-                    이 섹터에는 현재 {sector.performanceCount}개의 연주가 있습니다.
-                  </Text>
-                </View>
-              )}
+      {isEditMode && sector ? (
+        <FormSection title="삭제">
+          <View className="gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <View className="gap-1">
+              <Text variant="bodySm" className="text-foreground">
+                {`이 구간에는 연주가 ${sector.performanceCount}개 있어요.`}
+              </Text>
+              <Text variant="caption">
+                구간을 삭제하면 연결된 연주도 함께 삭제되고, 되돌릴 수 없어요.
+              </Text>
             </View>
-          </ScrollView>
-
-          {/* 하단 버튼 */}
-          <View className="gap-3 border-t border-border p-4">
-            <View className="flex-row gap-3">
-              <Button
-                variant="outline"
-                onPress={onClose}
-                disabled={loading}
-                className="flex-1">
-                <Text>취소</Text>
-              </Button>
-              <Button onPress={handleSubmit} disabled={loading} className="flex-1">
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text>{isEditMode ? '수정' : '생성'}</Text>
-                )}
-              </Button>
-            </View>
-
-            {/* 삭제 버튼 (수정 모드일 때만) */}
-            {isEditMode && sector && (
-              <Button
-                variant="destructive"
-                onPress={handleDelete}
-                disabled={loading}
-                className="w-full">
-                <Icon as={TrashIcon} size={16} className="text-destructive-foreground" />
-                <Text className="ml-2">섹터 삭제</Text>
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={handleDelete}
+              disabled={loading}
+              className="self-start">
+              <Icon as={TrashIcon} size={14} className="text-destructive" />
+              <Text className="text-destructive">{deleting ? '삭제 중…' : '구간 삭제'}</Text>
+            </Button>
           </View>
-        </Animated.View>
-      </View>
-    </Modal>
+        </FormSection>
+      ) : null}
+    </FormModal>
   );
 }
