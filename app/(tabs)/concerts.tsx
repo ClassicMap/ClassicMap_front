@@ -1,5 +1,5 @@
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
-import { concertClock, daysLeft, parseDay } from '@/components/concert/concert-parts';
+import { concertClock, daysLeft, parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
@@ -59,15 +59,6 @@ function groupByDay(concerts: Concert[]): DateGroup[] {
     groups.set(key, group);
   }
   return [...groups.values()];
-}
-
-function shortVenue(name?: string): string {
-  if (!name) return '';
-  // "롯데콘서트홀 (롯데콘서트홀)"처럼 괄호 안이 같으면 한 번만
-  const match = name.match(/^(.*?)\s*\((.*)\)\s*$/);
-  if (!match) return name;
-  const [, outer, inner] = match;
-  return outer.trim() === inner.trim() ? outer.trim() : `${outer.trim()} ${inner.trim()}`;
 }
 
 export default function ConcertsScreen() {

@@ -71,6 +71,18 @@ export function useAllComposers() {
 }
 
 /**
+ * 추천 순 작곡가 (홈 셸프·시대 타일용). 첫 페이지만 쓴다.
+ */
+export function useRecommendedComposers(limit = 40) {
+  return useQuery({
+    queryKey: ['composers', 'recommended', limit] as const,
+    queryFn: () => ComposerAPI.getAll({ offset: 0, limit, sort: 'recommended' }),
+    staleTime: 1000 * 60 * 10,
+    retry: 1,
+  });
+}
+
+/**
  * 특정 작곡가 조회 훅
  * - id가 없으면 쿼리 비활성화
  * - 작곡가 상세 정보 캐싱

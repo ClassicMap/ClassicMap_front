@@ -589,7 +589,13 @@ export const ComposerAPI = {
   /**
    * 모든 작곡가 조회
    */
-  async getAll(params?: { offset?: number; limit?: number; period?: string }): Promise<Composer[]> {
+  async getAll(params?: {
+    offset?: number;
+    limit?: number;
+    period?: string;
+    /** recommended: tier → 공개 비교 → 초상 → 소개 → 작품 수 순. 없으면 출생 연도 순 */
+    sort?: 'recommended';
+  }): Promise<Composer[]> {
     const offset = params?.offset ?? 0;
     const limit = params?.limit ?? 20;
     const period = params?.period;
@@ -600,6 +606,9 @@ export const ComposerAPI = {
       queryParams.append('limit', limit.toString());
       if (period && period !== 'all') {
         queryParams.append('period', period);
+      }
+      if (params?.sort) {
+        queryParams.append('sort', params.sort);
       }
 
       const response = await authenticatedFetch(

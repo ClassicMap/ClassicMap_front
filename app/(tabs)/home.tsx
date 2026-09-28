@@ -1,599 +1,414 @@
-// app/(tabs)/home.tsx
+import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/components/home/cards';
+import { EraPreferenceCard, PREFERENCE_ERAS } from '@/components/home/era-preference-card';
+import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
+import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { View, ScrollView, FlatList, Image, Pressable, Animated, ActivityIndicator, RefreshControl } from 'react-native';
-import { CalendarIcon, PlayCircleIcon } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useUser } from '@clerk/clerk-expo';
-import * as React from 'react';
-import { ArtistAPI, ConcertAPI, ComposerAPI } from '@/lib/api/client';
-import { getAllPeriods } from '@/lib/data/mockDTO';
-import type { Artist } from '@/lib/types/models';
-import { OptimizedImage, prefetchImages } from '@/components/optimized-image';
-import { getImageUrl } from '@/lib/utils/image';
-import { useComposers } from '@/lib/query/hooks/useComposers';
-import { useArtists } from '@/lib/query/hooks/useArtists';
-import { useConcerts } from '@/lib/query/hooks/useConcerts';
-import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
-import { Alert } from '@/lib/utils/alert';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { type RecentPiece, useRecentPieces } from '@/hooks/use-recent-pieces';
+import { daysLeft } from '@/components/concert/concert-parts';
+import { pickDailyPiece } from '@/lib/data/comparison';
+import { PERIODS } from '@/lib/data/periods';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import type { ColorScheme } from '@/lib/design/tokens';
+import { useUserProfile } from '@/lib/hooks/useUserProfile';
+import { useArtists } from '@/lib/query/hooks/useArtists';
+import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
+import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
+import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import type { Artist, Composer, Concert } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { useUser } from '@clerk/clerk-expo';
+import { type Href, useRouter } from 'expo-router';
+import { AlertCircleIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
+import * as React from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-// 레거시 형식으로 변환 (타입 호환성 유지)
-interface LegacyArtist {
-  id: string;
-  name: string;
-  category: string;
-  image: string;
+const SHELF_ARTISTS = 12;
+const SHELF_COMPOSERS = 12;
+const WEEK_DAYS = 7;
+
+function greeting(now: Date): string {
+  const hour = now.getHours();
+  if (hour >= 5 && hour < 11) return '좋은 아침이에요';
+  if (hour >= 11 && hour < 17) return '좋은 오후예요';
+  if (hour >= 17 && hour < 22) return '좋은 저녁이에요';
+  return '편안한 밤이에요';
 }
 
-interface LegacyConcert {
-  id: string;
-  title: string;
-  date: string;
-  venue: string;
-  poster: string;
+/** 홈은 큐레이션 존: 이미지가 있는 S·A급만 올린다. 모자라면 이미지 있는 쪽으로 채운다 (1차 시안 메모) */
+function curateArtists(artists: readonly Artist[]): Artist[] {
+  const withImage = artists.filter((artist) => Boolean(artist.imageUrl));
+  const top = withImage.filter((artist) => artist.tier === 'S' || artist.tier === 'A');
+  const rest = withImage.filter((artist) => !top.includes(artist));
+  return [...top, ...rest].slice(0, SHELF_ARTISTS);
 }
 
-interface LegacyComparison {
-  id: string;
-  piece: string;
-  artists: string;
-  composerId: number;
-  pieceId: number;
-  imageUrl?: string;
-  artistNames: string[];
+/** 좋아하는 시대를 골랐으면 그 시대 작곡가가 앞에 온다. 나머지 순서는 추천 순 그대로 */
+function curateComposers(composers: readonly Composer[], favoritePeriods: readonly string[]): Composer[] {
+  const withImage = composers.filter((composer) => Boolean(composer.avatarUrl));
+  if (favoritePeriods.length === 0) return withImage.slice(0, SHELF_COMPOSERS);
+  const preferred = withImage.filter((composer) => favoritePeriods.includes(composer.period));
+  const rest = withImage.filter((composer) => !favoritePeriods.includes(composer.period));
+  return [...preferred, ...rest].slice(0, SHELF_COMPOSERS);
 }
 
-const RECOMMENDED_PERIODS = getAllPeriods().map(era => ({
-  id: era.id,
-  period: era.name,
-  emoji: era.emoji,
-  composer: era.keyComposers[0],
-}));
+/** 이번 주 공연. 이번 주에 없으면 가장 가까운 공연으로 채운다 */
+function weekConcerts(concerts: readonly Concert[]): { items: Concert[]; thisWeek: boolean } {
+  const upcoming = concerts.filter((concert) => daysLeft(concert.startDate) !== null);
+  const week = upcoming.filter((concert) => (daysLeft(concert.startDate) ?? WEEK_DAYS) < WEEK_DAYS);
+  return week.length >= 3 ? { items: week, thisWeek: true } : { items: upcoming, thisWeek: false };
+}
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+  const { colorScheme } = useColorScheme();
+  const scheme: ColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
   const { user } = useUser();
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const waveAnim = React.useRef(new Animated.Value(0)).current;
-  const [showGreeting, setShowGreeting] = React.useState(true);
+  const { profile, isFirstLogin, completeOnboarding, updatePreferences } = useUserProfile();
+  const favoritePeriods = React.useMemo(
+    () => profile?.preferences?.favoritePeriods ?? [],
+    [profile?.preferences?.favoritePeriods]
+  );
 
-  // React Query로 병렬 데이터 로드 (자동 캐싱)
-  const {
-    data: artistsQueryData,
-    isLoading: loadingArtists,
-    error: artistsQueryError,
-    refetch: refetchArtists,
-  } = useArtists();
+  const catalog = useComparisonPieces();
+  const composersQuery = useRecommendedComposers();
+  const artistsQuery = useArtists();
+  const concertsQuery = useConcerts();
+  const recentPieces = useRecentPieces().data ?? [];
 
-  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
-  const artistsData = React.useMemo(() => {
-    return artistsQueryData?.pages?.[0] || [];
-  }, [artistsQueryData]);
+  const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data]);
+  const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data]);
 
-  const {
-    data: concertsQueryData,
-    isLoading: loadingConcerts,
-    error: concertsQueryError,
-    refetch: refetchConcerts,
-  } = useConcerts();
+  const today = React.useMemo(() => {
+    // 좋아하는 시대가 있으면 그 시대 작곡가의 작품 중에서 고른다
+    const preferredIds = new Set(
+      composers.filter((composer) => favoritePeriods.includes(composer.period)).map((composer) => composer.id)
+    );
+    const preferred = pieces.filter((piece) => preferredIds.has(piece.composerId));
+    return pickDailyPiece(preferred.length > 0 ? preferred : pieces, new Date());
+  }, [composers, favoritePeriods, pieces]);
 
-  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
-  const concertsData = React.useMemo(() => {
-    return concertsQueryData?.pages?.[0] || [];
-  }, [concertsQueryData]);
+  const shelfPieces = React.useMemo(
+    () => pieces.filter((piece) => piece.pieceId !== today?.pieceId),
+    [pieces, today?.pieceId]
+  );
+  const artists = React.useMemo(() => curateArtists(artistsQuery.data?.pages[0] ?? []), [artistsQuery.data]);
+  const featuredComposers = React.useMemo(
+    () => curateComposers(composers, favoritePeriods),
+    [composers, favoritePeriods]
+  );
+  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data]);
+  const eras = React.useMemo(
+    () =>
+      PERIODS.filter((era) => (PREFERENCE_ERAS as readonly string[]).includes(era.name)).map((era) => ({
+        era,
+        // 시대 대표 초상: 추천 순에서 그 시대 첫 작곡가
+        portrait: composers.find((composer) => composer.period === era.name && composer.avatarUrl),
+      })),
+    [composers]
+  );
 
-  const {
-    data: composersQueryData,
-    isLoading: loadingComposers,
-    error: composersQueryError,
-    refetch: refetchComposers,
-  } = useComposers();
-
-  // 무한 스크롤 데이터를 평탄화 (첫 페이지만 사용)
-  const composersData = React.useMemo(() => {
-    return composersQueryData?.pages?.[0] || [];
-  }, [composersQueryData]);
-
-  const errorArtists = artistsQueryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
-  const errorConcerts = concertsQueryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
-  const errorComposers = composersQueryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
-
-  // 레거시 형식으로 변환
-  const [artists, setArtists] = React.useState<LegacyArtist[]>([]);
-  const [concerts, setConcerts] = React.useState<LegacyConcert[]>([]);
-  const [comparisons, setComparisons] = React.useState<LegacyComparison[]>([]);
-  const [loadingComparisons, setLoadingComparisons] = React.useState(false);
-  const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [refreshing, setRefreshing] = React.useState(false);
-
-  // 데이터를 레거시 형식으로 변환 및 이미지 프리페치
-  React.useEffect(() => {
-    const convertAndPrefetch = async () => {
-      // 로딩 중이거나 데이터가 없으면 실행하지 않음
-      if (loadingArtists || loadingConcerts || loadingComposers) {
-        return;
-      }
-
-      if (artistsData.length === 0 && concertsData.length === 0 && composersData.length === 0) {
-        return;
-      }
-
-      // 레거시 형식으로 변환
-      const legacyArtists = artistsData.slice(0, 5).map(artist => ({
-        id: String(artist.id),
-        name: artist.name,
-        category: artist.category,
-        image: artist.imageUrl || '',
-      }));
-      setArtists(legacyArtists);
-
-      const legacyConcerts = concertsData.slice(0, 5).map(concert => ({
-        id: String(concert.id),
-        title: concert.title,
-        date: concert.startDate,
-        venue: '공연장',
-        poster: concert.posterUrl || '',
-      }));
-      setConcerts(legacyConcerts);
-
-      // 비교 영상 데이터: 백엔드에서 영상이 등록된 작곡가-곡 랜덤 10개 조회
-      setLoadingComparisons(true);
-      try {
-        const data = await ComposerAPI.getWithPerformances(10);
-        setComparisons(data.map(item => ({
-          id: `${item.composerId}-${item.pieceId}`,
-          piece: item.pieceTitle,
-          artists: item.composerName,
-          composerId: item.composerId,
-          pieceId: item.pieceId,
-          imageUrl: item.composerAvatarUrl,
-          artistNames: item.artistNames,
-        })));
-      } catch {
-        setComparisons([]);
-      } finally {
-        setLoadingComparisons(false);
-      }
-
-      // 이미지 프리페치 (타임아웃 추가)
-      const timeout = setTimeout(() => {
-        setImagesLoaded(true);
-      }, 1000);
-
-      try {
-        await prefetchImages([
-          ...artistsData.slice(0, 5).map(a => a.imageUrl),
-          ...concertsData.slice(0, 5).map(c => c.posterUrl)
-        ]);
-        setImagesLoaded(true);
-      } catch (error) {
-        setImagesLoaded(true);
-      } finally {
-        clearTimeout(timeout);
-      }
-    };
-
-    convertAndPrefetch();
-  }, [artistsData, concertsData, composersData, loadingArtists, loadingConcerts, loadingComposers]);
-
-  // 새로고침 핸들러
-  const onRefresh = React.useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([
-      refetchArtists(),
-      refetchConcerts(),
-      refetchComposers(),
-    ]);
-    setRefreshing(false);
-  }, [refetchArtists, refetchConcerts, refetchComposers]);
-
-  React.useEffect(() => {
-    // 페이드 인
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-
-    // 손 흔드는 애니메이션 (반복)
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(waveAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(waveAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(waveAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(waveAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.delay(400),
-      ])
-    ).start();
-
-    // 3초 후 페이드 아웃
-    const timer = setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }).start(() => {
-        setShowGreeting(false);
-      });
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const getFullName = () => {
-    if (!user) return '';
-    const lastName = user.lastName || '';
-    const firstName = user.firstName || '';
-    return lastName || firstName ? ` ${firstName}${lastName}님` : '';
+  const refreshing =
+    catalog.isRefetching || composersQuery.isRefetching || artistsQuery.isRefetching || concertsQuery.isRefetching;
+  const refresh = () => {
+    void catalog.refetch();
+    void composersQuery.refetch();
+    void artistsQuery.refetch();
+    void concertsQuery.refetch();
   };
 
-  const waveRotation = waveAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '20deg'],
-  });
+  const openPiece = (target: { composerId: number; pieceId: number; sectorId?: number | null }) => {
+    const params = new URLSearchParams({ composerId: String(target.composerId), pieceId: String(target.pieceId) });
+    if (target.sectorId) params.append('sectorId', String(target.sectorId));
+    router.push(`/compare?${params.toString()}` as Href);
+  };
+  const openToday = (target: TodayComparisonTarget) => openPiece(target);
+  const openRecent = (item: RecentPiece) => openPiece(item);
+
+  const gap = wide ? 20 : 12;
+
+  const onboarding =
+    user && isFirstLogin ? (
+      <EraPreferenceCard
+        scheme={scheme}
+        onSave={async (periods) => {
+          await updatePreferences({ favoritePeriods: periods });
+          await completeOnboarding();
+        }}
+        onSkip={completeOnboarding}
+      />
+    ) : null;
+
+  const todaySection = catalog.isLoading ? (
+    <Skeleton className={cn('w-full rounded-xl', wide ? 'h-[300px]' : 'aspect-video')} />
+  ) : catalog.isError ? (
+    <View className="rounded-xl border border-border">
+      <EmptyState
+        compact
+        icon={AlertCircleIcon}
+        tone="error"
+        title="비교할 작품을 불러오지 못했어요"
+        description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+        action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
+      />
+    </View>
+  ) : today ? (
+    <TodayComparison piece={today} wide={wide} onOpen={openToday} />
+  ) : null;
+
+  const eraGrid = (
+    <View className="flex-row flex-wrap" style={{ gap: 10 }}>
+      {eras.map(({ era, portrait }) => (
+        <View key={era.id} style={{ width: '48%', flexGrow: 1 }}>
+          <EraTile
+            era={era}
+            portrait={portrait?.avatarUrl}
+            height={wide ? 116 : 96}
+            onPress={() => router.push(`/timeline?era=${era.id}` as Href)}
+          />
+        </View>
+      ))}
+    </View>
+  );
 
   return (
-    <ScrollView 
-      className="flex-1 bg-background"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <View className="gap-6 p-4 pb-20">
-        {/* Header */}
-        {showGreeting && (
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              paddingVertical: 16,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Text variant="h1" className="text-3xl font-bold" style={{ display: 'flex' }}>
-                안녕하세요{getFullName()}!
-              </Text>
-              <Animated.Text
-                style={{
-                  fontSize: 30,
-                  marginLeft: 8,
-                  display: 'flex',
-                  transform: [{ rotate: waveRotation }],
-                }}
-              >
-                👋
-              </Animated.Text>
-            </View>
-          </Animated.View>
-        )}
+    <ScrollView
+      className="flex-1 bg-background web:bg-surface-1"
+      contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
+      <Text variant={wide ? 'display' : 'title1'}>{greeting(new Date())}</Text>
 
-        {/* 추천 아티스트 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">주목받는 아티스트</Text>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onPress={() => router.push('/(tabs)/artists')}
-            >
-              <Text className="text-sm text-primary">전체보기</Text>
-            </Button>
-          </View>
-          {loadingArtists ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : errorArtists ? (
-            <View className="py-8">
-              <Text className="text-center text-destructive">{errorArtists}</Text>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 mx-auto"
-                onPress={() => refetchArtists()}
-              >
-                <Text>다시 시도</Text>
-              </Button>
-            </View>
-          ) : !imagesLoaded ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
-            </View>
-          ) : (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={artists}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <ArtistCard artist={item} />}
-              ItemSeparatorComponent={() => <View className="w-3" />}
-              contentContainerClassName="pr-4"
-            />
-          )}
-        </View>
+      {onboarding ? <View className="mt-5">{onboarding}</View> : null}
 
-        {/* 다가오는 공연 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">다가오는 공연</Text>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onPress={() => router.push('/(tabs)/concerts')}
-            >
-              <Text className="text-sm text-primary">전체보기</Text>
-            </Button>
+      {/* 최근 본 작품: 데스크톱은 첫 줄 바로가기, 모바일은 2열 타일 */}
+      {recentPieces.length > 0 ? (
+        <View className={wide ? 'mt-6' : 'mt-5'}>
+          {!wide ? <ShelfHeader title="최근 본 작품" wide={false} /> : null}
+          <View className="flex-row flex-wrap" style={{ gap: wide ? 12 : 8 }}>
+            {recentPieces.slice(0, wide ? 6 : 4).map((item) => (
+              <View key={item.pieceId} style={{ width: wide ? '32%' : '48%', flexGrow: 1 }}>
+                <RecentTile item={item} onPress={() => openRecent(item)} />
+              </View>
+            ))}
           </View>
-          {loadingConcerts ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : errorConcerts ? (
-            <View className="py-8">
-              <Text className="text-center text-destructive">{errorConcerts}</Text>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 mx-auto"
-                onPress={() => refetchConcerts()}
-              >
-                <Text>다시 시도</Text>
-              </Button>
-            </View>
-          ) : !imagesLoaded ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-              <Text className="text-center text-muted-foreground mt-4">이미지를 불러오는 중...</Text>
-            </View>
-          ) : (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={concerts}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <ConcertCard concert={item} />}
-              ItemSeparatorComponent={() => <View className="w-3" />}
-              contentContainerClassName="pr-4"
-            />
-          )}
         </View>
+      ) : null}
 
-        {/* 인기 비교 */}
-        <View className="gap-3">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold">인기 연주 비교</Text>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onPress={() => router.push('/(tabs)/compare')}
-            >
-              <Text className="text-sm text-primary">전체보기</Text>
-            </Button>
+      {/* 오늘의 비교: 데스크톱은 옆에 시대로 듣기를 둔다 (7.1 Bento) */}
+      <View className={cn(wide ? 'mt-8 flex-row gap-6' : 'mt-6')}>
+        <View className="min-w-0 flex-[2]">{todaySection}</View>
+        {wide ? (
+          <View className="w-[320px]">
+            <ShelfHeader title="시대로 듣기" wide onAction={() => router.push('/timeline' as Href)} actionLabel="타임라인" />
+            {eraGrid}
           </View>
-          {loadingComposers || loadingComparisons ? (
-            <View className="py-8">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : errorComposers ? (
-            <View className="py-8">
-              <Text className="text-center text-destructive">{errorComposers}</Text>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4 mx-auto"
-                onPress={() => refetchComposers()}
-              >
-                <Text>다시 시도</Text>
-              </Button>
-            </View>
-          ) : comparisons.length > 0 ? (
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={comparisons}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <ComparisonCard comparison={item} />}
-              ItemSeparatorComponent={() => <View className="w-3" />}
-              contentContainerClassName="pr-4"
-            />
-          ) : (
-            <View className="py-8">
-              <Text className="text-center text-muted-foreground">비교 데이터가 없습니다.</Text>
-            </View>
-          )}
-        </View>
+        ) : null}
       </View>
+
+      <Section wide={wide} title="비교할 수 있는 작품" onAction={() => router.push('/compare' as Href)}>
+        {catalog.isLoading ? (
+          <CardSkeletonRow wide={wide} shape="square" />
+        ) : shelfPieces.length === 0 ? null : wide ? (
+          <ShelfRow
+            items={shelfPieces}
+            minItemWidth={168}
+            gap={gap}
+            keyOf={(piece) => piece.pieceId}
+            renderItem={(piece, width) => <PieceCard piece={piece} width={width} onPress={() => openPiece(piece)} />}
+          />
+        ) : (
+          <Grid
+            items={shelfPieces.slice(0, 6)}
+            columns={3}
+            gap={gap}
+            keyOf={(piece) => piece.pieceId}
+            renderItem={(piece, width) => <PieceCard piece={piece} width={width} onPress={() => openPiece(piece)} />}
+          />
+        )}
+      </Section>
+
+      <Section wide={wide} title="연주자" onAction={() => router.push('/artists' as Href)}>
+        {artistsQuery.isLoading ? (
+          <CardSkeletonRow wide={wide} shape="circle" />
+        ) : artistsQuery.isError ? (
+          <InlineError label="연주자를" onRetry={() => artistsQuery.refetch()} />
+        ) : wide ? (
+          <ShelfRow
+            items={artists}
+            minItemWidth={150}
+            gap={gap}
+            keyOf={(artist) => artist.id}
+            renderItem={(artist, width) => (
+              <PersonCard
+                name={artist.name}
+                image={artist.imageUrl}
+                caption={getArtistCategoryLabel(artist.category)}
+                width={width}
+                onPress={() => router.push(`/artist/${artist.id}` as Href)}
+              />
+            )}
+          />
+        ) : (
+          <ScrollShelf>
+            {artists.map((artist) => (
+              <View key={artist.id} style={{ width: 76 }}>
+                <PersonCard
+                  name={artist.name}
+                  image={artist.imageUrl}
+                  width={76}
+                  onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                />
+              </View>
+            ))}
+          </ScrollShelf>
+        )}
+      </Section>
+
+      <Section
+        wide={wide}
+        title="작곡가"
+        meta={favoritePeriods.length > 0 ? `${favoritePeriods.join('·')} 먼저` : undefined}
+        onAction={() => router.push('/timeline' as Href)}>
+        {composersQuery.isLoading ? (
+          <CardSkeletonRow wide={wide} shape="circle" />
+        ) : composersQuery.isError ? (
+          <InlineError label="작곡가를" onRetry={() => composersQuery.refetch()} />
+        ) : wide ? (
+          <ShelfRow
+            items={featuredComposers}
+            minItemWidth={150}
+            gap={gap}
+            keyOf={(composer) => composer.id}
+            renderItem={(composer, width) => (
+              <PersonCard
+                name={composer.name}
+                image={composer.avatarUrl}
+                caption={composer.period}
+                width={width}
+                onPress={() => router.push(`/composer/${composer.id}` as Href)}
+              />
+            )}
+          />
+        ) : (
+          <ScrollShelf>
+            {featuredComposers.map((composer) => (
+              <View key={composer.id} style={{ width: 76 }}>
+                <PersonCard
+                  name={composer.name}
+                  image={composer.avatarUrl}
+                  width={76}
+                  onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                />
+              </View>
+            ))}
+          </ScrollShelf>
+        )}
+      </Section>
+
+      {!wide ? (
+        <Section wide={false} title="시대로 듣기" onAction={() => router.push('/timeline' as Href)} actionLabel="타임라인">
+          {eraGrid}
+        </Section>
+      ) : null}
+
+      <Section
+        wide={wide}
+        title={concerts.thisWeek ? '이번 주 공연' : '다가오는 공연'}
+        onAction={() => router.push('/concerts' as Href)}>
+        {concertsQuery.isLoading ? (
+          <CardSkeletonRow wide={wide} shape="poster" />
+        ) : concertsQuery.isError ? (
+          <InlineError label="공연을" onRetry={() => concertsQuery.refetch()} />
+        ) : concerts.items.length === 0 ? (
+          <Text variant="bodySm" className="text-foreground-muted">
+            예정된 공연이 없어요. 공연 탭에서 지역을 바꿔 보세요.
+          </Text>
+        ) : wide ? (
+          <ShelfRow
+            items={concerts.items}
+            minItemWidth={160}
+            gap={gap}
+            keyOf={(concert) => concert.id}
+            renderItem={(concert, width) => (
+              <ConcertCard concert={concert} width={width} onPress={() => router.push(`/concert/${concert.id}` as Href)} />
+            )}
+          />
+        ) : (
+          <Grid
+            items={concerts.items.slice(0, 6)}
+            columns={3}
+            gap={gap}
+            keyOf={(concert) => concert.id}
+            renderItem={(concert, width) => (
+              <ConcertCard concert={concert} width={width} onPress={() => router.push(`/concert/${concert.id}` as Href)} />
+            )}
+          />
+        )}
+      </Section>
     </ScrollView>
   );
 }
 
-// 아티스트 카드
-const ArtistCard = React.memo(({ artist }: { artist: LegacyArtist }) => {
-  const router = useRouter();
-
-  const handlePress = React.useCallback(() => {
-    router.push(`/artist/${artist.id}`);
-  }, [router, artist.id]);
-
+function Section({
+  wide,
+  title,
+  meta,
+  actionLabel,
+  onAction,
+  children,
+}: {
+  wide: boolean;
+  title: string;
+  meta?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <Pressable onPress={handlePress}>
-      <Card className="w-[160px] p-3">
-        <View className="gap-2">
-          <Avatar alt={artist.name} className="size-16 self-center">
-            <AvatarImage source={{ uri: getImageUrl(artist.image) }} />
-            <AvatarFallback>
-              <Text>{artist.name[0]}</Text>
-            </AvatarFallback>
-          </Avatar>
-          <View className="gap-1">
-            <Text className="font-semibold" numberOfLines={1}>
-              {artist.name}
-            </Text>
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              {getArtistCategoryLabel(artist.category)}
-            </Text>
-          </View>
-        </View>
-      </Card>
-    </Pressable>
+    <View className={wide ? 'mt-11' : 'mt-9'}>
+      <ShelfHeader title={title} meta={meta} actionLabel={actionLabel} onAction={onAction} wide={wide} />
+      {children}
+    </View>
   );
-});
+}
 
-// 공연 카드
-const ConcertCard = React.memo(({ concert }: { concert: LegacyConcert }) => {
-  const router = useRouter();
-  const [isLoadingVendors, setIsLoadingVendors] = React.useState(false);
-  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
-  const [vendors, setVendors] = React.useState<any[]>([]);
-
-  const handlePress = React.useCallback(() => {
-    router.push(`/concert/${concert.id}`);
-  }, [router, concert.id]);
-
-  const handleBookTicket = React.useCallback(async (e: any) => {
-    e.stopPropagation();
-    setIsLoadingVendors(true);
-    try {
-      const concertId = parseInt(concert.id);
-      const fetchedVendors = await ConcertAPI.getTicketVendors(concertId);
-      setVendors(fetchedVendors);
-      setIsLoadingVendors(false);
-      setShowVendorsModal(true);
-    } catch (error) {
-      setIsLoadingVendors(false);
-      console.error('Failed to fetch ticket vendors:', error);
-      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
-    }
-  }, [concert.id]);
-
+function InlineError({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
-    <>
-      <Pressable onPress={handlePress}>
-        <Card className="w-[200px] overflow-hidden p-0">
-          <View className="aspect-[3/4] bg-muted">
-            {concert.poster ? (
-              <OptimizedImage
-                uri={concert.poster}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="h-full w-full items-center justify-center">
-                <Icon as={CalendarIcon} size={32} className="text-muted-foreground" />
-              </View>
-            )}
-          </View>
-          <View className="gap-3 p-3">
-            <View className="gap-1">
-              <View style={{ height: 40 }}>
-                <Text className="font-semibold" numberOfLines={2}>
-                  {concert.title}
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-1">
-                <Icon as={CalendarIcon} size={12} className="text-muted-foreground" />
-                <Text className="text-xs text-muted-foreground">{concert.date}</Text>
-              </View>
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {concert.venue}
-              </Text>
-            </View>
-            <Button size="sm" onPress={handleBookTicket} disabled={isLoadingVendors}>
-              <Text className="text-xs">{isLoadingVendors ? '로딩...' : '예매'}</Text>
-            </Button>
-          </View>
-        </Card>
+    <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
+      <Text variant="bodySm" className="flex-1 text-foreground-muted">
+        {`${label} 불러오지 못했어요.`}
+      </Text>
+      <Pressable onPress={onRetry} accessibilityRole="button" hitSlop={8}>
+        <Text variant="label" className="text-primary">
+          다시 시도
+        </Text>
       </Pressable>
-
-      <TicketVendorsModal
-        visible={showVendorsModal}
-        vendors={vendors}
-        onClose={() => setShowVendorsModal(false)}
-      />
-    </>
+    </View>
   );
-});
+}
 
-// 비교 카드
-const ComparisonCard = React.memo(({ comparison }: { comparison: LegacyComparison }) => {
-  const router = useRouter();
-
-  const handlePress = React.useCallback(() => {
-    router.push({
-      pathname: '/(tabs)/compare',
-      params: {
-        composerId: String(comparison.composerId),
-        pieceId: String(comparison.pieceId)
-      }
-    });
-  }, [router, comparison.composerId, comparison.pieceId]);
-
+function CardSkeletonRow({ wide, shape }: { wide: boolean; shape: 'square' | 'circle' | 'poster' }) {
+  const count = wide ? 6 : shape === 'circle' ? 4 : 3;
   return (
-    <Pressable onPress={handlePress}>
-      <Card className="w-[200px] p-3">
-        <View className="gap-3">
-          <View className="flex-row items-center gap-3">
-            {comparison.imageUrl ? (
-              <View className="size-12 rounded-full overflow-hidden bg-muted">
-                <OptimizedImage
-                  uri={comparison.imageUrl}
-                  style={{ width: 48, height: 48 }}
-                  resizeMode="cover"
-                />
-              </View>
-            ) : (
-              <Avatar alt={comparison.artists} className="size-12">
-                <AvatarFallback>
-                  <Text>{comparison.artists[0]}</Text>
-                </AvatarFallback>
-              </Avatar>
+    <View className="flex-row gap-4 overflow-hidden">
+      {Array.from({ length: count }, (_, index) => (
+        <View key={index} className={cn('gap-2', wide ? 'flex-1' : shape === 'circle' ? 'w-[76px]' : 'flex-1')}>
+          <Skeleton
+            className={cn(
+              'w-full',
+              shape === 'circle' ? 'aspect-square rounded-full' : shape === 'poster' ? 'aspect-[3/4] rounded-lg' : 'aspect-square rounded-lg'
             )}
-            <View className="flex-1">
-              <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {comparison.artists}
-              </Text>
-            </View>
-          </View>
-          <View style={{ height: 36 }}>
-            <Text className="text-sm font-semibold" numberOfLines={2}>
-              {comparison.piece}
-            </Text>
-          </View>
-          {comparison.artistNames.length > 0 && (
-            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-              🎵 {comparison.artistNames.join(', ')}
-            </Text>
-          )}
-          <Button size="sm" variant="outline" onPress={handlePress}>
-            <Icon as={PlayCircleIcon} size={14} />
-            <Text className="text-xs ml-1">비교 듣기</Text>
-          </Button>
+          />
+          <Skeleton className="h-3 w-4/5" />
+          {wide ? <Skeleton className="h-3 w-1/2" /> : null}
         </View>
-      </Card>
-    </Pressable>
+      ))}
+    </View>
   );
-});
-
+}
 

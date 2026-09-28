@@ -39,6 +39,22 @@ export function daysLeft(value?: string): number | null {
   return diff >= 0 ? diff : null;
 }
 
+/** 목록용 짧은 날짜: `9.29 (화)` */
+export function formatShortDay(value?: string): string {
+  const date = parseDay(value);
+  if (!date) return '날짜 미정';
+  return `${date.getMonth() + 1}.${date.getDate()} (${WEEKDAYS[date.getDay()]})`;
+}
+
+/** "롯데콘서트홀 (롯데콘서트홀)"처럼 괄호 안이 같으면 한 번만 */
+export function shortVenue(name?: string): string {
+  if (!name) return '';
+  const match = name.match(/^(.*?)\s*\((.*)\)\s*$/);
+  if (!match) return name;
+  const [, outer, inner] = match;
+  return outer.trim() === inner.trim() ? outer.trim() : `${outer.trim()} ${inner.trim()}`;
+}
+
 /** `화요일(19:30)` → `19:30`. 요일 외 형식이면 원문 */
 export function concertClock(time?: string): string | undefined {
   if (!time) return undefined;

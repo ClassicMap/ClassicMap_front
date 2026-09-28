@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
 import {
   useComparisonPiece,
   usePieceComparisonSectors,
@@ -58,6 +59,21 @@ export function ComparePieceView({
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const composerAvatar = pieceInfo?.composerAvatarUrl ?? null;
+
+  // 홈의 "최근 본 작품"에 남긴다 (이 기기에만)
+  const recordRecent = useRecordRecentPiece();
+  React.useEffect(() => {
+    if (!first || !activeSector) return;
+    void recordRecent({
+      pieceId,
+      pieceTitle: first.pieceTitle,
+      composerId: first.composerId,
+      composerName: first.composerName,
+      composerAvatarUrl: composerAvatar,
+      sectorId: activeSector.id,
+      sectorName: activeSector.sectorName,
+    });
+  }, [pieceId, first, activeSector, composerAvatar, recordRecent]);
 
   const [activeId, setActiveId] = React.useState<number | null>(null);
   const [playing, setPlaying] = React.useState(false);
