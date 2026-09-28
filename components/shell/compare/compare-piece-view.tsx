@@ -97,6 +97,11 @@ export function ComparePieceView({
 
   const active = performances.find((performance) => performance.id === activeId);
   const longest = Math.max(1, ...performances.map((p) => p.endMs - p.startMs));
+  // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
+  const playable = React.useMemo(
+    () => performances.filter((performance) => performance.clipStatus === 'ready' && Boolean(performance.clipUrl)),
+    [performances]
+  );
 
   const start = React.useCallback((performanceId: number, keepPosition: boolean) => {
     const video = videoRef.current;
@@ -109,21 +114,21 @@ export function ComparePieceView({
   const togglePlay = React.useCallback(() => {
     const video = videoRef.current;
     if (!video) {
-      if (performances[0]) start(performances[0].id, false);
+      if (playable[0]) start(playable[0].id, false);
       return;
     }
     if (video.paused) void video.play();
     else video.pause();
-  }, [performances, start]);
+  }, [playable, start]);
 
   const switchTake = React.useCallback(
     (direction: 1 | -1) => {
-      if (performances.length === 0) return;
-      const index = performances.findIndex((performance) => performance.id === activeId);
-      const next = performances[(index + direction + performances.length) % performances.length];
+      if (playable.length === 0) return;
+      const index = playable.findIndex((performance) => performance.id === activeId);
+      const next = playable[(index + direction + playable.length) % playable.length];
       start(next.id, true);
     },
-    [activeId, performances, start]
+    [activeId, playable, start]
   );
 
   const sectorIndex = sectors.findIndex((sector) => sector.id === activeSector?.id);
@@ -360,7 +365,7 @@ export function ComparePieceView({
           <Pressable
             accessibilityLabel="다음 연주자"
             onPress={() => switchTake(1)}
-            disabled={performances.length < 2}
+            disabled={playable.length < 2}
             className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
             <SwitchTakeIcon size={15} className="text-foreground" />
             <Text className="text-label text-foreground">다음 연주자</Text>
