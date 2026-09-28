@@ -622,33 +622,18 @@ export const ComposerAPI = {
   },
 
   /**
-   * 작곡가 ID로 조회 (작품 목록 포함)
+   * 작곡가 ID로 조회. 작품은 따로 페이지로 받는다 (바흐 작품만 1,695곡)
    */
-  async getById(id: number): Promise<ComposerWithPieces | null> {
+  async getById(id: number): Promise<Composer | null> {
     if (USE_REAL_API) {
       const composerResponse = await authenticatedFetch(`${API_BASE_URL}/composers/${id}`);
       if (!composerResponse.ok) throw new Error('Failed to fetch composer');
 
       const composerData: APIComposer = await composerResponse.json();
       if (!composerData) return null;
-
-      // 작곡가의 모든 곡 가져오기
-      const piecesResponse = await authenticatedFetch(`${API_BASE_URL}/composers/${id}/pieces`);
-      let pieces: Piece[] = [];
-      if (piecesResponse.ok) {
-        const piecesData: APIPiece[] = await piecesResponse.json();
-        pieces = piecesData.map(mapPiece);
-      }
-
-      return {
-        ...mapComposer(composerData),
-        majorPieces: pieces, // pieces를 majorPieces로 사용 (기존 코드 호환성 유지)
-      };
+      return mapComposer(composerData);
     }
-    const composer = getComposerById(id);
-    if (!composer) return null;
-    const majorPieces = getMajorPiecesByComposer(id);
-    return Promise.resolve({ ...composer, majorPieces });
+    return Promise.resolve(getComposerById(id) ?? null);
   },
 
   /**
@@ -793,6 +778,27 @@ export const PieceAPI = {
       return data.map((item) => ({ ...mapPiece(item), composerName: item.composerName }));
     }
     return Promise.resolve([]);
+  },
+
+  /**
+   * 작곡가의 작품 한 페이지. 스트리밍 링크·설명이 있는 작품이 앞에 온다
+   */
+  async getPageByComposer(
+    composerId: number,
+    params: { offset: number; limit: number }
+  ): Promise<Piece[]> {
+    if (USE_REAL_API) {
+      const query = new URLSearchParams({ offset: String(params.offset), limit: String(params.limit) });
+      const response = await authenticatedFetch(
+        `${API_BASE_URL}/composers/${composerId}/pieces?${query.toString()}`
+      );
+      if (!response.ok) throw new Error('Failed to fetch pieces');
+      const data: APIPiece[] = await response.json();
+      return data.map(mapPiece);
+    }
+    return Promise.resolve(
+      PIECES.filter((p) => p.composerId === composerId).slice(params.offset, params.offset + params.limit)
+    );
   },
 
   /**
