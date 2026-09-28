@@ -204,6 +204,8 @@ interface APIPerformance {
 }
 
 // API 응답을 프론트엔드 모델로 변환
+const COMPOSER_TIERS: ReadonlySet<unknown> = new Set(['S', 'A', 'B', 'C']);
+
 const mapComposer = (api: any): Composer => {
   const mapped = {
     id: api.id,
@@ -221,6 +223,7 @@ const mapComposer = (api: any): Composer => {
     style: api.style,
     influence: api.influence,
     pieceCount: api.pieceCount,
+    tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
   };
   return mapped;
 };
