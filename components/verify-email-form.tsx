@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
-import { router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
 import { type TextStyle, View } from 'react-native';
 
@@ -33,11 +33,12 @@ export function VerifyEmailForm() {
       // and redirect the user
       if (signUpAttempt.status === 'complete') {
         await setActive({ session: signUpAttempt.createdSessionId });
+        // 가입·인증 화면을 모두 닫고 홈으로 (아래 화면들이 하나씩만 닫혀 가입 폼이 남던 문제)
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/home' as Href);
         return;
       }
-      // TODO: Handle other statuses
-      // If the status is not complete, check why. User may need to
-      // complete further steps.
+      setError('인증을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.');
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import * as React from 'react';
 import { TextInput, View } from 'react-native';
 
@@ -28,12 +28,13 @@ export function ResetPasswordForm() {
       });
 
       if (result.status === 'complete') {
-        // Set the active session to
-        // the newly created session (user is now signed in)
-        setActive({ session: result.createdSessionId });
+        // 새 비밀번호로 로그인된 상태가 된다. 찾기·재설정 화면을 닫고 홈으로
+        await setActive({ session: result.createdSessionId });
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/home' as Href);
         return;
       }
-      // TODO: Handle other statuses
+      setError({ code: '재설정을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.', password: '' });
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 
