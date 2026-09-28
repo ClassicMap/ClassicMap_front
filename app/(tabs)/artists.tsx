@@ -1,445 +1,186 @@
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
+import { PersonCard } from '@/components/home/cards';
 import { Button } from '@/components/ui/button';
+import { Chip } from '@/components/ui/chip';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { Alert } from '@/lib/utils/alert';
-import { StarIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import * as React from 'react';
-import { AdminArtistAPI } from '@/lib/api/admin';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
-import type { Artist } from '@/lib/types/models';
-import { prefetchImages } from '@/components/optimized-image';
-import { getImageUrl } from '@/lib/utils/image';
-import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { useArtists, ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
-import { useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { ArtistAPI } from '@/lib/api/client';
+import { type ArtistCategoryCode, getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
+import { cn } from '@/lib/utils';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useRouter } from 'expo-router';
+import { AlertCircleIcon, PlusIcon, SearchIcon, UsersIcon } from 'lucide-react-native';
+import * as React from 'react';
+import { type LayoutChangeEvent, RefreshControl, ScrollView, View } from 'react-native';
 
-export default function ArtistsScreen() {
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
-  const [showFormModal, setShowFormModal] = React.useState(false);
-  const [searchResults, setSearchResults] = React.useState<Artist[]>([]);
-  const [isSearching, setIsSearching] = React.useState(false);
-  const [searchOffset, setSearchOffset] = React.useState(0);
-  const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
-  const { canEdit } = useAuth();
-  const queryClient = useQueryClient();
+const PAGE_SIZE = 30;
 
-  // Debounce search query (300ms delay)
+/** 자주 찾는 분류만 칩으로. 나머지는 검색으로 찾는다 */
+const FILTERS: ArtistCategoryCode[] = [
+  'pianist',
+  'violinist',
+  'cellist',
+  'violist',
+  'vocalist',
+  'conductor',
+  'orchestra',
+  'flutist',
+  'guitarist',
+];
+
+function useDebounced<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = React.useState(value);
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      // Reset search pagination when query changes
-      setSearchOffset(0);
-      setSearchResults([]);
-      setHasMoreSearchResults(true);
-    }, 300);
+    const timer = setTimeout(() => setDebounced(value), delay);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // React Query 무한 스크롤로 아티스트 데이터 로드
-  const {
-    data,
-    isLoading: loading,
-    error: queryError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-    isRefetching: refreshing,
-  } = useArtists();
-
-  // 페이지 데이터를 평탄화 및 중복 제거
-  const artists = React.useMemo(() => {
-    if (!data?.pages) return [];
-
-    const allArtists = data.pages.flat();
-
-    // ID 기준으로 중복 제거
-    const uniqueArtists = Array.from(
-      new Map(allArtists.map(artist => [artist.id, artist])).values()
-    );
-
-    return uniqueArtists;
-  }, [data]);
-
-  // 에러 처리
-  const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
-
-  // Backend search effect - initial search
-  React.useEffect(() => {
-    if (debouncedSearchQuery.trim().length > 0) {
-      setIsSearching(true);
-      ArtistAPI.search({
-        q: debouncedSearchQuery,
-        offset: 0,
-        limit: 20,
-      })
-        .then((results) => {
-          setSearchResults(results);
-          setSearchOffset(20);
-          setHasMoreSearchResults(results.length === 20);
-          setIsSearching(false);
-        })
-        .catch((error) => {
-          console.error('Search failed:', error);
-          setSearchResults([]);
-          setIsSearching(false);
-        });
-    } else {
-      setSearchResults([]);
-      setSearchOffset(0);
-      setHasMoreSearchResults(true);
-      setIsSearching(false);
-    }
-  }, [debouncedSearchQuery]);
-
-  // Load more search results
-  const loadMoreSearchResults = React.useCallback(() => {
-    if (!debouncedSearchQuery.trim() || !hasMoreSearchResults || isSearching) {
-      return;
-    }
-
-    setIsSearching(true);
-    ArtistAPI.search({
-      q: debouncedSearchQuery,
-      offset: searchOffset,
-      limit: 20,
-    })
-      .then((results) => {
-        if (results.length > 0) {
-          // Deduplicate by ID
-          const existingIds = new Set(searchResults.map(a => a.id));
-          const newResults = results.filter(a => !existingIds.has(a.id));
-          setSearchResults(prev => [...prev, ...newResults]);
-          setSearchOffset(prev => prev + 20);
-          setHasMoreSearchResults(results.length === 20);
-        } else {
-          setHasMoreSearchResults(false);
-        }
-        setIsSearching(false);
-      })
-      .catch((error) => {
-        console.error('Failed to load more search results:', error);
-        setIsSearching(false);
-      });
-  }, [debouncedSearchQuery, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
-
-  // 새로고침 핸들러 (첫 페이지만 다시 로드) - early return 전에 정의
-  const handleRefresh = React.useCallback(() => {
-    // Clear search state
-    setSearchQuery('');
-    setDebouncedSearchQuery('');
-    setSearchResults([]);
-    setSearchOffset(0);
-    setHasMoreSearchResults(true);
-
-    // resetQueries를 사용하여 무한 스크롤 상태를 초기화
-    // 이렇게 하면 첫 페이지만 로드됨
-    queryClient.resetQueries({ queryKey: ARTIST_QUERY_KEYS.all });
-  }, [queryClient]);
-
-  // 무한 스크롤 처리 - 마지막 요청 추적 - early return 전에 정의
-  const lastFetchRef = React.useRef<number>(0);
-
-  const handleScroll = React.useCallback(
-    (event: any) => {
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-      const paddingToBottom = 200; // 하단 200px 전에 로드 시작
-
-      // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
-      if (contentSize.height === 0) {
-        return;
-      }
-
-      // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
-      if (contentOffset.y < 0) {
-        return;
-      }
-
-      // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
-      const hasScrolled = contentOffset.y > 200;
-
-      const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-      if (!hasScrolled || !isNearBottom) {
-        return;
-      }
-
-      const now = Date.now();
-      // 마지막 요청 후 1초 이내면 무시 (중복 방지)
-      if (now - lastFetchRef.current < 1000) {
-        return;
-      }
-
-      // If searching, load more search results
-      if (debouncedSearchQuery.trim().length > 0) {
-        if (hasMoreSearchResults && !isSearching) {
-          lastFetchRef.current = now;
-          loadMoreSearchResults();
-        }
-      } else {
-        // Otherwise, load more paginated results
-        if (hasNextPage && !isFetchingNextPage) {
-          lastFetchRef.current = now;
-          fetchNextPage();
-        }
-      }
-    },
-    [
-      hasNextPage,
-      isFetchingNextPage,
-      fetchNextPage,
-      debouncedSearchQuery,
-      hasMoreSearchResults,
-      isSearching,
-      loadMoreSearchResults,
-    ]
-  );
-
-  const filteredArtists = React.useMemo(() => {
-    // Use search results if searching, otherwise use paginated artists
-    let filtered = debouncedSearchQuery.trim().length > 0 ? searchResults : artists;
-
-    // Deduplicate by ID to prevent duplicate key errors
-    filtered = Array.from(
-      new Map(filtered.map(artist => [artist.id, artist])).values()
-    );
-
-    return filtered;
-  }, [artists, searchResults, debouncedSearchQuery]);
-
-  // 이미지 프리페치 (첫 10개만 - 성능 최적화)
-  React.useEffect(() => {
-    if (artists.length > 0) {
-      const firstBatch = artists.slice(0, 10).map((a) => a.imageUrl).filter(Boolean);
-      if (firstBatch.length > 0) {
-        prefetchImages(firstBatch);
-      }
-    }
-  }, [artists.length]);
-
-  const handleDelete = (id: number, name: string) => {
-    Alert.alert(
-      '아티스트 삭제',
-      `${name}을(를) 삭제하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AdminArtistAPI.delete(id);
-              Alert.alert('성공', '아티스트가 삭제되었습니다.');
-              refetch();
-            } catch (error) {
-              Alert.alert('오류', '삭제에 실패했습니다.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  if (loading && !isSearching) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-        <Text className="mt-2 text-muted-foreground">로딩 중...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>다시 시도</Text>
-          </Button>
-        </Card>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView
-      className="flex-1 bg-background"
-      onScroll={handleScroll}
-      scrollEventThrottle={400}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      <View className="gap-6 p-4">
-        <View className="gap-2">
-          <View className="flex-row items-center justify-between">
-            <Text variant="h1" className="text-3xl font-bold">
-              아티스트 DB
-            </Text>
-            {canEdit && (
-              <Button onPress={() => setShowFormModal(true)} size="sm">
-                <Icon as={PlusIcon} size={16} className="text-primary-foreground mr-1" />
-                <Text>추가</Text>
-              </Button>
-            )}
-          </View>
-          <Text className="text-muted-foreground">
-            세계적인 클래식 연주자들을 만나보세요
-          </Text>
-        </View>
-
-        {/* Search */}
-        <View className="relative">
-          <Input
-            placeholder="아티스트 검색..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            className="pl-10"
-          />
-          <View className="absolute left-3 top-3.5">
-            <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
-          </View>
-        </View>
-
-        {/* Artists List */}
-        <View className="gap-3">
-          {(isSearching && filteredArtists.length === 0) ? (
-            <View className="py-12">
-              <ActivityIndicator size="large" />
-              <Text className="mt-4 text-center text-muted-foreground">검색 중...</Text>
-            </View>
-          ) : filteredArtists.length > 0 ? (
-            filteredArtists.map((artist) => (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                canEdit={canEdit}
-                onDelete={handleDelete}
-              />
-            ))
-          ) : (
-            <Card className="p-8">
-              <Text className="text-center text-muted-foreground">
-                {debouncedSearchQuery
-                  ? `"${debouncedSearchQuery}"에 대한 검색 결과가 없습니다`
-                  : '아티스트가 없습니다'}
-              </Text>
-            </Card>
-          )}
-        </View>
-
-        {/* 무한 스크롤 로딩 인디케이터 */}
-        {debouncedSearchQuery ? (
-          // 검색 중일 때
-          isSearching && filteredArtists.length > 0 && (
-            <View className="py-4">
-              <ActivityIndicator size="small" />
-              <Text className="mt-2 text-center text-sm text-muted-foreground">
-                더 많은 검색 결과를 불러오는 중...
-              </Text>
-            </View>
-          )
-        ) : (
-          // 일반 무한 스크롤
-          isFetchingNextPage && (
-            <View className="py-4">
-              <ActivityIndicator size="small" />
-              <Text className="mt-2 text-center text-sm text-muted-foreground">
-                더 많은 아티스트를 불러오는 중...
-              </Text>
-            </View>
-          )
-        )}
-
-        {/* 더 이상 데이터가 없을 때 */}
-        {debouncedSearchQuery ? (
-          // 검색 모드
-          !hasMoreSearchResults && filteredArtists.length > 0 && (
-            <View className="py-4">
-              <Text className="text-center text-sm text-muted-foreground">
-                "{debouncedSearchQuery}" 검색 결과: 총 {filteredArtists.length}개
-              </Text>
-            </View>
-          )
-        ) : (
-          // 일반 모드
-          !hasNextPage && artists.length > 0 && (
-            <View className="py-4">
-              <Text className="text-center text-muted-foreground text-sm">
-                모든 아티스트를 불러왔습니다
-              </Text>
-            </View>
-          )
-        )}
-      </View>
-
-      <ArtistFormModal
-        visible={showFormModal}
-        onClose={() => setShowFormModal(false)}
-        onSuccess={() => refetch()}
-      />
-    </ScrollView>
-  );
+  }, [value, delay]);
+  return debounced;
 }
 
-const ArtistCard = React.memo(({
-  artist,
-  canEdit,
-  onDelete
-}: {
-  artist: Artist;
-  canEdit: boolean;
-  onDelete: (id: number, name: string) => void;
-}) => {
+/** 연주자 둘러보기: 추천 순 원형 그리드 + 분류 칩 + 이름 검색 (검색 둘러보기에서 들어온다) */
+export default function ArtistsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { canEdit } = useAuth();
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+  const [query, setQuery] = React.useState('');
+  const [category, setCategory] = React.useState<ArtistCategoryCode | null>(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [width, setWidth] = React.useState(0);
+  const q = useDebounced(query.trim(), 300);
 
-  const handlePress = React.useCallback(() => {
-    router.push(`/artist/${artist.id}` as any);
-  }, [router, artist.id]);
+  const artists = useInfiniteQuery({
+    queryKey: [...ARTIST_QUERY_KEYS.all, 'browse', q, category ?? 'all'] as const,
+    queryFn: ({ pageParam }) =>
+      q || category
+        ? ArtistAPI.search({ q: q || undefined, category: category ?? undefined, offset: pageParam, limit: PAGE_SIZE })
+        : ArtistAPI.getAll(pageParam, PAGE_SIZE),
+    getNextPageParam: (lastPage, pages) => (lastPage.length < PAGE_SIZE ? undefined : pages.length * PAGE_SIZE),
+    initialPageParam: 0,
+    staleTime: 3 * 60_000,
+  });
+  const list = React.useMemo(() => {
+    const seen = new Set<number>();
+    return (artists.data?.pages.flat() ?? []).filter((artist) => (seen.has(artist.id) ? false : seen.add(artist.id)));
+  }, [artists.data]);
 
-  const handleDeletePress = React.useCallback((e: any) => {
-    e.stopPropagation();
-    onDelete(artist.id, artist.name);
-  }, [onDelete, artist.id, artist.name]);
+  const gap = wide ? 24 : 14;
+  const minItem = wide ? 148 : 96;
+  const columns = width > 0 ? Math.max(3, Math.floor((width + gap) / (minItem + gap))) : 0;
+  const itemWidth = columns > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
+
+  const onScroll = ({ nativeEvent }: { nativeEvent: { layoutMeasurement: { height: number }; contentOffset: { y: number }; contentSize: { height: number } } }) => {
+    const nearEnd = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 600;
+    if (nearEnd && artists.hasNextPage && !artists.isFetchingNextPage) void artists.fetchNextPage();
+  };
 
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <Card className="p-4">
-        <View className="flex-row gap-4">
-          <Avatar alt={artist.name} className="size-16">
-            <AvatarImage source={{ uri: getImageUrl(artist.imageUrl) }} />
-            <AvatarFallback>
-              <Text>{artist.name[0]}</Text>
-            </AvatarFallback>
-          </Avatar>
-          <View className="flex-1 gap-2">
-            <Text className="text-lg font-semibold">{artist.name}</Text>
-            <Text className="text-sm text-muted-foreground">{getArtistCategoryLabel(artist.category)}</Text>
-            <Text className="text-sm text-muted-foreground">{artist.nationality}</Text>
+    <View className="flex-1 bg-background web:bg-surface-1">
+      <ScrollView
+        className="flex-1"
+        onScroll={onScroll}
+        scrollEventThrottle={200}
+        refreshControl={<RefreshControl refreshing={artists.isRefetching} onRefresh={() => artists.refetch()} />}
+        contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}>
+        <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
+          <View>
+            <Text variant={wide ? 'display' : 'title1'}>연주자</Text>
+            <Text variant="bodySm" className="mt-1 text-foreground-muted">
+              추천 순으로 보여요. 분류를 고르거나 이름으로 찾아보세요.
+            </Text>
           </View>
-          {canEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={handleDeletePress}
-            >
-              <Icon as={TrashIcon} size={18} className="text-destructive" />
-            </Button>
-          )}
+          <View className={cn('flex-row items-center gap-2', wide && 'w-[380px]')}>
+            <View className="flex-1 justify-center">
+              <Input
+                value={query}
+                onChangeText={setQuery}
+                placeholder="이름으로 찾기"
+                autoCapitalize="none"
+                returnKeyType="search"
+                accessibilityLabel="연주자 이름으로 찾기"
+                className="h-11 rounded-full pl-10 sm:h-11"
+              />
+              <View pointerEvents="none" className="absolute left-3.5">
+                <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
+              </View>
+            </View>
+            {canEdit ? (
+              <Button variant="outline" size="icon" className="rounded-full" accessibilityLabel="연주자 추가" onPress={() => setShowForm(true)}>
+                <Icon as={PlusIcon} size={16} className="text-foreground" />
+              </Button>
+            ) : null}
+          </View>
         </View>
-      </Card>
-    </TouchableOpacity>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-5" contentContainerClassName="gap-2">
+          <Chip label="전체" selected={category === null} onPress={() => setCategory(null)} />
+          {FILTERS.map((code) => (
+            <Chip key={code} label={getArtistCategoryLabel(code)} selected={category === code} onPress={() => setCategory(code)} />
+          ))}
+        </ScrollView>
+
+        <View
+          className="mt-7 flex-row flex-wrap"
+          style={{ columnGap: gap, rowGap: gap + 8 }}
+          onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}>
+          {artists.isLoading ? (
+            Array.from({ length: columns || 6 }, (_, index) => (
+              <View key={index} style={{ width: itemWidth || minItem }} className="items-center gap-2">
+                <Skeleton className="aspect-square w-full rounded-full" />
+                <Skeleton className="h-3 w-2/3" />
+              </View>
+            ))
+          ) : itemWidth > 0 ? (
+            list.map((artist) => (
+              <View key={artist.id} style={{ width: itemWidth }}>
+                <PersonCard
+                  name={artist.name}
+                  image={artist.imageUrl}
+                  caption={getArtistCategoryLabel(artist.category)}
+                  width={itemWidth}
+                  onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                />
+              </View>
+            ))
+          ) : null}
+        </View>
+
+        {artists.isError ? (
+          <EmptyState
+            icon={AlertCircleIcon}
+            tone="error"
+            title="연주자를 불러오지 못했어요"
+            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+            action={{ label: '다시 시도', onPress: () => artists.refetch() }}
+          />
+        ) : !artists.isLoading && list.length === 0 ? (
+          <EmptyState
+            icon={UsersIcon}
+            title={q ? `"${q}"에 맞는 연주자가 없어요` : '이 분류에는 아직 연주자가 없어요'}
+            description={q ? '다른 표기나 영문 이름으로 찾아보세요.' : '다른 분류를 골라 보세요.'}
+          />
+        ) : artists.isFetchingNextPage ? (
+          <Text variant="caption" className="mt-6 text-center">
+            더 불러오는 중…
+          </Text>
+        ) : null}
+      </ScrollView>
+
+      <ArtistFormModal
+        visible={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={() => {
+          setShowForm(false);
+          void queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });
+        }}
+      />
+    </View>
   );
-});
+}
