@@ -15,7 +15,7 @@ import { useColorScheme } from 'nativewind';
 import { Platform, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function TabsLayout() {
+export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 20;
@@ -28,8 +28,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // 데스크톱 웹은 셸(SideNav·TopBar)이 크롬을 맡으므로 탭바·헤더를 숨긴다.
+      tabBar={hideChrome ? () => null : undefined}
       screenOptions={{
-        headerShown: true,
+        headerShown: !hideChrome,
+        sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
         headerTransparent: false,
         headerStyle: {
           backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
