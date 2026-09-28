@@ -43,7 +43,8 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
-  const saved = isFavorite(favorites.data, kind, id);
+  // 로그아웃 직후 남은 캐시로 '담김'이 보이지 않게, 로그인 상태에서만 서버 목록을 믿는다
+  const saved = isSignedIn ? isFavorite(favorites.data, kind, id) : false;
   const active = optimistic ?? saved;
 
   const mutation = useMutation({

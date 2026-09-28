@@ -11,7 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
 import { RootChrome } from '@/components/navigation/root-chrome';
 
@@ -49,7 +49,18 @@ export default function RootLayout() {
 SplashScreen.preventAutoHideAsync();
 
 function Routes() {
-  const { isLoaded } = useAuth();
+  const { isLoaded, userId } = useAuth();
+  const client = useQueryClient();
+  const previousUser = React.useRef<string | null | undefined>(undefined);
+
+  // 로그아웃하거나 계정이 바뀌면 이전 사람의 내 정보(평가·레퍼토리·공개 설정) 캐시를 지운다
+  React.useEffect(() => {
+    if (!isLoaded) return;
+    if (previousUser.current !== undefined && previousUser.current !== userId) {
+      client.removeQueries({ queryKey: ['me'] });
+    }
+    previousUser.current = userId ?? null;
+  }, [client, isLoaded, userId]);
 
   React.useEffect(() => {
     if (isLoaded) {
@@ -80,6 +91,7 @@ function Routes() {
         <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="delete-account" options={{ headerShown: false }} />
+        <Stack.Screen name="compare-admin" options={{ title: '구간·연주 관리' }} />
 
         {/* Screens accessible to everyone */}
         <Stack.Screen name="help" options={{ headerShown: false }} />
