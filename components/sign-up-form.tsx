@@ -1,9 +1,8 @@
+import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthDivider, AuthHeading, FieldError } from '@/components/auth/auth-shell';
 import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
@@ -94,120 +93,106 @@ export function SignUpForm() {
     }
   }
 
-  function onFirstNameSubmitEditing() {
-    lastNameInputRef.current?.focus();
-  }
-
-  function onLastNameSubmitEditing() {
-    emailInputRef.current?.focus();
-  }
 
   function onEmailSubmitEditing() {
     passwordInputRef.current?.focus();
   }
 
+  // 한국어 이름 순서: 성 → 이름 → 이메일 → 비밀번호
+  function onLastNameSubmitEditing() {
+    firstNameInputRef.current?.focus();
+  }
+
+  function onFirstNameSubmitEditing() {
+    emailInputRef.current?.focus();
+  }
+
   return (
-    <View className="gap-6">
-      <View className="mb-4 gap-2">
-        <Text className="text-center text-4xl font-bold">🎵</Text>
-        <Text className="text-center text-3xl font-bold">클래식 여정을 시작하세요</Text>
-        <Text className="text-center text-base text-muted-foreground">
-          발견부터 공연 관람까지, 함께 합니다
-        </Text>
+    <View>
+      <AuthHeading title="회원가입" description="레퍼토리와 별점을 남기려면 계정이 필요해요." />
+      <SocialConnections />
+      <AuthDivider label="또는 이메일로" />
+      <View className="gap-4">
+        <View className="flex-row gap-3">
+          <View className="flex-1 gap-1.5">
+            <Label htmlFor="lastName">성</Label>
+            <Input
+              ref={lastNameInputRef}
+              id="lastName"
+              placeholder="성"
+              autoComplete="name-family"
+              autoCapitalize="words"
+              aria-invalid={Boolean(error.lastName)}
+              className={AUTH_INPUT_CLASS}
+              onChangeText={setLastName}
+              onSubmitEditing={onLastNameSubmitEditing}
+              returnKeyType="next"
+              submitBehavior="submit"
+            />
+            <FieldError message={error.lastName} />
+          </View>
+          <View className="flex-1 gap-1.5">
+            <Label htmlFor="firstName">이름</Label>
+            <Input
+              ref={firstNameInputRef}
+              id="firstName"
+              placeholder="이름"
+              autoComplete="name-given"
+              autoCapitalize="words"
+              aria-invalid={Boolean(error.firstName)}
+              className={AUTH_INPUT_CLASS}
+              onChangeText={setFirstName}
+              onSubmitEditing={onFirstNameSubmitEditing}
+              returnKeyType="next"
+              submitBehavior="submit"
+            />
+            <FieldError message={error.firstName} />
+          </View>
+        </View>
+        <View className="gap-1.5">
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            ref={emailInputRef}
+            id="email"
+            placeholder="name@example.com"
+            keyboardType="email-address"
+            autoComplete="email"
+            autoCapitalize="none"
+            aria-invalid={Boolean(error.email)}
+            className={AUTH_INPUT_CLASS}
+            onChangeText={setEmail}
+            onSubmitEditing={onEmailSubmitEditing}
+            returnKeyType="next"
+            submitBehavior="submit"
+          />
+          <FieldError message={error.email} />
+        </View>
+        <View className="gap-1.5">
+          <Label htmlFor="password">비밀번호</Label>
+          <Input
+            ref={passwordInputRef}
+            id="password"
+            placeholder="8자 이상"
+            secureTextEntry
+            autoComplete="new-password"
+            aria-invalid={Boolean(error.password)}
+            className={AUTH_INPUT_CLASS}
+            onChangeText={setPassword}
+            returnKeyType="send"
+            onSubmitEditing={onSubmit}
+          />
+          <FieldError message={error.password} />
+        </View>
+        <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
+          <Text className="font-bold">가입하고 인증 메일 받기</Text>
+        </Button>
       </View>
-      <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
-        <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">회원가입</CardTitle>
-          <CardDescription className="text-center sm:text-left">
-            몇 가지 정보만 입력하면 바로 시작할 수 있어요
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-6">
-          <View className="gap-6">
-            <View className="gap-1.5">
-              <Label htmlFor="firstName">이름</Label>
-              <Input
-                id="firstName"
-                placeholder="이름을 입력하세요"
-                autoComplete="name-given"
-                autoCapitalize="words"
-                onChangeText={setFirstName}
-                onSubmitEditing={onFirstNameSubmitEditing}
-                returnKeyType="next"
-                submitBehavior="submit"
-              />
-              {error.firstName ? (
-                <Text className="text-sm font-medium text-destructive">{error.firstName}</Text>
-              ) : null}
-            </View>
-            <View className="gap-1.5">
-              <Label htmlFor="lastName">성</Label>
-              <Input
-                ref={lastNameInputRef}
-                id="lastName"
-                placeholder="성을 입력하세요"
-                autoComplete="name-family"
-                autoCapitalize="words"
-                onChangeText={setLastName}
-                onSubmitEditing={onLastNameSubmitEditing}
-                returnKeyType="next"
-                submitBehavior="submit"
-              />
-              {error.lastName ? (
-                <Text className="text-sm font-medium text-destructive">{error.lastName}</Text>
-              ) : null}
-            </View>
-            <View className="gap-1.5">
-              <Label htmlFor="email">이메일</Label>
-              <Input
-                ref={emailInputRef}
-                id="email"
-                placeholder="이메일을 입력하세요"
-                keyboardType="email-address"
-                autoComplete="email"
-                autoCapitalize="none"
-                onChangeText={setEmail}
-                onSubmitEditing={onEmailSubmitEditing}
-                returnKeyType="next"
-                submitBehavior="submit"
-              />
-              {error.email ? (
-                <Text className="text-sm font-medium text-destructive">{error.email}</Text>
-              ) : null}
-            </View>
-            <View className="gap-1.5">
-              <Label htmlFor="password">비밀번호</Label>
-              <Input
-                ref={passwordInputRef}
-                id="password"
-                placeholder="비밀번호를 입력하세요"
-                secureTextEntry
-                onChangeText={setPassword}
-                returnKeyType="send"
-                onSubmitEditing={onSubmit}
-              />
-              {error.password ? (
-                <Text className="text-sm font-medium text-destructive">{error.password}</Text>
-              ) : null}
-            </View>
-            <Button className="w-full" onPress={onSubmit}>
-              <Text>시작하기</Text>
-            </Button>
-          </View>
-          <Text className="text-center text-sm">
-            이미 계정이 있으신가요?{' '}
-            <Link href="/(auth)/sign-in" dismissTo className="text-sm underline underline-offset-4">
-              로그인
-            </Link>
-          </Text>
-          <View className="flex-row items-center">
-            <Separator className="flex-1" />
-            <Text className="px-4 text-sm text-muted-foreground">또는</Text>
-            <Separator className="flex-1" />
-          </View>
-          <SocialConnections />
-        </CardContent>
-      </Card>
+      <Text variant="bodySm" className="mt-5 text-center text-foreground-muted">
+        이미 계정이 있어요?{' '}
+        <Link href="/(auth)/sign-in" dismissTo className="font-semibold text-foreground">
+          로그인
+        </Link>
+      </Text>
     </View>
   );
 }

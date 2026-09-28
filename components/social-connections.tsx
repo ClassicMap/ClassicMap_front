@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { useSSO, type StartSSOFlowParams } from '@clerk/clerk-expo';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { Image, Platform, View, type ImageSourcePropType } from 'react-native';
+import { Image, Platform, Pressable, View, type ImageSourcePropType } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -16,16 +16,19 @@ type SocialConnectionStrategy = Extract<
 
 const SOCIAL_CONNECTION_STRATEGIES: {
   type: SocialConnectionStrategy;
+  label: string;
   source: ImageSourcePropType;
   useTint?: boolean;
 }[] = [
   {
     type: 'oauth_apple',
+    label: 'Apple로 계속하기',
     source: { uri: 'https://img.clerk.com/static/apple.png?width=160' },
     useTint: true,
   },
   {
     type: 'oauth_google',
+    label: 'Google로 계속하기',
     source: { uri: 'https://img.clerk.com/static/google.png?width=160' },
     useTint: false,
   },
@@ -57,23 +60,23 @@ export function SocialConnections() {
   }
 
   return (
-    <View className="gap-2 sm:flex-row sm:gap-3">
+    <View className="gap-2.5">
       {SOCIAL_CONNECTION_STRATEGIES.map((strategy) => {
         return (
-          <Button
+          <Pressable
             key={strategy.type}
-            variant="outline"
-            size="sm"
-            className="sm:flex-1"
-            onPress={onSocialLoginPress(strategy.type)}>
+            accessibilityRole="button"
+            onPress={onSocialLoginPress(strategy.type)}
+            className="h-12 flex-row items-center justify-center gap-2.5 rounded-full border border-border-strong active:bg-surface-2 web:transition-colors web:duration-fast web:hover:bg-surface-2">
             <Image
-              className={cn('size-4', strategy.useTint && Platform.select({ web: 'dark:invert' }))}
+              className={cn('size-[18px]', strategy.useTint && Platform.select({ web: 'dark:invert' }))}
               tintColor={Platform.select({
                 native: strategy.useTint ? (colorScheme === 'dark' ? 'white' : 'black') : undefined,
               })}
               source={strategy.source}
             />
-          </Button>
+            <Text className="text-body-sm font-semibold text-foreground">{strategy.label}</Text>
+          </Pressable>
         );
       })}
     </View>

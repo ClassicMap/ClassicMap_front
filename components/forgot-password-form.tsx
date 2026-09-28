@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/components/auth/auth-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
@@ -51,39 +51,33 @@ export function ForgotPasswordForm() {
   };
 
   return (
-    <View className="gap-6">
-      <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
-        <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">비밀번호 재설정</CardTitle>
-          <CardDescription className="text-center sm:text-left">
-            이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-6">
-          <View className="gap-6">
-            <View className="gap-1.5">
-              <Label htmlFor="email">이메일</Label>
-              <Input
-                id="email"
-                defaultValue={email}
-                placeholder="your@email.com"
-                keyboardType="email-address"
-                autoComplete="email"
-                autoCapitalize="none"
-                onChangeText={setEmail}
-                onSubmitEditing={onSubmit}
-                returnKeyType="send"
-              />
-              {error.email ? (
-                <Text className="text-sm font-medium text-destructive">{error.email}</Text>
-              ) : null}
-            </View>
-            <Button className="w-full" onPress={onSubmit}>
-              <Text>비밀번호 재설정</Text>
-            </Button>
-          </View>
-        </CardContent>
-      </Card>
+    <View>
+      <AuthHeading
+        title="비밀번호 찾기"
+        description="가입한 이메일로 인증 코드를 보내 드려요. 코드를 넣으면 새 비밀번호를 정할 수 있어요."
+      />
+      <View className="gap-4">
+        <View className="gap-1.5">
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            defaultValue={email}
+            placeholder="name@example.com"
+            keyboardType="email-address"
+            autoComplete="email"
+            autoCapitalize="none"
+            aria-invalid={Boolean(error.email)}
+            className={AUTH_INPUT_CLASS}
+            onChangeText={setEmail}
+            onSubmitEditing={onSubmit}
+            returnKeyType="send"
+          />
+          <FieldError message={error.email} />
+        </View>
+        <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
+          <Text className="font-bold">인증 코드 받기</Text>
+        </Button>
+      </View>
     </View>
   );
 }
