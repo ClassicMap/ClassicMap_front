@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, ImageProps, ActivityIndicator, View } from 'react-native';
+import { Image, ImageProps, View } from 'react-native';
 import { getImageUrl } from '@/lib/utils/image';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
@@ -45,19 +45,11 @@ const OptimizedImageComponent = ({
   return (
     <View style={style}>
       {loading && (
+        // 로딩 중에는 스피너 대신 표면색 자리만 둔다 (설계 문서 4.8)
         <View
-          style={[
-            style,
-            {
-              position: 'absolute',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: '#f0f0f0',
-              zIndex: 1,
-            },
-          ]}>
-          <ActivityIndicator size="small" />
-        </View>
+          className="bg-surface-2"
+          style={[style, { position: 'absolute', zIndex: 1 }]}
+        />
       )}
       <Image
         {...props}
