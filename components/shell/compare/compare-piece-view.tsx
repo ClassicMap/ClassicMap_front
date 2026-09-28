@@ -11,7 +11,15 @@ import {
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import { useArtist } from '@/lib/query/hooks/useArtists';
-import type { ComparisonPerformance, ComparisonSector, PerformanceCredit } from '@/lib/types/models';
+import {
+  clipClock,
+  primaryCredit,
+  sortComparisonSectors,
+  supportingCredits,
+  youtubeThumbnailUrl,
+  youtubeWatchUrl,
+} from '@/lib/data/comparison';
+import type { ComparisonPerformance } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import {
   AlertCircleIcon,
@@ -22,33 +30,6 @@ import {
 } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-
-function clock(ms: number): string {
-  const total = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function primaryCredit(performance: ComparisonPerformance): PerformanceCredit | undefined {
-  return performance.credits.find((credit) => credit.isPrimary) ?? performance.credits[0];
-}
-
-function supportingCredits(performance: ComparisonPerformance): string {
-  return performance.credits
-    .filter((credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra'))
-    .map((credit) => (credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName))
-    .join(' · ');
-}
-
-function youtubeUrl(performance: ComparisonPerformance): string | undefined {
-  if (!performance.videoId) return undefined;
-  return `https://www.youtube.com/watch?v=${performance.videoId}&t=${Math.floor(performance.startMs / 1000)}s`;
-}
-
-function sortSectors(sectors: ComparisonSector[]): ComparisonSector[] {
-  return [...sectors].sort(
-    (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0) || a.id - b.id
-  );
-}
 
 interface ComparePieceViewProps {
   pieceId: number;
@@ -70,7 +51,7 @@ export function ComparePieceView({
   onSelectSector,
 }: ComparePieceViewProps) {
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   const performances = performancesQuery.data ?? [];
@@ -304,7 +285,7 @@ export function ComparePieceView({
           </View>
           <View className="w-full flex-row items-center gap-2.5">
             <Text variant="mono" className="text-foreground-muted">
-              {clock(progress.current * 1000)}
+              {clipClock(progress.current * 1000)}
             </Text>
             <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
               <View
@@ -313,14 +294,14 @@ export function ComparePieceView({
               />
             </View>
             <Text variant="mono" className="text-foreground-muted">
-              {active ? clock(active.endMs - active.startMs) : '0:00'}
+              {active ? clipClock(active.endMs - active.startMs) : '0:00'}
             </Text>
           </View>
         </View>
         <View className="flex-1 flex-row items-center justify-end gap-2">
-          {active && youtubeUrl(active) ? (
+          {active && youtubeWatchUrl(active) ? (
             <a
-              href={youtubeUrl(active)}
+              href={youtubeWatchUrl(active)}
               target="_blank"
               rel="noreferrer"
               style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
@@ -371,9 +352,7 @@ function Slot({
   const artist = useArtist(credit?.artistId);
   const duration = performance.endMs - performance.startMs;
   const lengthPercent = Math.max(4, (duration / longest) * 100);
-  const thumbnail = performance.videoId
-    ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg`
-    : undefined;
+  const thumbnail = youtubeThumbnailUrl(performance);
   const support = supportingCredits(performance);
   const canPlay = performance.clipStatus === 'ready' && Boolean(performance.clipUrl);
 
@@ -430,7 +409,7 @@ function Slot({
                 <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">준비 중</Text>
               </View>
             )}
-            <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">{clock(duration)}</Text>
+            <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">{clipClock(duration)}</Text>
           </Pressable>
         )}
       </View>
@@ -456,7 +435,7 @@ function Slot({
           ) : null}
         </View>
         <Text variant="mono" className="text-foreground-subtle">
-          {clock(duration)}
+          {clipClock(duration)}
         </Text>
       </View>
     </View>

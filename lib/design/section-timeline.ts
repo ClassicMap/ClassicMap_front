@@ -5,6 +5,8 @@
  * 구간의 실제 `startMs` / `endMs`를 그대로 가로 위치로 쓰면 둘 다 한 번에 읽힙니다.
  */
 
+import { clipClock } from '../data/comparison';
+
 export type SectionClip = { startMs: number; endMs: number };
 
 export type SectionPlacement = {
@@ -16,12 +18,6 @@ export type SectionPlacement = {
   endLabel: string;
 };
 
-function clock(ms: number): string {
-  const total = Math.max(0, Math.round(ms / 1000));
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
 
 /**
  * 한 연주자의 구간들을 그 연주의 타임라인 위에 배치합니다.
@@ -38,8 +34,8 @@ export function placeSections(clips: readonly SectionClip[]): SectionPlacement[]
   return valid.map((c) => ({
     leftPercent: (c.startMs / total) * 100,
     widthPercent: ((c.endMs - c.startMs) / total) * 100,
-    startLabel: clock(c.startMs),
-    endLabel: clock(c.endMs),
+    startLabel: clipClock(c.startMs),
+    endLabel: clipClock(c.endMs),
   }));
 }
 

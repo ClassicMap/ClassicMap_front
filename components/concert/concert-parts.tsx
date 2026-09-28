@@ -1,3 +1,4 @@
+import { clipClock } from '@/lib/data/comparison';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Text } from '@/components/ui/text';
 import { getImageUrl } from '@/lib/utils/image';
@@ -122,10 +123,6 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
   );
 }
 
-function clock(ms: number): string {
-  const total = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
 
 function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; compact: boolean }) {
   const router = useRouter();
@@ -150,7 +147,7 @@ function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; co
       </View>
       {!compact ? (
         <Text variant="mono" className="text-foreground-muted">
-          {clock(item.endMs - item.startMs)}
+          {clipClock(item.endMs - item.startMs)}
         </Text>
       ) : null}
     </Pressable>

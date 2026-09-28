@@ -1,3 +1,4 @@
+import { clipClock } from '@/lib/data/comparison';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -15,10 +16,6 @@ import { AlertCircleIcon, ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
-function clock(ms: number): string {
-  const total = Math.max(0, Math.round(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
 
 interface PieceGroup {
   pieceId: number;
@@ -151,7 +148,7 @@ function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; arti
           {item.sectorName}
         </Text>
         <Text variant="caption" numberOfLines={1}>
-          원본 영상 <Text variant="mono" className="text-foreground-muted">{`${clock(item.startMs)}–${clock(item.endMs)}`}</Text>
+          원본 영상 <Text variant="mono" className="text-foreground-muted">{`${clipClock(item.startMs)}–${clipClock(item.endMs)}`}</Text>
         </Text>
       </View>
       {wide ? (
@@ -160,7 +157,7 @@ function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; arti
         </Text>
       ) : null}
       <Text variant="mono" className={cn('text-foreground-muted', !wide && 'ml-auto')}>
-        {clock(item.endMs - item.startMs)}
+        {clipClock(item.endMs - item.startMs)}
       </Text>
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" />
     </Pressable>
