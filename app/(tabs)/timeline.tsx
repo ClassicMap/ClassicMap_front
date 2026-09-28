@@ -14,7 +14,7 @@ import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/u
 import { useAllComposers } from '@/lib/query/hooks/useComposers';
 import type { Composer } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, MinusIcon, PlusIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -36,6 +36,9 @@ const RIBBON_AREA = 78;
 
 export default function TimelineScreen() {
   const router = useRouter();
+  // 홈 "시대로 듣기"에서 오면 그 시대가 보이는 곳부터 연다
+  const { era: focusEraId } = useLocalSearchParams<{ era?: string }>();
+  const chartScrollRef = React.useRef<ScrollView>(null);
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -72,6 +75,15 @@ export default function TimelineScreen() {
 
   const eras = PERIODS.filter((era) => era.endYear > fromYear);
   const selected = composers.find((c) => c.id === selectedId) ?? null;
+  const focusEra = eras.find((era) => era.id === focusEraId);
+  const focusX = focusEra ? Math.max(0, x(Math.max(focusEra.startYear, fromYear)) - 24) : null;
+
+  React.useEffect(() => {
+    if (focusX === null || placed.length === 0) return;
+    // 차트가 그려진 다음 프레임에 옮겨야 스크롤 폭이 잡혀 있다
+    const frame = requestAnimationFrame(() => chartScrollRef.current?.scrollTo({ x: focusX, animated: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [focusX, placed.length]);
 
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
@@ -155,7 +167,7 @@ export default function TimelineScreen() {
             action={{ label: '다시 시도', onPress: () => composersQuery.refetch() }}
           />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator className="mt-8">
+          <ScrollView ref={chartScrollRef} horizontal showsHorizontalScrollIndicator className="mt-8">
             <View style={{ width: chartWidth, height: chartHeight }}>
               {yearTicks(fromYear, toYear).map((year) => (
                 <View key={year} className="absolute bottom-0 top-0 w-px bg-border" style={{ left: x(year) }}>
@@ -171,11 +183,12 @@ export default function TimelineScreen() {
                 const width = x(Math.min(era.endYear, toYear)) - left;
                 const top = index % 2 === 0 ? 22 : 50;
                 const color = getEraForeground(era.name, scheme);
+                const dimmed = focusEra !== undefined && focusEra.id !== era.id;
                 return (
-                  <View key={era.id} className="absolute" style={{ left, top, width }}>
+                  <View key={era.id} className="absolute" style={{ left, top, width, opacity: dimmed ? 0.45 : 1 }}>
                     <View className="h-1.5 rounded-full" style={{ backgroundColor: color, opacity: 0.8 }} />
                     <Text className="mt-1 text-caption font-semibold" style={{ color }}>
-                      {era.name}
+                      {focusEra?.id === era.id ? `${era.name} · ${era.startYear}–${era.endYear}` : era.name}
                     </Text>
                   </View>
                 );
