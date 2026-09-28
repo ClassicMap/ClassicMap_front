@@ -1,3 +1,4 @@
+import { NotationGlyph } from '@/components/ui/notation-glyph';
 import { Text } from '@/components/ui/text';
 import { primaryCredit } from '@/lib/data/comparison';
 import { placeSections } from '@/lib/design/section-timeline';
@@ -9,6 +10,8 @@ import { Pressable, View } from 'react-native';
 
 const LINE_GAP = 7;
 const STAFF_HEIGHT = LINE_GAP * 4;
+/** 높은음자리표 자리. 구간 면은 그 뒤에서 시작한다 */
+const CLEF_WIDTH = 26;
 
 interface SectionStaffProps {
   sectors: readonly ComparisonSector[];
@@ -46,6 +49,11 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
   return (
     <View accessibilityLabel="곡 안에서 구간 위치" className="pb-5">
       <View style={{ height: STAFF_HEIGHT + 1 }}>
+        {/* 높은음자리표: SMuFL 원점이 G선(아래에서 둘째 줄)에 오도록 캔버스 가운데를 맞춘다 */}
+        <View pointerEvents="none" className="absolute left-1" style={{ top: LINE_GAP * 3 - LINE_GAP * 4 }}>
+          <NotationGlyph glyph="gClef" lineSpacing={LINE_GAP} className="text-foreground-muted" />
+        </View>
+        <View className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
         {clips.map(({ sector }, index) => {
           const placement = placements[index];
           const active = sector.id === activeSectorId;
@@ -66,6 +74,7 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
             />
           );
         })}
+        </View>
         {/* 다섯 줄은 여기서만 긋는다 */}
         {Array.from({ length: 5 }, (_, line) => (
           <View
@@ -78,6 +87,7 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
         <View pointerEvents="none" className="absolute bottom-0 left-0 top-0 w-px bg-foreground-faint" />
         <View pointerEvents="none" className="absolute bottom-0 right-0 top-0 w-[3px] bg-foreground-faint" />
       </View>
+      <View pointerEvents="none" className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
       {clips.map(({ sector }, index) => {
         if (labels === 'active' && sector.id !== activeSectorId) return null;
         const { leftPercent, widthPercent } = placements[index];
@@ -101,6 +111,7 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
           </Text>
         );
       })}
+      </View>
     </View>
   );
 }

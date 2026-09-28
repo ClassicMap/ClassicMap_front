@@ -5,6 +5,7 @@ import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -29,6 +30,8 @@ if (!publishableKey) {
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
+  // 악보 글리프(Bravura)는 화면을 막지 않고 불러온다. 로드 전에는 글리프 자리만 빈다
+  useFonts({ Bravura: require('@/assets/fonts/Bravura.otf') });
 
   return (
     <QueryClientProvider client={queryClient}>
