@@ -39,10 +39,15 @@ export function useAuth() {
   }, [user?.id, isLoaded]);
 
   useEffect(() => {
-    if (!isLoaded || !user) {
+    // Clerk가 아직 로드 중이면 로그인 여부를 모르므로 계속 로딩으로 둔다
+    // (여기서 끝내면 새로고침 때 로그인한 사용자가 로그인 화면으로 튕긴다)
+    if (!isLoaded) return;
+    if (!user) {
+      setProfile(null);
       setLoading(false);
       return;
     }
+    setLoading(true);
 
     async function loadProfile() {
       if (!user) return;
