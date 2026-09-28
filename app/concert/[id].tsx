@@ -1,239 +1,110 @@
-// app/concert/[id].tsx
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import {
-  View,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Linking,
-  Animated,
-  Platform,
-} from 'react-native';
-import { Alert } from '@/lib/utils/alert';
-import {
-  ArrowLeftIcon,
-  CalendarIcon,
-  MapPinIcon,
-  TicketIcon,
-  MusicIcon,
-  ClockIcon,
-  MoonStarIcon,
-  SunIcon,
-  TrashIcon,
-  StarIcon,
-  EditIcon,
-  UserIcon,
-} from 'lucide-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { UserMenu } from '@/components/user-menu';
-import { useColorScheme } from 'nativewind';
-import * as React from 'react';
-import { ConcertAPI, VenueAPI } from '@/lib/api/client';
-import { AdminConcertAPI } from '@/lib/api/admin';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { getImageUrl } from '@/lib/utils/image';
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
-import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
-import { prefetchImages } from '@/components/optimized-image';
+import {
+  CastChip,
+  CastComparisons,
+  IntroImages,
+  concertClock,
+  concertStatusLabel,
+  formatDay,
+  parsePrices,
+} from '@/components/concert/concert-parts';
 import { StarRating } from '@/components/StarRating';
+import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { EntityThumb } from '@/components/ui/entity-thumb';
+import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { AdminConcertAPI } from '@/lib/api/admin';
+import { ConcertAPI } from '@/lib/api/client';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
-import type { Concert, ConcertArtist, BoxofficeRanking, TicketVendor } from '@/lib/types/models';
-
-// ----------------------------------------------------------------------
-// [추가됨] 이미지의 원본 비율을 계산하여 가로를 꽉 채워주는 컴포넌트
-// ----------------------------------------------------------------------
-const ScalableImage = ({ uri }: { uri: string }) => {
-  const [aspectRatio, setAspectRatio] = React.useState(1); // 기본 1:1
-
-  React.useEffect(() => {
-    if (uri) {
-      Image.getSize(
-        uri,
-        (width, height) => {
-          if (width > 0 && height > 0) {
-            setAspectRatio(width / height);
-          }
-        },
-        (error) => console.log('Image size calc error:', error)
-      );
-    }
-  }, [uri]);
-
-  return (
-    <Image
-      source={{ uri }}
-      // width: '100%'로 부모 컨테이너(카드)에 맞추고, 높이는 비율에 따라 자동 조절
-      style={{ width: '100%', aspectRatio: aspectRatio }}
-      resizeMode="contain"
-    />
-  );
-};
-
-const getStatusInfo = (concert: Concert) => {
-  const concertStartDate = new Date(concert.startDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  concertStartDate.setHours(0, 0, 0, 0);
-
-  if (concert.status === 'cancelled') {
-    return { label: '취소', color: '#ef4444' };
-  } else if (concertStartDate < today) {
-    return { label: '종료', color: '#9ca3af' };
-  } else if (concertStartDate.getTime() === today.getTime()) {
-    return { label: '오늘', color: '#22c55e' };
-  } else {
-    return { label: '예정', color: '#3b82f6' };
-  }
-};
+import type { TicketVendor } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { Alert } from '@/lib/utils/alert';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircleIcon, ArrowLeftIcon, EditIcon, ExternalLinkIcon, TrashIcon } from 'lucide-react-native';
+import * as React from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConcertDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const concertId = Number(id);
   const router = useRouter();
-  const { colorScheme, toggleColorScheme } = useColorScheme();
-
-  // React Query로 공연 데이터 로드 (자동 캐싱)
-  const {
-    data: concert,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-    isRefetching: refreshing,
-  } = useConcert(id ? Number(id) : undefined);
-
-  const error = queryError ? '공연 정보를 불러오는데 실패했습니다.' : null;
-
-  const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [imageLoaded, setImageLoaded] = React.useState(false);
-  const imageOpacity = React.useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
   const { canEdit, isSignedIn } = useAuth();
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+  const { data: concert, isLoading, isError, refetch, isRefetching } = useConcert(
+    Number.isFinite(concertId) ? concertId : undefined
+  );
+
   const [editModalVisible, setEditModalVisible] = React.useState(false);
-  const [userRating, setUserRating] = React.useState<number>(0);
+  const [userRating, setUserRating] = React.useState(0);
   const [hasWatched, setHasWatched] = React.useState(false);
-  const [venueName, setVenueName] = React.useState<string>('');
-  const [isLoadingVendors, setIsLoadingVendors] = React.useState(false);
-  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
   const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
+  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
+  const [loadingVendors, setLoadingVendors] = React.useState(false);
 
-  // 사용자 평점 로드
   React.useEffect(() => {
-    if (id && isSignedIn) {
-      loadUserRating();
-    }
-  }, [id, isSignedIn]);
+    if (!isSignedIn || !Number.isFinite(concertId)) return;
+    ConcertAPI.getUserRating(concertId)
+      .then((rating) => {
+        if (rating != null) {
+          setUserRating(Number(rating));
+          setHasWatched(true);
+        }
+      })
+      .catch(() => undefined);
+  }, [concertId, isSignedIn]);
 
-  const loadUserRating = async () => {
-    try {
-      const rating = await ConcertAPI.getUserRating(Number(id));
-      if (rating != null) {
-        setUserRating(Number(rating));
-        setHasWatched(true);
-      }
-    } catch (error) {
-      console.error('Failed to load user rating:', error);
-    }
-  };
-
-  const handleRatingPress = () => {
+  const askWatched = () => {
     if (!isSignedIn) {
-      Alert.alert('로그인 필요', '평점을 입력하려면 로그인이 필요합니다.');
+      Alert.alert('로그인이 필요해요', '별점은 로그인한 뒤 남길 수 있어요.');
       return;
     }
-
     if (!hasWatched) {
-      Alert.alert(
-        '공연 관람 확인',
-        '이 평점은 공연을 관람한 후에 매기는 평점입니다. 공연을 보셨나요?',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '네, 봤습니다',
-            onPress: () => setHasWatched(true),
-          },
-        ]
-      );
+      Alert.alert('공연을 보셨나요?', '별점은 공연을 본 뒤에 남기는 점수예요.', [
+        { text: '취소', style: 'cancel' },
+        { text: '네, 봤어요', onPress: () => setHasWatched(true) },
+      ]);
     }
   };
 
-  const handleRatingChange = async (rating: number) => {
+  const submitRating = async (rating: number) => {
     if (!hasWatched) {
-      handleRatingPress();
+      askWatched();
       return;
     }
-
     setUserRating(rating);
     try {
-      await ConcertAPI.submitRating(Number(id), rating);
-      Alert.alert('성공', '평점이 등록되었습니다.');
-      // 캐시 업데이트
-      refetch();
-    } catch (error) {
-      Alert.alert('오류', '평점 등록에 실패했습니다.');
-      console.error('Failed to submit rating:', error);
+      await ConcertAPI.submitRating(concertId, rating);
+      void refetch();
+    } catch {
+      Alert.alert('별점을 남기지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     }
   };
 
-  const handleImageLoad = () => {
-    setImageLoaded(true);
-    Animated.timing(imageOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleImageError = () => {
-    setImageLoaded(true);
-    Animated.timing(imageOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  // 이미지 로드
-  React.useEffect(() => {
-    const loadImages = async () => {
-      if (!concert) return;
-
-      setImagesLoaded(false);
-
-      // facilityName 직접 사용 (API 호출 없음)
-      if (concert.facilityName) {
-        setVenueName(concert.facilityName);
-      }
-
-      // 이미지 프리페치 (타임아웃 추가)
-      const timeout = setTimeout(() => {
-        setImagesLoaded(true);
-      }, 1000);
-
-      try {
-        if (concert.posterUrl) {
-          await prefetchImages([concert.posterUrl]);
-        }
-        setImagesLoaded(true);
-      } catch (error) {
-        setImagesLoaded(true);
-      } finally {
-        clearTimeout(timeout);
-      }
-    };
-
-    loadImages();
-  }, [concert]);
-
-  const onRefresh = () => {
-    refetch();
-  };
-
-  const handleDeleteConcert = () => {
+  const openTickets = async () => {
     if (!concert) return;
-    Alert.alert('공연 삭제', `${concert.title}을(를) 삭제하시겠습니까?`, [
+    setLoadingVendors(true);
+    try {
+      setVendors(await ConcertAPI.getTicketVendors(concert.id));
+      setShowVendorsModal(true);
+    } catch {
+      Alert.alert('예매처를 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+    } finally {
+      setLoadingVendors(false);
+    }
+  };
+
+  const deleteConcert = () => {
+    if (!concert) return;
+    Alert.alert('공연 삭제', `${concert.title}을(를) 삭제할까요?`, [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -241,463 +112,265 @@ export default function ConcertDetailScreen() {
         onPress: async () => {
           try {
             await AdminConcertAPI.delete(concert.id);
-            Alert.alert('성공', '공연이 삭제되었습니다.');
             router.back();
-          } catch (error) {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+          } catch {
+            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
           }
         },
       },
     ]);
   };
 
-  const handleBookTicket = async () => {
-    if (!concert) return;
-
-    setIsLoadingVendors(true);
-    try {
-      const fetchedVendors = await ConcertAPI.getTicketVendors(concert.id);
-      setVendors(fetchedVendors);
-      setIsLoadingVendors(false);
-      setShowVendorsModal(true);
-    } catch (error) {
-      setIsLoadingVendors(false);
-      console.error('Failed to fetch ticket vendors:', error);
-      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'undefined년 undefined월 undefined일';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    const weekday = weekdays[date.getDay()];
-    return `${year}년 ${month}월 ${day}일 (${weekday})`;
-  };
-
-  if (loading || !imagesLoaded) {
+  if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-        <Text className="mt-4 text-center text-muted-foreground">
-          {loading ? '공연 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+      <View className="flex-1 flex-row gap-8 bg-background p-6">
+        <Skeleton className="aspect-[3/4] w-[240px] rounded-lg" />
+        <View className="flex-1 gap-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-10 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </View>
+      </View>
+    );
+  }
+
+  if (isError || !concert) {
+    return (
+      <View className="flex-1 bg-background">
+        <EmptyState
+          icon={AlertCircleIcon}
+          tone="error"
+          title="공연 정보를 불러오지 못했어요"
+          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          action={{ label: '다시 시도', onPress: () => refetch() }}
+        />
+      </View>
+    );
+  }
+
+  const status = concertStatusLabel(concert);
+  const prices = parsePrices(concert.priceInfo);
+  const cast = concert.artists ?? [];
+  const bookable = concert.status === 'upcoming' || concert.status === 'ongoing';
+  const firstVendor = concert.ticketVendors?.[0]?.vendorName;
+  const ranking = concert.boxofficeRanking;
+  const time = concertClock(concert.concertTime);
+  const multiDay = concert.endDate && concert.endDate !== concert.startDate;
+
+  const facts: { label: string; value: string; sub?: string }[] = [
+    {
+      label: '일시',
+      value: `${formatDay(concert.startDate)}${time ? ` ${time}` : ''}`,
+      sub: multiDay ? `~ ${formatDay(concert.endDate)}` : undefined,
+    },
+    { label: '장소', value: concert.facilityName ?? '공연장 정보 없음', sub: concert.area },
+    ...(concert.runtime ? [{ label: '관람 시간', value: concert.runtime }] : []),
+    ...(concert.ageRestriction ? [{ label: '관람 연령', value: concert.ageRestriction }] : []),
+  ];
+
+  const bookButton = bookable ? (
+    <View className="gap-1.5">
+      <Button size="lg" className="h-12 rounded-full" onPress={openTickets} disabled={loadingVendors}>
+        <Text className="text-base font-bold text-primary-foreground">
+          {loadingVendors ? '불러오는 중…' : '예매하기'}
         </Text>
-      </View>
-    );
-  }
+        <Icon as={ExternalLinkIcon} size={16} className="text-primary-foreground" />
+      </Button>
+      <Text variant="caption" className="text-center">
+        {firstVendor ? `${firstVendor} 등 예매처로 이동해요` : '예매처로 이동해요'}
+      </Text>
+    </View>
+  ) : null;
 
-  if (error || !concert) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">
-            {error || '공연을 찾을 수 없습니다'}
+  const headerBadges = (
+    <View className="flex-row flex-wrap gap-1.5">
+      <Badge tone={status.tone} label={status.label} />
+      {ranking && ranking.ranking <= 10 ? (
+        <Badge label={`${ranking.areaName ?? ''} 예매 ${ranking.ranking}위`.trim()} />
+      ) : null}
+    </View>
+  );
+
+  const body = (
+    <View className="gap-10">
+      <View className={cn(wide && 'flex-row gap-11')}>
+        {prices.length > 0 ? (
+          <View className={cn(wide ? 'flex-1' : 'mb-10')}>
+            <Text variant="headline" className="mb-1">
+              좌석별 가격
+            </Text>
+            {prices.map((price, index) => (
+              <View
+                key={`${price.seat}-${index}`}
+                className={cn('flex-row items-baseline justify-between py-2.5', index < prices.length - 1 && 'border-b border-border')}>
+                <Text className="text-body-sm font-semibold text-foreground">{price.seat}</Text>
+                <Text variant="mono" className="text-body-sm text-foreground">
+                  {price.price}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <View className={cn(wide && 'flex-1')}>
+          <CastComparisons cast={cast} horizontal={!wide} />
+        </View>
+      </View>
+
+      {/* composerInfo는 출연자 이름이 들어오는 경우가 많아 프로그램으로 쓰지 않는다 */}
+      {concert.program ? (
+        <View className="max-w-[680px]">
+          <Text variant="headline" className="mb-2">
+            프로그램
           </Text>
-          <Button variant="outline" onPress={() => router.back()}>
-            <Text>뒤로 가기</Text>
-          </Button>
-        </Card>
-      </View>
-    );
-  }
+          <Text variant="body">{concert.program}</Text>
+        </View>
+      ) : null}
 
-  const statusInfo = getStatusInfo(concert);
+      {concert.synopsis ? (
+        <View className="max-w-[680px]">
+          <Text variant="headline" className="mb-2">
+            소개
+          </Text>
+          <Text variant="body">{concert.synopsis}</Text>
+        </View>
+      ) : null}
+
+      {concert.images && concert.images.length > 0 ? <IntroImages images={concert.images} /> : null}
+
+      <View>
+        <Text variant="headline" className="mb-3">
+          별점
+        </Text>
+        <View className="gap-3 rounded-lg border border-dashed border-border-strong p-4">
+          <Text variant="bodySm" className="text-foreground-muted">
+            {concert.rating != null && Number(concert.rating) > 0
+              ? `평균 ${Number(concert.rating).toFixed(1)} · ${concert.ratingCount ?? 0}명`
+              : '아직 남긴 사람이 없어요.'}
+          </Text>
+          <Pressable onPress={askWatched} disabled={hasWatched} className="flex-row items-center gap-3">
+            <StarRating rating={userRating} onRatingChange={hasWatched ? submitRating : undefined} size={24} />
+            <Text variant="caption">
+              {!isSignedIn ? '로그인하면 별점을 남길 수 있어요' : hasWatched ? '내 별점' : '공연을 봤다면 눌러서 남겨요'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {canEdit ? (
+        <View className="flex-row gap-2">
+          <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
+            <Icon as={EditIcon} size={14} className="text-foreground" />
+            <Text>공연 수정</Text>
+          </Button>
+          <Button variant="outline" size="sm" onPress={deleteConcert}>
+            <Icon as={TrashIcon} size={14} className="text-destructive" />
+            <Text className="text-destructive">공연 삭제</Text>
+          </Button>
+        </View>
+      ) : null}
+
+      <Text variant="caption" className="text-foreground-subtle">
+        {`공연 정보 출처: ${concert.dataSource === 'KOPIS' || concert.kopisId ? 'KOPIS 공연예술통합전산망' : 'ClassicMap'}${
+          concert.kopisId ? ` · 공연 ID ${concert.kopisId}` : ''
+        }`}
+      </Text>
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {/* Header */}
-        <View className="bg-background">
-          {/* Top Controls */}
-          <View className="flex-row items-center justify-between px-4 pb-4 pt-12">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="size-10 items-center justify-center">
-              <Icon as={ArrowLeftIcon} size={24} className="text-foreground" />
-            </TouchableOpacity>
-
-            <View className="flex-row items-center gap-3">
-              <TouchableOpacity
-                onPress={toggleColorScheme}
-                className="size-10 items-center justify-center">
-                <Icon
-                  as={colorScheme === 'dark' ? SunIcon : MoonStarIcon}
-                  size={24}
-                  className="text-foreground"
-                />
-              </TouchableOpacity>
-              <UserMenu />
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} />}
+        contentContainerClassName={cn(wide ? 'px-7 pb-20 pt-4' : 'px-4 pb-10')}>
+        {wide ? (
+          <View className="flex-row gap-11">
+            <View className="w-[320px] gap-4">
+              <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={320} aspect={4 / 3} />
+              {bookButton}
             </View>
-          </View>
-
-          {/* Title Section */}
-          <View className="items-center px-4 pb-4">
-            <Text className="mb-2 text-center text-3xl font-bold">{concert.title}</Text>
-
-            {concert.composerInfo && (
-              <Text className="mb-3 text-center text-base text-muted-foreground">
-                {concert.composerInfo}
+            <View className="min-w-0 flex-1">
+              {headerBadges}
+              <Text className="mt-3 text-[44px] font-extrabold leading-[48px] tracking-tight text-foreground">
+                {concert.title}
               </Text>
-            )}
-
-            {/* Status Badge */}
-            <View className="flex-row flex-wrap items-center justify-center gap-2">
-              <View className="rounded px-2.5 py-1" style={{ backgroundColor: statusInfo.color }}>
-                <Text className="text-xs font-medium text-white">{statusInfo.label}</Text>
+              {cast.length > 0 ? (
+                <View className="mt-4 flex-row flex-wrap gap-2">
+                  {cast.map((item) => (
+                    <CastChip key={item.id} cast={item} />
+                  ))}
+                </View>
+              ) : null}
+              <View className="mt-7 flex-row flex-wrap border-y border-border py-5">
+                {facts.map((fact) => (
+                  <View key={fact.label} className="w-1/2 py-2 pr-6">
+                    <Text variant="caption" className="font-semibold text-foreground-subtle">
+                      {fact.label}
+                    </Text>
+                    <Text className="mt-1 text-body font-semibold text-foreground">{fact.value}</Text>
+                    {fact.sub ? <Text variant="caption" className="mt-0.5">{fact.sub}</Text> : null}
+                  </View>
+                ))}
               </View>
+              <View className="mt-8">{body}</View>
             </View>
           </View>
-        </View>
-
-        {/* Content */}
-        <View className="gap-6 p-4 pb-20">
-          {/* Poster Image */}
-          <Card className="mx-auto overflow-hidden p-0" style={{ width: '80%', maxWidth: 320 }}>
-            {!imageLoaded && (
-              <View
-                className="w-full items-center justify-center bg-muted"
-                style={{ aspectRatio: 2 / 3 }}>
-                <ActivityIndicator size="large" />
+        ) : (
+          <>
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.push('/concerts'))}
+              accessibilityLabel="뒤로"
+              style={{ marginTop: insets.top + 4 }}
+              className="mb-2 size-11 items-center justify-center">
+              <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
+            </Pressable>
+            {/* 첫 화면에서 무엇·언제·어디·얼마가 다 보이게 */}
+            <View className="flex-row gap-3.5">
+              <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={120} aspect={4 / 3} />
+              <View className="min-w-0 flex-1">
+                {headerBadges}
+                <Text className="mt-2 text-[21px] font-extrabold leading-7 text-foreground">{concert.title}</Text>
               </View>
-            )}
-            {concert.posterUrl ? (
-              Platform.OS === 'web' ? (
-                <Image
-                  source={{ uri: getImageUrl(concert.posterUrl) }}
-                  className="w-full"
-                  style={{ aspectRatio: 2 / 3, opacity: imageLoaded ? 1 : 0 }}
-                  resizeMode="cover"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                />
-              ) : (
-                <Animated.Image
-                  source={{ uri: getImageUrl(concert.posterUrl) }}
-                  className="w-full"
-                  style={{ aspectRatio: 2 / 3, opacity: imageOpacity }}
-                  resizeMode="cover"
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
-                />
-              )
-            ) : (
-              <View
-                className="w-full items-center justify-center bg-muted"
-                style={{ aspectRatio: 2 / 3 }}
-                onLayout={handleImageLoad}>
-                <Icon as={CalendarIcon} size={64} className="text-muted-foreground" />
+            </View>
+            {cast.length > 0 ? (
+              <View className="mt-3 flex-row flex-wrap gap-2">
+                {cast.map((item) => (
+                  <CastChip key={item.id} cast={item} />
+                ))}
               </View>
-            )}
-
-            {/* Boxoffice Ranking Badge */}
-            {concert.boxofficeRanking && concert.boxofficeRanking.ranking <= 3 && (
-              <View style={{ position: 'absolute', top: 12, right: 12 }}>
-                <View
-                  className="size-12 items-center justify-center rounded-full shadow-lg"
-                  style={{
-                    backgroundColor:
-                      concert.boxofficeRanking.ranking === 1
-                        ? '#FFD700'
-                        : concert.boxofficeRanking.ranking === 2
-                          ? '#C0C0C0'
-                          : '#CD7F32',
-                  }}>
-                  <Text className="text-xl font-bold text-white">
-                    {concert.boxofficeRanking.ranking}
+            ) : null}
+            <View className="mt-4">
+              {facts.map((fact) => (
+                <View key={fact.label} className="flex-row gap-3 border-b border-border py-3">
+                  <Text variant="bodySm" className="w-[72px] text-foreground-muted">
+                    {fact.label}
                   </Text>
-                </View>
-              </View>
-            )}
-          </Card>
-
-          {/* Concert Info */}
-          <Card className="p-4">
-            <View className="gap-3">
-              {concert.artists && concert.artists.length > 0 && (
-                <View className="flex-row items-start gap-3">
-                  <Icon as={UserIcon} size={20} className="mt-0.5 text-primary" />
-                  <View className="flex-1">
-                    <Text className="text-xs text-muted-foreground">연주자</Text>
-                    <Text className="text-base font-medium">
-                      {concert.artists.map((a: ConcertArtist) => a.artistName).join(', ')}
-                    </Text>
+                  <View className="min-w-0 flex-1">
+                    <Text className="text-body-sm font-semibold text-foreground">{fact.value}</Text>
+                    {fact.sub ? <Text variant="caption">{fact.sub}</Text> : null}
                   </View>
                 </View>
-              )}
-
-              <View className="flex-row items-start gap-3">
-                <Icon as={CalendarIcon} size={20} className="mt-0.5 text-primary" />
-                <View className="flex-1">
-                  <Text className="text-xs text-muted-foreground">날짜</Text>
-                  <Text className="text-base font-medium">
-                    {formatDate(concert.startDate)}
-                    {concert.endDate &&
-                      concert.endDate !== concert.startDate &&
-                      ` ~ ${formatDate(concert.endDate)}`}
-                  </Text>
-                </View>
-              </View>
-
-              {concert.concertTime && (
-                <View className="flex-row items-start gap-3">
-                  <Icon as={ClockIcon} size={20} className="mt-0.5 text-primary" />
-                  <View className="flex-1">
-                    <Text className="text-xs text-muted-foreground">시간</Text>
-                    <Text className="text-base font-medium">{concert.concertTime}</Text>
-                  </View>
-                </View>
-              )}
-
-              <View className="flex-row items-start gap-3">
-                <Icon as={MapPinIcon} size={20} className="mt-0.5 text-primary" />
-                <View className="flex-1">
-                  <Text className="text-xs text-muted-foreground">장소</Text>
-                  <Text className="text-base font-medium">{venueName || '공연장 정보 없음'}</Text>
-                </View>
-              </View>
-
-              {concert.priceInfo && (
-                <View className="flex-row items-start gap-3">
-                  <Icon as={TicketIcon} size={20} className="mt-0.5 text-primary" />
-                  <View className="flex-1">
-                    <Text className="text-xs text-muted-foreground">가격</Text>
-                    <View className="gap-1">
-                      {concert.priceInfo.split(/,\s+(?=\D)/).map((price, index) => (
-                        <Text key={index} className="text-base font-medium">
-                          {price.trim()}
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-              )}
+              ))}
             </View>
-          </Card>
-
-          {/* Concert Introduction Section */}
-          {(concert.synopsis || concert.runtime || concert.ageRestriction || concert.cast) && (
-            <Card className="p-4">
-              <Text className="mb-3 text-lg font-bold">공연 소개</Text>
-              <View className="gap-3">
-                {concert.synopsis && (
-                  <View>
-                    <Text className="mb-1 text-sm font-medium text-muted-foreground">소개</Text>
-                    <Text className="text-base leading-6">{concert.synopsis}</Text>
-                  </View>
-                )}
-
-                <View className="flex-row flex-wrap gap-4">
-                  {concert.runtime && (
-                    <View className="flex-row items-center gap-2">
-                      <Icon as={ClockIcon} size={16} className="text-primary" />
-                      <View>
-                        <Text className="text-xs text-muted-foreground">러닝타임</Text>
-                        <Text className="text-sm font-medium">{concert.runtime}</Text>
-                      </View>
-                    </View>
-                  )}
-
-                  {concert.ageRestriction && (
-                    <View className="flex-row items-center gap-2">
-                      <Icon as={UserIcon} size={16} className="text-primary" />
-                      <View>
-                        <Text className="text-xs text-muted-foreground">관람연령</Text>
-                        <Text className="text-sm font-medium">{concert.ageRestriction}</Text>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                {concert.cast && (
-                  <View>
-                    <Text className="mb-1 text-sm font-medium text-muted-foreground">출연진</Text>
-                    <Text className="text-base leading-6">{concert.cast}</Text>
-                  </View>
-                )}
-
-                {concert.crew && (
-                  <View>
-                    <Text className="mb-1 text-sm font-medium text-muted-foreground">제작진</Text>
-                    <Text className="text-base leading-6">{concert.crew}</Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          )}
-
-          {/* ==================================================================== */}
-          {/* [수정됨] Introduction Images Gallery: 가로 스크롤 제거, 세로로 꽉 차게 변경 */}
-          {/* ==================================================================== */}
-          {concert.images && concert.images.length > 0 && (
-            <Card className="p-4">
-              <Text className="mb-3 text-lg font-bold">공연 소개 이미지</Text>
-              <View className="w-full gap-0">
-                {concert.images
-                  .sort((a: any, b: any) => a.displayOrder - b.displayOrder)
-                  .map((image: any) => (
-                    <ScalableImage key={image.id} uri={getImageUrl(image.imageUrl)} />
-                  ))}
-              </View>
-            </Card>
-          )}
-
-
-          {/* Rating Section */}
-          <Card className="p-4">
-            <View className="gap-4">
-              <Text className="text-lg font-bold">공연 평점</Text>
-
-              {/* Average Rating */}
-              {concert.rating != null && Number(concert.rating) > 0 ? (
-                <View className="items-center gap-2">
-                  <View className="flex-row items-center gap-2">
-                    <Icon as={StarIcon} size={32} className="text-amber-500" />
-                    <Text className="text-4xl font-bold">{Number(concert.rating).toFixed(1)}</Text>
-                  </View>
-                  {concert.ratingCount && concert.ratingCount > 0 && (
-                    <Text className="text-sm text-muted-foreground">
-                      {concert.ratingCount}명이 평가했습니다
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                <Text className="py-2 text-center text-muted-foreground">아직 평가가 없습니다</Text>
-              )}
-
-              {/* User Rating Input */}
-              <View className="border-t border-border pt-4">
-                <TouchableOpacity onPress={handleRatingPress} activeOpacity={hasWatched ? 1 : 0.7}>
-                  <View className="gap-2">
-                    <Text className="text-sm font-medium">내 평점</Text>
-                    <View className="items-center">
-                      <StarRating
-                        rating={userRating}
-                        onRatingChange={hasWatched ? handleRatingChange : undefined}
-                        size={32}
-                      />
-                    </View>
-                    {!hasWatched && isSignedIn && (
-                      <Text className="text-center text-xs text-muted-foreground">
-                        평점을 입력하려면 탭하세요
-                      </Text>
-                    )}
-                    {!isSignedIn && (
-                      <Text className="text-center text-xs text-muted-foreground">
-                        로그인 후 평점을 입력할 수 있습니다
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Card>
-
-          {/* Program Info */}
-          {(concert.composerInfo || concert.program) && (
-            <Card className="p-4">
-              <View className="mb-3 flex-row items-center gap-2">
-                <Icon as={MusicIcon} size={20} className="text-primary" />
-                <Text className="text-lg font-bold">프로그램</Text>
-              </View>
-              {concert.composerInfo && (
-                <View className="mb-3">
-                  <Text className="mb-1 text-sm font-medium text-muted-foreground">곡목</Text>
-                  <Text className="text-base leading-6">{concert.composerInfo}</Text>
-                </View>
-              )}
-              {concert.program && (
-                <View>
-                  <Text className="mb-1 text-sm font-medium text-muted-foreground">상세</Text>
-                  <Text className="text-base leading-6">{concert.program}</Text>
-                </View>
-              )}
-            </Card>
-          )}
-
-          {/* Booking Buttons */}
-          {concert.status === 'upcoming' && (
-            <Button
-              size="lg"
-              className="items-center justify-center"
-              onPress={handleBookTicket}
-              disabled={isLoadingVendors}>
-              <View className="flex-row items-center justify-center">
-                {!isLoadingVendors && (
-                  <Icon as={TicketIcon} size={20} className="mr-2 text-primary-foreground" />
-                )}
-                <Text className="text-lg">{isLoadingVendors ? '로딩 중...' : '예매하기'}</Text>
-              </View>
-            </Button>
-          )}
-
-          {concert.status === 'ongoing' && (
-            <Button size="lg" variant="secondary" className="items-center justify-center">
-              <Text className="text-lg">공연 진행중</Text>
-            </Button>
-          )}
-
-          {concert.status === 'completed' && (
-            <Button size="lg" variant="outline" disabled className="items-center justify-center">
-              <Text className="text-lg">공연 종료</Text>
-            </Button>
-          )}
-
-          {concert.status === 'cancelled' && (
-            <Button
-              size="lg"
-              variant="destructive"
-              disabled
-              className="items-center justify-center">
-              <Text className="text-lg">공연 취소</Text>
-            </Button>
-          )}
-
-          {/* Admin Buttons */}
-          {canEdit && (
-            <View className="flex-row gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onPress={() => setEditModalVisible(true)}>
-                <Icon as={EditIcon} size={16} className="mr-2" />
-                <Text>공연 수정</Text>
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="flex-1"
-                onPress={handleDeleteConcert}>
-                <Icon as={TrashIcon} size={16} className="mr-2" />
-                <Text>공연 삭제</Text>
-              </Button>
-            </View>
-          )}
-        </View>
+            <View className="mt-8">{body}</View>
+          </>
+        )}
       </ScrollView>
 
-      {/* Edit Modal */}
-      {concert && (
-        <ConcertFormModal
-          visible={editModalVisible}
-          concert={concert}
-          onClose={() => setEditModalVisible(false)}
-          onSuccess={() => refetch()}
-        />
-      )}
+      {/* 모바일: 예매 버튼은 항상 엄지가 닿는 곳에 */}
+      {!wide && bookButton ? (
+        <View className="border-t border-border bg-background px-4 pt-2.5" style={{ paddingBottom: insets.bottom + 10 }}>
+          {bookButton}
+        </View>
+      ) : null}
 
-      {/* Ticket Vendors Modal */}
-      <TicketVendorsModal
-        visible={showVendorsModal}
-        vendors={vendors}
-        onClose={() => setShowVendorsModal(false)}
+      <ConcertFormModal
+        visible={editModalVisible}
+        concert={concert}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={() => refetch()}
       />
+      <TicketVendorsModal visible={showVendorsModal} vendors={vendors} onClose={() => setShowVendorsModal(false)} />
     </View>
   );
 }
