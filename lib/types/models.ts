@@ -183,6 +183,39 @@ export interface ComparisonPerformance {
   credits: PerformanceCredit[];
 }
 
+/** `/pieces/{id}/comparison-sectors`: 공개 기준(연주자 3명 이상)을 통과한 섹터 */
+export interface ComparisonSector {
+  id: number;
+  pieceId: number;
+  sectorName: string;
+  sectorNameEn: string | null;
+  description: string | null;
+  displayOrder: number | null;
+  measureStart: string | null;
+  measureEnd: string | null;
+  readyPerformanceCount: number;
+  primaryArtistCount: number;
+}
+
+export interface ComparisonPiecePerformer {
+  artistId: number;
+  artistName: string;
+  imageUrl: string | null;
+}
+
+/** `/comparison-pieces`: 공개 섹터가 하나 이상 있는 작품 */
+export interface ComparisonPiece {
+  pieceId: number;
+  pieceTitle: string;
+  opusNumber: string | null;
+  composerId: number;
+  composerName: string;
+  composerAvatarUrl: string | null;
+  sectorCount: number;
+  performerCount: number;
+  performers: ComparisonPiecePerformer[];
+}
+
 export interface ComparisonPerformancePage {
   items: ComparisonPerformance[];
   nextCursor: string | null;

@@ -3,6 +3,8 @@ import type {
   ClipStatus,
   ComparisonPerformance,
   ComparisonPerformancePage,
+  ComparisonPiece,
+  ComparisonSector,
   PerformanceCredit,
   PerformanceCreditRole,
 } from '@/lib/types/models';
@@ -175,7 +177,94 @@ function parsePage(payload: unknown): ComparisonPerformancePage {
   };
 }
 
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+function parseSector(value: unknown): ComparisonSector {
+  if (!isRecord(value)) {
+    throw new Error('비교 섹터 응답이 객체가 아닙니다.');
+  }
+  return {
+    id: requireInteger(value.id, 'sector.id'),
+    pieceId: requireInteger(value.pieceId, 'sector.pieceId'),
+    sectorName: requireString(value.sectorName, 'sector.sectorName'),
+    sectorNameEn: optionalString(value.sectorNameEn),
+    description: optionalString(value.description),
+    displayOrder: typeof value.displayOrder === 'number' ? value.displayOrder : null,
+    measureStart: optionalString(value.measureStart),
+    measureEnd: optionalString(value.measureEnd),
+    readyPerformanceCount: requireNumber(value.readyPerformanceCount, 'sector.readyPerformanceCount'),
+    primaryArtistCount: requireNumber(value.primaryArtistCount, 'sector.primaryArtistCount'),
+  };
+}
+
+function parsePiece(value: unknown): ComparisonPiece {
+  if (!isRecord(value)) {
+    throw new Error('비교 작품 응답이 객체가 아닙니다.');
+  }
+  const performers = Array.isArray(value.performers) ? value.performers : [];
+  return {
+    pieceId: requireInteger(value.pieceId, 'pieceId'),
+    pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
+    opusNumber: optionalString(value.opusNumber),
+    composerId: requireInteger(value.composerId, 'composerId'),
+    composerName: requireString(value.composerName, 'composerName'),
+    composerAvatarUrl: optionalString(value.composerAvatarUrl),
+    sectorCount: requireNumber(value.sectorCount, 'sectorCount'),
+    performerCount: requireNumber(value.performerCount, 'performerCount'),
+    performers: performers.filter(isRecord).map((performer) => ({
+      artistId: requireInteger(performer.artistId, 'performers.artistId'),
+      artistName: requireString(performer.artistName, 'performers.artistName'),
+      imageUrl: optionalString(performer.imageUrl),
+    })),
+  };
+}
+
 export const ComparisonAPI = {
+  /** 비교할 수 있는 작품. 연주자가 많은 작품부터 온다. */
+  async getPieces(options: { composerId?: number; offset?: number; limit?: number } = {}): Promise<ComparisonPiece[]> {
+    const params = new URLSearchParams({
+      offset: String(options.offset ?? 0),
+      limit: String(options.limit ?? 20),
+    });
+    if (options.composerId) params.set('composer', String(options.composerId));
+    const response = await authenticatedFetch(`${API_BASE_URL}/comparison-pieces?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`비교할 수 있는 작품을 불러오지 못했습니다. (${response.status})`);
+    }
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) throw new Error('비교 작품 목록 응답 형식이 올바르지 않습니다.');
+    return payload.map(parsePiece);
+  },
+
+  /** 작품의 공개 섹터. 작품이 없으면 null, 공개 섹터가 없으면 빈 배열. */
+  async getPieceSectors(pieceId: number): Promise<ComparisonSector[] | null> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${pieceId}/comparison-sectors`);
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`비교 구간을 불러오지 못했습니다. (${response.status})`);
+    }
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) throw new Error('비교 구간 응답 형식이 올바르지 않습니다.');
+    return payload.map(parseSector);
+  },
+
+  /** 섹터의 공개 연주. 섹터가 없으면 null. */
+  async getSectorPerformances(sectorId: number): Promise<ComparisonPerformance[] | null> {
+    const response = await authenticatedFetch(
+      `${API_BASE_URL}/sectors/${sectorId}/comparison-performances`
+    );
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`구간 연주를 불러오지 못했습니다. (${response.status})`);
+    }
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) throw new Error('구간 연주 응답 형식이 올바르지 않습니다.');
+    return payload.map(parseComparison);
+  },
+
+
   async getByArtist(
     artistId: number,
     options: { cursor?: string | null; limit?: number } = {}
