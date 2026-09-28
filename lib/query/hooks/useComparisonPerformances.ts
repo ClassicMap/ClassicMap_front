@@ -14,7 +14,7 @@ export const COMPARISON_QUERY_KEYS = {
 const CATALOG_PAGE_SIZE = 24;
 
 /** 비교 카탈로그. offset 페이지를 이어 붙인다. */
-export function useComparisonPieces(composerId?: number) {
+export function useComparisonPieces(composerId?: number, enabled = true) {
   return useInfiniteQuery({
     queryKey: COMPARISON_QUERY_KEYS.pieces(composerId),
     queryFn: ({ pageParam }) =>
@@ -23,6 +23,7 @@ export function useComparisonPieces(composerId?: number) {
       lastPage.length < CATALOG_PAGE_SIZE ? undefined : pages.length * CATALOG_PAGE_SIZE,
     initialPageParam: 0,
     staleTime: 5 * 60_000,
+    enabled,
   });
 }
 
@@ -65,5 +66,28 @@ export function useComparisonPiece(pieceId: number | undefined, composerId: numb
     },
     enabled: (pieceId ?? 0) > 0 && (composerId ?? 0) > 0,
     staleTime: 5 * 60_000,
+  });
+}
+
+const CATALOG_SCAN_PAGE = 50;
+const CATALOG_SCAN_LIMIT = 2000;
+
+/**
+ * 비교할 수 있는 작품이 있는 작곡가와 그 작품 수.
+ * 카탈로그는 공개 섹터가 있는 작품만이라 작아서 몇 페이지면 끝난다.
+ */
+export function useComparableComposers() {
+  return useQuery({
+    queryKey: ['comparison-pieces', 'composers'] as const,
+    queryFn: async () => {
+      const counts = new Map<number, number>();
+      for (let offset = 0; offset < CATALOG_SCAN_LIMIT; offset += CATALOG_SCAN_PAGE) {
+        const page = await ComparisonAPI.getPieces({ offset, limit: CATALOG_SCAN_PAGE });
+        for (const piece of page) counts.set(piece.composerId, (counts.get(piece.composerId) ?? 0) + 1);
+        if (page.length < CATALOG_SCAN_PAGE) break;
+      }
+      return counts;
+    },
+    staleTime: 10 * 60_000,
   });
 }
