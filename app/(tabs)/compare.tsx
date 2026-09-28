@@ -1,2 +1,6 @@
-// 네이티브 비교 화면. 웹은 compare.web.tsx가 맡는다.
-export { default } from '@/components/compare/legacy-compare-screen';
+import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
+import * as React from 'react';
+
+export default function CompareScreen() {
+  return <CompareMobileScreen />;
+}

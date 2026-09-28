@@ -22,13 +22,16 @@ import {
   youtubeWatchUrl,
 } from '@/lib/data/comparison';
 import type { ComparisonPerformance } from '@/lib/types/models';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { type Href, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
   PauseIcon,
   PlayIcon,
+  SettingsIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -52,6 +55,8 @@ export function ComparePieceView({
   onBack,
   onSelectSector,
 }: ComparePieceViewProps) {
+  const router = useRouter();
+  const { canEdit } = useAuth();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
@@ -208,6 +213,17 @@ export function ComparePieceView({
                       .join('')}
                   </Text>
                   <FavoriteButton kind="pieces" id={pieceId} name={first.pieceTitle} />
+                  {canEdit ? (
+                    <Pressable
+                      onPress={() => router.push(`/compare-admin?composerId=${first.composerId}&pieceId=${pieceId}` as Href)}
+                      accessibilityLabel="구간·연주 관리"
+                      className="h-9 flex-row items-center gap-1.5 rounded-full px-3 web:hover:bg-surface-3">
+                      <Icon as={SettingsIcon} size={15} className="text-foreground-muted" />
+                      <Text variant="label" className="text-foreground-muted">
+                        구간·연주 관리
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               </>
             ) : (

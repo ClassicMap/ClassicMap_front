@@ -1,4 +1,4 @@
-import LegacyCompareScreen from '@/components/compare/legacy-compare-screen';
+import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
 import { CompareCatalog } from '@/components/shell/compare/compare-catalog';
 import { ComparePieceView } from '@/components/shell/compare/compare-piece-view';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -13,7 +13,7 @@ function toId(value: string | string[] | undefined): number | undefined {
 }
 
 /**
- * 웹 비교 화면 (설계 문서 5.2). 좁은 웹은 기존 화면을 그대로 쓰고,
+ * 웹 비교 화면 (설계 문서 5.2). 좁은 웹은 모바일 비교 화면을 쓰고,
  * 데스크톱은 새 비교 API(공개 섹터·구간 연주)로 카탈로그 → 작품 비교를 보여 준다.
  */
 export default function CompareScreenWeb() {
@@ -24,7 +24,7 @@ export default function CompareScreenWeb() {
   const sectorId = toId(params.sectorId);
   const composerId = toId(params.composerId);
 
-  if (nav === 'tabs') return <LegacyCompareScreen />;
+  if (nav === 'tabs') return <CompareMobileScreen />;
 
   return (
     <View className="flex-1 bg-surface-1">
