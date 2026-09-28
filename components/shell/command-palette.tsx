@@ -1,13 +1,10 @@
-import { FallbackArt } from '@/components/ui/fallback-art';
+import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { OptimizedImage } from '@/components/optimized-image';
 import { Text } from '@/components/ui/text';
-import { ArtistAPI, ComposerAPI, ConcertAPI, PieceAPI } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { cn } from '@/lib/utils';
-import { getImageUrl } from '@/lib/utils/image';
-import { useQuery } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import { CornerDownLeftIcon, MoonStarIcon, SearchIcon, type LucideIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -45,44 +42,6 @@ const GROUP_LABELS: Record<Exclude<ResultKind, 'action'>, string> = {
   concert: '공연',
 };
 
-function usePaletteSearch(query: string, enabled: boolean) {
-  const q = query.trim();
-  const active = enabled && q.length > 0;
-  const composers = useQuery({
-    queryKey: ['palette', 'composers', q],
-    queryFn: () => ComposerAPI.search({ q, limit: GROUP_LIMIT }),
-    enabled: active,
-    staleTime: 60_000,
-  });
-  const pieces = useQuery({
-    queryKey: ['palette', 'pieces', q],
-    queryFn: () => PieceAPI.search({ q, limit: GROUP_LIMIT }),
-    enabled: active,
-    staleTime: 60_000,
-  });
-  const artists = useQuery({
-    queryKey: ['palette', 'artists', q],
-    queryFn: () => ArtistAPI.search({ q, limit: GROUP_LIMIT }),
-    enabled: active,
-    staleTime: 60_000,
-  });
-  const concerts = useQuery({
-    queryKey: ['palette', 'concerts', q],
-    queryFn: () => ConcertAPI.search({ q, limit: GROUP_LIMIT }),
-    enabled: active,
-    staleTime: 60_000,
-  });
-  const queries = [composers, pieces, artists, concerts];
-  return {
-    composers: composers.data ?? [],
-    pieces: pieces.data ?? [],
-    artists: artists.data ?? [],
-    concerts: concerts.data ?? [],
-    isFetching: queries.some((item) => item.isFetching),
-    failed: queries.filter((item) => item.isError).length,
-  };
-}
-
 export function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
   const router = useRouter();
@@ -90,7 +49,7 @@ export function CommandPalette() {
   const [query, setQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
   const debounced = useDebounce(query, 300);
-  const result = usePaletteSearch(debounced, open);
+  const result = useUnifiedSearch(debounced, { enabled: open, limit: GROUP_LIMIT });
 
   const close = React.useCallback(() => {
     setOpen(false);
@@ -239,7 +198,7 @@ export function CommandPalette() {
               </Text>
             </View>
           ) : null}
-          {result.failed > 0 ? (
+          {result.failedCount > 0 ? (
             <View className="px-4 pt-3">
               <Text variant="caption" className="text-destructive">
                 일부 검색이 실패했어요. 잠시 뒤 다시 입력해 보세요.
@@ -306,13 +265,5 @@ function PaletteThumb({ item }: { item: PaletteItem }) {
       </View>
     );
   }
-  const fallback = <FallbackArt name={item.title} shape={item.shape} size={24} />;
-  if (!item.image) return fallback;
-  return (
-    <OptimizedImage
-      uri={getImageUrl(item.image)}
-      fallbackComponent={fallback}
-      style={{ width: 24, height: 24, borderRadius: item.shape === 'circle' ? 12 : 4 }}
-    />
-  );
+  return <EntityThumb name={item.title} image={item.image} shape={item.shape} size={24} />;
 }

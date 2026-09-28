@@ -1,12 +1,10 @@
-import { FallbackArt } from '@/components/ui/fallback-art';
+import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, EraIcon, PerformerKindIcon, TicketIcon } from '@/components/ui/icons';
-import { OptimizedImage } from '@/components/optimized-image';
+import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
-import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { buildLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
-import { getImageUrl } from '@/lib/utils/image';
 import { useAuth } from '@clerk/clerk-expo';
 import { type Href, Link, usePathname } from 'expo-router';
 import { HomeIcon, SearchIcon } from 'lucide-react-native';
@@ -28,28 +26,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: '홈', href: '/home', match: '/home', renderIcon: (p) => <Icon as={HomeIcon} {...p} /> },
+  { label: '검색', href: '/search', match: '/search', renderIcon: (p) => <Icon as={SearchIcon} {...p} /> },
   { label: '비교', href: '/compare', match: '/compare', renderIcon: (p) => <CompareIcon {...p} /> },
-  {
-    label: '아티스트',
-    href: '/artists',
-    match: '/artist',
-    renderIcon: (p) => <PerformerKindIcon {...p} />,
-  },
   { label: '공연', href: '/concerts', match: '/concert', renderIcon: (p) => <TicketIcon {...p} /> },
-  { label: '타임라인', href: '/timeline', match: '/timeline', renderIcon: (p) => <EraIcon {...p} /> },
 ];
 
 /** 레퍼토리 목록에 올릴 즐겨찾기 최대 수 */
 const LIBRARY_LIMIT = 12;
-
-interface LibraryEntry {
-  key: string;
-  title: string;
-  subtitle: string;
-  image?: string | null;
-  shape: 'circle' | 'square';
-  href: Href;
-}
 
 export function SideNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
@@ -88,33 +71,28 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
               {!collapsed && (
                 <Text
                   className={cn(
-                    'text-[13.5px] font-semibold',
+                    'flex-1 text-[13.5px] font-semibold',
                     active ? 'text-foreground' : 'text-foreground-muted'
                   )}>
                   {item.label}
                 </Text>
               )}
+              {!collapsed && item.href === '/search' ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="빠른 검색 열기"
+                  onPress={(event) => {
+                    event.preventDefault();
+                    setOpen(true);
+                  }}>
+                  <Kbd>{`${modKeyLabel()}K`}</Kbd>
+                </Pressable>
+              ) : null}
             </Pressable>
           </Link>
         );
       })}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="검색 열기"
-        onPress={() => setOpen(true)}
-        className={cn(
-          'h-10 flex-row items-center gap-3.5 rounded-md hover:bg-surface-2',
-          collapsed ? 'w-10 justify-center' : 'px-2.5'
-        )}>
-        <Icon as={SearchIcon} size={20} className="text-foreground-muted" />
-        {!collapsed && (
-          <>
-            <Text className="flex-1 text-[13.5px] font-semibold text-foreground-muted">검색</Text>
-            <Kbd>{`${modKeyLabel()}K`}</Kbd>
-          </>
-        )}
-      </Pressable>
 
       {!collapsed && <Library />}
     </View>
@@ -125,48 +103,10 @@ function Library() {
   const { isSignedIn } = useAuth();
   const favorites = useMyFavorites(isSignedIn === true);
 
-  const entries: LibraryEntry[] = React.useMemo(() => {
-    const data = favorites.data;
-    if (!data) return [];
-    const list: (LibraryEntry & { createdAt: string })[] = [
-      ...data.composers.map((item) => ({
-        key: `c-${item.composerId}`,
-        title: item.name,
-        subtitle: '작곡가',
-        image: item.avatarUrl,
-        shape: 'circle' as const,
-        href: `/composer/${item.composerId}` as Href,
-        createdAt: item.createdAt,
-      })),
-      ...data.artists.map((item) => ({
-        key: `a-${item.artistId}`,
-        title: item.name,
-        subtitle: getArtistCategoryLabel(item.category),
-        image: item.imageUrl,
-        shape: 'circle' as const,
-        href: `/artist/${item.artistId}` as Href,
-        createdAt: item.createdAt,
-      })),
-      ...data.pieces.map((item) => ({
-        key: `p-${item.pieceId}`,
-        title: item.title,
-        subtitle: item.composerName,
-        shape: 'square' as const,
-        href: `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}` as Href,
-        createdAt: item.createdAt,
-      })),
-      ...data.concerts.map((item) => ({
-        key: `k-${item.concertId}`,
-        title: item.title,
-        subtitle: [item.startDate, item.facilityName].filter(Boolean).join(' '),
-        image: item.posterUrl,
-        shape: 'square' as const,
-        href: `/concert/${item.concertId}` as Href,
-        createdAt: item.createdAt,
-      })),
-    ];
-    return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, LIBRARY_LIMIT);
-  }, [favorites.data]);
+  const entries = React.useMemo(
+    () => (favorites.data ? buildLibraryEntries(favorites.data).slice(0, LIBRARY_LIMIT) : []),
+    [favorites.data]
+  );
 
   return (
     <View className="mt-4 flex-1 border-t border-border pt-4">
@@ -194,7 +134,7 @@ function Library() {
       ) : (
         <ScrollView className="-mx-1" showsVerticalScrollIndicator={false}>
           {entries.map((entry) => (
-            <Link key={entry.key} href={entry.href} asChild>
+            <Link key={entry.key} href={entry.href as Href} asChild>
               <Pressable className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
                 <LibraryThumb entry={entry} />
                 <View className="min-w-0 flex-1">
@@ -215,14 +155,5 @@ function Library() {
 }
 
 function LibraryThumb({ entry }: { entry: LibraryEntry }) {
-  const radius = entry.shape === 'circle' ? 19 : 4;
-  const fallback = <FallbackArt name={entry.title} shape={entry.shape} size={38} />;
-  if (!entry.image) return fallback;
-  return (
-    <OptimizedImage
-      uri={getImageUrl(entry.image)}
-      fallbackComponent={fallback}
-      style={{ width: 38, height: 38, borderRadius: radius }}
-    />
-  );
+  return <EntityThumb name={entry.title} image={entry.image} shape={entry.shape} size={38} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
 }

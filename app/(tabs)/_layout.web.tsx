@@ -1,14 +1,8 @@
 import { TabsLayout } from '@/components/navigation/tabs-layout';
-import { AppShell } from '@/components/shell/app-shell';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 
-/** 웹: 좁으면 기존 하단 탭, 넓으면 사이드바 셸 (설계 문서 5.3). */
+/** 웹: 좁으면 기존 하단 탭, 넓으면 탭 크롬을 숨긴다. 셸은 루트(RootChrome)가 씌운다. */
 export default function TabsLayoutWeb() {
   const { nav } = useBreakpoint();
-  if (nav === 'tabs') return <TabsLayout />;
-  return (
-    <AppShell nav={nav}>
-      <TabsLayout hideChrome />
-    </AppShell>
-  );
+  return <TabsLayout hideChrome={nav !== 'tabs'} />;
 }
