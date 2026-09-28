@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { THEME } from '@/lib/theme';
 import { useColorScheme } from 'nativewind';
-import { Platform, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -19,6 +20,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
   const colors = THEME[scheme];
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 20;
+  const translucent = Platform.OS === 'ios';
 
   const ThemeToggle = () => (
     <Button
@@ -55,13 +57,26 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         headerStatusBarHeight: 52,
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.foregroundSubtle,
+        // iOS 26: 탭바를 콘텐츠 위에 띄우고 뒤를 흐린다. 안드로이드·웹은 불투명 + 윗선 (설계 5.4)
         tabBarStyle: {
-          backgroundColor: colors.background,
+          backgroundColor: translucent ? 'transparent' : colors.surface1,
           borderTopColor: colors.border,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 0,
           paddingTop: 8,
           paddingBottom: bottomPadding,
           height: 58 + bottomPadding,
+          ...(translucent ? { position: 'absolute' as const } : null),
         },
+        tabBarBackground: translucent
+          ? () => (
+              <BlurView
+                tint={scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
+                intensity={80}
+                style={StyleSheet.absoluteFill}
+              />
+            )
+          : undefined,
       }}>
       <Tabs.Screen
         name="home"
