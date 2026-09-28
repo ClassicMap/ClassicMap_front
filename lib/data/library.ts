@@ -5,6 +5,8 @@ export type LibraryKind = 'composer' | 'artist' | 'piece' | 'concert';
 
 export interface LibraryEntry {
   key: string;
+  /** 즐겨찾기 대상 id (kind별 테이블의 id) */
+  id: number;
   kind: LibraryKind;
   title: string;
   subtitle: string;
@@ -31,11 +33,16 @@ function shortDate(date: string): string {
   return month && day ? `${Number(month)}.${Number(day)}` : date;
 }
 
+export function getFavoriteCount(favorites: FavoriteGroups): number {
+  return favorites.composers.length + favorites.artists.length + favorites.pieces.length + favorites.concerts.length;
+}
+
 /** 즐겨찾기 네 묶음을 하나의 레퍼토리 목록으로. 최근에 담은 것이 위로 온다. */
 export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
   const entries: LibraryEntry[] = [
     ...favorites.composers.map((item) => ({
       key: `composer-${item.composerId}`,
+      id: item.composerId,
       kind: 'composer' as const,
       title: item.name,
       subtitle: '작곡가',
@@ -46,6 +53,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
     })),
     ...favorites.artists.map((item) => ({
       key: `artist-${item.artistId}`,
+      id: item.artistId,
       kind: 'artist' as const,
       title: item.name,
       subtitle: getArtistCategoryLabel(item.category),
@@ -56,6 +64,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
     })),
     ...favorites.pieces.map((item) => ({
       key: `piece-${item.pieceId}`,
+      id: item.pieceId,
       kind: 'piece' as const,
       title: item.title,
       subtitle: item.composerName,
@@ -66,6 +75,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
     })),
     ...favorites.concerts.map((item) => ({
       key: `concert-${item.concertId}`,
+      id: item.concertId,
       kind: 'concert' as const,
       title: item.title,
       subtitle: [shortDate(item.startDate), item.facilityName].filter(Boolean).join(' '),
