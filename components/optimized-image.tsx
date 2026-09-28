@@ -1,6 +1,6 @@
 import React from 'react';
 import { Image, ImageProps, View } from 'react-native';
-import { getImageUrl } from '@/lib/utils/image';
+import { getImageCandidates } from '@/lib/utils/image';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   uri?: string | null;
@@ -15,27 +15,28 @@ const OptimizedImageComponent = ({
   style,
   ...props
 }: OptimizedImageProps) => {
-  // Memoize imageUrl to prevent recalculation on every render
-  const imageUrl = React.useMemo(() => {
-    return getImageUrl(uri) || fallbackUri || '';
+  // 앞에서부터 시도하고 실패하면 다음 주소로 (위키미디어 썸네일 → 원본 → fallbackUri)
+  const candidates = React.useMemo(() => {
+    const urls = getImageCandidates(uri);
+    return fallbackUri ? [...urls, fallbackUri] : urls;
   }, [uri, fallbackUri]);
 
+  const [attempt, setAttempt] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(false);
   const [loadedUrl, setLoadedUrl] = React.useState<string>('');
+  const imageUrl = candidates[attempt] ?? '';
 
-  // Reset states only when imageUrl changes
+  // 주소가 바뀌면 처음 후보부터 다시
   React.useEffect(() => {
-    // If image is already loaded (cached), don't show loading state
-    if (loadedUrl === imageUrl) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(false);
+    setAttempt(0);
+  }, [candidates]);
+
+  React.useEffect(() => {
+    // 이미 불러온 주소면 로딩 표시를 건너뛴다
+    setLoading(loadedUrl !== imageUrl);
   }, [imageUrl, loadedUrl]);
 
-  if (!imageUrl || error) {
+  if (!imageUrl) {
     if (fallbackComponent) {
       return <View style={style}>{fallbackComponent}</View>;
     }
@@ -55,15 +56,11 @@ const OptimizedImageComponent = ({
         {...props}
         source={{ uri: imageUrl }}
         style={[style, { opacity: loading ? 0 : 1 }]}
-        onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => {
+        onLoad={() => {
           setLoading(false);
           setLoadedUrl(imageUrl);
         }}
-        onError={() => {
-          setError(true);
-          setLoading(false);
-        }}
+        onError={() => setAttempt((current) => current + 1)}
       />
     </View>
   );
@@ -79,7 +76,7 @@ export const OptimizedImage = React.memo(OptimizedImageComponent, (prevProps, ne
 });
 
 export function prefetchImages(uris: (string | null | undefined)[]): Promise<void[]> {
-  const validUris = uris.map((uri) => getImageUrl(uri)).filter((uri): uri is string => !!uri);
+  const validUris = uris.map((uri) => getImageCandidates(uri)[0]).filter((uri): uri is string => !!uri);
 
   return Promise.all(
     validUris.map((uri) =>

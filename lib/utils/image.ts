@@ -29,6 +29,37 @@ export function getImageUrl(
   return fullUrl;
 }
 
+const WIKIMEDIA_ORIGINAL =
+  /^(https?:\/\/upload\.wikimedia\.org\/wikipedia\/[^/]+)\/([0-9a-f])\/([0-9a-f]{2})\/([^/?#]+)$/i;
+const THUMBNAIL_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+/** 위키미디어가 캐시해 두는 표준 폭 중 하나. 초상은 최대 208px(2x 416px)로 그린다 */
+const WIKIMEDIA_THUMB_WIDTH = 500;
+
+/**
+ * 위키미디어 원본 주소를 표준 폭 썸네일 주소로 바꾼다. 원본은 수십 MB도 있다
+ * (베토벤 초상 원본 20MB). 이미 썸네일이거나 모양이 다르면 null.
+ */
+export function wikimediaThumbnailUrl(url: string, width = WIKIMEDIA_THUMB_WIDTH): string | null {
+  const match = url.match(WIKIMEDIA_ORIGINAL);
+  if (!match) return null;
+  const [, base, first, second, file] = match;
+  const extension = file.split('.').pop()?.toLowerCase() ?? '';
+  if (!THUMBNAIL_EXTENSIONS.includes(extension)) return null;
+  const thumbFile = extension === 'svg' ? `${width}px-${file}.png` : `${width}px-${file}`;
+  return `${base}/thumb/${first}/${second}/${file}/${thumbFile}`;
+}
+
+/**
+ * 화면에 그릴 때 시도할 주소를 순서대로 준다.
+ * 위키미디어 원본은 썸네일을 먼저, 썸네일이 없으면(원본이 더 작을 때 등) 원본을 쓴다.
+ */
+export function getImageCandidates(path: string | undefined | null): string[] {
+  if (!path) return [];
+  const thumbnail = path.startsWith('http') ? wikimediaThumbnailUrl(path) : null;
+  const urls = thumbnail ? [getImageUrl(thumbnail), getImageUrl(path)] : [getImageUrl(path)];
+  return urls.filter((url, index) => urls.indexOf(url) === index);
+}
+
 // 절대 경로를 상대 경로로 변환 (DB 저장용)
 export function toRelativePath(url: string | undefined | null): string | undefined {
   if (!url) {
