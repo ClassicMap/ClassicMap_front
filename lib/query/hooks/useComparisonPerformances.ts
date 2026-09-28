@@ -54,3 +54,16 @@ export function useArtistComparisonPerformances(artistId: number) {
     enabled: artistId > 0,
   });
 }
+
+/** 작품 한 개의 카탈로그 정보(작곡가 초상·작품번호·연주자 얼굴). 작곡가 필터로 찾는다. */
+export function useComparisonPiece(pieceId: number | undefined, composerId: number | undefined) {
+  return useQuery({
+    queryKey: [...COMPARISON_QUERY_KEYS.pieces(composerId), 'piece', pieceId ?? 0] as const,
+    queryFn: async () => {
+      const pieces = await ComparisonAPI.getPieces({ composerId, limit: 50 });
+      return pieces.find((piece) => piece.pieceId === pieceId) ?? null;
+    },
+    enabled: (pieceId ?? 0) > 0 && (composerId ?? 0) > 0,
+    staleTime: 5 * 60_000,
+  });
+}
