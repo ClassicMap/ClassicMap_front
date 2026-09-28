@@ -1,15 +1,8 @@
 import { Period } from '../types/models';
+import { ERA_BASE_COLORS } from '../design/era-palette';
 
-// 시대별 색상 매핑
-export const ERA_COLORS: Record<string, string> = {
-  '중세': '#b45309',
-  '르네상스': '#0f766e',
-  '바로크': '#9333ea',
-  '고전주의': '#3b82f6',
-  '고전주의/낭만주의': '#ec4899',
-  '낭만주의': '#ec4899',
-  '근현대': '#22c55e',
-};
+// 시대별 색상 매핑 (단일 정의는 lib/design/era-palette.ts)
+export const ERA_COLORS: Record<string, string> = ERA_BASE_COLORS;
 
 // 시대 정보 (타임라인 탭용)
 export const PERIODS: Period[] = [

@@ -5,9 +5,11 @@ import { type PropsWithChildren } from 'react';
 // web page during static rendering.
 // The contents of this function only run in Node.js environments and
 // do not have access to the DOM or browser APIs.
+const LAYOUT_SCRIPT = `(function(){var w=window.innerWidth;document.documentElement.dataset.layout=w<768?'mobile':w<1024?'tablet':w<1536?'desktop':'wide';})();`;
+
 export default function Root({ children }: PropsWithChildren) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="ko" className="bg-background">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -22,7 +24,14 @@ export default function Root({ children }: PropsWithChildren) {
         */}
         <ScrollViewStyleReset />
 
-        {/* Add any additional <head> elements that you want globally available on web... */}
+        {/* 본문 서체: Pretendard 가변 폰트 동적 서브셋 (쓰는 글자 범위만 받는다) */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+        {/* 첫 렌더 전에 폭 구간을 정해 셸 레이아웃이 튀지 않게 한다 (설계 문서 6.2) */}
+        <script dangerouslySetInnerHTML={{ __html: LAYOUT_SCRIPT }} />
       </head>
       <body>{children}</body>
     </html>
