@@ -3,17 +3,14 @@ import { Icon } from '@/components/ui/icon';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { clipClock, clipDurationMs, pickDailyPiece, primaryCredit, sortComparisonSectors } from '@/lib/data/comparison';
-import {
-  useComparisonPieces,
-  usePieceComparisonSectors,
-  useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
+import { CompareIcon, EraIcon, RepertoireIcon, TicketIcon } from '@/components/ui/icons';
+import { getEraColor } from '@/lib/design/era-palette';
+import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
+import type { Composer } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import { Pressable, ScrollView, View } from 'react-native';
 
 interface AuthShellProps {
   children: React.ReactNode;
@@ -23,7 +20,7 @@ interface AuthShellProps {
 
 /**
  * 로그인·회원가입·비밀번호 화면의 틀 (3차 시안 Auth).
- * 데스크톱은 왼쪽에 이 앱이 무엇을 하는지 실제 비교 한 장을, 오른쪽에 400px 폼을 둔다.
+ * 데스크톱은 왼쪽에 이 앱이 무엇을 하는지(클래식 로드맵)를, 오른쪽에 400px 폼을 둔다.
  */
 export function AuthShell({ children, onClose }: AuthShellProps) {
   const { layout } = useBreakpoint();
@@ -76,118 +73,197 @@ function BrandMark({ size }: { size: number }) {
 }
 
 /**
- * 왼쪽 패널: 연주자가 가장 많은 작품의 첫 구간을 그대로 보여 준다. 숫자는 운영 데이터다.
- * 첫 연주의 영상 장면을 패널 전체에 깔고, 그 위에 같은 구간의 연주 길이를 크게 겹친다.
+ * 왼쪽 패널: 이 앱이 클래식을 따라가는 지도라는 걸 보여 준다.
+ * 추천 작곡가를 태어난 해 자리에 올린 노선도 한 줄과, 그 길에서 할 수 있는 네 가지를 둔다.
  */
 function BrandPanel() {
-  const catalog = useComparisonPieces();
-  // 홈의 '오늘의 비교'와 같은 작품을 고른다
-  const piece = React.useMemo(
-    () => pickDailyPiece(catalog.data?.pages[0] ?? [], new Date()),
-    [catalog.data]
-  );
-  const sectorsQuery = usePieceComparisonSectors(piece?.pieceId);
-  const sector = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? [])[0], [sectorsQuery.data]);
-  const performances = useSectorComparisonPerformances(sector?.id).data ?? [];
-  const images = new Map((piece?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl]));
-  const ready = performances.filter((performance) => performance.clipStatus === 'ready').slice(0, 3);
-  const lines = ready.map((performance) => {
-    const credit = primaryCredit(performance);
-    return {
-      id: performance.id,
-      name: credit?.artistName ?? '연주자 정보 없음',
-      image: credit ? credit.imageUrl ?? images.get(credit.artistId) ?? null : null,
-      durationMs: clipDurationMs(performance),
-    };
-  });
-  const longest = Math.max(1, ...lines.map((line) => line.durationMs));
-  const videoId = ready[0]?.videoId ?? null;
-
   return (
     <View className="w-1/2 max-w-[760px] overflow-hidden bg-[#0B0A09]">
-      {videoId ? <PanelBackdrop videoId={videoId} /> : null}
-
       <View className="flex-1 justify-between px-14 py-12">
         <View className="flex-row items-center gap-2.5">
           <BrandLogo size={28} />
           <Text className="text-body font-bold text-white">ClassicMap</Text>
         </View>
 
-        <View>
-          <Text className="text-[76px] font-extrabold leading-[78px] tracking-tighter text-white">
-            {'같은 구간,\n다른 연주.'}
-          </Text>
-          <Text className="mt-5 max-w-[480px] text-body text-white/70">
-            같은 악보인데 길이부터 달라요. 연주자를 바꿔 가며 같은 구간을 이어 들어 보세요.
-          </Text>
+        <RoadmapLine />
 
-          {lines.length > 0 && piece && sector ? (
-            <View className="mt-10 max-w-[560px]">
-              <Text className="mb-3 text-caption font-semibold uppercase tracking-widest text-white/55" numberOfLines={1}>
-                {`${piece.composerName} · ${piece.pieceTitle} · ${sector.sectorName}`}
-              </Text>
-              <View className="gap-4">
-                {lines.map((line, index) => (
-                  <View key={line.id} className="flex-row items-center gap-3.5">
-                    <EntityThumb name={line.name} image={line.image} shape="circle" size={36} />
-                    <View className="min-w-0 flex-1 gap-1.5">
-                      <View className="flex-row items-baseline justify-between gap-3">
-                        <Text
-                          numberOfLines={1}
-                          className={cn('flex-1 text-body font-semibold', index === 0 ? 'text-primary' : 'text-white')}>
-                          {line.name}
-                        </Text>
-                        <Text variant="mono" className="text-white/70">
-                          {clipClock(line.durationMs)}
-                        </Text>
-                      </View>
-                      <View className="h-1.5 overflow-hidden rounded-full bg-white/15">
-                        <View
-                          className={cn('h-full rounded-full', index === 0 ? 'bg-primary' : 'bg-white/60')}
-                          style={{ width: `${Math.max(6, (line.durationMs / longest) * 100)}%` }}
-                        />
-                      </View>
-                    </View>
-                  </View>
-                ))}
+        <View>
+          <Text className="text-[76px] font-extrabold leading-[80px] tracking-tighter text-white">
+            {'클래식\n로드맵.'}
+          </Text>
+          <Text className="mt-5 max-w-[500px] text-body text-white/70">
+            어디서부터 들을지 막막할 때, 시대를 따라 작곡가를 만나고 좋아하는 연주와 공연까지 이어 가요.
+          </Text>
+          <View className="mt-9 max-w-[560px] flex-row flex-wrap gap-x-8 gap-y-5">
+            {ROADMAP_FEATURES.map((feature) => (
+              <View key={feature.title} className="w-[240px] flex-row gap-3">
+                <View className="size-9 items-center justify-center rounded-md bg-white/10">
+                  {feature.icon}
+                </View>
+                <View className="min-w-0 flex-1">
+                  <Text className="text-body-sm font-semibold text-white">{feature.title}</Text>
+                  <Text className="mt-0.5 text-caption text-white/55">{feature.description}</Text>
+                </View>
               </View>
-            </View>
-          ) : null}
-          <Text className="mt-6 text-caption text-white/45">영상은 YouTube 원본의 해당 구간이에요.</Text>
+            ))}
+          </View>
         </View>
       </View>
     </View>
   );
 }
 
-/**
- * 연주 장면을 패널 폭에 맞춰 위에 깔고 아래로 어둡게 녹인다. 세로로 꽉 채우면 16:9 장면의 좌우가
- * 잘려 연주자가 빠지기 쉬워서 장면은 온전히 보인다.
- * maxresdefault는 없는 영상이 많고 그때도 회색 대체 그림이 200으로 와서 onError로 못 거른다.
- * 항상 있는 hqdefault(4:3 안에 16:9, 위아래 12.5% 검은 띠)를 띠만 잘라 쓴다.
- */
-function PanelBackdrop({ videoId }: { videoId: string }) {
+const FEATURE_ICON_CLASS = 'text-white/85';
+
+const ROADMAP_FEATURES = [
+  {
+    title: '타임라인',
+    description: '400년 작곡가 흐름을 한눈에',
+    icon: <EraIcon size={18} className={FEATURE_ICON_CLASS} />,
+  },
+  {
+    title: '연주 비교',
+    description: '같은 구간을 연주자별로',
+    icon: <CompareIcon size={18} className={FEATURE_ICON_CLASS} />,
+  },
+  {
+    title: '공연',
+    description: '전국 클래식 공연 일정',
+    icon: <TicketIcon size={18} className={FEATURE_ICON_CLASS} />,
+  },
+  {
+    title: '레퍼토리',
+    description: '담아 두고 어느 기기에서든',
+    icon: <RepertoireIcon size={18} className={FEATURE_ICON_CLASS} />,
+  },
+] as const;
+
+const ROAD_FROM = 1660;
+const ROAD_TO = 1930;
+const ROAD_ERAS = [
+  { period: '바로크', label: '바로크', from: ROAD_FROM, to: 1750 },
+  { period: '고전주의', label: '고전', from: 1750, to: 1820 },
+  { period: '낭만주의', label: '낭만', from: 1820, to: 1890 },
+  { period: '근현대', label: '근현대', from: 1890, to: ROAD_TO },
+] as const;
+const STATION_AVATAR = 52;
+const MAX_STATIONS = 8;
+
+interface Station {
+  id: number;
+  name: string;
+  year: number;
+  image: string;
+  x: number;
+}
+
+/** 추천 순으로 훑으며 서로 너무 붙지 않는 작곡가만 역으로 고른다. 위아래를 번갈아 달아 이웃 역 사이를 넓힌다 */
+function pickStations(composers: readonly Composer[], width: number): Station[] {
+  const minGap = STATION_AVATAR * 0.95;
+  const picked: Station[] = [];
+  for (const composer of composers) {
+    if (picked.length >= MAX_STATIONS) break;
+    const year = composer.birthYear;
+    if (!composer.avatarUrl || !year || year < ROAD_FROM + 10 || year > ROAD_TO - 12) continue;
+    const x = ((year - ROAD_FROM) / (ROAD_TO - ROAD_FROM)) * width;
+    if (picked.some((station) => Math.abs(station.x - x) < minGap)) continue;
+    picked.push({ id: composer.id, name: composer.name, year, image: composer.avatarUrl, x });
+  }
+  return picked.sort((a, b) => a.x - b.x);
+}
+
+function RoadmapLine() {
+  const composers = useRecommendedComposers(40);
+  const [width, setWidth] = React.useState(0);
+  const stations = React.useMemo(
+    () => (width > 0 ? pickStations(composers.data ?? [], width) : []),
+    [composers.data, width]
+  );
+  const lineY = STATION_AVATAR + 40;
+
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View className="w-full overflow-hidden" style={{ aspectRatio: 16 / 9 }}>
-        <Image
-          source={{ uri: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }}
-          resizeMode="cover"
-          style={{ position: 'absolute', left: 0, right: 0, top: '-16.7%', bottom: '-16.7%' }}
-          accessibilityIgnoresInvertColors
-        />
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} preserveAspectRatio="none">
-          <Defs>
-            <LinearGradient id="auth-panel-fade" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor="#0B0A09" stopOpacity="0.5" />
-              <Stop offset="0.3" stopColor="#0B0A09" stopOpacity="0.1" />
-              <Stop offset="0.75" stopColor="#0B0A09" stopOpacity="0.55" />
-              <Stop offset="1" stopColor="#0B0A09" stopOpacity="1" />
-            </LinearGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#auth-panel-fade)" />
-        </Svg>
-      </View>
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      style={{ height: lineY * 2 }}
+      className="my-8">
+      {ROAD_ERAS.map((era) => {
+        const left = ((era.from - ROAD_FROM) / (ROAD_TO - ROAD_FROM)) * width;
+        const right = ((era.to - ROAD_FROM) / (ROAD_TO - ROAD_FROM)) * width;
+        const color = getEraColor(era.period);
+        return (
+          <View key={era.period} style={{ position: 'absolute', left, width: right - left, top: lineY - 3 }}>
+            <View style={{ height: 6, backgroundColor: color?.base ?? '#FFFFFF', opacity: 0.85 }} />
+            <Text className="mt-2 text-caption font-semibold" style={{ color: color?.onDark ?? '#FFFFFF' }}>
+              {era.label}
+            </Text>
+          </View>
+        );
+      })}
+      {stations.map((station, index) => {
+        const above = index % 2 === 0;
+        const stem = 18;
+        return (
+          <View
+            key={station.id}
+            className="items-center"
+            style={{
+              position: 'absolute',
+              left: station.x - 40,
+              width: 80,
+              top: above ? lineY - stem - STATION_AVATAR - 34 : lineY + 22,
+            }}>
+            {above ? <StationLabel station={station} /> : null}
+            <View className="rounded-full border-2 border-white/80">
+              <EntityThumb name={station.name} image={station.image} shape="circle" size={STATION_AVATAR} />
+            </View>
+            {!above ? <StationLabel station={station} /> : null}
+          </View>
+        );
+      })}
+      {stations.map((station, index) => {
+        const above = index % 2 === 0;
+        return (
+          <View
+            key={`stop-${station.id}`}
+            style={{
+              position: 'absolute',
+              left: station.x - 5,
+              top: lineY - 5,
+              width: 10,
+              height: 10,
+              borderRadius: 5,
+              backgroundColor: '#0B0A09',
+              borderWidth: 2,
+              borderColor: '#FFFFFF',
+            }}>
+            <View
+              style={{
+                position: 'absolute',
+                left: 2,
+                width: 2,
+                height: 16,
+                top: above ? -18 : 8,
+                backgroundColor: 'rgba(255,255,255,0.5)',
+              }}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function StationLabel({ station }: { station: Station }) {
+  return (
+    <View className="my-1.5 items-center">
+      <Text numberOfLines={1} className="text-caption font-semibold text-white">
+        {station.name}
+      </Text>
+      <Text variant="mono" className="text-[11px] text-white/50">
+        {station.year}
+      </Text>
     </View>
   );
 }
