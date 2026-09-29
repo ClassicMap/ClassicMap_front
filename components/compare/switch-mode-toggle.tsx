@@ -4,6 +4,15 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
+/** 세그먼트에서 고른 칸의 그림자. className으로 켜고 끄지 않는다 (아래 주석) */
+export const SELECTED_SHADOW = {
+  shadowColor: '#000000',
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+  shadowOffset: { width: 0, height: 1 },
+  elevation: 1,
+} as const;
+
 /** 연주자를 바꿀 때 어디서 이어 들을지 */
 export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
   const mode = useComparePlayer((state) => state.switchMode);
@@ -28,7 +37,10 @@ export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityHint={option.hint}
-              className={cn('h-7 justify-center rounded-full px-3', selected && 'bg-surface-1 shadow-sm shadow-black/10')}>
+              // 그림자를 className으로 켜고 끄면 NativeWind가 개발 모드에서 컴포넌트를 바꿔 끼우며 오류를 낸다.
+              // 그림자는 style로 준다
+              style={selected ? SELECTED_SHADOW : undefined}
+              className={cn('h-7 justify-center rounded-full px-3', selected && 'bg-surface-1')}>
               <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
                 {option.label}
               </Text>

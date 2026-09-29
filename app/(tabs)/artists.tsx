@@ -1,3 +1,4 @@
+import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { PeopleGrid, PeopleShelf, type PersonItem } from '@/components/artists/people-grid';
 import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
@@ -344,9 +345,11 @@ function SegmentedControl({ value, onChange }: { value: Segment; onChange: (valu
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
+            // 그림자는 className으로 켜고 끄지 않는다 (SELECTED_SHADOW 주석)
+            style={selected ? SELECTED_SHADOW : undefined}
             className={cn(
               'h-9 min-w-[88px] items-center justify-center rounded-full px-5 web:transition-colors',
-              selected ? 'bg-background shadow-sm shadow-black/10 web:bg-surface-1' : 'web:hover:bg-surface-3'
+              selected ? 'bg-background web:bg-surface-1' : 'web:hover:bg-surface-3'
             )}>
             <Text className={cn('text-body-sm font-semibold', selected ? 'text-foreground' : 'text-foreground-muted')}>
               {option.label}
