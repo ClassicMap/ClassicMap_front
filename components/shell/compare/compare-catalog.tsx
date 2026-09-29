@@ -6,6 +6,12 @@ import { CompareIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
+  CompareSearchField,
+  CompareSearchResults,
+  openFirstResult,
+  searchComparable,
+} from '@/components/compare/compare-search';
+import {
   type ComparableComposer,
   useComparableComposers,
   useComparisonPieces,
@@ -17,19 +23,47 @@ import { AlertCircleIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
-/** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. */
-export function CompareCatalog({ onOpenComposer }: { onOpenComposer: (composerId: number) => void }) {
+interface CompareCatalogProps {
+  onOpenComposer: (composerId: number) => void;
+  onOpenPiece: (piece: ComparisonPiece) => void;
+}
+
+/** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
+export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogProps) {
   const comparable = useComparableComposers();
   const composers = comparable.data?.composers ?? [];
+  const [query, setQuery] = React.useState('');
+  const searching = query.trim().length > 0;
+  const result = React.useMemo(() => searchComparable(comparable.data, query), [comparable.data, query]);
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2">
-      <Text variant="display">비교</Text>
-      <Text variant="bodySm" className="mt-1.5 text-foreground-muted">
-        작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
-      </Text>
+    <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
+      <View className="flex-row items-end justify-between gap-6">
+        <View className="min-w-0 flex-1">
+          <Text variant="display">비교</Text>
+          <Text variant="bodySm" className="mt-1.5 text-foreground-muted">
+            작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
+          </Text>
+        </View>
+        <CompareSearchField
+          value={query}
+          onChange={setQuery}
+          onSubmit={() => openFirstResult(result, onOpenComposer, onOpenPiece)}
+          className="w-[340px]"
+        />
+      </View>
 
-      {comparable.isLoading ? (
+      {searching && comparable.data ? (
+        <View className="max-w-[720px]">
+          <CompareSearchResults
+            query={query}
+            result={result}
+            onOpenComposer={onOpenComposer}
+            onOpenPiece={onOpenPiece}
+            onClear={() => setQuery('')}
+          />
+        </View>
+      ) : comparable.isLoading ? (
         <View className="mt-8 flex-row flex-wrap gap-x-5 gap-y-7">
           {Array.from({ length: 8 }, (_, index) => (
             <View key={index} className="w-[188px] items-center gap-2.5">

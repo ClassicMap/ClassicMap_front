@@ -33,6 +33,12 @@ import {
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
+import {
+  CompareSearchField,
+  CompareSearchResults,
+  openFirstResult,
+  searchComparable,
+} from '@/components/compare/compare-search';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import {
@@ -47,23 +53,47 @@ import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
-/** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로 */
-export function CompareMobileCatalog({ onOpenComposer }: { onOpenComposer: (composerId: number) => void }) {
+interface CompareMobileCatalogProps {
+  onOpenComposer: (composerId: number) => void;
+  onOpenPiece: (piece: ComparisonPiece) => void;
+}
+
+/** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로. 위 검색 칸으로 바로 찾는다 */
+export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
   const scrollInsets = useTabScrollInsets();
   const comparable = useComparableComposers();
   const composers = comparable.data?.composers ?? [];
+  const [query, setQuery] = React.useState('');
+  const searching = query.trim().length > 0;
+  const result = React.useMemo(() => searchComparable(comparable.data, query), [comparable.data, query]);
 
   return (
     <ScrollView
       {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName="px-4 pb-24 pt-2"
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       refreshControl={<RefreshControl refreshing={comparable.isRefetching} onRefresh={() => comparable.refetch()} />}>
       <Text variant="title1">비교</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
         작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
       </Text>
-      {comparable.isLoading ? (
+      <CompareSearchField
+        value={query}
+        onChange={setQuery}
+        onSubmit={() => openFirstResult(result, onOpenComposer, onOpenPiece)}
+        className="mt-4"
+      />
+      {searching && comparable.data ? (
+        <CompareSearchResults
+          query={query}
+          result={result}
+          onOpenComposer={onOpenComposer}
+          onOpenPiece={onOpenPiece}
+          onClear={() => setQuery('')}
+        />
+      ) : comparable.isLoading ? (
         <View className="mt-5 gap-4">
           {Array.from({ length: 5 }, (_, index) => (
             <View key={index} className="flex-row items-center gap-3.5">

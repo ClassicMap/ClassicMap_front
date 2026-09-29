@@ -50,7 +50,12 @@ export default function CompareScreenWeb() {
           onOpen={(piece) => router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })}
         />
       ) : (
-        <CompareCatalog onOpenComposer={(id) => router.setParams({ composerId: String(id) })} />
+        <CompareCatalog
+          onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
+          onOpenPiece={(piece) =>
+            router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })
+          }
+        />
       )}
     </View>
   );

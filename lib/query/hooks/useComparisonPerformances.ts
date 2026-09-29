@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
-import type { ComparisonPiecePerformer } from '@/lib/types/models';
+import type { ComparisonPiece, ComparisonPiecePerformer } from '@/lib/types/models';
 
 const PAGE_SIZE = 10;
 
@@ -101,6 +101,8 @@ export interface ComparableComposers {
   /** 비교할 수 있는 작품이 많은 순 (같으면 연주자 수 합이 많은 순) */
   composers: ComparableComposer[];
   byId: Map<number, ComparableComposer>;
+  /** 카탈로그 전체 작품. 비교 탭 검색에 쓴다 */
+  pieces: ComparisonPiece[];
 }
 
 /**
@@ -113,9 +115,11 @@ export function useComparableComposers() {
     queryFn: async (): Promise<ComparableComposers> => {
       const byId = new Map<number, ComparableComposer>();
       const seen = new Map<number, Set<number>>();
+      const pieces: ComparisonPiece[] = [];
       for (let offset = 0; offset < CATALOG_SCAN_LIMIT; offset += CATALOG_SCAN_PAGE) {
         const page = await ComparisonAPI.getPieces({ offset, limit: CATALOG_SCAN_PAGE });
         for (const piece of page) {
+          pieces.push(piece);
           const entry = byId.get(piece.composerId) ?? {
             composerId: piece.composerId,
             composerName: piece.composerName,
@@ -146,7 +150,7 @@ export function useComparableComposers() {
             .slice(0, COMPOSER_FACES),
         }))
         .sort((a, b) => b.pieceCount - a.pieceCount || b.performanceCount - a.performanceCount);
-      return { composers, byId: new Map(composers.map((entry) => [entry.composerId, entry])) };
+      return { composers, byId: new Map(composers.map((entry) => [entry.composerId, entry])), pieces };
     },
     staleTime: 10 * 60_000,
   });

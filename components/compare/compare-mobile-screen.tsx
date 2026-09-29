@@ -48,5 +48,12 @@ export function CompareMobileScreen() {
     );
   }
 
-  return <CompareMobileCatalog onOpenComposer={(id) => router.setParams({ composerId: String(id) })} />;
+  return (
+    <CompareMobileCatalog
+      onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
+      onOpenPiece={(piece) =>
+        router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })
+      }
+    />
+  );
 }
