@@ -1,7 +1,7 @@
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
-import YoutubePlayer, { PLAYER_STATES, type YoutubeIframeRef } from 'react-native-youtube-iframe';
+import { type YoutubeClipHandle, YoutubeClipPlayer, YT_STATE } from '@/components/player/youtube-clip-player';
 
 interface PerformanceVideoPlayerProps {
   videoId?: string;
@@ -16,8 +16,6 @@ interface PerformanceVideoPlayerProps {
 }
 
 const VIDEO_CLIP_BASE = process.env.EXPO_PUBLIC_VIDEO_CLIP_BASE ?? '/classicmap/clips';
-/** 네이티브 YouTube는 위치 이벤트가 없어 이 간격으로 묻는다 */
-const NATIVE_POLL_MS = 1000;
 
 function createClipUrl(videoId: string, startTime: number, endTime: number): string {
   const params = new URLSearchParams({
@@ -185,86 +183,79 @@ function WebClip({
 
 /**
  * 네이티브: YouTube 원본의 그 구간. 스토어에 붙으면 듣던 위치(구간 안 초)에서 시작하고,
- * 위치를 초마다 물어 적어 둔다.
+ * 재생 상태·위치를 스토어에 알린다. 구간 끝에서 멈춘다.
  */
-function NativeYoutubeClip({
+export function NativeYoutubeClip({
   videoId,
   startTime,
   endTime,
   performanceId,
+  height = 196,
 }: {
   videoId: string;
   startTime: number;
   endTime: number;
   performanceId?: number;
+  /** 플레이어 높이. 루트 호스트는 기준 크기로 그리고 자리에 맞춰 줄여 보인다 */
+  height?: number;
 }) {
-  const ref = React.useRef<YoutubeIframeRef | null>(null);
-  const [play, setPlay] = React.useState(false);
-  const [sound, setSound] = React.useState(() => {
-    const { volume, muted } = comparePlayer.getState();
-    return { volume, muted };
-  });
-  const linked = performanceId !== undefined;
+  const player = React.useRef<YoutubeClipHandle>(null);
+  const duration = Math.max(0, endTime - startTime);
   // 처음 붙을 때만 정한다. 바꾸면 플레이어가 다시 만들어진다
   const [initialStart] = React.useState(() =>
-    linked ? startTime + Math.floor(comparePlayer.positionFor(performanceId)) : startTime
+    performanceId !== undefined ? startTime + comparePlayer.positionFor(performanceId) : startTime
   );
-  const duration = Math.max(0, endTime - startTime);
 
   React.useEffect(() => {
     if (performanceId === undefined) return;
     return comparePlayer.registerMedia({
       performanceId,
-      play: () => setPlay(true),
-      pause: () => setPlay(false),
-      seek: (seconds) => ref.current?.seekTo(startTime + seconds, true),
-      applyVolume: (volume, muted) => setSound({ volume, muted }),
+      play: () => player.current?.play(),
+      pause: () => player.current?.pause(),
+      seek: (seconds) => player.current?.seekTo(startTime + seconds),
+      applyVolume: (volume, muted) => player.current?.setVolume(volume, muted),
     });
   }, [performanceId, startTime]);
 
-  React.useEffect(() => {
-    if (performanceId === undefined || !play) return;
-    const timer = setInterval(() => {
-      void ref.current
-        ?.getCurrentTime()
-        .then((time) => comparePlayer.reportProgress(performanceId, Math.max(0, time - startTime), duration))
-        .catch(() => undefined);
-    }, NATIVE_POLL_MS);
-    return () => clearInterval(timer);
-  }, [performanceId, play, startTime, duration]);
-
   return (
-    <YoutubePlayer
-      ref={ref}
+    <YoutubeClipPlayer
+      ref={player}
       videoId={videoId}
-      height={196}
-      play={play}
-      volume={linked ? Math.round(sound.volume * 100) : undefined}
-      mute={linked ? sound.muted : undefined}
-      initialPlayerParams={{
-        start: initialStart,
-        end: endTime,
-        controls: true,
-        modestbranding: true,
-        rel: false,
-      }}
+      start={initialStart}
+      end={endTime}
+      height={height}
       onReady={() => {
-        if (performanceId !== undefined && comparePlayer.consumePlayIntent(performanceId)) setPlay(true);
-      }}
-      onChangeState={(event: PLAYER_STATES) => {
-        if (event === PLAYER_STATES.PLAYING) setPlay(true);
-        else if (event === PLAYER_STATES.PAUSED) setPlay(false);
         if (performanceId === undefined) return;
-        if (event === PLAYER_STATES.PLAYING) comparePlayer.reportPlaying(performanceId, true);
-        else if (event === PLAYER_STATES.PAUSED) comparePlayer.reportPlaying(performanceId, false);
-        else if (event === PLAYER_STATES.ENDED) {
-          setPlay(false);
+        const { volume, muted } = comparePlayer.getState();
+        player.current?.setVolume(volume, muted);
+        // 시작 전 YouTube는 seekTo를 받으면 재생해 버린다. 틀 때만 초 단위 아래까지 맞춘다
+        if (comparePlayer.consumePlayIntent(performanceId)) {
+          player.current?.seekTo(initialStart);
+          player.current?.play();
+        }
+      }}
+      onState={(state) => {
+        if (performanceId === undefined) return;
+        if (state === YT_STATE.playing) comparePlayer.reportPlaying(performanceId, true);
+        else if (state === YT_STATE.paused) comparePlayer.reportPlaying(performanceId, false);
+        else if (state === YT_STATE.ended) {
+          // 끝나면 구간 처음으로 되돌려 둔다 (다음 재생이 영상 맨 앞에서 시작하지 않게)
+          player.current?.seekTo(startTime);
+          player.current?.pause();
           comparePlayer.reportEnded(performanceId);
         }
       }}
-      webViewProps={{
-        androidLayerType: 'hardware',
-        allowsInlineMediaPlayback: true,
+      onTime={(seconds) => {
+        if (performanceId === undefined) return;
+        // 구간을 벗어나면 끝난 것으로 본다. YouTube는 end에 닿으면 영상 맨 앞으로 돌아가 이어서 트는 때가 있다
+        if (seconds >= endTime - 0.25 || seconds < startTime - 1) {
+          // 옮긴 뒤 멈춘다. 재생 중에 옮기면 계속 재생되니 멈춤이 마지막이어야 한다
+          player.current?.seekTo(startTime);
+          player.current?.pause();
+          comparePlayer.reportEnded(performanceId);
+          return;
+        }
+        comparePlayer.reportProgress(performanceId, Math.max(0, seconds - startTime), duration);
       }}
     />
   );
