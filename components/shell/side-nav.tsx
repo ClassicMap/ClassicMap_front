@@ -1,6 +1,6 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, TicketIcon } from '@/components/ui/icons';
+import { CompareIcon, PerformerKindIcon, TicketIcon } from '@/components/ui/icons';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, groupLibraryEntries, type LibraryEntry } from '@/lib/data/library';
@@ -21,16 +21,22 @@ type NavIconProps = { size: number; className: string };
 interface NavItem {
   label: string;
   href: Href;
-  /** 이 경로로 시작하면 활성 */
-  match: string;
+  /** 이 경로들 중 하나로 시작하면 활성 */
+  match: readonly string[];
   renderIcon: (props: NavIconProps) => React.ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: '홈', href: '/home', match: '/home', renderIcon: (p) => <Icon as={HomeIcon} {...p} /> },
-  { label: '검색', href: '/search', match: '/search', renderIcon: (p) => <Icon as={SearchIcon} {...p} /> },
-  { label: '비교', href: '/compare', match: '/compare', renderIcon: (p) => <CompareIcon {...p} /> },
-  { label: '공연', href: '/concerts', match: '/concert', renderIcon: (p) => <TicketIcon {...p} /> },
+  { label: '홈', href: '/home', match: ['/home'], renderIcon: (p) => <Icon as={HomeIcon} {...p} /> },
+  { label: '검색', href: '/search', match: ['/search'], renderIcon: (p) => <Icon as={SearchIcon} {...p} /> },
+  { label: '비교', href: '/compare', match: ['/compare'], renderIcon: (p) => <CompareIcon {...p} /> },
+  {
+    label: '아티스트',
+    href: '/artists',
+    match: ['/artists', '/timeline', '/composer', '/artist/'],
+    renderIcon: (p) => <PerformerKindIcon {...p} />,
+  },
+  { label: '공연', href: '/concerts', match: ['/concert'], renderIcon: (p) => <TicketIcon {...p} /> },
 ];
 
 /** 사이드바 레퍼토리는 종류마다 최근 몇 개만. 나머지는 레퍼토리 탭에서 */
@@ -52,7 +58,7 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
       </View>
 
       {NAV_ITEMS.map((item) => {
-        const active = pathname.startsWith(item.match);
+        const active = item.match.some((prefix) => pathname.startsWith(prefix));
         return (
           <Link key={item.label} href={item.href} asChild>
             <Pressable

@@ -235,7 +235,7 @@ export default function HomeScreen() {
         )}
       </Section>
 
-      <Section wide={wide} title="연주자" onAction={() => router.push('/artists' as Href)}>
+      <Section wide={wide} title="연주자" onAction={() => router.push('/artists?type=artist' as Href)}>
         {artistsQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="circle" />
         ) : artistsQuery.isError ? (

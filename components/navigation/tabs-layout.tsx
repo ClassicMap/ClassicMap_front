@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { BookmarkIcon, HomeIcon, MoonStarIcon, SearchIcon, SunIcon } from 'lucide-react-native';
+import { BookmarkIcon, CompassIcon, HomeIcon, MoonStarIcon, SunIcon } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_CHROME_TRANSLUCENT } from '@/components/navigation/tab-chrome';
 
 /**
- * 탭 구성 (설계 문서 6.0): 홈 · 검색 · 비교 · 공연 · 레퍼토리.
- * 아티스트 목록과 타임라인은 탭에서 내리고 경로만 남긴다 (검색 둘러보기·홈에서 들어감).
+ * 모바일 탭 구성: 홈 · 둘러보기 · 비교 · 공연 · 레퍼토리.
+ * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
   const { colorScheme, toggleColorScheme } = useColorScheme();
@@ -98,8 +98,9 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       <Tabs.Screen
         name="search"
         options={{
-          title: '검색',
-          tabBarIcon: ({ color }) => <Icon as={SearchIcon} color={color} size={24} />,
+          // 탭바 5칸을 지키려고 검색 탭이 아티스트·시대·앨범 입구를 겸한다 (기획 C)
+          title: '둘러보기',
+          tabBarIcon: ({ color }) => <Icon as={CompassIcon} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
@@ -123,7 +124,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
           tabBarIcon: ({ color }) => <Icon as={BookmarkIcon} color={color} size={24} />,
         }}
       />
-      {/* 탭에서는 내리고 경로만 유지 */}
+      {/* 탭바에는 없고 둘러보기·사이드바에서 들어가는 화면 */}
       <Tabs.Screen name="artists" options={{ href: null, title: '아티스트' }} />
       <Tabs.Screen name="timeline" options={{ href: null, title: '타임라인' }} />
     </Tabs>

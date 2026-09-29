@@ -1,4 +1,5 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
+import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { OptimizedImage } from '@/components/optimized-image';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -44,23 +45,31 @@ export function PersonCard({
   caption,
   width,
   onPress,
+  inRepertoire = false,
 }: {
   name: string;
   image?: string | null;
   caption?: string;
   width: number;
   onPress: () => void;
+  /** 레퍼토리에 담긴 사람이면 사진 모서리 배지와 이름 옆 표시 */
+  inRepertoire?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={name}
+      accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
       className="items-center rounded-lg web:transition-opacity web:hover:opacity-90">
-      <EntityThumb name={name} image={image} shape="circle" size={width} />
-      <Text numberOfLines={1} className="mt-2.5 text-center text-body-sm font-semibold text-foreground">
-        {name}
-      </Text>
+      <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
+        <EntityThumb name={name} image={image} shape="circle" size={width} />
+      </RepertoireThumb>
+      <View className="mt-2.5 max-w-full flex-row items-center justify-center gap-1">
+        <Text numberOfLines={1} className="shrink text-center text-body-sm font-semibold text-foreground">
+          {name}
+        </Text>
+        {inRepertoire ? <RepertoireMark /> : null}
+      </View>
       {caption ? (
         <Text variant="caption" numberOfLines={1} className="mt-0.5 text-center">
           {caption}

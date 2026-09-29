@@ -82,6 +82,27 @@ export function useRecommendedComposers(limit = 40) {
   });
 }
 
+const BROWSE_PAGE_SIZE = 20;
+
+/**
+ * 아티스트 탭 작곡가 둘러보기. 추천 순으로 20명씩 이어 붙인다.
+ * 이름을 치면 같은 시대 안에서 이름으로 찾는다.
+ */
+export function useBrowseComposers(period: string | undefined, query: string) {
+  const q = query.trim();
+  return useInfiniteQuery({
+    queryKey: ['composers', 'browse', period ?? 'all', q] as const,
+    queryFn: ({ pageParam }) =>
+      q
+        ? ComposerAPI.search({ q, period, offset: pageParam, limit: BROWSE_PAGE_SIZE })
+        : ComposerAPI.getAll({ offset: pageParam, limit: BROWSE_PAGE_SIZE, period, sort: 'recommended' }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < BROWSE_PAGE_SIZE ? undefined : pages.length * BROWSE_PAGE_SIZE,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
 /**
  * 특정 작곡가 조회 훅
  * - id가 없으면 쿼리 비활성화

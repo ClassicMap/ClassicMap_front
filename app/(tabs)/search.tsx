@@ -1,19 +1,22 @@
-import { Chip } from '@/components/ui/chip';
+import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, EraIcon, PerformerKindIcon, TicketIcon } from '@/components/ui/icons';
+import { CompareIcon, ComposerKindIcon, EraIcon, PerformerKindIcon } from '@/components/ui/icons';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
-import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { type ArtistCategoryCode, getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { getEraForeground } from '@/lib/design/era-palette';
+import { PERIODS } from '@/lib/data/periods';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import type { Artist, Composer, Concert, PieceSearchResult } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { AlertCircleIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
@@ -39,19 +42,22 @@ interface BrowseTile {
   renderIcon: (className: string) => React.ReactNode;
 }
 
-const BROWSE_TILES: BrowseTile[] = [
+const PEOPLE_TILES: BrowseTile[] = [
   {
-    label: '비교할 수 있는 작품',
-    description: '같은 구간을 연주자별로 들어 봐요',
-    href: '/compare',
-    renderIcon: (className) => <CompareIcon size={22} className={className} />,
+    label: '작곡가',
+    description: '시대별로 추천 순',
+    href: '/artists',
+    renderIcon: (className) => <ComposerKindIcon size={22} className={className} />,
   },
   {
     label: '연주자',
     description: '피아니스트부터 오케스트라까지',
-    href: '/artists',
+    href: '/artists?type=artist',
     renderIcon: (className) => <PerformerKindIcon size={22} className={className} />,
   },
+];
+
+const MORE_TILES: BrowseTile[] = [
   {
     label: '타임라인',
     description: '작곡가들이 살았던 시간을 겹쳐 봐요',
@@ -59,11 +65,26 @@ const BROWSE_TILES: BrowseTile[] = [
     renderIcon: (className) => <EraIcon size={22} className={className} />,
   },
   {
-    label: '공연',
-    description: '이번 주 클래식 공연 일정',
-    href: '/concerts',
-    renderIcon: (className) => <TicketIcon size={22} className={className} />,
+    label: '비교할 수 있는 작품',
+    description: '같은 구간을 연주자별로 들어 봐요',
+    href: '/compare',
+    renderIcon: (className) => <CompareIcon size={22} className={className} />,
   },
+];
+
+/** 작곡가가 있는 시대만. 누르면 아티스트 탭의 그 시대로 */
+const ERA_LINKS = PERIODS.filter((era) => era.id !== 'medieval');
+
+/** 악기·편성 바로가기. 누르면 아티스트 탭의 연주자 그 분류로 */
+const CATEGORY_LINKS: ArtistCategoryCode[] = [
+  'pianist',
+  'violinist',
+  'cellist',
+  'vocalist',
+  'conductor',
+  'orchestra',
+  'ensemble',
+  'choir',
 ];
 
 function formatLife(composer: Composer): string {
@@ -161,30 +182,7 @@ export default function SearchScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerClassName={cn('px-4 pb-16', isWide && 'mx-auto w-full max-w-[880px] px-6')}>
         {!result.query ? (
-          <View className="mt-4 gap-3">
-            <Text variant="title3">둘러보기</Text>
-            <View className={cn('gap-3', isWide && 'flex-row flex-wrap')}>
-              {BROWSE_TILES.map((tile) => (
-                <Pressable
-                  key={tile.label}
-                  onPress={() => router.push(tile.href)}
-                  className={cn(
-                    'flex-row items-center gap-4 rounded-lg bg-surface-2 p-4 active:bg-surface-3 web:hover:bg-surface-3',
-                    isWide && 'w-[calc(50%-6px)]'
-                  )}>
-                  <View className="size-11 items-center justify-center rounded-md bg-surface-3">
-                    {tile.renderIcon('text-primary')}
-                  </View>
-                  <View className="flex-1">
-                    <Text variant="headline">{tile.label}</Text>
-                    <Text variant="caption" className="mt-0.5">
-                      {tile.description}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          <BrowseLanding isWide={isWide} />
         ) : result.isLoading ? (
           <SkeletonList rows={6} className="mt-2" />
         ) : total === 0 && result.failedCount === 0 ? (
@@ -346,4 +344,95 @@ function ResultRow({
 function PieceThumb({ piece }: { piece: PieceSearchResult }) {
   const image = useComposerAvatar(piece.composerId, piece.composerAvatarUrl);
   return <EntityThumb name={piece.title} image={image} shape="square" size={44} />;
+}
+
+function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide: boolean }) {
+  const router = useRouter();
+  return (
+    <View className={cn('gap-3', isWide && 'flex-row flex-wrap')}>
+      {tiles.map((tile) => (
+        <Pressable
+          key={tile.label}
+          onPress={() => router.push(tile.href)}
+          accessibilityRole="link"
+          className={cn(
+            'flex-row items-center gap-4 rounded-lg bg-surface-2 p-4 active:bg-surface-3 web:hover:bg-surface-3',
+            isWide && 'w-[calc(50%-6px)]'
+          )}>
+          <View className="size-11 items-center justify-center rounded-md bg-surface-3">{tile.renderIcon('text-primary')}</View>
+          <View className="flex-1">
+            <Text variant="headline">{tile.label}</Text>
+            <Text variant="caption" className="mt-0.5">
+              {tile.description}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/** 검색어가 없을 때: 아티스트 · 시대 · 악기 · 더 둘러보기 입구 */
+function BrowseLanding({ isWide }: { isWide: boolean }) {
+  const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  return (
+    <View className="mt-4 gap-8">
+      <View className="gap-3">
+        <Text variant="title3">아티스트</Text>
+        <BrowseTileRow tiles={PEOPLE_TILES} isWide={isWide} />
+      </View>
+
+      <View className="gap-3">
+        <Text variant="headline">시대로 찾기</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {ERA_LINKS.map((era) => {
+            const color = getEraForeground(era.name, scheme);
+            return (
+              <Chip
+                key={era.id}
+                label={era.name}
+                leading={color ? <ChipDot color={color} /> : undefined}
+                onPress={() => router.push(`/artists?period=${era.id}` as Href)}
+              />
+            );
+          })}
+        </View>
+      </View>
+
+      <View className="gap-3">
+        <Text variant="headline">악기·편성으로 찾기</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {CATEGORY_LINKS.map((code) => (
+            <Chip
+              key={code}
+              label={getArtistCategoryLabel(code)}
+              onPress={() => router.push(`/artists?type=artist&category=${code}` as Href)}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View className="gap-3">
+        <Text variant="headline">더 둘러보기</Text>
+        <BrowseTileRow tiles={MORE_TILES} isWide={isWide} />
+        <View
+          accessibilityState={{ disabled: true }}
+          className={cn('flex-row items-center gap-4 rounded-lg border border-dashed border-border p-4', isWide && 'w-[calc(50%-6px)]')}>
+          <View className="size-11 items-center justify-center rounded-md bg-surface-2">
+            <Icon as={DiscIcon} size={22} className="text-foreground-subtle" />
+          </View>
+          <View className="flex-1">
+            <Text variant="headline" className="text-foreground-muted">
+              앨범
+            </Text>
+            <Text variant="caption" className="mt-0.5">
+              담은 연주자의 새 앨범을 모아 보여 줄 거예요. 곧 열려요.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 }

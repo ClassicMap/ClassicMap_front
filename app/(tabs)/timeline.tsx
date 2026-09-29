@@ -33,7 +33,7 @@ import { useAllComposers } from '@/lib/query/hooks/useComposers';
 import type { Composer, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
+import { AlertCircleIcon, ChevronLeftIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import {
@@ -379,6 +379,15 @@ export default function TimelineScreen() {
         <View onLayout={(event: LayoutChangeEvent) => setHeaderHeight(event.nativeEvent.layout.height)}>
           <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
             <View className="min-w-0 flex-1">
+              <Pressable
+                onPress={() => router.push('/artists' as Href)}
+                accessibilityRole="link"
+                className="mb-1 flex-row items-center gap-1 self-start">
+                <Icon as={ChevronLeftIcon} size={14} className="text-foreground-muted" />
+                <Text variant="caption" className="text-foreground-muted">
+                  작곡가 목록으로 보기
+                </Text>
+              </Pressable>
               <Text variant={wide ? 'display' : 'title1'}>타임라인</Text>
               <Text variant="bodySm" className="mt-1 text-foreground-muted">
                 작곡가들이 살았던 시간을 겹쳐 봐요. 누가 같은 시대를 살았는지 한눈에 보여요.
