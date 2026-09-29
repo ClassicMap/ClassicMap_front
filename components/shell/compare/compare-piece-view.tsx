@@ -1,5 +1,8 @@
 import { SectionStaff } from '@/components/compare/section-staff';
+import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { FavoriteButton } from '@/components/favorite-button';
+import { RepertoireThumb } from '@/components/library/repertoire-badge';
+import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -8,6 +11,7 @@ import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import {
   useComparisonPiece,
   usePieceComparisonSectors,
@@ -16,12 +20,16 @@ import {
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import {
   clipClock,
+  clipDurationMs,
   primaryCredit,
   sortComparisonSectors,
   supportingCredits,
   youtubeThumbnailUrl,
   youtubeWatchUrl,
 } from '@/lib/data/comparison';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
+import { repertoireFirst } from '@/lib/data/library';
 import type { ComparisonPerformance } from '@/lib/types/models';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -30,9 +38,16 @@ import {
   AlertCircleIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
+  LayoutGridIcon,
+  MaximizeIcon,
+  MinimizeIcon,
   PauseIcon,
   PlayIcon,
+  RectangleHorizontalIcon,
   SettingsIcon,
+  Volume1Icon,
+  Volume2Icon,
+  VolumeXIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -46,9 +61,12 @@ interface ComparePieceViewProps {
   onSelectSector: (sectorId: number) => void;
 }
 
+const SEEK_STEP_SEC = 5;
+
 /**
  * 한 작품의 비교 화면 (설계 문서 7.4, 1차 시안 비교 패널).
- * 영상은 선택한 슬롯 하나만 불러오고 나머지는 썸네일로 둔다 (프로젝트 지침).
+ * 영상은 고른 연주 하나만 불러오고 나머지는 썸네일로 둔다 (프로젝트 지침).
+ * 재생 상태는 전역 스토어(compare-player-store)에 두어 연주자별 위치·볼륨이 화면을 오가도 남는다.
  */
 export function ComparePieceView({
   pieceId,
@@ -59,17 +77,38 @@ export function ComparePieceView({
 }: ComparePieceViewProps) {
   const router = useRouter();
   const { canEdit } = useAuth();
+  const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
-  const performances = performancesQuery.data ?? [];
-  const first = performances[0];
+  const first = performancesQuery.data?.[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const composerAvatar = pieceInfo?.composerAvatarUrl ?? null;
   const backComposerId = composerId ?? first?.composerId;
   const backLabel = first?.composerName ?? pieceInfo?.composerName;
   const goBack = () => onBack(backComposerId);
+
+  // 레퍼토리에 담은 연주자를 앞으로. 나머지는 원래 순서 (재생 순서도 이 순서다)
+  const performances = React.useMemo(
+    () =>
+      repertoireFirst(performancesQuery.data ?? [], (performance) =>
+        repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)
+      ),
+    [performancesQuery.data, repertoire.artists]
+  );
+
+  const images = React.useMemo(
+    () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
+    [pieceInfo?.performers]
+  );
+  const imageOf = React.useCallback(
+    (performance: ComparisonPerformance) => {
+      const credit = primaryCredit(performance);
+      return credit?.imageUrl ?? images.get(credit?.artistId ?? 0) ?? null;
+    },
+    [images]
+  );
 
   // 홈의 "최근 본 작품"에 남긴다 (이 기기에만)
   const recordRecent = useRecordRecentPiece();
@@ -86,53 +125,46 @@ export function ComparePieceView({
     });
   }, [pieceId, first, activeSector, composerAvatar, recordRecent]);
 
-  const [activeId, setActiveId] = React.useState<number | null>(null);
-  const [playing, setPlaying] = React.useState(false);
-  const [progress, setProgress] = React.useState({ current: 0, duration: 0 });
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
-  // 연주자를 바꿀 때 같은 비율 지점에서 이어 듣는다
-  const resumeRatio = React.useRef<number | null>(null);
+  const current = useComparePlayer((state) => state.current);
+  const playing = useComparePlayer((state) => state.playing);
+  const theater = useComparePlayer((state) => state.theater);
 
-  React.useEffect(() => {
-    setActiveId(null);
-    setPlaying(false);
-    setProgress({ current: 0, duration: 0 });
-  }, [activeSector?.id]);
-
+  // 지금 이 작품·구간의 연주를 골라 둔 경우에만 그 연주가 활성이다
+  const activeId =
+    current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
   const active = performances.find((performance) => performance.id === activeId);
-  const longest = Math.max(1, ...performances.map((p) => p.endMs - p.startMs));
+  const longest = Math.max(1, ...performances.map(clipDurationMs));
   // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
-  const playable = React.useMemo(
-    () => performances.filter((performance) => performance.clipStatus === 'ready' && Boolean(performance.clipUrl)),
-    [performances]
+  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances]);
+  // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
+  const staged = active ?? playable[0];
+
+  const start = React.useCallback(
+    (performance: ComparisonPerformance) => {
+      if (!isPlayablePerformance(performance)) return;
+      if (performance.id === activeId && comparePlayer.hasMedia()) {
+        comparePlayer.togglePlay();
+        return;
+      }
+      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true });
+    },
+    [activeId, imageOf]
   );
 
-  const start = React.useCallback((performanceId: number, keepPosition: boolean) => {
-    const video = videoRef.current;
-    resumeRatio.current =
-      keepPosition && video && video.duration > 0 ? video.currentTime / video.duration : null;
-    setActiveId(performanceId);
-    setPlaying(true);
-  }, []);
-
   const togglePlay = React.useCallback(() => {
-    const video = videoRef.current;
-    if (!video) {
-      if (playable[0]) start(playable[0].id, false);
-      return;
-    }
-    if (video.paused) void video.play();
-    else video.pause();
-  }, [playable, start]);
+    if (comparePlayer.togglePlay()) return;
+    const target = active ?? playable[0];
+    if (target) comparePlayer.select(trackFromPerformance(target, imageOf(target)), { play: true });
+  }, [active, playable, imageOf]);
 
   const switchTake = React.useCallback(
     (direction: 1 | -1) => {
       if (playable.length === 0) return;
       const index = playable.findIndex((performance) => performance.id === activeId);
       const next = playable[(index + direction + playable.length) % playable.length];
-      start(next.id, true);
+      comparePlayer.select(trackFromPerformance(next, imageOf(next)), { play: true });
     },
-    [activeId, playable, start]
+    [activeId, playable, imageOf]
   );
 
   const sectorIndex = sectors.findIndex((sector) => sector.id === activeSector?.id);
@@ -141,23 +173,71 @@ export function ComparePieceView({
     if (next) onSelectSector(next.id);
   };
 
+  // 전체 화면: 크게 보기 무대를 통째로 띄운다. 연주자를 바꿔도 무대는 그대로라 전체 화면이 풀리지 않는다
+  const stageRef = React.useRef<HTMLDivElement | null>(null);
+  const [fullscreen, setFullscreen] = React.useState(false);
+  const pendingFullscreen = React.useRef(false);
+  const theaterBeforeFullscreen = React.useRef(false);
+
+  const enterFullscreen = React.useCallback(() => {
+    theaterBeforeFullscreen.current = comparePlayer.getState().theater;
+    if (stageRef.current) {
+      void stageRef.current.requestFullscreen?.().catch(() => undefined);
+    } else {
+      pendingFullscreen.current = true;
+      comparePlayer.setTheater(true);
+    }
+  }, []);
+
+  const toggleFullscreen = React.useCallback(() => {
+    if (typeof document !== 'undefined' && document.fullscreenElement) void document.exitFullscreen();
+    else enterFullscreen();
+  }, [enterFullscreen]);
+
+  React.useEffect(() => {
+    if (pendingFullscreen.current && theater && stageRef.current) {
+      pendingFullscreen.current = false;
+      void stageRef.current.requestFullscreen?.().catch(() => undefined);
+    }
+  }, [theater]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onChange = () => {
+      const on = document.fullscreenElement !== null && document.fullscreenElement === stageRef.current;
+      setFullscreen(on);
+      if (!on) comparePlayer.setTheater(theaterBeforeFullscreen.current);
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      // 슬라이더는 제 화살표를 스스로 처리하고 전파를 끊으므로 여기서는 입력 칸만 비킨다
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const key = event.key.toLowerCase();
       if (event.key === ' ') {
         event.preventDefault();
         togglePlay();
-      } else if (event.key === 'ArrowRight') {
-        switchTake(1);
-      } else if (event.key === 'ArrowLeft') {
-        switchTake(-1);
+      } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        event.preventDefault();
+        if (event.shiftKey) comparePlayer.seekBy(direction * SEEK_STEP_SEC);
+        else switchTake(direction);
+      } else if (key === 'f') {
+        toggleFullscreen();
+      } else if (key === 't') {
+        comparePlayer.setTheater(!comparePlayer.getState().theater);
+      } else if (key === 'm') {
+        comparePlayer.toggleMute();
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [togglePlay, switchTake]);
+  }, [togglePlay, switchTake, toggleFullscreen]);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -197,24 +277,30 @@ export function ComparePieceView({
           </Text>
         </Pressable>
 
-        {/* 머리: 작품은 사각 */}
+        {/* 머리: 작품은 사각. 크게 보기에서는 영상에 자리를 내주려 줄인다 */}
         <View className="flex-row items-end gap-6">
           {first ? (
             // 앨범 연결(B22)이 없어 작품 사각에는 작곡가 초상을 쓴다 (1차 시안과 같음)
-            <EntityThumb name={first.pieceTitle} image={composerAvatar} shape="square" size={136} />
+            <EntityThumb name={first.pieceTitle} image={composerAvatar} shape="square" size={theater ? 72 : 136} />
           ) : (
-            <Skeleton className="size-[136px] rounded-md" />
+            <Skeleton className={cn('rounded-md', theater ? 'size-[72px]' : 'size-[136px]')} />
           )}
           <View className="min-w-0 flex-1 pb-1">
-            <Text variant="micro" className="uppercase tracking-widest">
-              비교
-            </Text>
+            {!theater ? (
+              <Text variant="micro" className="uppercase tracking-widest">
+                비교
+              </Text>
+            ) : null}
             {first ? (
               <>
-                <Text className="mt-2 text-[44px] font-extrabold leading-[46px] tracking-tight text-foreground">
+                <Text
+                  className={cn(
+                    'font-extrabold tracking-tight text-foreground',
+                    theater ? 'text-[28px] leading-[32px]' : 'mt-2 text-[44px] leading-[46px]'
+                  )}>
                   {first.pieceTitle}
                 </Text>
-                <View className="mt-3 flex-row items-center gap-2">
+                <View className={cn('flex-row items-center gap-2', theater ? 'mt-1.5' : 'mt-3')}>
                   <Text variant="bodySm" className="text-foreground-muted">
                     <Text className="font-semibold text-foreground">{first.composerName}</Text>
                     {[pieceInfo?.opusNumber, `연주자 ${pieceInfo?.performerCount ?? first.credits.length}`, `구간 ${sectors.length}`]
@@ -242,7 +328,7 @@ export function ComparePieceView({
           </View>
         </View>
 
-        <View className="mt-8 max-w-[880px]">
+        <View className={cn('max-w-[880px]', theater ? 'mt-5' : 'mt-8')}>
           <SectionStaff
             sectors={sectors}
             activeSectorId={activeSector?.id}
@@ -251,165 +337,276 @@ export function ComparePieceView({
           />
         </View>
 
-        {/* 구간 선택 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2" contentContainerClassName="gap-2">
-          {sectors.map((sector) => (
-            <Chip
-              key={sector.id}
-              label={sector.sectorName}
-              count={sector.primaryArtistCount}
-              selected={sector.id === activeSector?.id}
-              onPress={() => onSelectSector(sector.id)}
-            />
-          ))}
-        </ScrollView>
-
-        {/* 슬롯: 연주자 한 명 = 한 열 */}
-        <View className="mt-6 flex-row flex-wrap gap-5">
-          {performancesQuery.isLoading
-            ? Array.from({ length: 3 }, (_, index) => (
-                <View key={index} className="min-w-[280px] flex-1 gap-3">
-                  <SkeletonMedia performers={0} className="aspect-video rounded-lg" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-4 w-1/2" />
-                </View>
-              ))
-            : performances.map((performance) => (
-                <Slot
-                  key={performance.id}
-                  performance={performance}
-                  longest={longest}
-                  active={performance.id === activeId}
-                  onPlay={() => start(performance.id, false)}
-                  videoRef={performance.id === activeId ? videoRef : undefined}
-                  resumeRatio={resumeRatio}
-                  onPlayingChange={setPlaying}
-                  onProgress={setProgress}
-                  onEnded={() => setPlaying(false)}
-                />
-              ))}
-        </View>
-      </ScrollView>
-
-      {/* 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지 */}
-      <View className="h-[76px] flex-row items-center gap-4 border-t border-border px-4">
-        <View className="min-w-0 flex-1 flex-row items-center gap-3">
-          {active ? (
-            <>
-              <EntityThumb name={active.pieceTitle} image={composerAvatar} shape="square" size={48} />
-              <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-                  {primaryCredit(active)?.artistName ?? '연주자 정보 없음'}
-                </Text>
-                <Text variant="caption" numberOfLines={1}>
-                  {`${active.sectorName} · ${active.pieceTitle}`}
-                </Text>
-              </View>
-            </>
-          ) : (
-            <Text variant="caption" className="text-foreground-subtle">
-              연주를 골라 재생해 보세요. 스페이스로 재생, ←→로 연주자를 바꿔요.
-            </Text>
-          )}
-        </View>
-        <View className="flex-[1.3] items-center gap-1.5">
-          <View className="flex-row items-center gap-4">
-            <Pressable
-              accessibilityLabel="이전 구간"
-              disabled={sectorIndex <= 0}
-              onPress={() => goSector(-1)}
-              className={cn('size-8 items-center justify-center rounded-full', sectorIndex <= 0 && 'opacity-40')}>
-              <PrevSectionIcon size={18} className="text-foreground-muted" />
-            </Pressable>
-            <Pressable
-              accessibilityLabel={playing ? '일시정지' : '재생'}
-              onPress={togglePlay}
-              className="size-9 items-center justify-center rounded-full bg-foreground">
-              <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
-            </Pressable>
-            <Pressable
-              accessibilityLabel="다음 구간"
-              disabled={sectorIndex >= sectors.length - 1}
-              onPress={() => goSector(1)}
-              className={cn(
-                'size-8 items-center justify-center rounded-full',
-                sectorIndex >= sectors.length - 1 && 'opacity-40'
-              )}>
-              <NextSectionIcon size={18} className="text-foreground-muted" />
-            </Pressable>
-          </View>
-          <View className="w-full flex-row items-center gap-2.5">
-            <Text variant="mono" className="text-foreground-muted">
-              {clipClock(progress.current * 1000)}
-            </Text>
-            <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
-              <View
-                className="h-full rounded-full bg-foreground"
-                style={{ width: `${progress.duration > 0 ? (progress.current / progress.duration) * 100 : 0}%` }}
+        {/* 구간 선택 + 보기 방식 */}
+        <View className="mt-2 flex-row items-center gap-4">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="min-w-0 flex-1" contentContainerClassName="gap-2">
+            {sectors.map((sector) => (
+              <Chip
+                key={sector.id}
+                label={sector.sectorName}
+                count={sector.primaryArtistCount}
+                selected={sector.id === activeSector?.id}
+                onPress={() => onSelectSector(sector.id)}
               />
-            </View>
-            <Text variant="mono" className="text-foreground-muted">
-              {active ? clipClock(active.endMs - active.startMs) : '0:00'}
-            </Text>
-          </View>
-        </View>
-        <View className="flex-1 flex-row items-center justify-end gap-2">
-          {active && youtubeWatchUrl(active) ? (
-            <a
-              href={youtubeWatchUrl(active)}
-              target="_blank"
-              rel="noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-              <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
-              <Text variant="caption" className="text-foreground-subtle">
-                YouTube 원본
-              </Text>
-            </a>
-          ) : null}
+            ))}
+          </ScrollView>
+          <SwitchModeToggle />
           <Pressable
-            accessibilityLabel="다음 연주자"
-            onPress={() => switchTake(1)}
-            disabled={playable.length < 2}
+            onPress={() => comparePlayer.setTheater(!theater)}
+            accessibilityRole="button"
+            accessibilityLabel={theater ? '모아 보기 (T)' : '크게 보기 (T)'}
             className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
-            <SwitchTakeIcon size={15} className="text-foreground" />
-            <Text className="text-label text-foreground">다음 연주자</Text>
+            <Icon as={theater ? LayoutGridIcon : RectangleHorizontalIcon} size={14} className="text-foreground" />
+            <Text className="text-label text-foreground">{theater ? '모아 보기' : '크게 보기'}</Text>
           </Pressable>
         </View>
-      </View>
+
+        {performancesQuery.isLoading ? (
+          <View className="mt-6 flex-row flex-wrap gap-5">
+            {Array.from({ length: 3 }, (_, index) => (
+              <View key={index} className="min-w-[280px] flex-1 gap-3">
+                <SkeletonMedia performers={0} className="aspect-video rounded-lg" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-4 w-1/2" />
+              </View>
+            ))}
+          </View>
+        ) : theater ? (
+          <View className="mt-6 flex-row items-start gap-6">
+            <View className="min-w-0 flex-1">
+              <div
+                ref={stageRef}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '16 / 9',
+                  background: '#000',
+                  borderRadius: fullscreen ? 0 : 12,
+                  overflow: 'hidden',
+                }}>
+                {staged && active && staged.id === active.id ? (
+                  <CompareVideo performance={active} fit="contain" />
+                ) : staged ? (
+                  <Poster performance={staged} onPlay={() => start(staged)} large />
+                ) : (
+                  <View className="absolute inset-0 items-center justify-center">
+                    <Text variant="caption" className="text-white/70">
+                      이 구간은 아직 재생할 수 있는 영상이 없어요
+                    </Text>
+                  </View>
+                )}
+                {fullscreen ? (
+                  <FullscreenOverlay
+                    performances={playable}
+                    activeId={activeId}
+                    imageOf={imageOf}
+                    onPick={start}
+                    onTogglePlay={togglePlay}
+                    playing={playing}
+                    onExit={toggleFullscreen}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="전체 화면 (F)"
+                    title="전체 화면 (F)"
+                    onClick={enterFullscreen}
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 999,
+                      border: 'none',
+                      background: 'rgba(0,0,0,0.55)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}>
+                    <Icon as={MaximizeIcon} size={16} className="text-white" />
+                  </button>
+                )}
+              </div>
+              {staged ? (
+                <StageCaption performance={staged} image={imageOf(staged)} active={staged.id === activeId} inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)} />
+              ) : null}
+            </View>
+            <View className="w-[300px] gap-1">
+              <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
+                {`연주자 ${performances.length}`}
+              </Text>
+              {performances.map((performance) => (
+                <TheaterRow
+                  key={performance.id}
+                  performance={performance}
+                  image={imageOf(performance)}
+                  longest={longest}
+                  active={performance.id === activeId}
+                  playing={performance.id === activeId && playing}
+                  inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
+                  onPress={() => start(performance)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : (
+          // 슬롯: 연주자 한 명 = 한 열
+          <View className="mt-6 flex-row flex-wrap gap-5">
+            {performances.map((performance) => (
+              <Slot
+                key={performance.id}
+                performance={performance}
+                image={imageOf(performance)}
+                longest={longest}
+                active={performance.id === activeId}
+                inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
+                onPlay={() => start(performance)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      <PlayerBar
+        active={active}
+        activeImage={active ? imageOf(active) : null}
+        playing={playing}
+        canPrevSector={sectorIndex > 0}
+        canNextSector={sectorIndex >= 0 && sectorIndex < sectors.length - 1}
+        onPrevSector={() => goSector(-1)}
+        onNextSector={() => goSector(1)}
+        onTogglePlay={togglePlay}
+        onNextTake={() => switchTake(1)}
+        canSwitch={playable.length >= 2}
+        onFullscreen={toggleFullscreen}
+      />
     </View>
   );
 }
 
-interface SlotProps {
-  performance: ComparisonPerformance;
-  longest: number;
-  active: boolean;
-  onPlay: () => void;
-  videoRef?: React.MutableRefObject<HTMLVideoElement | null>;
-  resumeRatio: React.MutableRefObject<number | null>;
-  onPlayingChange: (playing: boolean) => void;
-  onProgress: (progress: { current: number; duration: number }) => void;
-  onEnded: () => void;
+/**
+ * 고른 연주의 <video>. 붙으면 스토어에 손잡이를 걸고, 기억해 둔 위치로 옮긴 뒤
+ * 사용자가 방금 누른 경우에만 재생한다 (돌아와서 다시 그릴 때 저절로 소리 나지 않게).
+ */
+function CompareVideo({ performance, fit }: { performance: ComparisonPerformance; fit: 'cover' | 'contain' }) {
+  const ref = React.useRef<HTMLVideoElement | null>(null);
+  const id = performance.id;
+
+  React.useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    return comparePlayer.registerMedia({
+      performanceId: id,
+      play: () => {
+        void video.play().catch(() => comparePlayer.reportPlaying(id, false));
+      },
+      pause: () => video.pause(),
+      seek: (seconds) => {
+        video.currentTime = seconds;
+      },
+      applyVolume: (volume, muted) => {
+        video.volume = volume;
+        video.muted = muted;
+      },
+    });
+  }, [id]);
+
+  return (
+    <video
+      ref={ref}
+      src={performance.clipUrl}
+      playsInline
+      preload="auto"
+      style={{ width: '100%', height: '100%', objectFit: fit, background: '#000', display: 'block' }}
+      onLoadedMetadata={(event) => {
+        const video = event.currentTarget;
+        const resume = comparePlayer.positionFor(id);
+        if (resume > 0 && resume < video.duration) video.currentTime = resume;
+        comparePlayer.reportProgress(id, video.currentTime, video.duration);
+        if (comparePlayer.consumePlayIntent(id)) {
+          void video.play().catch(() => comparePlayer.reportPlaying(id, false));
+        }
+      }}
+      onPlay={() => comparePlayer.reportPlaying(id, true)}
+      onPause={() => comparePlayer.reportPlaying(id, false)}
+      onEnded={() => comparePlayer.reportEnded(id)}
+      onTimeUpdate={(event) =>
+        comparePlayer.reportProgress(id, event.currentTarget.currentTime, event.currentTarget.duration || 0)
+      }
+    />
+  );
 }
 
-function Slot({
+/** 아직 고르지 않은 연주: YouTube 썸네일 + 재생 버튼. 클립이 준비 안 됐으면 재생 버튼 없이 '준비 중' */
+function Poster({
   performance,
-  longest,
-  active,
   onPlay,
-  videoRef,
-  resumeRatio,
-  onPlayingChange,
-  onProgress,
-  onEnded,
-}: SlotProps) {
+  large = false,
+}: {
+  performance: ComparisonPerformance;
+  onPlay: () => void;
+  large?: boolean;
+}) {
   const credit = primaryCredit(performance);
-  const artist = useArtist(credit?.artistId);
-  const duration = performance.endMs - performance.startMs;
-  const lengthPercent = Math.max(4, (duration / longest) * 100);
   const thumbnail = youtubeThumbnailUrl(performance);
+  const canPlay = isPlayablePerformance(performance);
+  return (
+    <Pressable
+      onPress={canPlay ? onPlay : undefined}
+      disabled={!canPlay}
+      accessibilityLabel={`${credit?.artistName ?? '연주'} 재생`}
+      className="group absolute inset-0">
+      {thumbnail ? (
+        <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      ) : null}
+      <View className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 to-transparent" />
+      {canPlay ? (
+        large ? (
+          <View className="absolute inset-0 items-center justify-center">
+            <View className="size-16 items-center justify-center rounded-full bg-primary">
+              <Icon as={PlayIcon} size={26} className="ml-1 fill-primary-foreground text-primary-foreground" />
+            </View>
+          </View>
+        ) : (
+          <View className="absolute bottom-3 right-3 size-11 items-center justify-center rounded-full bg-primary opacity-0 transition-opacity duration-fast group-hover:opacity-100 web:hover:opacity-100">
+            <Icon as={PlayIcon} size={18} className="fill-primary-foreground text-primary-foreground" />
+          </View>
+        )
+      ) : (
+        <View className="absolute inset-0 items-center justify-center">
+          <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">준비 중</Text>
+        </View>
+      )}
+      <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">
+        {clipClock(clipDurationMs(performance))}
+      </Text>
+    </Pressable>
+  );
+}
+
+function useArtistImage(artistId: number | undefined, known: string | null): string | null {
+  // 카탈로그 미리보기에 없는 연주자만 상세로 채운다
+  const artist = useArtist(known ? undefined : artistId);
+  return known ?? artist.data?.imageUrl ?? null;
+}
+
+interface SlotProps {
+  performance: ComparisonPerformance;
+  image: string | null;
+  longest: number;
+  active: boolean;
+  inRepertoire: boolean;
+  onPlay: () => void;
+}
+
+function Slot({ performance, image, longest, active, inRepertoire, onPlay }: SlotProps) {
+  const credit = primaryCredit(performance);
+  const photo = useArtistImage(credit?.artistId, image);
+  const duration = clipDurationMs(performance);
+  const lengthPercent = Math.max(4, (duration / longest) * 100);
   const support = supportingCredits(performance);
-  const canPlay = performance.clipStatus === 'ready' && Boolean(performance.clipUrl);
 
   return (
     <View className="min-w-[280px] flex-1">
@@ -418,54 +615,10 @@ function Slot({
           'relative aspect-video w-full overflow-hidden rounded-lg bg-surface-3',
           active && 'ring-2 ring-primary'
         )}>
-        {active && canPlay ? (
-          <video
-            ref={(element) => {
-              if (videoRef) videoRef.current = element;
-            }}
-            src={performance.clipUrl}
-            autoPlay
-            playsInline
-            style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
-            onLoadedMetadata={(event) => {
-              const video = event.currentTarget;
-              if (resumeRatio.current !== null && video.duration > 0) {
-                video.currentTime = resumeRatio.current * video.duration;
-                resumeRatio.current = null;
-              }
-            }}
-            onPlay={() => onPlayingChange(true)}
-            onPause={() => onPlayingChange(false)}
-            onEnded={onEnded}
-            onTimeUpdate={(event) =>
-              onProgress({ current: event.currentTarget.currentTime, duration: event.currentTarget.duration || 0 })
-            }
-          />
+        {active && isPlayablePerformance(performance) ? (
+          <CompareVideo performance={performance} fit="cover" />
         ) : (
-          <Pressable
-            onPress={canPlay ? onPlay : undefined}
-            disabled={!canPlay}
-            accessibilityLabel={`${credit?.artistName ?? '연주'} 재생`}
-            className="absolute inset-0">
-            {thumbnail ? (
-              <img
-                src={thumbnail}
-                alt=""
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            ) : null}
-            <View className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 to-transparent" />
-            {canPlay ? (
-              <View className="absolute bottom-3 right-3 size-11 items-center justify-center rounded-full bg-primary opacity-0 transition-opacity duration-fast group-hover:opacity-100 web:hover:opacity-100">
-                <Icon as={PlayIcon} size={18} className="fill-primary-foreground text-primary-foreground" />
-              </View>
-            ) : (
-              <View className="absolute inset-0 items-center justify-center">
-                <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">준비 중</Text>
-              </View>
-            )}
-            <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">{clipClock(duration)}</Text>
-          </Pressable>
+          <Poster performance={performance} onPlay={onPlay} />
         )}
       </View>
 
@@ -478,7 +631,9 @@ function Slot({
       </View>
 
       <View className="mt-3 flex-row items-center gap-3">
-        <EntityThumb name={credit?.artistName ?? '?'} image={artist.data?.imageUrl} shape="circle" size={32} />
+        <RepertoireThumb active={inRepertoire} badgeSize={14}>
+          <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={32} />
+        </RepertoireThumb>
         <View className="min-w-0 flex-1">
           <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
             {credit?.artistName ?? '연주자 정보 없음'}
@@ -492,6 +647,373 @@ function Slot({
         <Text variant="mono" className="text-foreground-subtle">
           {clipClock(duration)}
         </Text>
+      </View>
+    </View>
+  );
+}
+
+/** 크게 보기 무대 아래: 지금 무대에 오른 연주자 */
+function StageCaption({
+  performance,
+  image,
+  active,
+  inRepertoire,
+}: {
+  performance: ComparisonPerformance;
+  image: string | null;
+  active: boolean;
+  inRepertoire: boolean;
+}) {
+  const credit = primaryCredit(performance);
+  const photo = useArtistImage(credit?.artistId, image);
+  const support = supportingCredits(performance);
+  return (
+    <View className="mt-4 flex-row items-center gap-3.5">
+      <RepertoireThumb active={inRepertoire} badgeSize={16}>
+        <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={44} />
+      </RepertoireThumb>
+      <View className="min-w-0 flex-1">
+        <Text numberOfLines={1} className={cn('text-body font-bold', active ? 'text-primary' : 'text-foreground')}>
+          {credit?.artistName ?? '연주자 정보 없음'}
+        </Text>
+        <Text variant="caption" numberOfLines={1}>
+          {[support, `${performance.sectorName} · ${clipClock(clipDurationMs(performance))}`].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+/** 크게 보기 옆 목록: 썸네일·이름·길이. 누르면 무대에 올린다 */
+function TheaterRow({
+  performance,
+  image,
+  longest,
+  active,
+  playing,
+  inRepertoire,
+  onPress,
+}: {
+  performance: ComparisonPerformance;
+  image: string | null;
+  longest: number;
+  active: boolean;
+  playing: boolean;
+  inRepertoire: boolean;
+  onPress: () => void;
+}) {
+  const credit = primaryCredit(performance);
+  const photo = useArtistImage(credit?.artistId, image);
+  const canPlay = isPlayablePerformance(performance);
+  const thumbnail = youtubeThumbnailUrl(performance);
+  const duration = clipDurationMs(performance);
+  return (
+    <Pressable
+      onPress={canPlay ? onPress : undefined}
+      disabled={!canPlay}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active, disabled: !canPlay }}
+      accessibilityLabel={`${credit?.artistName ?? '연주'} ${canPlay ? '재생' : '준비 중'}`}
+      className={cn(
+        '-mx-2 flex-row items-center gap-3 rounded-lg p-2 web:hover:bg-surface-2',
+        active && 'bg-surface-2'
+      )}>
+      <View
+        className={cn('relative overflow-hidden rounded-md bg-surface-3', active && 'ring-2 ring-primary')}
+        style={{ width: 112, height: 63 }}>
+        {thumbnail ? (
+          <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : null}
+        {active ? (
+          <View className="absolute inset-0 items-center justify-center bg-black/45">
+            <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-white text-white" />
+          </View>
+        ) : !canPlay ? (
+          <View className="absolute inset-0 items-center justify-center bg-black/45">
+            <Text className="text-micro text-white">준비 중</Text>
+          </View>
+        ) : null}
+      </View>
+      <View className="min-w-0 flex-1">
+        <View className="flex-row items-center gap-2">
+          <RepertoireThumb active={inRepertoire} badgeSize={12}>
+            <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={22} />
+          </RepertoireThumb>
+          <Text numberOfLines={1} className={cn('min-w-0 flex-1 text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+            {credit?.artistName ?? '연주자 정보 없음'}
+          </Text>
+        </View>
+        <View className="mt-2 flex-row items-center gap-2">
+          <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
+            <View
+              className={cn('h-full rounded-full', active ? 'bg-primary' : 'bg-foreground-subtle')}
+              style={{ width: `${Math.max(4, (duration / longest) * 100)}%` }}
+            />
+          </View>
+          <Text variant="mono" className="text-foreground-subtle">
+            {clipClock(duration)}
+          </Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+/** 전체 화면에서 영상 위에 겹치는 조작부: 연주자 바꾸기·재생·위치·나가기 */
+function FullscreenOverlay({
+  performances,
+  activeId,
+  imageOf,
+  onPick,
+  onTogglePlay,
+  playing,
+  onExit,
+}: {
+  performances: ComparisonPerformance[];
+  activeId: number | null;
+  imageOf: (performance: ComparisonPerformance) => string | null;
+  onPick: (performance: ComparisonPerformance) => void;
+  onTogglePlay: () => void;
+  playing: boolean;
+  onExit: () => void;
+}) {
+  const progress = useComparePlayer((state) => state.progress);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        padding: '48px 32px 24px',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}>
+      <View className="flex-row items-center gap-3">
+        <Pressable
+          onPress={onTogglePlay}
+          accessibilityLabel={playing ? '일시정지' : '재생'}
+          className="size-11 items-center justify-center rounded-full bg-white">
+          <Icon as={playing ? PauseIcon : PlayIcon} size={18} className="fill-black text-black" />
+        </Pressable>
+        <Text variant="mono" className="text-white/80">
+          {clipClock(progress.current * 1000)}
+        </Text>
+        <ScrubBar
+          value={progress.duration > 0 ? progress.current / progress.duration : 0}
+          onCommit={(value) => comparePlayer.seek(value * progress.duration)}
+          label="재생 위치"
+          valueText={(value) => clipClock(value * progress.duration * 1000)}
+          disabled={progress.duration <= 0}
+          tooltip
+          fill="#FFFFFF"
+        />
+        <Text variant="mono" className="text-white/80">
+          {clipClock(progress.duration * 1000)}
+        </Text>
+        <Pressable
+          onPress={onExit}
+          accessibilityLabel="전체 화면 나가기 (F)"
+          className="size-11 items-center justify-center rounded-full bg-white/15">
+          <Icon as={MinimizeIcon} size={18} className="text-white" />
+        </Pressable>
+      </View>
+      <View className="flex-row flex-wrap gap-2">
+        {performances.map((performance, index) => {
+          const credit = primaryCredit(performance);
+          const selected = performance.id === activeId;
+          return (
+            <Pressable
+              key={performance.id}
+              onPress={() => onPick(performance)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              className={cn(
+                'h-10 flex-row items-center gap-2 rounded-full pl-1 pr-3.5',
+                selected ? 'bg-primary' : 'bg-white/15'
+              )}>
+              <EntityThumb name={credit?.artistName ?? '?'} image={imageOf(performance)} shape="circle" size={32} />
+              <Text className={cn('text-label font-semibold', selected ? 'text-primary-foreground' : 'text-white')}>
+                {credit?.artistName ?? `연주 ${index + 1}`}
+              </Text>
+              <Text className={cn('font-mono text-micro', selected ? 'text-primary-foreground/80' : 'text-white/60')}>
+                {clipClock(clipDurationMs(performance))}
+              </Text>
+            </Pressable>
+          );
+        })}
+        <Text variant="caption" className="self-center pl-2 text-white/55">
+          ←→ 연주자 · ⇧←→ 5초 · 스페이스 재생
+        </Text>
+      </View>
+    </div>
+  );
+}
+
+interface PlayerBarProps {
+  active: ComparisonPerformance | undefined;
+  activeImage: string | null;
+  playing: boolean;
+  canPrevSector: boolean;
+  canNextSector: boolean;
+  onPrevSector: () => void;
+  onNextSector: () => void;
+  onTogglePlay: () => void;
+  onNextTake: () => void;
+  canSwitch: boolean;
+  onFullscreen: () => void;
+}
+
+/** 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다 */
+function PlayerBar({
+  active,
+  activeImage,
+  playing,
+  canPrevSector,
+  canNextSector,
+  onPrevSector,
+  onNextSector,
+  onTogglePlay,
+  onNextTake,
+  canSwitch,
+  onFullscreen,
+}: PlayerBarProps) {
+  const credit = active ? primaryCredit(active) : undefined;
+  const photo = useArtistImage(credit?.artistId, activeImage);
+  // 재생 위치는 초마다 바뀌어 바 안에서만 구독한다 (화면 전체가 다시 그려지지 않게)
+  const progress = useComparePlayer((state) => state.progress);
+  const [scrub, setScrub] = React.useState<number | null>(null);
+  const duration = progress.duration || (active ? clipDurationMs(active) / 1000 : 0);
+  const shownSeconds = scrub !== null ? scrub * duration : progress.current;
+
+  return (
+    <View className="h-[76px] flex-row items-center gap-4 border-t border-border px-4">
+      <View className="min-w-0 flex-1 flex-row items-center gap-3">
+        {active ? (
+          <>
+            <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={48} />
+            <View className="min-w-0 flex-1">
+              <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
+                {credit?.artistName ?? '연주자 정보 없음'}
+              </Text>
+              <Text variant="caption" numberOfLines={1}>
+                {`${active.sectorName} · ${active.pieceTitle}`}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <Text variant="caption" className="text-foreground-subtle">
+            연주를 골라 재생해 보세요. 스페이스 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면
+          </Text>
+        )}
+      </View>
+      <View className="flex-[1.3] items-center gap-1.5">
+        <View className="flex-row items-center gap-4">
+          <Pressable
+            accessibilityLabel="이전 구간"
+            disabled={!canPrevSector}
+            onPress={onPrevSector}
+            className={cn('size-8 items-center justify-center rounded-full', !canPrevSector && 'opacity-40')}>
+            <PrevSectionIcon size={18} className="text-foreground-muted" />
+          </Pressable>
+          <Pressable
+            accessibilityLabel={playing ? '일시정지' : '재생'}
+            onPress={onTogglePlay}
+            className="size-9 items-center justify-center rounded-full bg-foreground">
+            <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="다음 구간"
+            disabled={!canNextSector}
+            onPress={onNextSector}
+            className={cn('size-8 items-center justify-center rounded-full', !canNextSector && 'opacity-40')}>
+            <NextSectionIcon size={18} className="text-foreground-muted" />
+          </Pressable>
+        </View>
+        <View className="w-full flex-row items-center gap-2.5">
+          <Text variant="mono" className="w-10 text-right text-foreground-muted">
+            {clipClock(shownSeconds * 1000)}
+          </Text>
+          <ScrubBar
+            value={duration > 0 ? progress.current / duration : 0}
+            onScrub={setScrub}
+            onCommit={(value) => {
+              setScrub(null);
+              comparePlayer.seek(value * duration);
+            }}
+            label="재생 위치"
+            valueText={(value) => `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`}
+            step={duration > 0 ? 5 / duration : 0.05}
+            disabled={!active || duration <= 0}
+            tooltip
+          />
+          <Text variant="mono" className="w-10 text-foreground-muted">
+            {active ? clipClock(duration * 1000) : '0:00'}
+          </Text>
+        </View>
+      </View>
+      <View className="flex-1 flex-row items-center justify-end gap-2.5">
+        <VolumeControl />
+        <Pressable
+          onPress={onFullscreen}
+          accessibilityLabel="전체 화면 (F)"
+          className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+          <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
+        </Pressable>
+        {active && youtubeWatchUrl(active) ? (
+          <a
+            href={youtubeWatchUrl(active)}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
+            <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
+              YouTube 원본
+            </Text>
+          </a>
+        ) : null}
+        <Pressable
+          accessibilityLabel="다음 연주자"
+          onPress={onNextTake}
+          disabled={!canSwitch}
+          className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
+          <SwitchTakeIcon size={15} className="text-foreground" />
+          <Text className="text-label text-foreground">다음 연주자</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+/** 음소거 버튼 + 볼륨 슬라이더. 값은 이 브라우저에 남는다 */
+function VolumeControl() {
+  const volume = useComparePlayer((state) => state.volume);
+  const muted = useComparePlayer((state) => state.muted);
+  const level = muted ? 0 : volume;
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <Pressable
+        onPress={() => comparePlayer.toggleMute()}
+        accessibilityLabel={muted ? '소리 켜기 (M)' : '음소거 (M)'}
+        className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+        <Icon
+          as={level === 0 ? VolumeXIcon : level < 0.5 ? Volume1Icon : Volume2Icon}
+          size={17}
+          className="text-foreground-muted"
+        />
+      </Pressable>
+      <View className="flex-row" style={{ width: 76 }}>
+        <ScrubBar
+          value={level}
+          onScrub={(value) => comparePlayer.setVolume(value)}
+          onCommit={(value) => comparePlayer.setVolume(value)}
+          label="볼륨"
+          valueText={(value) => `${Math.round(value * 100)}%`}
+          step={0.1}
+          fill="hsl(var(--foreground-muted))"
+        />
       </View>
     </View>
   );

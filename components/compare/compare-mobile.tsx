@@ -6,6 +6,9 @@ import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/compo
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { repertoireFirst } from '@/lib/data/library';
 import { PerformanceVideoPlayer } from '@/components/performance-video-player';
+import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
@@ -324,17 +327,34 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
-  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data]);
-  const first = performances[0];
+  const repertoireIds = useRepertoireIds();
+  // 레퍼토리에 담은 연주자를 앞으로
+  const performances = React.useMemo(
+    () =>
+      repertoireFirst(performancesQuery.data ?? [], (performance) =>
+        repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)
+      ),
+    [performancesQuery.data, repertoireIds.artists]
+  );
+  const first = performancesQuery.data?.[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const goBack = () => onBack(composerId ?? first?.composerId);
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
     [pieceInfo?.performers]
   );
-  const [activeId, setActiveId] = React.useState<number | null>(null);
+  const imageOf = (performance: ComparisonPerformance) =>
+    primaryCredit(performance)?.imageUrl ?? images.get(primaryCredit(performance)?.artistId ?? 0) ?? null;
 
-  React.useEffect(() => setActiveId(null), [activeSector?.id]);
+  // 고른 연주는 전역 재생 스토어에 둔다. 연주자를 오가도 각자 듣던 위치에서 이어진다
+  const current = useComparePlayer((state) => state.current);
+  const activeId =
+    current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
+  const choose = (performance: ComparisonPerformance) => {
+    if (!isPlayablePerformance(performance)) return;
+    if (performance.id === activeId && comparePlayer.togglePlay()) return;
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true });
+  };
 
   const recordRecent = useRecordRecentPiece();
   React.useEffect(() => {
@@ -446,6 +466,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         {active && active.clipStatus === 'ready' ? (
           <PerformanceVideoPlayer
             key={active.id}
+            performanceId={active.id}
             clipUrl={active.clipUrl}
             videoId={active.videoId}
             startTime={Math.floor(active.startMs / 1000)}
@@ -453,7 +474,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           />
         ) : preview ? (
           <Pressable
-            onPress={() => setActiveId(preview.id)}
+            onPress={() => choose(preview)}
             accessibilityRole="button"
             accessibilityLabel={`${primaryCredit(preview)?.artistName ?? '연주'} 재생`}
             className="flex-1">
@@ -486,15 +507,18 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           </View>
         )}
       </View>
-      {active && youtubeWatchUrl(active) ? (
-        <Pressable
-          onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
-          accessibilityRole="link"
-          className="mt-2 flex-row items-center gap-1 self-end">
-          <Text variant="caption">YouTube 원본</Text>
-          <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
-        </Pressable>
-      ) : null}
+      <View className="mt-2 flex-row items-center justify-between gap-3">
+        <SwitchModeToggle compact />
+        {active && youtubeWatchUrl(active) ? (
+          <Pressable
+            onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
+            accessibilityRole="link"
+            className="flex-row items-center gap-1">
+            <Text variant="caption">YouTube 원본</Text>
+            <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
+          </Pressable>
+        ) : null}
+      </View>
 
       {/* 연주자: 길이는 가장 긴 연주 대비 */}
       <View className="mt-4">
@@ -504,10 +528,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
               <PerformerRow
                 key={performance.id}
                 performance={performance}
-                image={primaryCredit(performance)?.imageUrl ?? images.get(primaryCredit(performance)?.artistId ?? 0) ?? null}
+                image={imageOf(performance)}
                 longest={longest}
                 active={performance.id === activeId}
-                onPress={() => setActiveId(performance.id)}
+                inRepertoire={repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)}
+                onPress={() => choose(performance)}
               />
             ))}
       </View>
@@ -531,12 +556,14 @@ function PerformerRow({
   image,
   longest,
   active,
+  inRepertoire,
   onPress,
 }: {
   performance: ComparisonPerformance;
   image: string | null;
   longest: number;
   active: boolean;
+  inRepertoire: boolean;
   onPress: () => void;
 }) {
   const credit = primaryCredit(performance);
@@ -551,7 +578,9 @@ function PerformerRow({
       accessibilityState={{ selected: active, disabled: !ready }}
       accessibilityLabel={`${credit?.artistName ?? '연주'} ${ready ? '재생' : '준비 중'}`}
       className={cn('-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5', active && 'bg-surface-2')}>
-      <EntityThumb name={credit?.artistName ?? '?'} image={image} shape="circle" size={40} />
+      <RepertoireThumb active={inRepertoire} badgeSize={16}>
+        <EntityThumb name={credit?.artistName ?? '?'} image={image} shape="circle" size={40} />
+      </RepertoireThumb>
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
           {credit?.artistName ?? '연주자 정보 없음'}
