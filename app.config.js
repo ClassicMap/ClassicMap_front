@@ -47,6 +47,7 @@ export default {
       'expo-secure-store',
       'expo-web-browser',
       ['expo-image-picker', { cameraPermission: false, microphonePermission: false }],
+      './plugins/with-ios-scene-lifecycle',
     ],
     experiments: {
       baseUrl: '/classicmap',
