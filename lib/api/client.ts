@@ -1023,6 +1023,14 @@ export const ConcertAPI = {
     genre?: string;
     area?: string;
     status?: string;
+    /** YYYY-MM-DD. 이 날 이후에도 열리는 공연만 */
+    from?: string;
+    /** YYYY-MM-DD. 이 날까지 시작하는 공연만 */
+    to?: string;
+    /** true면 내한 공연만 */
+    visit?: boolean;
+    /** true면 페스티벌 공연만 */
+    festival?: boolean;
     offset?: number;
     limit?: number;
   }): Promise<Concert[]> {
@@ -1032,6 +1040,10 @@ export const ConcertAPI = {
       if (params.genre) queryParams.append('genre', params.genre);
       if (params.area) queryParams.append('area', params.area);
       if (params.status) queryParams.append('status', params.status);
+      if (params.from) queryParams.append('from', params.from);
+      if (params.to) queryParams.append('to', params.to);
+      if (params.visit !== undefined) queryParams.append('visit', String(params.visit));
+      if (params.festival !== undefined) queryParams.append('festival', String(params.festival));
       if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
       if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 

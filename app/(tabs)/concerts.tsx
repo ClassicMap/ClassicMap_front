@@ -1,8 +1,9 @@
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
-import { concertClock, daysLeft, parseDay, shortVenue } from '@/components/concert/concert-parts';
-import { Badge } from '@/components/ui/badge';
+import { ConcertCard } from '@/components/concert/concert-card';
+import { ConcertFilterBar, ConcertSearchField } from '@/components/concert/concert-filter-bar';
+import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
+import { parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Button } from '@/components/ui/button';
-import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -11,19 +12,36 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { BoxofficeAPI, type BoxofficeConcert } from '@/lib/api/client';
-import { normalizeAreas, type AreaOption } from '@/lib/data/areas';
+import { normalizeAreas } from '@/lib/data/areas';
+import {
+  type ConcertFilter,
+  type ConcertFilterParams,
+  countActiveFilters,
+  DEFAULT_CONCERT_FILTER,
+  matchesConcertFilter,
+  parseConcertFilter,
+  periodRange,
+  toConcertFilterParams,
+  toDayString,
+} from '@/lib/data/concert-filters';
 import { getRankForeground } from '@/lib/design/rank-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useAreas, useConcerts } from '@/lib/query/hooks/useConcerts';
+import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
+import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import type { Concert } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { type Href, useRouter } from 'expo-router';
-import { AlertCircleIcon, PlusIcon } from 'lucide-react-native';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircleIcon, PlusIcon, SearchXIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+
+/** 걸러낸 결과가 이보다 적으면 다음 페이지를 더 불러온다 */
+const MIN_VISIBLE = 12;
+const AUTOFILL_PAGE_LIMIT = 8;
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
@@ -34,13 +52,18 @@ interface DateGroup {
   concerts: Concert[];
 }
 
-/** 시작일로 묶는다. 이미 시작한 여러 날 공연은 '공연 중'으로 모은다. */
-function groupByDay(concerts: Concert[]): DateGroup[] {
+/**
+ * 시작일로 묶는다. 이미 시작한 여러 날 공연은 '공연 중'으로 모으고,
+ * 기간 필터 첫날보다 먼저 시작한 공연은 그 첫날에 둔다 (주말을 골랐는데 금요일 묶음이 뜨지 않게).
+ */
+function groupByDay(concerts: Concert[], fromDay: string): DateGroup[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const todayKey = toDayString(today);
   const groups = new Map<string, DateGroup>();
   for (const concert of concerts) {
-    const start = parseDay(concert.startDate);
+    const day = fromDay > todayKey && concert.startDate < fromDay ? fromDay : concert.startDate;
+    const start = parseDay(day);
     if (!start) continue;
     const diff = Math.round((start.getTime() - today.getTime()) / 86_400_000);
     let key: string;
@@ -51,7 +74,7 @@ function groupByDay(concerts: Concert[]): DateGroup[] {
       title = '공연 중';
       subtitle = '이미 시작한 여러 날 공연';
     } else {
-      key = concert.startDate;
+      key = day;
       title = diff === 0 ? '오늘' : diff === 1 ? '내일' : subtitle;
       if (diff > 1) subtitle = '';
     }
@@ -59,29 +82,96 @@ function groupByDay(concerts: Concert[]): DateGroup[] {
     group.concerts.push(concert);
     groups.set(key, group);
   }
-  return [...groups.values()];
+  // 'ongoing'은 날짜 문자열보다 뒤로 정렬되니 따로 앞에 둔다
+  return [...groups.values()].sort((a, b) =>
+    a.key === 'ongoing' ? -1 : b.key === 'ongoing' ? 1 : a.key.localeCompare(b.key)
+  );
 }
 
 export default function ConcertsScreen() {
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
-  const { canEdit } = useAuth();
+  const { canEdit, isSignedIn } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const [area, setArea] = React.useState<AreaOption | null>(null);
   const [gridWidth, setGridWidth] = React.useState(0);
   const [showForm, setShowForm] = React.useState(false);
 
+  // 필터는 주소 파라미터가 곧 상태다. 검색어만 입력 중 값을 따로 두고 늦춰서 반영한다.
+  const params = useLocalSearchParams<Record<keyof ConcertFilterParams, string>>();
+  const filter = React.useMemo(
+    () =>
+      parseConcertFilter({
+        genre: params.genre,
+        period: params.period,
+        visit: params.visit,
+        festival: params.festival,
+        area: params.area,
+        q: params.q,
+      }),
+    [params.genre, params.period, params.visit, params.festival, params.area, params.q]
+  );
+  const updateFilter = React.useCallback(
+    (next: Partial<ConcertFilter>) => router.setParams(toConcertFilterParams({ ...filter, ...next })),
+    [router, filter]
+  );
+
+  // 검색어는 입력 중 값을 따로 두고, 멈춘 뒤에만 주소에 올린다
+  const [query, setQuery] = React.useState(filter.q);
+  const debouncedQuery = useDebounce(query, 300);
+  const sentQuery = React.useRef(filter.q);
+  const updateFilterRef = React.useRef(updateFilter);
+  updateFilterRef.current = updateFilter;
+  React.useEffect(() => {
+    if (debouncedQuery === sentQuery.current) return;
+    sentQuery.current = debouncedQuery;
+    updateFilterRef.current({ q: debouncedQuery });
+  }, [debouncedQuery]);
+  const resetFilter = () => {
+    sentQuery.current = '';
+    setQuery('');
+    router.setParams(toConcertFilterParams(DEFAULT_CONCERT_FILTER));
+  };
+
   const areasQuery = useAreas();
   const areas = React.useMemo(() => normalizeAreas(areasQuery.data ?? []), [areasQuery.data]);
-  const concertsQuery = useConcerts(area?.value);
+  const area = areas.find((option) => option.value === filter.area) ?? null;
+
+  const range = React.useMemo(() => periodRange(filter.period), [filter.period]);
+  const concertsQuery = useFilteredConcerts(filter, range);
+  const pageCount = concertsQuery.data?.pages.length ?? 0;
   const concerts = React.useMemo(() => {
     const all = concertsQuery.data?.pages.flat() ?? [];
-    return Array.from(new Map(all.map((concert) => [concert.id, concert])).values());
-  }, [concertsQuery.data]);
-  const groups = React.useMemo(() => groupByDay(concerts), [concerts]);
+    const unique = Array.from(new Map(all.map((concert) => [concert.id, concert])).values());
+    return unique.filter((concert) => matchesConcertFilter(concert, filter, range));
+  }, [concertsQuery.data, filter, range]);
+  const groups = React.useMemo(() => groupByDay(concerts, range.from), [concerts, range.from]);
+
+  // 서버가 아직 모르는 조건은 화면에서 걸러 한 페이지가 비어 보일 수 있다. 몇 페이지까지 더 채운다.
+  React.useEffect(() => {
+    if (
+      concerts.length < MIN_VISIBLE &&
+      pageCount > 0 &&
+      pageCount < AUTOFILL_PAGE_LIMIT &&
+      concertsQuery.hasNextPage &&
+      !concertsQuery.isFetchingNextPage
+    ) {
+      void concertsQuery.fetchNextPage();
+    }
+  }, [concerts.length, pageCount, concertsQuery]);
+
+  const favorites = useMyFavorites(isSignedIn);
+  const favoriteArtists = React.useMemo(
+    () =>
+      (favorites.data?.artists ?? []).map((artist) => ({
+        artistId: artist.artistId,
+        name: artist.name,
+        imageUrl: artist.imageUrl,
+      })),
+    [favorites.data?.artists]
+  );
 
   const kopisCode = area ? area.kopisCode : '00';
   const boxofficeQuery = useQuery({
@@ -100,6 +190,7 @@ export default function ConcertsScreen() {
   }, [boxofficeQuery.data]);
 
   const columns = wide ? Math.max(3, Math.floor((gridWidth + 18) / 196)) : 2;
+  const activeCount = countActiveFilters(filter) + Number(Boolean(filter.area)) + Number(Boolean(filter.q.trim()));
   const cardWidth = gridWidth > 0 ? (gridWidth - 18 * (columns - 1)) / columns : 0;
 
   const onGridLayout = (event: LayoutChangeEvent) => setGridWidth(event.nativeEvent.layout.width);
@@ -174,6 +265,7 @@ export default function ConcertsScreen() {
               클래식 공연 일정 · KOPIS 공연예술통합전산망 제공
             </Text>
           </View>
+          {wide ? <ConcertSearchField value={query} onChange={setQuery} className="w-[300px]" /> : null}
           {canEdit ? (
             <Button variant="outline" size="sm" onPress={() => setShowForm(true)}>
               <Icon as={PlusIcon} size={14} className="text-foreground" />
@@ -181,22 +273,15 @@ export default function ConcertsScreen() {
             </Button>
           ) : null}
         </View>
+        {!wide ? <ConcertSearchField value={query} onChange={setQuery} className="mt-4" /> : null}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-5 border-b border-border pb-4"
-          contentContainerClassName="gap-2">
-          <Chip label="전국" selected={area === null} onPress={() => setArea(null)} />
-          {areas.map((option) => (
-            <Chip
-              key={option.value}
-              label={option.label}
-              selected={area?.value === option.value}
-              onPress={() => setArea(option)}
-            />
-          ))}
-        </ScrollView>
+        {isSignedIn && favoriteArtists.length > 0 && !filter.q.trim() ? (
+          <FavoriteArtistConcerts artists={favoriteArtists} from={periodRange('all').from} cardWidth={wide ? 188 : 156} />
+        ) : null}
+
+        <View className="mt-6 border-b border-border pb-4">
+          <ConcertFilterBar filter={filter} areas={areas} onChange={updateFilter} onReset={resetFilter} />
+        </View>
 
         {!wide ? <View className="mt-5">{boxofficePanel}</View> : null}
 
@@ -218,13 +303,28 @@ export default function ConcertsScreen() {
                 description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
                 action={{ label: '다시 시도', onPress: () => concertsQuery.refetch() }}
               />
+            ) : groups.length === 0 &&
+              (concertsQuery.isFetchingNextPage || (concertsQuery.hasNextPage && pageCount < AUTOFILL_PAGE_LIMIT)) ? (
+              <View className="mt-8">
+                <Skeleton className="h-4 w-1/3" />
+              </View>
             ) : groups.length === 0 ? (
-              <EmptyState
-                icon={TicketIcon}
-                title={area ? `${area.label}에 예정된 공연이 없어요` : '예정된 공연이 없어요'}
-                description="다른 지역을 골라 보세요."
-                action={area ? { label: '전국 보기', onPress: () => setArea(null) } : undefined}
-              />
+              activeCount > 0 ? (
+                <EmptyState
+                  icon={SearchXIcon}
+                  title="조건에 맞는 공연이 없어요"
+                  description={
+                    area ? `${area.label} 말고 다른 지역이나 날짜로 넓혀 보세요.` : '날짜를 넓히거나 조건을 몇 개 빼 보세요.'
+                  }
+                  action={
+                    concertsQuery.hasNextPage
+                      ? { label: '더 찾아보기', onPress: () => void concertsQuery.fetchNextPage() }
+                      : { label: '필터 초기화', onPress: resetFilter }
+                  }
+                />
+              ) : (
+                <EmptyState icon={TicketIcon} title="예정된 공연이 없어요" description="잠시 뒤 다시 확인해 주세요." />
+              )
             ) : (
               groups.map((group) => (
                 <View key={group.key}>
@@ -259,31 +359,5 @@ export default function ConcertsScreen() {
         }}
       />
     </View>
-  );
-}
-
-function ConcertCard({ concert, width }: { concert: Concert; width: number }) {
-  const router = useRouter();
-  const days = daysLeft(concert.startDate);
-  const time = concertClock(concert.concertTime);
-  if (width <= 0) return null;
-  return (
-    <Pressable
-      onPress={() => router.push(`/concert/${concert.id}` as Href)}
-      accessibilityRole="link"
-      style={{ width }}
-      className="rounded-md web:hover:opacity-90">
-      <View className="relative">
-        <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
-        {days === 0 ? <Badge tone="accent" label="오늘" className="absolute left-2 top-2" /> : null}
-        {concert.status === 'cancelled' ? <Badge tone="danger" label="취소" className="absolute left-2 top-2" /> : null}
-      </View>
-      <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
-        {concert.title}
-      </Text>
-      <Text variant="caption" numberOfLines={1} className="mt-1">
-        {[time, shortVenue(concert.facilityName)].filter(Boolean).join(' · ')}
-      </Text>
-    </Pressable>
   );
 }
