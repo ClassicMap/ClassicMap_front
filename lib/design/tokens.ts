@@ -118,7 +118,10 @@ export const THEME: Record<ColorScheme, TokenSet> = {
   dark: toColors(CHANNELS.dark),
 };
 
-/** 토큰에 알파를 입힙니다. 채널 문자열을 그대로 쓰므로 색이 갈라지지 않습니다. */
+/**
+ * 토큰에 알파를 입힙니다. 채널 문자열을 그대로 쓰므로 색이 갈라지지 않습니다.
+ * React Native는 슬래시 알파를 `hsla(...)`로만 읽으므로 `hsl(... / a)`로 바꾸지 않습니다.
+ */
 export function withAlpha(scheme: ColorScheme, token: keyof TokenSet, alpha: number): string {
-  return `hsl(${CHANNELS[scheme][token]} / ${alpha})`;
+  return `hsla(${CHANNELS[scheme][token]} / ${alpha})`;
 }
