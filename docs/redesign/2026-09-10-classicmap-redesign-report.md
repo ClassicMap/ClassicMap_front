@@ -1745,7 +1745,11 @@ lib/design/
 > - 5.3 iOS 시뮬레이터(iPhone 17, iOS 27) 확인: 탭 5개·상세 3종·연주자·타임라인·비교 상세·로그인 화면을 라이트/다크로 캡처해 봤고 레이아웃 깨짐은 없었습니다. 안드로이드는 에뮬레이터가 없어 미확인입니다.
 > - **iOS 27 차단 이슈**: Xcode 27 SDK로 빌드하면 앱이 실행 즉시 종료됩니다(`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). SDK 54 네이티브 템플릿이 UIScene 라이프사이클을 쓰지 않기 때문입니다. 로컬 확인은 `ios/`(gitignore)에 SceneDelegate를 임시로 붙여서 했습니다. 저장소에 반영하려면 config plugin 또는 Expo SDK 업그레이드가 필요합니다. 같은 빌드에서 일부 Pod의 최소 배포 버전(12.4·13.4)이 Xcode 27 하한(15.0)보다 낮아 빌드가 실패하는 것도 함께 풀어야 합니다.
 > - 백엔드 수정은 `ClassicMap_back` `fix/redesign-followups` 브랜치에 있습니다(미배포): `/concerts/featured` 500(DISTINCT + ORDER BY, MySQL 3065), `/composers/{id}` `pieceCount`, 성악 음역 원본값(`baritone` 등)이 `other`로 나가던 것, 양인모·대니구·이지윤·라쉬코프스키 악기 분류 migration.
-> - 아직 열린 데이터 판단: 위키데이터 악기로 들어온 지휘자(오라모·잉키넨·샬론·로비츠키·자발리슈·시몬 영·카틀레비치·요엘 레비·주이트너), 합창단·앙상블·트럼펫(`choir`·`ensemble`·`trumpeter`) 분류 코드, 양인모 소개 문구가 다른 사람 내용인 것.
+> - 데이터 판단(2026-09-29 결정): 주 활동이 지휘인 사람은 `conductor`로(9명 migration, 043 방침 변경), `choir`·`ensemble`·`trumpeter` 분류 코드 추가(백엔드 표·프론트 라벨). 양인모 소개 문구가 다른 사람 내용인 것은 아직 남아 있습니다.
+> - iOS 27 대응은 `plugins/with-ios-scene-lifecycle.js`(config plugin)로 저장소에 반영했습니다. 씬 매니페스트, SceneDelegate(URL·유니버설 링크·생명주기를 AppDelegate로 전달), Pod 최소 배포 버전 15.1. 플러그인만으로 Xcode 27 빌드·실행·백그라운드 복귀를 확인했습니다. 콜드 스타트 딥링크는 시뮬레이터에서 확인 창을 누를 수 없어 미확인입니다.
+> - 로그인 상태 확인(웹, Clerk 테스트 계정 → 확인 뒤 앱의 계정 삭제 흐름으로 지움): 마이페이지·설정·계정 이름·비밀번호 변경·계정 삭제·레퍼토리 화면은 라이트/다크, 390/1440에서 레이아웃이 정상이었습니다. 다만 운영 DB에 사용자 행이 만들어지지 않아 내 정보 API가 모두 401이었습니다(아래).
+> - 함께 고친 것: 웹에서 로그인·가입에 성공하면 에러 화면이 뜨던 것(`WebBrowser.dismissBrowser()`가 웹에서 undefined, main에도 있음), 가입이 보안 확인 실패 등으로 막혀도 문구가 없던 것(+ `clerk-captcha` 자리), 웹이 시스템 다크 모드를 따르지 않던 것, 로그인 오류 문구 해요체.
+> - **운영 확인 필요**: (1) Clerk 웹훅으로 사용자 행이 만들어지지 않습니다. 새로 가입한 사용자는 평가·레퍼토리·공개 범위를 쓸 수 없습니다. Clerk 대시보드의 웹훅 설정을 확인해야 합니다. (2) `POST /users/webhook`에 서명 검증(svix)이 없어 누구나 사용자 생성·삭제 이벤트를 보낼 수 있습니다. (3) `/users/clerk/{id}`가 없는 사용자에서 500 → `fix/redesign-followups`에서 고침.
 
 ### 단계 5 — 네이티브 크롬 (1일)
 
