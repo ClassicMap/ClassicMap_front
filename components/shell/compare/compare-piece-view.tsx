@@ -39,6 +39,7 @@ import { type Href, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
   ChevronLeftIcon,
+  Columns2Icon as ColumnsIcon,
   ExternalLinkIcon,
   LayoutGridIcon,
   MaximizeIcon,
@@ -59,6 +60,8 @@ interface ComparePieceViewProps {
   /** 돌아갈 작곡가. 주소에 작곡가가 없던 딥링크면 연주에서 알아낸 작곡가를 넘긴다 */
   onBack: (composerId?: number) => void;
   onSelectSector: (sectorId: number) => void;
+  /** 두 연주자 집중 비교로 (A = 듣던 연주, B = 고른 연주) */
+  onFocus?: (a: number, b: number) => void;
 }
 
 const SEEK_STEP_SEC = 5;
@@ -74,6 +77,7 @@ export function ComparePieceView({
   sectorId,
   onBack,
   onSelectSector,
+  onFocus,
 }: ComparePieceViewProps) {
   const router = useRouter();
   const { canEdit } = useAuth();
@@ -153,16 +157,30 @@ export function ComparePieceView({
     [imageOf, queue]
   );
 
+  // 1:1 비교 고르기: 지금 연주(A)는 고정, 다른 연주 하나를 고르면 집중 비교로 간다
+  const [picking, setPicking] = React.useState(false);
+  const canFocus = Boolean(onFocus) && activeId !== null && playable.length >= 2;
+  React.useEffect(() => {
+    if (!canFocus) setPicking(false);
+  }, [canFocus]);
+
   const start = React.useCallback(
     (performance: ComparisonPerformance) => {
       if (!isPlayablePerformance(performance)) return;
+      if (picking) {
+        if (performance.id !== activeId && activeId !== null && onFocus) {
+          setPicking(false);
+          onFocus(activeId, performance.id);
+        }
+        return;
+      }
       if (performance.id === activeId && comparePlayer.hasMedia()) {
         comparePlayer.togglePlay();
         return;
       }
       choose(performance);
     },
-    [activeId, choose]
+    [activeId, choose, picking, onFocus]
   );
 
   const togglePlay = React.useCallback(() => {
@@ -204,7 +222,9 @@ export function ComparePieceView({
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key.toLowerCase();
-      if (event.key === ' ') {
+      if (event.key === 'Escape' && picking) {
+        setPicking(false);
+      } else if (event.key === ' ') {
         event.preventDefault();
         togglePlay();
       } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
@@ -222,7 +242,7 @@ export function ComparePieceView({
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [togglePlay, switchTake, toggleFullscreen]);
+  }, [togglePlay, switchTake, toggleFullscreen, picking]);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -346,6 +366,17 @@ export function ComparePieceView({
           </Pressable>
         </View>
 
+        {picking ? (
+          <View className="mt-5 flex-row items-center gap-3 rounded-lg border border-primary bg-primary-muted px-4 py-3">
+            <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
+              {`함께 비교할 연주자를 하나 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+            </Text>
+            <Pressable onPress={() => setPicking(false)} accessibilityRole="button" className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
+              <Text className="text-label text-foreground-muted">취소 (Esc)</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {performancesQuery.isLoading ? (
           <View className="mt-6 flex-row flex-wrap gap-5">
             {Array.from({ length: 3 }, (_, index) => (
@@ -389,6 +420,7 @@ export function ComparePieceView({
                   active={performance.id === activeId}
                   playing={performance.id === activeId && playing}
                   inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
+                  pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
                   onPress={() => start(performance)}
                 />
               ))}
@@ -405,6 +437,7 @@ export function ComparePieceView({
                 longest={longest}
                 active={performance.id === activeId}
                 inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
+                pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
                 onPlay={() => start(performance)}
               />
             ))}
@@ -467,6 +500,9 @@ export function ComparePieceView({
         onNextTake={() => switchTake(1)}
         canSwitch={playable.length >= 2}
         onFullscreen={toggleFullscreen}
+        canFocus={canFocus}
+        picking={picking}
+        onToggleFocus={() => setPicking((value) => !value)}
       />
       )}
     </View>
@@ -526,16 +562,38 @@ function useArtistImage(artistId: number | undefined, known: string | null): str
   return known ?? artist.data?.imageUrl ?? null;
 }
 
+/** 1:1 비교 고르기에서 이 연주의 처지: A(고정) 또는 고를 수 있는 후보 */
+type PickState = 'anchor' | 'candidate' | undefined;
+
+/** 고르기 표시: 후보는 빈 원, A는 금색 'A' */
+function PickMark({ pick }: { pick: PickState }) {
+  if (!pick) return null;
+  return (
+    <View pointerEvents="none" className="absolute left-3 top-3 z-10">
+      {pick === 'anchor' ? (
+        <View className="h-7 flex-row items-center rounded-full bg-primary px-2.5">
+          <Text className="text-micro font-bold text-primary-foreground">A · 지금 연주</Text>
+        </View>
+      ) : (
+        <View className="size-7 items-center justify-center rounded-full border-2 border-white bg-black/40">
+          <Text className="text-micro font-bold text-white">B</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 interface SlotProps {
   performance: ComparisonPerformance;
   image: string | null;
   longest: number;
   active: boolean;
   inRepertoire: boolean;
+  pick?: PickState;
   onPlay: () => void;
 }
 
-function Slot({ performance, image, longest, active, inRepertoire, onPlay }: SlotProps) {
+function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay }: SlotProps) {
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
@@ -554,6 +612,7 @@ function Slot({ performance, image, longest, active, inRepertoire, onPlay }: Slo
         ) : (
           <Poster performance={performance} onPlay={onPlay} />
         )}
+        {pick === 'candidate' ? <PickMark pick={pick} /> : null}
       </View>
 
       {/* 길이 막대: 가장 긴 연주 대비 */}
@@ -570,7 +629,7 @@ function Slot({ performance, image, longest, active, inRepertoire, onPlay }: Slo
         </RepertoireThumb>
         <View className="min-w-0 flex-1">
           <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-            {credit?.artistName ?? '연주자 정보 없음'}
+            {pick === 'anchor' ? `A · ${credit?.artistName ?? '지금 연주'}` : credit?.artistName ?? '연주자 정보 없음'}
           </Text>
           {support ? (
             <Text variant="caption" numberOfLines={1}>
@@ -626,6 +685,7 @@ function TheaterRow({
   active,
   playing,
   inRepertoire,
+  pick,
   onPress,
 }: {
   performance: ComparisonPerformance;
@@ -634,6 +694,7 @@ function TheaterRow({
   active: boolean;
   playing: boolean;
   inRepertoire: boolean;
+  pick?: PickState;
   onPress: () => void;
 }) {
   const credit = primaryCredit(performance);
@@ -665,6 +726,11 @@ function TheaterRow({
         ) : !canPlay ? (
           <View className="absolute inset-0 items-center justify-center bg-black/45">
             <Text className="text-micro text-white">준비 중</Text>
+          </View>
+        ) : null}
+        {pick === 'candidate' ? (
+          <View pointerEvents="none" className="absolute left-1.5 top-1.5 size-6 items-center justify-center rounded-full border-2 border-white bg-black/40">
+            <Text className="text-micro font-bold text-white">B</Text>
           </View>
         ) : null}
       </View>
@@ -799,6 +865,9 @@ interface PlayerBarProps {
   onNextTake: () => void;
   canSwitch: boolean;
   onFullscreen: () => void;
+  canFocus: boolean;
+  picking: boolean;
+  onToggleFocus: () => void;
 }
 
 /** 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다 */
@@ -814,6 +883,9 @@ function PlayerBar({
   onNextTake,
   canSwitch,
   onFullscreen,
+  canFocus,
+  picking,
+  onToggleFocus,
 }: PlayerBarProps) {
   const credit = active ? primaryCredit(active) : undefined;
   const photo = useArtistImage(credit?.artistId, activeImage);
@@ -909,6 +981,19 @@ function PlayerBar({
             </Text>
           </a>
         ) : null}
+        <Pressable
+          accessibilityLabel={picking ? '1:1 비교 고르기 취소' : '1:1 비교'}
+          accessibilityState={{ selected: picking, disabled: !canFocus }}
+          onPress={onToggleFocus}
+          disabled={!canFocus}
+          className={cn(
+            'h-8 flex-row items-center gap-1.5 rounded-full border px-3',
+            picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
+            !canFocus && 'opacity-40'
+          )}>
+          <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
+          <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>{picking ? '고르는 중' : '1:1 비교'}</Text>
+        </Pressable>
         <Pressable
           accessibilityLabel="다음 연주자"
           onPress={onNextTake}

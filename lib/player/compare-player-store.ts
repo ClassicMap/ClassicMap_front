@@ -343,13 +343,19 @@ export const comparePlayer = {
     }
     const start = startPositionFor(track, options.mode ?? state.switchMode);
     savePosition(track.performanceId, start);
+    // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
+    const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
     setState({
       current: track,
-      playIntent: options.play ? track.performanceId : null,
+      playIntent: options.play && !sameMedia ? track.performanceId : null,
       progress: { current: start, duration: track.durationSec },
       restored: false,
       ...(options.queue ? { queue: options.queue } : null),
     });
+    if (sameMedia && media) {
+      media.seek(start);
+      if (options.play) media.play();
+    }
     flushSession();
   },
 
@@ -473,6 +479,11 @@ export const comparePlayer = {
     if (state.playIntent !== performanceId) return false;
     setState({ playIntent: null });
     return true;
+  },
+
+  /** 스토어 밖에서 재생한 연주(집중 비교)의 위치를 적어 둔다. 비교 화면으로 돌아가면 여기서 이어진다 */
+  rememberPosition(performanceId: number, seconds: number, duration?: number) {
+    savePosition(performanceId, seconds, duration);
   },
 
   /** 이 연주를 붙일 때 어디서부터 틀지 (초) */

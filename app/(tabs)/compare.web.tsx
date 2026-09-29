@@ -1,3 +1,4 @@
+import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
 import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
 import { CompareCatalog, CompareComposerPieces } from '@/components/shell/compare/compare-catalog';
 import { ComparePieceView } from '@/components/shell/compare/compare-piece-view';
@@ -19,16 +20,26 @@ function toId(value: string | string[] | undefined): number | undefined {
 export default function CompareScreenWeb() {
   const { nav } = useBreakpoint();
   const router = useRouter();
-  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string }>();
+  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string; focus?: string }>();
   const pieceId = toId(params.pieceId);
   const sectorId = toId(params.sectorId);
   const composerId = toId(params.composerId);
+  const focus = parseFocusParam(params.focus);
 
   if (nav === 'tabs') return <CompareMobileScreen />;
 
   return (
     <View className="flex-1 bg-surface-1">
-      {pieceId ? (
+      {pieceId && focus ? (
+        <FocusCompare
+          pieceId={pieceId}
+          composerId={composerId}
+          sectorId={sectorId}
+          focus={focus}
+          onExit={() => router.setParams({ focus: undefined })}
+          onChangeSector={(id, a, b) => router.setParams({ sectorId: String(id), focus: `${a},${b}` })}
+        />
+      ) : pieceId ? (
         <ComparePieceView
           pieceId={pieceId}
           composerId={composerId}
@@ -42,6 +53,7 @@ export default function CompareScreenWeb() {
             })
           }
           onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
+          onFocus={(a, b) => router.setParams({ sectorId: sectorId ? String(sectorId) : undefined, focus: `${a},${b}` })}
         />
       ) : composerId ? (
         <CompareComposerPieces

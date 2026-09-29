@@ -3,6 +3,7 @@ import {
   CompareMobileComposerPieces,
   CompareMobilePiece,
 } from '@/components/compare/compare-mobile';
+import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 
@@ -15,9 +16,23 @@ function toId(value: string | string[] | undefined): number | undefined {
 /** 네이티브와 좁은 웹의 비교 탭: 작곡가 → 작곡가의 작품 → 작품 비교. 주소 파라미터가 곧 상태다 */
 export function CompareMobileScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string }>();
+  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string; focus?: string }>();
   const pieceId = toId(params.pieceId);
   const composerId = toId(params.composerId);
+  const focus = parseFocusParam(params.focus);
+
+  if (pieceId && focus) {
+    return (
+      <FocusCompare
+        pieceId={pieceId}
+        composerId={composerId}
+        sectorId={toId(params.sectorId)}
+        focus={focus}
+        onExit={() => router.setParams({ focus: undefined })}
+        onChangeSector={(id, a, b) => router.setParams({ sectorId: String(id), focus: `${a},${b}` })}
+      />
+    );
+  }
 
   if (pieceId) {
     return (
@@ -34,6 +49,7 @@ export function CompareMobileScreen() {
           })
         }
         onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
+        onFocus={(a, b) => router.setParams({ focus: `${a},${b}` })}
       />
     );
   }

@@ -313,13 +313,15 @@ interface CompareMobilePieceProps {
   /** 돌아갈 작곡가. 주소에 작곡가가 없던 딥링크면 연주에서 알아낸 작곡가를 넘긴다 */
   onBack: (composerId?: number) => void;
   onSelectSector: (sectorId: number) => void;
+  /** 두 연주자 집중 비교로 (A = 듣던 연주, B = 고른 연주) */
+  onFocus?: (a: number, b: number) => void;
 }
 
 /**
  * 모바일 작품 비교 (1차 시안 모바일 비교): 구간 칩 → 영상 한 개 → 연주자 목록.
  * 영상은 고른 연주 하나만 불러온다. 웹은 잘라 둔 클립, 네이티브는 YouTube 원본의 그 구간.
  */
-export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSelectSector }: CompareMobilePieceProps) {
+export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSelectSector, onFocus }: CompareMobilePieceProps) {
   const router = useRouter();
   const headerInset = useTabHeaderInset();
   const scrollInsets = useTabScrollInsets();
@@ -351,8 +353,19 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const current = useComparePlayer((state) => state.current);
   const activeId =
     current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
+  // 1:1 비교 고르기: 지금 연주(A)는 고정, 다른 연주 하나를 고르면 집중 비교로 간다
+  const [picking, setPicking] = React.useState(false);
+  const canFocus =
+    Boolean(onFocus) && activeId !== null && performances.filter(isPlayablePerformance).length >= 2;
   const choose = (performance: ComparisonPerformance) => {
     if (!isPlayablePerformance(performance)) return;
+    if (picking) {
+      if (performance.id !== activeId && activeId !== null && onFocus) {
+        setPicking(false);
+        onFocus(activeId, performance.id);
+      }
+      return;
+    }
     if (performance.id === activeId && comparePlayer.togglePlay()) return;
     // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
     const queue = performances
@@ -516,7 +529,22 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         )}
       </View>
       <View className="mt-2 flex-row items-center justify-between gap-3">
-        <SwitchModeToggle compact />
+        <View className="flex-row items-center gap-2">
+          <SwitchModeToggle compact />
+          <Pressable
+            onPress={() => setPicking((value) => !value)}
+            disabled={!canFocus}
+            accessibilityRole="button"
+            accessibilityState={{ selected: picking, disabled: !canFocus }}
+            accessibilityLabel={picking ? '1:1 비교 고르기 취소' : '1:1 비교'}
+            className={cn(
+              'h-8 items-center justify-center rounded-full border px-3',
+              picking ? 'border-primary bg-primary-muted' : 'border-border-strong',
+              !canFocus && 'opacity-40'
+            )}>
+            <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>{picking ? '취소' : '1:1 비교'}</Text>
+          </Pressable>
+        </View>
         {active && youtubeWatchUrl(active) ? (
           <Pressable
             onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
@@ -527,6 +555,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           </Pressable>
         ) : null}
       </View>
+
+      {picking ? (
+        <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
+          <Text className="text-body-sm font-semibold text-foreground">
+            {`함께 비교할 연주자를 하나 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+          </Text>
+        </View>
+      ) : null}
 
       {/* 연주자: 길이는 가장 긴 연주 대비 */}
       <View className="mt-4">
