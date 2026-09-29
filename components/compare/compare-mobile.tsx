@@ -298,7 +298,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
               <PerformerRow
                 key={performance.id}
                 performance={performance}
-                image={images.get(primaryCredit(performance)?.artistId ?? 0) ?? null}
+                image={primaryCredit(performance)?.imageUrl ?? images.get(primaryCredit(performance)?.artistId ?? 0) ?? null}
                 longest={longest}
                 active={performance.id === activeId}
                 onPress={() => setActiveId(performance.id)}

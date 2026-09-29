@@ -253,7 +253,7 @@ export default function SearchScreen() {
                     key={piece.id}
                     title={piece.title}
                     subtitle={[piece.composerName, piece.opusNumber].filter(Boolean).join(' · ')}
-                    thumb={<EntityThumb name={piece.title} shape="square" size={44} />}
+                    thumb={<EntityThumb name={piece.title} image={piece.composerAvatarUrl} shape="square" size={44} />}
                     onPress={() =>
                       router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`)
                     }

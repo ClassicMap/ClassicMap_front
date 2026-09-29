@@ -68,7 +68,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
       kind: 'piece' as const,
       title: item.title,
       subtitle: item.composerName,
-      image: null,
+      image: item.composerAvatarUrl ?? null,
       shape: 'square' as const,
       href: `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}`,
       createdAt: item.createdAt,

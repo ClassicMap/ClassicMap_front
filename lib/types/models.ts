@@ -161,6 +161,8 @@ export type PerformanceCreditRole =
 export interface PerformanceCredit {
   artistId: number;
   artistName: string;
+  /** 연주자 사진. 서버가 크레딧에 싣는다(없으면 null) */
+  imageUrl: string | null;
   role: PerformanceCreditRole;
   isPrimary: boolean;
   displayOrder: number;
@@ -290,6 +292,7 @@ export interface ComposerWithPieces extends Composer {
 /** `/pieces/search` 결과. 목록에 작곡가 이름을 함께 보여주려고 서버가 싣는다. */
 export interface PieceSearchResult extends Piece {
   composerName: string;
+  composerAvatarUrl: string | null;
 }
 
 export interface PieceWithPerformances extends Piece {

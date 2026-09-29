@@ -48,6 +48,7 @@ interface ApiComparisonPerformance {
 interface ApiPerformanceCredit {
   artistId: number;
   artistName: string;
+  imageUrl?: string | null;
   role: PerformanceCreditRole;
   isPrimary: boolean;
   displayOrder: number;
@@ -98,6 +99,7 @@ function parseCredit(value: unknown): PerformanceCredit {
   return {
     artistId: requireInteger(value.artistId, 'credits.artistId'),
     artistName: requireString(value.artistName, 'credits.artistName'),
+    imageUrl: optionalString(value.imageUrl),
     displayOrder: requireNumber(value.displayOrder, 'credits.displayOrder'),
     isPrimary: value.isPrimary,
     role: role as PerformanceCreditRole,

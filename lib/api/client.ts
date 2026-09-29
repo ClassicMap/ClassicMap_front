@@ -75,6 +75,7 @@ interface APIPiece {
 
 interface APIPieceSearchResult extends APIPiece {
   composerName: string;
+  composerAvatarUrl?: string | null;
 }
 
 interface APIArtistAward {
@@ -425,6 +426,7 @@ export interface FavoritePieceItem {
   titleEn?: string | null;
   composerId: number;
   composerName: string;
+  composerAvatarUrl?: string | null;
   createdAt: string;
 }
 
@@ -775,7 +777,11 @@ export const PieceAPI = {
       );
       if (!response.ok) throw new Error('Failed to search pieces');
       const data: APIPieceSearchResult[] = await response.json();
-      return data.map((item) => ({ ...mapPiece(item), composerName: item.composerName }));
+      return data.map((item) => ({
+        ...mapPiece(item),
+        composerName: item.composerName,
+        composerAvatarUrl: item.composerAvatarUrl ?? null,
+      }));
     }
     return Promise.resolve([]);
   },

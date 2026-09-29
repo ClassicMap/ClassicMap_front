@@ -84,6 +84,7 @@ export function CommandPalette() {
         kind: 'piece',
         title: piece.title,
         meta: [piece.composerName, piece.opusNumber].filter(Boolean).join(' · '),
+        image: piece.composerAvatarUrl,
         shape: 'square',
         run: () => go(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`),
       }));

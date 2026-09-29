@@ -63,7 +63,7 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
         return {
           performance,
           name: credit?.artistName ?? '연주자 정보 없음',
-          image: credit ? images.get(credit.artistId) ?? null : null,
+          image: credit ? credit.imageUrl ?? images.get(credit.artistId) ?? null : null,
           durationMs: clipDurationMs(performance),
         };
       });
