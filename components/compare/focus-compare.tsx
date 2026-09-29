@@ -18,6 +18,8 @@ import {
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { alignAcross, anchorPairKey, fineClock, type AlignAnchor } from '@/lib/player/focus-align';
+import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import {
   useAllSectorPerformances,
@@ -27,7 +29,17 @@ import {
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { AlertCircleIcon, ArrowLeftRightIcon, ChevronLeftIcon, PauseIcon, PlayIcon, RepeatIcon, XIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ArrowLeftRightIcon,
+  ChevronLeftIcon,
+  Link2Icon,
+  PauseIcon,
+  PlayIcon,
+  RepeatIcon,
+  Undo2Icon,
+  XIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -44,6 +56,9 @@ interface LoopRange {
 
 const AUTO_OPTIONS: AutoInterval[] = [0, 2, 4, 8];
 const SEEK_STEP_SEC = 5;
+/** 영상별 미세 조정 (초) */
+const NUDGE_STEPS = [-5, -1, -0.5, 0.5, 1, 5] as const;
+const FINE_STEP_SEC = 0.5;
 const MIN_LOOP = 0.01;
 
 export interface FocusCompareProps {
@@ -204,6 +219,25 @@ interface FocusEngine {
   seekBy: (seconds: number) => void;
   /** 떠날 때 두 연주의 위치 */
   positions: () => { a: number; b: number };
+  /** 두 영상 각각의 위치(초)·길이(초). 소리 안 나는 쪽도 따로 맞출 수 있다 */
+  sideProgress: Record<Side, SideProgress>;
+  /** 한쪽 영상만 옮긴다. 소리 안 나는 쪽은 멈춘 채 위치만 바뀐다 */
+  seekSide: (side: Side, seconds: number) => void;
+}
+
+interface SideProgress {
+  current: number;
+  duration: number;
+}
+
+/**
+ * 전환할 때 기준점. 없으면 null (구간 안 비율로 옮긴다).
+ * anchorFor(a, b)는 { first: A 기준점, second: B 기준점 }을 준다
+ */
+function anchorBetween(a: number, b: number, from: Side): AlignAnchor | null {
+  const pair = comparePlayer.anchorFor(a, b);
+  if (!pair) return null;
+  return from === 'a' ? { from: pair.first, to: pair.second } : { from: pair.second, to: pair.first };
 }
 
 function FocusStage(props: FocusStageProps) {
@@ -266,6 +300,12 @@ function FocusStage(props: FocusStageProps) {
       } else if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && event.shiftKey) {
         event.preventDefault();
         engine.seekBy(event.key === 'ArrowRight' ? SEEK_STEP_SEC : -SEEK_STEP_SEC);
+      } else if (event.key === ',' || event.key === '.' || event.key === '<' || event.key === '>') {
+        // 소리 나는 쪽 미세 조정: , . 는 0.5초, ⇧(< >)는 5초
+        event.preventDefault();
+        const step = event.key === '<' || event.key === '>' ? SEEK_STEP_SEC : FINE_STEP_SEC;
+        const direction = event.key === '.' || event.key === '>' ? 1 : -1;
+        engine.seekSide(engine.side, engine.sideProgress[engine.side].current + direction * step);
       } else if (event.key === 'Escape') {
         if (editingLoop) setEditingLoop(false);
         else exitRef.current();
@@ -414,10 +454,18 @@ function FocusStage(props: FocusStageProps) {
                     {clipClock(clipDurationMs(performance))}
                   </Text>
                 </View>
+                <SideControls
+                  side={side}
+                  on={on}
+                  progress={engine.sideProgress[side]}
+                  onSeek={(seconds) => engine.seekSide(side, seconds)}
+                />
               </View>
             );
           })}
         </View>
+
+        <AnchorBar a={a} b={b} sideProgress={engine.sideProgress} narrow={narrow} />
 
         <LengthTable a={a} b={b} rows={rows} activeSectorId={activeSectorId} />
       </ScrollView>
@@ -444,7 +492,11 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
   const refs = React.useRef<Record<Side, HTMLVideoElement | null>>({ a: null, b: null });
   const [side, setSide] = React.useState<Side>('a');
   const [playing, setPlaying] = React.useState(false);
-  const [progress, setProgress] = React.useState({ current: 0, duration: clipDurationMs(a) / 1000 });
+  const [sideProgress, setSideProgress] = React.useState<Record<Side, SideProgress>>({
+    a: { current: 0, duration: clipDurationMs(a) / 1000 },
+    b: { current: 0, duration: clipDurationMs(b) / 1000 },
+  });
+  const progress = sideProgress[side];
   const sideRef = React.useRef<Side>('a');
   sideRef.current = side;
   const loopRef = React.useRef(loop);
@@ -478,7 +530,26 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
       }
       if (time - last > 100) {
         last = time;
-        setProgress({ current: video.currentTime, duration: video.duration });
+        // 소리 안 나는 쪽도 조정하면 위치가 바뀌니 둘 다 적는다
+        const read = (key: Side, fallback: SideProgress): SideProgress => {
+          const element = refs.current[key];
+          return element && Number.isFinite(element.duration) && element.duration > 0
+            ? { current: element.currentTime, duration: element.duration }
+            : fallback;
+        };
+        setSideProgress((prev) => {
+          const nextA = read('a', prev.a);
+          const nextB = read('b', prev.b);
+          if (
+            nextA.current === prev.a.current &&
+            nextB.current === prev.b.current &&
+            nextA.duration === prev.a.duration &&
+            nextB.duration === prev.b.duration
+          ) {
+            return prev;
+          }
+          return { a: nextA, b: nextB };
+        });
       }
     };
     raf = requestAnimationFrame(tick);
@@ -503,7 +574,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         if (!from || !to || target === sideRef.current) return;
         const wasPlaying = !from.paused;
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
-          to.currentTime = (from.currentTime / from.duration) * to.duration;
+          to.currentTime = alignAcross(from.currentTime, from.duration, to.duration, anchorBetween(a.id, b.id, sideRef.current));
         }
         from.pause();
         from.muted = true;
@@ -521,8 +592,16 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         if (video) video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
       },
       positions: () => ({ a: get('a')?.currentTime ?? 0, b: get('b')?.currentTime ?? 0 }),
+      sideProgress,
+      seekSide: (key: Side, seconds: number) => {
+        const video = get(key);
+        if (!video) return;
+        const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        video.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
+        setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
+      },
     };
-  }, [side, playing, progress, mode]);
+  }, [side, playing, progress, sideProgress, mode, a.id, b.id]);
 
   const renderVideo = (key: Side) => {
     const performance = key === 'a' ? a : b;
@@ -564,6 +643,10 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
   const playing = useComparePlayer((state) => state.playing);
   const progress = useComparePlayer((state) => state.progress);
   const side: Side = current?.performanceId === b.id ? 'b' : 'a';
+  // 소리 안 나는 쪽 위치는 스토어가 조용히 적어서, 조정할 때 다시 그리게 한다
+  const [adjusted, bump] = React.useReducer((count: number) => count + 1, 0);
+  const idOf = React.useCallback((key: Side) => (key === 'a' ? a.id : b.id), [a.id, b.id]);
+  const lengthOf = React.useCallback((key: Side) => clipDurationMs(key === 'a' ? a : b) / 1000, [a, b]);
 
   // 구간 반복: 네이티브는 위치를 초마다 받아서 끝 지점을 넘으면 시작 지점으로 돌린다 (1초 안팎 오차)
   React.useEffect(() => {
@@ -593,13 +676,35 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
       switchTo: (target: Side) => {
         if (target === side) return;
         const performance = target === 'a' ? a : b;
-        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: playing, mode });
+        const track = trackFromPerformance(performance, imageOf(performance));
+        const fromLength = progress.duration || lengthOf(side);
+        const anchor = anchorBetween(a.id, b.id, side);
+        if (mode === 'align' && anchor) {
+          const startAt = alignAcross(progress.current, fromLength, lengthOf(target), anchor);
+          comparePlayer.select(track, { play: playing, startAt });
+        } else {
+          comparePlayer.select(track, { play: playing, mode });
+        }
       },
       seekRatio: (ratio: number) => comparePlayer.seek(ratio * (progress.duration || 0)),
       seekBy: (seconds: number) => comparePlayer.seekBy(seconds),
       positions: () => ({ a: comparePlayer.positionFor(a.id), b: comparePlayer.positionFor(b.id) }),
+      sideProgress: {
+        a: side === 'a' ? progress : { current: comparePlayer.positionFor(a.id), duration: lengthOf('a') },
+        b: side === 'b' ? progress : { current: comparePlayer.positionFor(b.id), duration: lengthOf('b') },
+      },
+      seekSide: (key: Side, seconds: number) => {
+        const target = Math.max(0, Math.min(lengthOf(key) - 0.05, seconds));
+        if (key === side) comparePlayer.seek(target);
+        else {
+          comparePlayer.rememberPosition(idOf(key), target);
+          bump();
+        }
+      },
     }),
-    [side, playing, progress, a, b, imageOf, mode]
+    // adjusted: 소리 안 나는 쪽을 조정하면 그 위치를 다시 읽는다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [side, playing, progress, a, b, imageOf, mode, idOf, lengthOf, adjusted]
   );
 }
 
@@ -683,6 +788,151 @@ function Segmented<T extends string | number>({
             </Pressable>
           );
         })}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * 영상 한쪽 전용 위치 조정: 진행바(웹은 끌기·말풍선, 네이티브는 누른 자리로)와 초 단위 미세 조정.
+ * 소리 안 나는 쪽도 멈춘 채 옮길 수 있어, 두 영상을 같은 대목에 맞춰 둘 수 있다.
+ */
+function SideControls({
+  side,
+  on,
+  progress,
+  onSeek,
+}: {
+  side: Side;
+  on: boolean;
+  progress: SideProgress;
+  onSeek: (seconds: number) => void;
+}) {
+  const [scrub, setScrub] = React.useState<number | null>(null);
+  const [trackWidth, setTrackWidth] = React.useState(0);
+  const duration = progress.duration;
+  const shown = scrub !== null ? scrub * duration : progress.current;
+  const ratio = duration > 0 ? Math.min(1, Math.max(0, progress.current / duration)) : 0;
+  const name = side.toUpperCase();
+  return (
+    <View className="mt-3 gap-2">
+      <View className="flex-row items-center gap-2.5">
+        <Text variant="mono" className={cn('w-14 text-right', on ? 'text-foreground' : 'text-foreground-muted')}>
+          {fineClock(shown)}
+        </Text>
+        <View className="min-w-0 flex-1">
+          {Platform.OS === 'web' ? (
+            <ScrubBar
+              value={ratio}
+              onScrub={setScrub}
+              onCommit={(value) => {
+                setScrub(null);
+                onSeek(value * duration);
+              }}
+              label={`${name} 영상 위치`}
+              valueText={(value) => `${fineClock(value * duration)} / ${fineClock(duration)}`}
+              step={duration > 0 ? 1 / duration : 0.05}
+              disabled={duration <= 0}
+              fill={on ? 'hsl(var(--primary))' : 'hsl(var(--foreground-muted))'}
+              tooltip
+            />
+          ) : (
+            <Pressable
+              accessibilityRole="adjustable"
+              accessibilityLabel={`${name} 영상 위치`}
+              accessibilityValue={{ text: `${fineClock(progress.current)} / ${fineClock(duration)}` }}
+              onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
+              onPress={(event) => {
+                if (trackWidth > 0 && duration > 0) onSeek((event.nativeEvent.locationX / trackWidth) * duration);
+              }}
+              className="h-6 justify-center">
+              <View className="h-1 overflow-hidden rounded-full bg-surface-3">
+                <View className={cn('h-full', on ? 'bg-primary' : 'bg-foreground-muted')} style={{ width: `${ratio * 100}%` }} />
+              </View>
+            </Pressable>
+          )}
+        </View>
+        <Text variant="mono" className="w-14 text-foreground-subtle">
+          {fineClock(duration)}
+        </Text>
+      </View>
+      <View className="flex-row flex-wrap items-center justify-center gap-1.5">
+        {NUDGE_STEPS.map((step) => (
+          <Pressable
+            key={step}
+            onPress={() => onSeek(progress.current + step)}
+            disabled={duration <= 0}
+            accessibilityRole="button"
+            accessibilityLabel={`${name} ${Math.abs(step)}초 ${step < 0 ? '뒤로' : '앞으로'}`}
+            className="h-7 min-w-11 items-center justify-center rounded-full border border-border-strong px-2 active:bg-surface-2 web:hover:bg-surface-2">
+            <Text variant="mono" className="text-caption text-foreground">
+              {`${step < 0 ? '−' : '+'}${Math.abs(step)}`}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/**
+ * 맞춤 기준점. 두 영상을 같은 대목(예: 첫 타건)에 맞춰 두고 누르면, 그다음부터 '같은 지점' 전환은
+ * 기준점에서 지난 시간을 두 연주의 빠르기 비율로 옮긴다.
+ */
+function AnchorBar({
+  a,
+  b,
+  sideProgress,
+  narrow,
+}: {
+  a: ComparisonPerformance;
+  b: ComparisonPerformance;
+  sideProgress: Record<Side, SideProgress>;
+  narrow: boolean;
+}) {
+  const stored = useComparePlayer((state) => state.anchors[anchorPairKey(a.id, b.id)]);
+  const anchor = stored && stored[a.id] !== undefined && stored[b.id] !== undefined ? { a: stored[a.id], b: stored[b.id] } : null;
+  return (
+    <View
+      className={cn(
+        'mt-5 gap-3 rounded-xl border px-4 py-3',
+        anchor ? 'border-primary bg-primary-muted/40' : 'border-border bg-surface-1',
+        !narrow && 'flex-row items-center'
+      )}>
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="text-body-sm font-semibold text-foreground">
+          {anchor ? `맞춤 기준점 · A ${fineClock(anchor.a)} ↔ B ${fineClock(anchor.b)}` : '맞춤 기준점이 없어요'}
+        </Text>
+        <Text variant="caption">
+          {anchor
+            ? '같은 지점으로 바꿀 때 이 대목부터 지난 시간을 두 연주의 빠르기 비율로 옮겨요.'
+            : '영상마다 위치를 조정해 같은 대목(예: 첫 음)에 맞춘 뒤 눌러 보세요. 지금은 구간 안 비율로 옮겨요.'}
+        </Text>
+        {Platform.OS === 'web' && !narrow ? (
+          <Text variant="caption" className="text-foreground-subtle">
+            소리 나는 쪽 미세 조정: , . 0.5초 · ⇧ , . 5초
+          </Text>
+        ) : null}
+      </View>
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => comparePlayer.setAnchor(a.id, sideProgress.a.current, b.id, sideProgress.b.current)}
+          accessibilityRole="button"
+          accessibilityLabel="지금 두 위치를 같은 대목으로 맞추기"
+          className="h-9 flex-row items-center gap-1.5 rounded-full bg-primary px-3.5 active:opacity-80">
+          <Icon as={Link2Icon} size={15} className="text-primary-foreground" />
+          <Text className="text-label font-semibold text-primary-foreground">{anchor ? '다시 맞추기' : '여기로 맞추기'}</Text>
+        </Pressable>
+        {anchor ? (
+          <Pressable
+            onPress={() => comparePlayer.clearAnchor(a.id, b.id)}
+            accessibilityRole="button"
+            accessibilityLabel="맞춤 기준점 지우기"
+            className="h-9 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 active:bg-surface-2 web:hover:bg-surface-2">
+            <Icon as={Undo2Icon} size={14} className="text-foreground-muted" />
+            <Text className="text-label text-foreground">초기화</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

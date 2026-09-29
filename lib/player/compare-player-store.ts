@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { anchorPairKey } from './focus-align';
+
 /**
  * 비교 재생 상태. 화면 컴포넌트가 아니라 앱 전역에 두어, 다른 화면으로 가도 무엇을 어디까지
  * 들었는지 남는다 (전역 미니 플레이어가 같은 스토어를 읽는다).
@@ -66,6 +68,8 @@ export interface ComparePlayerState {
   focus: { a: number; b: number } | null;
   /** 재생을 맡은 미디어가 붙어 있다. 네이티브에서 비교 화면이 사라지면 false */
   mediaAttached: boolean;
+  /** 집중 비교 기준점. 두 연주 쌍(anchorPairKey)마다 연주 id → 초 */
+  anchors: Readonly<Record<string, Readonly<Record<number, number>>>>;
 }
 
 /** 화면에 붙은 미디어를 조작하는 손잡이 */
@@ -97,6 +101,9 @@ const VOLUME_KEY = 'classicmap.player.volume';
 const MUTED_KEY = 'classicmap.player.muted';
 const SWITCH_MODE_KEY = 'classicmap.player.switch-mode';
 const SESSION_KEY = 'classicmap.player.session.v1';
+const ANCHORS_KEY = 'classicmap.player.anchors.v1';
+/** 기준점은 최근 연주 쌍만 이만큼 남긴다 */
+const MAX_ANCHORS = 100;
 /** 끝에서 이만큼 안쪽이면 다 들은 것으로 보고 다음에는 처음부터 */
 const END_MARGIN_SEC = 0.75;
 /** 연주별 위치는 최근 것만 이만큼 남긴다 */
@@ -227,6 +234,37 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
   };
 }
 
+// ─── 저장: 집중 비교 기준점 ─────────────────────────────
+
+type AnchorMap = Record<string, Record<number, number>>;
+
+function parseAnchors(raw: string | null): AnchorMap {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    const result: AnchorMap = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!value || typeof value !== 'object') continue;
+      const pair: Record<number, number> = {};
+      for (const [id, seconds] of Object.entries(value as Record<string, unknown>)) {
+        const numericId = Number(id);
+        if (Number.isInteger(numericId) && typeof seconds === 'number' && Number.isFinite(seconds)) pair[numericId] = seconds;
+      }
+      if (Object.keys(pair).length === 2) result[key] = pair;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+function saveAnchors(anchors: AnchorMap) {
+  const value = JSON.stringify(anchors);
+  if (Platform.OS === 'web') writeStored(ANCHORS_KEY, value);
+  else void AsyncStorage.setItem(ANCHORS_KEY, value).catch(() => undefined);
+}
+
 // ─── 상태 ─────────────────────────────────────────────────────
 
 let state: ComparePlayerState = {
@@ -245,6 +283,7 @@ let state: ComparePlayerState = {
   fullscreen: false,
   focus: null,
   mediaAttached: false,
+  anchors: parseAnchors(readStored(ANCHORS_KEY)),
   // 웹은 동기로 바로 되살린다
   ...(Platform.OS === 'web' ? sessionPatch(parseSession(readStored(SESSION_KEY))) : {}),
 };
@@ -275,6 +314,13 @@ if (Platform.OS !== 'web') {
       const merged = { ...patch.positions, ...state.positions };
       if (state.current) setState({ positions: merged });
       else setState({ ...patch, positions: merged });
+    })
+    .catch(() => undefined);
+  void AsyncStorage.getItem(ANCHORS_KEY)
+    .then((raw) => {
+      const stored = parseAnchors(raw);
+      // 켜지는 사이에 새로 맞춘 기준점이 이긴다
+      if (Object.keys(stored).length > 0) setState({ anchors: { ...stored, ...state.anchors } });
     })
     .catch(() => undefined);
   AppState.addEventListener('change', (next) => {
@@ -336,12 +382,24 @@ export const comparePlayer = {
    * 연주를 고른다. `play`면 미디어가 붙는 대로 재생한다 (사용자가 누른 경우).
    * 떠나는 연주의 위치는 먼저 적어 둔다. `queue`를 주면 미니 플레이어의 이전·다음이 그 순서를 따른다.
    */
-  select(track: ComparePlayerTrack, options: { play: boolean; queue?: readonly ComparePlayerTrack[]; mode?: SwitchMode }) {
+  select(
+    track: ComparePlayerTrack,
+    options: {
+      play: boolean;
+      queue?: readonly ComparePlayerTrack[];
+      mode?: SwitchMode;
+      /** 시작 위치(초)를 직접 정한다 (집중 비교의 기준점 맞춤) */
+      startAt?: number;
+    }
+  ) {
     const { current, progress } = state;
     if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
       savePosition(current.performanceId, progress.current, progress.duration);
     }
-    const start = startPositionFor(track, options.mode ?? state.switchMode);
+    const start =
+      options.startAt !== undefined
+        ? clampPosition(options.startAt, track.durationSec)
+        : startPositionFor(track, options.mode ?? state.switchMode);
     savePosition(track.performanceId, start);
     // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
     const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
@@ -492,6 +550,35 @@ export const comparePlayer = {
   /** 이 연주를 붙일 때 어디서부터 틀지 (초) */
   positionFor(performanceId: number): number {
     return state.positions[performanceId] ?? 0;
+  },
+
+  /** 집중 비교 기준점. 없으면 null */
+  anchorFor(first: number, second: number): { first: number; second: number } | null {
+    const pair = state.anchors[anchorPairKey(first, second)];
+    if (!pair || pair[first] === undefined || pair[second] === undefined) return null;
+    return { first: pair[first], second: pair[second] };
+  },
+
+  /** 두 영상이 지금 같은 대목이라고 기준점을 적는다 */
+  setAnchor(first: number, firstSeconds: number, second: number, secondSeconds: number) {
+    const key = anchorPairKey(first, second);
+    const next: AnchorMap = { ...state.anchors };
+    delete next[key];
+    next[key] = { [first]: Math.max(0, firstSeconds), [second]: Math.max(0, secondSeconds) };
+    // 오래된 쌍부터 버린다 (객체 키는 넣은 순서를 지킨다)
+    const keys = Object.keys(next);
+    for (const old of keys.slice(0, Math.max(0, keys.length - MAX_ANCHORS))) delete next[old];
+    setState({ anchors: next });
+    saveAnchors(next);
+  },
+
+  clearAnchor(first: number, second: number) {
+    const key = anchorPairKey(first, second);
+    if (!state.anchors[key]) return;
+    const next: AnchorMap = { ...state.anchors };
+    delete next[key];
+    setState({ anchors: next });
+    saveAnchors(next);
   },
 
   /** 화면의 미디어를 건다. 떼는 함수를 돌려준다 */
