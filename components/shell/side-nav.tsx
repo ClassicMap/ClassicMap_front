@@ -1,6 +1,7 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/ui/icons';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
@@ -45,9 +46,7 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
         collapsed ? 'w-[60px] items-center px-2' : 'w-[232px] px-2.5'
       )}>
       <View className={cn('flex-row items-center gap-2.5 pb-5', collapsed ? 'justify-center' : 'px-2.5')}>
-        <View className="size-7 items-center justify-center rounded-sm bg-primary">
-          <CompareIcon size={16} className="text-primary-foreground" />
-        </View>
+        <BrandLogo size={28} />
         {!collapsed && <Text className="text-[15px] font-bold tracking-tight">ClassicMap</Text>}
       </View>
 

@@ -1,6 +1,6 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon } from '@/components/ui/icons';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { clipClock, clipDurationMs, primaryCredit, sortComparisonSectors } from '@/lib/data/comparison';
@@ -71,14 +71,7 @@ export function AuthShell({ children, onClose }: AuthShellProps) {
 }
 
 function BrandMark({ size }: { size: number }) {
-  return (
-    <View
-      className="mb-5 items-center justify-center rounded-lg bg-primary"
-      style={{ width: size, height: size }}
-      accessibilityLabel="ClassicMap">
-      <CompareIcon size={Math.round(size * 0.55)} className="text-primary-foreground" />
-    </View>
-  );
+  return <BrandLogo size={size} className="mb-5" />;
 }
 
 /** 왼쪽 패널: 연주자가 가장 많은 작품의 첫 구간을 그대로 보여 준다. 숫자는 운영 데이터다 */
@@ -106,9 +99,7 @@ function BrandPanel() {
   return (
     <View className="w-1/2 max-w-[720px] justify-between bg-surface-1 px-14 py-12">
       <View className="flex-row items-center gap-2.5">
-        <View className="size-7 items-center justify-center rounded-md bg-primary">
-          <CompareIcon size={16} className="text-primary-foreground" />
-        </View>
+        <BrandLogo size={28} />
         <Text className="text-body font-bold text-foreground">ClassicMap</Text>
       </View>
 
