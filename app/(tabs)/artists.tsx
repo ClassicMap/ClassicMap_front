@@ -18,6 +18,7 @@ import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, PlusIcon, SearchIcon, UsersIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { type LayoutChangeEvent, RefreshControl, ScrollView, View } from 'react-native';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 const PAGE_SIZE = 30;
 
@@ -45,6 +46,7 @@ function useDebounced<T>(value: T, delay: number): T {
 
 /** 연주자 둘러보기: 추천 순 원형 그리드 + 분류 칩 + 이름 검색 (검색 둘러보기에서 들어온다) */
 export default function ArtistsScreen() {
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { canEdit } = useAuth();
@@ -84,6 +86,7 @@ export default function ArtistsScreen() {
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
+        {...scrollInsets}
         className="flex-1"
         onScroll={onScroll}
         scrollEventThrottle={200}

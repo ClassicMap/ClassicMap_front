@@ -5,10 +5,12 @@ import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { THEME } from '@/lib/theme';
+import { withAlpha } from '@/lib/design/tokens';
 import { useColorScheme } from 'nativewind';
 import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_CHROME_TRANSLUCENT } from '@/components/navigation/tab-chrome';
 
 /**
  * 탭 구성 (설계 문서 6.0): 홈 · 검색 · 비교 · 공연 · 레퍼토리.
@@ -20,7 +22,8 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
   const colors = THEME[scheme];
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 20;
-  const translucent = Platform.OS === 'ios';
+  const translucent = TAB_CHROME_TRANSLUCENT;
+  const blurTint = scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
 
   const ThemeToggle = () => (
     <Button
@@ -40,8 +43,19 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       screenOptions={{
         headerShown: !hideChrome,
         sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
-        headerTransparent: false,
-        headerStyle: { backgroundColor: colors.background },
+        // iOS 26: 헤더도 콘텐츠 위에 띄우고 뒤를 흐린다. 화면은 useTabScrollInsets로 헤더 높이만큼 비운다
+        headerTransparent: translucent,
+        headerStyle: { backgroundColor: translucent ? 'transparent' : colors.background },
+        // 배경색을 반쯤 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 흐리게 비친다
+        headerBackground: translucent
+          ? () => (
+              <BlurView tint={scheme} intensity={60} style={StyleSheet.absoluteFill}>
+                <View
+                  style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(scheme, 'background', scheme === 'dark' ? 0.8 : 0.72) }]}
+                />
+              </BlurView>
+            )
+          : undefined,
         headerLeft: () => (
           <View className="mb-2 ml-4">
             <ThemeToggle />
@@ -70,11 +84,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         },
         tabBarBackground: translucent
           ? () => (
-              <BlurView
-                tint={scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight'}
-                intensity={80}
-                style={StyleSheet.absoluteFill}
-              />
+              <BlurView tint={blurTint} intensity={80} style={StyleSheet.absoluteFill} />
             )
           : undefined,
       }}>

@@ -23,6 +23,7 @@ import { AlertCircleIcon, PlusIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 
@@ -62,6 +63,7 @@ function groupByDay(concerts: Concert[]): DateGroup[] {
 }
 
 export default function ConcertsScreen() {
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
@@ -151,6 +153,7 @@ export default function ConcertsScreen() {
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
+        {...scrollInsets}
         className="flex-1"
         contentContainerClassName={cn('pb-20', wide ? 'px-7 pt-2' : 'px-4 pt-3')}
         onScroll={(event) => {

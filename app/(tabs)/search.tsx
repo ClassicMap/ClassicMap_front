@@ -15,6 +15,7 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
 
 type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert';
 
@@ -94,6 +95,7 @@ function pickTopHit(
 }
 
 export default function SearchScreen() {
+  const headerInset = useTabHeaderInset();
   const router = useRouter();
   const params = useLocalSearchParams<{ q?: string }>();
   const { layout } = useBreakpoint();
@@ -120,7 +122,7 @@ export default function SearchScreen() {
     result.composers.length + result.pieces.length + result.artists.length + result.concerts.length;
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background" style={{ paddingTop: headerInset }}>
       <View className={cn('gap-3 px-4 pb-2 pt-3', isWide && 'mx-auto w-full max-w-[880px] px-6')}>
         <View className="h-11 flex-row items-center gap-2.5 rounded-full border border-border-strong bg-surface-2 px-4">
           <Icon as={SearchIcon} size={18} className="text-foreground-subtle" />

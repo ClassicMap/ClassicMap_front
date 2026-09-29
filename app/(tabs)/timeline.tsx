@@ -19,6 +19,7 @@ import { AlertCircleIcon, MinusIcon, PlusIcon, XIcon } from 'lucide-react-native
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 type Scope = 'major' | 'comparable' | 'all';
 
@@ -35,6 +36,7 @@ const BAR_HEIGHT = 32;
 const RIBBON_AREA = 78;
 
 export default function TimelineScreen() {
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   // 홈 "시대로 듣기"에서 오면 그 시대가 보이는 곳부터 연다
   const { era: focusEraId } = useLocalSearchParams<{ era?: string }>();
@@ -87,7 +89,7 @@ export default function TimelineScreen() {
 
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
-      <ScrollView contentContainerClassName={cn('pb-40', wide ? 'px-7 pt-2' : 'px-4 pt-3')}>
+      <ScrollView {...scrollInsets} contentContainerClassName={cn('pb-40', wide ? 'px-7 pt-2' : 'px-4 pt-3')}>
         <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
           <View className="min-w-0 flex-1">
             <Text variant={wide ? 'display' : 'title1'}>타임라인</Text>

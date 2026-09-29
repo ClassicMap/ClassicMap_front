@@ -25,6 +25,7 @@ import { AlertCircleIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 const SHELF_ARTISTS = 12;
 const SHELF_COMPOSERS = 12;
@@ -63,6 +64,7 @@ function weekConcerts(concerts: readonly Concert[]): { items: Concert[]; thisWee
 }
 
 export default function HomeScreen() {
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -178,6 +180,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
+      {...scrollInsets}
       className="flex-1 bg-background web:bg-surface-1"
       contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>

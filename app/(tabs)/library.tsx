@@ -11,8 +11,11 @@ import { useRouter } from 'expo-router';
 import { AlertCircleIcon, BookmarkIcon, LogInIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
+import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 export default function LibraryScreen() {
+  const headerInset = useTabHeaderInset();
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { isSignedIn, loading } = useAuth();
   const { layout } = useBreakpoint();
@@ -23,7 +26,7 @@ export default function LibraryScreen() {
 
   if (!loading && !isSignedIn) {
     return (
-      <View className="flex-1 bg-background">
+      <View className="flex-1 bg-background" style={{ paddingTop: headerInset }}>
         <EmptyState
           icon={LogInIcon}
           title="로그인하면 레퍼토리를 모을 수 있어요"
@@ -36,6 +39,7 @@ export default function LibraryScreen() {
 
   return (
     <ScrollView
+      {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName={container}
       refreshControl={

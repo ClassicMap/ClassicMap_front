@@ -37,14 +37,17 @@ import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, ExternalLinkIcon, PlayIcon, SettingsIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 /** 모바일 비교 첫 화면: 비교할 수 있는 작품만 2열로 */
 export function CompareMobileCatalog({ onOpen }: { onOpen: (piece: ComparisonPiece) => void }) {
+  const scrollInsets = useTabScrollInsets();
   const catalog = useComparisonPieces();
   const pieces = React.useMemo(() => catalog.data?.pages.flat() ?? [], [catalog.data]);
 
   return (
     <ScrollView
+      {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName="px-4 pb-24 pt-2"
       refreshControl={<RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />}>
@@ -109,6 +112,8 @@ interface CompareMobilePieceProps {
  */
 export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSelectSector }: CompareMobilePieceProps) {
   const router = useRouter();
+  const headerInset = useTabHeaderInset();
+  const scrollInsets = useTabScrollInsets();
   const { canEdit } = useAuth();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
@@ -146,7 +151,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
-      <View className="flex-1 bg-background px-4">
+      <View className="flex-1 bg-background px-4" style={{ paddingTop: headerInset }}>
         <BackButton onPress={onBack} />
         <EmptyState
           icon={AlertCircleIcon}
@@ -166,7 +171,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   }
 
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerClassName="px-4 pb-28">
+    <ScrollView {...scrollInsets} className="flex-1 bg-background" contentContainerClassName="px-4 pb-28">
       <View className="flex-row items-center justify-between">
         <BackButton onPress={onBack} />
         <View className="mt-3 flex-row items-center gap-1">
