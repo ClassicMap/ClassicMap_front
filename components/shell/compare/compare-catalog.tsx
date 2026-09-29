@@ -5,6 +5,9 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
+import { repertoireFirst } from '@/lib/data/library';
 import {
   CompareSearchField,
   CompareSearchResults,
@@ -31,10 +34,21 @@ interface CompareCatalogProps {
 /** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
 export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogProps) {
   const comparable = useComparableComposers();
-  const composers = comparable.data?.composers ?? [];
+  const repertoire = useRepertoireIds();
+  const repertoirePieces = React.useMemo(
+    () => countRepertoirePieces(comparable.data?.pieces ?? [], repertoire.pieces),
+    [comparable.data?.pieces, repertoire.pieces]
+  );
+  const composers = React.useMemo(
+    () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
+    [comparable.data?.composers, repertoire.composers, repertoirePieces]
+  );
   const [query, setQuery] = React.useState('');
   const searching = query.trim().length > 0;
-  const result = React.useMemo(() => searchComparable(comparable.data, query), [comparable.data, query]);
+  const result = React.useMemo(
+    () => searchComparable(comparable.data, query, repertoire),
+    [comparable.data, query, repertoire]
+  );
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
@@ -58,6 +72,7 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
           <CompareSearchResults
             query={query}
             result={result}
+            repertoire={repertoire}
             onOpenComposer={onOpenComposer}
             onOpenPiece={onOpenPiece}
             onClear={() => setQuery('')}
@@ -93,6 +108,9 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
             <ComposerCard
               key={composer.composerId}
               composer={composer}
+              inRepertoire={repertoire.composers.has(composer.composerId)}
+              repertoirePieceCount={repertoirePieces.get(composer.composerId) ?? 0}
+              repertoireArtists={repertoire.artists}
               onPress={() => onOpenComposer(composer.composerId)}
             />
           ))}
@@ -102,43 +120,105 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
   );
 }
 
-function ComposerCard({ composer, onPress }: { composer: ComparableComposer; onPress: () => void }) {
+/** 작곡가별로 레퍼토리에 담은 비교 작품 수 */
+export function countRepertoirePieces(
+  pieces: readonly ComparisonPiece[],
+  repertoirePieces: ReadonlySet<number>
+): Map<number, number> {
+  const counts = new Map<number, number>();
+  if (repertoirePieces.size === 0) return counts;
+  for (const piece of pieces) {
+    if (repertoirePieces.has(piece.pieceId)) counts.set(piece.composerId, (counts.get(piece.composerId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/**
+ * 레퍼토리에 담은 작곡가를 맨 앞으로, 그다음 담은 작품이 있는 작곡가. 나머지는 원래 순서(작품 많은 순) 그대로
+ */
+export function sortComposersByRepertoire(
+  composers: readonly ComparableComposer[],
+  repertoireComposers: ReadonlySet<number>,
+  repertoirePieces: ReadonlyMap<number, number>
+): ComparableComposer[] {
+  const withPieces = repertoireFirst(composers, (composer) => (repertoirePieces.get(composer.composerId) ?? 0) > 0);
+  return repertoireFirst(withPieces, (composer) => repertoireComposers.has(composer.composerId));
+}
+
+function ComposerCard({
+  composer,
+  inRepertoire,
+  repertoirePieceCount,
+  repertoireArtists,
+  onPress,
+}: {
+  composer: ComparableComposer;
+  inRepertoire: boolean;
+  repertoirePieceCount: number;
+  repertoireArtists: ReadonlySet<number>;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${composer.composerName}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+      accessibilityLabel={`${composer.composerName}${inRepertoire ? ', 레퍼토리에 있어요' : ''}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
       className="w-[188px] items-center rounded-lg p-2 -m-2 transition-colors duration-instant web:hover:bg-surface-2">
       {/* 작곡가는 사람이라 원형 */}
-      <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={172} />
-      <Text numberOfLines={1} className="mt-3 text-body-sm font-semibold text-foreground">
-        {composer.composerName}
-      </Text>
+      <RepertoireThumb active={inRepertoire} badgeSize={36}>
+        <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={172} />
+      </RepertoireThumb>
+      <View className="mt-3 flex-row items-center gap-1">
+        <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
+          {composer.composerName}
+        </Text>
+        {inRepertoire ? <RepertoireMark /> : null}
+      </View>
       <Text variant="caption" className="mt-0.5">
         비교할 수 있는 작품 {composer.pieceCount}곡
       </Text>
-      <Faces performers={composer.performers} className="mt-2.5" />
+      {repertoirePieceCount > 0 ? (
+        <Text variant="caption" className="mt-0.5 font-semibold text-primary">
+          레퍼토리 작품 {repertoirePieceCount}곡
+        </Text>
+      ) : null}
+      <Faces performers={composer.performers} highlightIds={repertoireArtists} className="mt-2.5" />
     </Pressable>
   );
 }
 
-/** 겹쳐 놓은 연주자 얼굴. 테두리는 놓인 바탕색과 맞춘다 */
+/**
+ * 겹쳐 놓은 연주자 얼굴. 테두리는 놓인 바탕색과 맞춘다.
+ * highlightIds(레퍼토리에 담은 연주자)는 맨 앞에 두고 브라스 테두리로 표시한다
+ */
 export function Faces({
   performers,
   className,
   ringClassName = 'border-surface-1',
+  highlightIds,
+  max,
 }: {
   performers: ComparisonPiecePerformer[];
   className?: string;
   ringClassName?: string;
+  highlightIds?: ReadonlySet<number>;
+  /** 앞에서부터 이만큼만. 레퍼토리 연주자를 앞으로 옮긴 뒤 자른다 */
+  max?: number;
 }) {
   if (performers.length === 0) return null;
+  const ordered = (
+    highlightIds?.size ? repertoireFirst(performers, (performer) => highlightIds.has(performer.artistId)) : performers
+  ).slice(0, max ?? performers.length);
   return (
     <View className={cn('flex-row', className)}>
-      {performers.map((performer, index) => (
+      {ordered.map((performer, index) => (
         <View
           key={performer.artistId}
-          className={cn('rounded-full border-2', ringClassName)}
+          accessibilityLabel={highlightIds?.has(performer.artistId) ? `${performer.artistName}, 레퍼토리에 있어요` : undefined}
+          className={cn(
+            'rounded-full border-2',
+            highlightIds?.has(performer.artistId) ? 'z-10 border-primary' : ringClassName
+          )}
           style={{ marginLeft: index === 0 ? 0 : -8 }}>
           <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={22} />
         </View>
@@ -157,7 +237,12 @@ interface CompareComposerPiecesProps {
 export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareComposerPiecesProps) {
   const router = useRouter();
   const catalog = useComparisonPieces(composerId);
-  const pieces = React.useMemo(() => catalog.data?.pages.flat() ?? [], [catalog.data]);
+  const repertoire = useRepertoireIds();
+  // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
+  const pieces = React.useMemo(
+    () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
+    [catalog.data, repertoire.pieces]
+  );
   const summary = useComparableComposers().data?.byId.get(composerId);
   const name = summary?.composerName ?? pieces[0]?.composerName;
   const avatar = summary?.composerAvatarUrl ?? pieces[0]?.composerAvatarUrl ?? null;
@@ -174,7 +259,9 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
 
       <View className="flex-row items-end gap-6">
         {name ? (
-          <EntityThumb name={name} image={avatar} shape="circle" size={136} />
+          <RepertoireThumb active={repertoire.composers.has(composerId)} badgeSize={30}>
+            <EntityThumb name={name} image={avatar} shape="circle" size={136} />
+          </RepertoireThumb>
         ) : (
           <Skeleton className="size-[136px] rounded-full" />
         )}
@@ -241,7 +328,14 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
           {/* 작곡가 초상은 머리에 한 번만. 작품은 음반 트랙 목록처럼 번호 행으로 */}
           <View className="mt-7 max-w-[960px] border-t border-border">
             {pieces.map((piece, index) => (
-              <PieceRow key={piece.pieceId} index={index + 1} piece={piece} onPress={() => onOpen(piece)} />
+              <PieceRow
+                key={piece.pieceId}
+                index={index + 1}
+                piece={piece}
+                inRepertoire={repertoire.pieces.has(piece.pieceId)}
+                repertoireArtists={repertoire.artists}
+                onPress={() => onOpen(piece)}
+              />
             ))}
           </View>
           {catalog.hasNextPage ? (
@@ -260,27 +354,42 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
   );
 }
 
-function PieceRow({ index, piece, onPress }: { index: number; piece: ComparisonPiece; onPress: () => void }) {
+function PieceRow({
+  index,
+  piece,
+  inRepertoire,
+  repertoireArtists,
+  onPress,
+}: {
+  index: number;
+  piece: ComparisonPiece;
+  inRepertoire: boolean;
+  repertoireArtists: ReadonlySet<number>;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
+      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${inRepertoire ? ', 레퍼토리에 있어요' : ''} 비교하기`}
       className="flex-row items-center gap-4 border-b border-border px-3 py-3.5 transition-colors duration-instant web:hover:bg-surface-2">
       <Text variant="mono" className="w-6 text-right text-foreground-subtle">
         {index}
       </Text>
       <View className="min-w-0 flex-1">
-        <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-          {piece.pieceTitle}
-        </Text>
+        <View className="flex-row items-center gap-1.5">
+          <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+            {piece.pieceTitle}
+          </Text>
+          {inRepertoire ? <RepertoireMark /> : null}
+        </View>
         {piece.opusNumber ? (
           <Text variant="caption" numberOfLines={1} className="mt-0.5">
             {piece.opusNumber}
           </Text>
         ) : null}
       </View>
-      <Faces performers={piece.performers.slice(0, 4)} />
+      <Faces performers={piece.performers} max={4} highlightIds={repertoireArtists} />
       <Text variant="caption" className="w-[108px] text-foreground-subtle">
         연주자 {piece.performerCount} · 구간 {piece.sectorCount}
       </Text>

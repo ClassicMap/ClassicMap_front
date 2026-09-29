@@ -3,11 +3,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { getFavoriteCount } from '@/lib/data/library';
+import { getFavoriteCount, isLibraryKind } from '@/lib/data/library';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, BookmarkIcon, LogInIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
@@ -17,6 +17,9 @@ export default function LibraryScreen() {
   const headerInset = useTabHeaderInset();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{ kind?: string }>();
+  // 사이드바 '… 더 보기'가 ?kind= 로 그 종류를 골라 연다
+  const initialKind = isLibraryKind(params.kind) ? params.kind : undefined;
   const { isSignedIn, loading } = useAuth();
   const { layout } = useBreakpoint();
   const isWide = layout === 'desktop' || layout === 'wide';
@@ -68,7 +71,7 @@ export default function LibraryScreen() {
         />
       ) : (
         <View className="mt-4">
-          <RepertoireList favorites={favorites.data} editable />
+          <RepertoireList favorites={favorites.data} editable initialFilter={initialKind} />
         </View>
       )}
     </ScrollView>

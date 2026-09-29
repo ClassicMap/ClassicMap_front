@@ -3,7 +3,13 @@ import { Chip } from '@/components/ui/chip';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Text } from '@/components/ui/text';
 import type { FavoriteGroups, FavoriteTargetType } from '@/lib/api/client';
-import { buildLibraryEntries, libraryKindLabel, type LibraryEntry, type LibraryKind } from '@/lib/data/library';
+import {
+  buildLibraryEntries,
+  groupLibraryEntries,
+  libraryKindLabel,
+  type LibraryEntry,
+  type LibraryKind,
+} from '@/lib/data/library';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -33,12 +39,20 @@ interface RepertoireListProps {
   /** 표시할 최대 행 수. 넘치면 onShowAll로 전체 보기를 연다 */
   limit?: number;
   onShowAll?: () => void;
+  /** 처음 고를 종류 (주소의 ?kind= 등). 바뀌면 따라간다 */
+  initialFilter?: LibraryKind;
 }
 
-/** 레퍼토리 목록: 종류 칩 + 담은 순서 행 (레퍼토리 탭·마이페이지·공개 프로필이 같이 쓴다) */
-export function RepertoireList({ favorites, editable = false, limit, onShowAll }: RepertoireListProps) {
+/**
+ * 레퍼토리 목록: 종류 칩 + 행 (레퍼토리 탭·마이페이지·공개 프로필이 같이 쓴다).
+ * '전체'에서는 작곡가·연주자·작품·공연 묶음으로 나눠 보여 주고, 묶음 안은 최근에 담은 순서다.
+ */
+export function RepertoireList({ favorites, editable = false, limit, onShowAll, initialFilter }: RepertoireListProps) {
   const router = useRouter();
-  const [filter, setFilter] = React.useState<Filter>('all');
+  const [filter, setFilter] = React.useState<Filter>(initialFilter ?? 'all');
+  React.useEffect(() => {
+    if (initialFilter) setFilter(initialFilter);
+  }, [initialFilter]);
   const entries = React.useMemo(() => buildLibraryEntries(favorites), [favorites]);
   const counts = React.useMemo(() => {
     const map: Record<Filter, number> = { all: entries.length, composer: 0, artist: 0, piece: 0, concert: 0 };
@@ -61,16 +75,42 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll }
           />
         ))}
       </ScrollView>
-      <View className="mt-3">
-        {visible.map((entry) => (
-          <RepertoireRow
-            key={entry.key}
-            entry={entry}
-            editable={editable}
-            onPress={() => router.push(entry.href as Href)}
-          />
-        ))}
-      </View>
+      {filter === 'all' ? (
+        groupLibraryEntries(visible).map((section) => (
+          <View key={section.kind} className="mt-5">
+            <Pressable
+              onPress={() => setFilter(section.kind)}
+              accessibilityRole="button"
+              accessibilityLabel={`${section.label}만 보기`}
+              className="mb-1 flex-row items-baseline gap-2 self-start">
+              <Text className="text-body-sm font-semibold text-foreground">{section.label}</Text>
+              <Text variant="caption" className="text-foreground-subtle">
+                {counts[section.kind]}
+              </Text>
+            </Pressable>
+            {section.entries.map((entry) => (
+              <RepertoireRow
+                key={entry.key}
+                entry={entry}
+                grouped
+                editable={editable}
+                onPress={() => router.push(entry.href as Href)}
+              />
+            ))}
+          </View>
+        ))
+      ) : (
+        <View className="mt-3">
+          {visible.map((entry) => (
+            <RepertoireRow
+              key={entry.key}
+              entry={entry}
+              editable={editable}
+              onPress={() => router.push(entry.href as Href)}
+            />
+          ))}
+        </View>
+      )}
       {limit && filtered.length > limit && onShowAll ? (
         <Pressable onPress={onShowAll} accessibilityRole="link" className="mt-2 self-start px-1 py-1.5">
           <Text variant="label" className="text-foreground-muted">
@@ -82,9 +122,17 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll }
   );
 }
 
-function RepertoireRow({ entry, editable, onPress }: { entry: LibraryEntry; editable: boolean; onPress: () => void }) {
+interface RepertoireRowProps {
+  entry: LibraryEntry;
+  editable: boolean;
+  onPress: () => void;
+  /** 묶음 제목 아래에서는 종류를 다시 적지 않는다 */
+  grouped?: boolean;
+}
+
+function RepertoireRow({ entry, editable, onPress, grouped = false }: RepertoireRowProps) {
   const meta =
-    entry.kind === 'composer' || entry.kind === 'artist'
+    grouped || entry.kind === 'composer' || entry.kind === 'artist'
       ? entry.subtitle
       : `${libraryKindLabel(entry.kind)} · ${entry.subtitle}`;
   const image = useComposerAvatar(entry.composerId, entry.image);

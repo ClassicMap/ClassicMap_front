@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
-import { buildLibraryEntries, type LibraryEntry } from '@/lib/data/library';
+import { buildLibraryEntries, groupLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
@@ -33,8 +33,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: '공연', href: '/concerts', match: '/concert', renderIcon: (p) => <TicketIcon {...p} /> },
 ];
 
-/** 레퍼토리 목록에 올릴 즐겨찾기 최대 수 */
-const LIBRARY_LIMIT = 12;
+/** 사이드바 레퍼토리는 종류마다 최근 몇 개만. 나머지는 레퍼토리 탭에서 */
+const LIBRARY_PER_SECTION = 4;
 
 export function SideNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
@@ -103,8 +103,8 @@ function Library() {
   const { isSignedIn } = useAuth();
   const favorites = useMyFavorites(isSignedIn === true);
 
-  const entries = React.useMemo(
-    () => (favorites.data ? buildLibraryEntries(favorites.data).slice(0, LIBRARY_LIMIT) : []),
+  const sections = React.useMemo(
+    () => (favorites.data ? groupLibraryEntries(buildLibraryEntries(favorites.data), LIBRARY_PER_SECTION) : []),
     [favorites.data]
   );
 
@@ -127,26 +127,44 @@ function Library() {
             즐겨찾기를 못 불러왔어요. 눌러서 다시 시도해 주세요.
           </Text>
         </Pressable>
-      ) : entries.length === 0 && !favorites.isLoading ? (
+      ) : sections.length === 0 && !favorites.isLoading ? (
         <Text variant="caption" className="px-2.5 py-2 text-foreground-muted">
           작곡가나 연주자를 즐겨찾기하면 여기에 모여요.
         </Text>
       ) : (
         <ScrollView className="-mx-1" showsVerticalScrollIndicator={false}>
-          {entries.map((entry) => (
-            <Link key={entry.key} href={entry.href as Href} asChild>
-              <Pressable className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
-                <LibraryThumb entry={entry} />
-                <View className="min-w-0 flex-1">
-                  <Text numberOfLines={1} className="text-[13px] font-semibold">
-                    {entry.title}
-                  </Text>
-                  <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
-                    {entry.subtitle}
-                  </Text>
-                </View>
-              </Pressable>
-            </Link>
+          {sections.map((section) => (
+            <View key={section.kind} className="mb-2.5">
+              {/* 사람·작품·공연이 섞이지 않게 종류별로 묶는다. 악기는 연주자 행 부제로 보인다 */}
+              <View className="mx-1 flex-row items-baseline gap-1.5 px-2 pb-1 pt-1">
+                <Text className="text-[11.5px] font-semibold text-foreground-subtle">{section.label}</Text>
+                <Text className="text-[11px] text-foreground-subtle/70">{section.total}</Text>
+              </View>
+              {section.entries.map((entry) => (
+                <Link key={entry.key} href={entry.href as Href} asChild>
+                  <Pressable className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
+                    <LibraryThumb entry={entry} />
+                    <View className="min-w-0 flex-1">
+                      <Text numberOfLines={1} className="text-[13px] font-semibold">
+                        {entry.title}
+                      </Text>
+                      <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
+                        {entry.subtitle}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </Link>
+              ))}
+              {section.total > section.entries.length ? (
+                <Link href={`/library?kind=${section.kind}` as Href} asChild>
+                  <Pressable className="mx-1 rounded-md px-2 py-1.5 hover:bg-surface-2">
+                    <Text className="text-[12px] text-foreground-muted">
+                      {`${section.label} ${section.total - section.entries.length}개 더 보기`}
+                    </Text>
+                  </Pressable>
+                </Link>
+              ) : null}
+            </View>
           ))}
         </ScrollView>
       )}

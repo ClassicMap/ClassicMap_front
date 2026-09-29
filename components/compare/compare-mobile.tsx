@@ -1,7 +1,10 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { ScrollShelf } from '@/components/home/shelf';
 import { SectionStaff } from '@/components/compare/section-staff';
-import { Faces } from '@/components/shell/compare/compare-catalog';
+import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
+import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/components/shell/compare/compare-catalog';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
+import { repertoireFirst } from '@/lib/data/library';
 import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,10 +65,21 @@ interface CompareMobileCatalogProps {
 export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
   const scrollInsets = useTabScrollInsets();
   const comparable = useComparableComposers();
-  const composers = comparable.data?.composers ?? [];
+  const repertoire = useRepertoireIds();
+  const repertoirePieces = React.useMemo(
+    () => countRepertoirePieces(comparable.data?.pieces ?? [], repertoire.pieces),
+    [comparable.data?.pieces, repertoire.pieces]
+  );
+  const composers = React.useMemo(
+    () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
+    [comparable.data?.composers, repertoire.composers, repertoirePieces]
+  );
   const [query, setQuery] = React.useState('');
   const searching = query.trim().length > 0;
-  const result = React.useMemo(() => searchComparable(comparable.data, query), [comparable.data, query]);
+  const result = React.useMemo(
+    () => searchComparable(comparable.data, query, repertoire),
+    [comparable.data, query, repertoire]
+  );
 
   return (
     <ScrollView
@@ -89,6 +103,7 @@ export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMob
         <CompareSearchResults
           query={query}
           result={result}
+          repertoire={repertoire}
           onOpenComposer={onOpenComposer}
           onOpenPiece={onOpenPiece}
           onClear={() => setQuery('')}
@@ -121,26 +136,45 @@ export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMob
         />
       ) : (
         <View className="mt-4">
-          {composers.map((composer) => (
-            <Pressable
-              key={composer.composerId}
-              onPress={() => onOpenComposer(composer.composerId)}
-              accessibilityRole="link"
-              accessibilityLabel={`${composer.composerName}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
-              className="-mx-2 flex-row items-center gap-3.5 rounded-lg px-2 py-2.5 active:bg-surface-2">
-              <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={56} />
-              <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-                  {composer.composerName}
-                </Text>
-                <Text variant="caption" className="mt-0.5">
-                  비교할 수 있는 작품 {composer.pieceCount}곡
-                </Text>
-              </View>
-              <Faces performers={composer.performers.slice(0, 3)} ringClassName="border-background" />
-              <Icon as={ChevronRightIcon} size={18} className="text-foreground-subtle" />
-            </Pressable>
-          ))}
+          {composers.map((composer) => {
+            const inRepertoire = repertoire.composers.has(composer.composerId);
+            const repertoirePieceCount = repertoirePieces.get(composer.composerId) ?? 0;
+            return (
+              <Pressable
+                key={composer.composerId}
+                onPress={() => onOpenComposer(composer.composerId)}
+                accessibilityRole="link"
+                accessibilityLabel={`${composer.composerName}${inRepertoire ? ', 레퍼토리에 있어요' : ''}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+                className="-mx-2 flex-row items-center gap-3.5 rounded-lg px-2 py-2.5 active:bg-surface-2">
+                <RepertoireThumb active={inRepertoire} badgeSize={18}>
+                  <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={56} />
+                </RepertoireThumb>
+                <View className="min-w-0 flex-1">
+                  <View className="flex-row items-center gap-1">
+                    <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+                      {composer.composerName}
+                    </Text>
+                    {inRepertoire ? <RepertoireMark /> : null}
+                  </View>
+                  <Text variant="caption" numberOfLines={1} className="mt-0.5">
+                    비교할 수 있는 작품 {composer.pieceCount}곡
+                  </Text>
+                  {repertoirePieceCount > 0 ? (
+                    <Text variant="caption" numberOfLines={1} className="mt-0.5 font-semibold text-primary">
+                      레퍼토리 작품 {repertoirePieceCount}곡
+                    </Text>
+                  ) : null}
+                </View>
+                <Faces
+                  performers={composer.performers}
+                  max={3}
+                  highlightIds={repertoire.artists}
+                  ringClassName="border-background"
+                />
+                <Icon as={ChevronRightIcon} size={18} className="text-foreground-subtle" />
+              </Pressable>
+            );
+          })}
         </View>
       )}
     </ScrollView>
@@ -157,7 +191,12 @@ interface CompareMobileComposerPiecesProps {
 export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: CompareMobileComposerPiecesProps) {
   const scrollInsets = useTabScrollInsets();
   const catalog = useComparisonPieces(composerId);
-  const pieces = React.useMemo(() => catalog.data?.pages.flat() ?? [], [catalog.data]);
+  const repertoire = useRepertoireIds();
+  // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
+  const pieces = React.useMemo(
+    () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
+    [catalog.data, repertoire.pieces]
+  );
   const summary = useComparableComposers().data?.byId.get(composerId);
   const name = summary?.composerName ?? pieces[0]?.composerName;
   const avatar = summary?.composerAvatarUrl ?? pieces[0]?.composerAvatarUrl ?? null;
@@ -172,7 +211,9 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
       <BackButton onPress={onBack} />
       <View className="mt-4 flex-row items-center gap-4">
         {name ? (
-          <EntityThumb name={name} image={avatar} shape="circle" size={72} />
+          <RepertoireThumb active={repertoire.composers.has(composerId)} badgeSize={22}>
+            <EntityThumb name={name} image={avatar} shape="circle" size={72} />
+          </RepertoireThumb>
         ) : (
           <Skeleton className="size-[72px] rounded-full" />
         )}
@@ -222,19 +263,27 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               key={piece.pieceId}
               onPress={() => onOpen(piece)}
               accessibilityRole="link"
-              accessibilityLabel={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
+              accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
               <View className="min-w-0 flex-1">
-                <Text numberOfLines={2} className="text-body-sm font-semibold text-foreground">
-                  {piece.pieceTitle}
-                </Text>
+                <View className="flex-row items-center gap-1.5">
+                  <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">
+                    {piece.pieceTitle}
+                  </Text>
+                  {repertoire.pieces.has(piece.pieceId) ? <RepertoireMark /> : null}
+                </View>
                 <Text variant="caption" numberOfLines={1} className="mt-1">
                   {[piece.opusNumber, `연주자 ${piece.performerCount}`, `구간 ${piece.sectorCount}`]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
               </View>
-              <Faces performers={piece.performers.slice(0, 3)} ringClassName="border-background" />
+              <Faces
+                performers={piece.performers}
+                max={3}
+                highlightIds={repertoire.artists}
+                ringClassName="border-background"
+              />
               <Icon as={ChevronRightIcon} size={18} className="text-foreground-subtle" />
             </Pressable>
           ))}

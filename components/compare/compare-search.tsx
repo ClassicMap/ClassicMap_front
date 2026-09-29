@@ -1,7 +1,10 @@
+import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { ComparableComposer, ComparableComposers } from '@/lib/query/hooks/useComparisonPerformances';
+import { EMPTY_REPERTOIRE_IDS, repertoireFirst, type RepertoireIds } from '@/lib/data/library';
 import type { ComparisonPiece } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { searchMatchIndex } from '@/lib/utils/hangul-search';
@@ -20,7 +23,11 @@ export interface CompareSearchResult {
  * 비교 탭 검색. 작곡가 이름(초성 포함)과 작품 제목·작품번호를 카탈로그 안에서 찾는다.
  * 이름 앞부분이 맞을수록, 같으면 비교할 수 있는 작품이 많을수록 위로 온다.
  */
-export function searchComparable(data: ComparableComposers | undefined, query: string): CompareSearchResult {
+export function searchComparable(
+  data: ComparableComposers | undefined,
+  query: string,
+  repertoire: RepertoireIds = EMPTY_REPERTOIRE_IDS
+): CompareSearchResult {
   if (!data || !query.trim()) return { composers: [], pieces: [] };
   const composers = data.composers
     .map((composer) => ({ composer, at: searchMatchIndex(composer.composerName, query) }))
@@ -41,7 +48,11 @@ export function searchComparable(data: ComparableComposers | undefined, query: s
     .sort((a, b) => a.rank - b.rank || b.piece.performerCount - a.piece.performerCount)
     .slice(0, PIECE_RESULT_LIMIT)
     .map((item) => item.piece);
-  return { composers, pieces };
+  // 맞는 것 중 레퍼토리에 담은 것을 위로 (엔터로 여는 첫 결과도 그것)
+  return {
+    composers: repertoireFirst(composers, (composer) => repertoire.composers.has(composer.composerId)),
+    pieces: repertoireFirst(pieces, (piece) => repertoire.pieces.has(piece.pieceId)),
+  };
 }
 
 interface CompareSearchFieldProps {
@@ -55,6 +66,9 @@ interface CompareSearchFieldProps {
 /** 작곡가·작품 검색 칸. 웹에서는 '/'를 누르면 바로 입력할 수 있다 */
 export function CompareSearchField({ value, onChange, onSubmit, className }: CompareSearchFieldProps) {
   const inputRef = React.useRef<TextInput>(null);
+  // 키보드가 있는 넓은 웹에서만 '/' 단축키를 알려 준다
+  const { nav } = useBreakpoint();
+  const showShortcut = Platform.OS === 'web' && nav !== 'tabs';
 
   React.useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -93,7 +107,7 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
         <Pressable accessibilityLabel="검색어 지우기" hitSlop={10} onPress={() => onChange('')}>
           <Icon as={XIcon} size={16} className="text-foreground-subtle" />
         </Pressable>
-      ) : Platform.OS === 'web' ? (
+      ) : showShortcut ? (
         <View className="rounded border border-border px-1.5 py-0.5">
           <Text className="text-[11px] text-foreground-subtle">/</Text>
         </View>
@@ -105,13 +119,21 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
 interface CompareSearchResultsProps {
   query: string;
   result: CompareSearchResult;
+  repertoire?: RepertoireIds;
   onOpenComposer: (composerId: number) => void;
   onOpenPiece: (piece: ComparisonPiece) => void;
   onClear: () => void;
 }
 
 /** 검색 결과: 작곡가 줄 다음 작품 줄. 결과가 없으면 지우고 전체를 보게 한다 */
-export function CompareSearchResults({ query, result, onOpenComposer, onOpenPiece, onClear }: CompareSearchResultsProps) {
+export function CompareSearchResults({
+  query,
+  result,
+  repertoire = EMPTY_REPERTOIRE_IDS,
+  onOpenComposer,
+  onOpenPiece,
+  onClear,
+}: CompareSearchResultsProps) {
   if (result.composers.length === 0 && result.pieces.length === 0) {
     return (
       <View className="mt-10 items-center gap-2">
@@ -135,8 +157,13 @@ export function CompareSearchResults({ query, result, onOpenComposer, onOpenPiec
             <ResultRow
               key={composer.composerId}
               onPress={() => onOpenComposer(composer.composerId)}
-              label={`${composer.composerName}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
-              thumb={<EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={44} />}
+              label={`${composer.composerName}${repertoire.composers.has(composer.composerId) ? ', 레퍼토리에 있어요' : ''}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+              thumb={
+                <RepertoireThumb active={repertoire.composers.has(composer.composerId)} badgeSize={16}>
+                  <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={44} />
+                </RepertoireThumb>
+              }
+              inRepertoire={repertoire.composers.has(composer.composerId)}
               title={composer.composerName}
               meta={`비교할 수 있는 작품 ${composer.pieceCount}곡`}
             />
@@ -152,8 +179,13 @@ export function CompareSearchResults({ query, result, onOpenComposer, onOpenPiec
             <ResultRow
               key={piece.pieceId}
               onPress={() => onOpenPiece(piece)}
-              label={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
-              thumb={<EntityThumb name={piece.pieceTitle} image={piece.composerAvatarUrl} shape="square" size={44} />}
+              label={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
+              thumb={
+                <RepertoireThumb active={repertoire.pieces.has(piece.pieceId)} badgeSize={16} shape="square">
+                  <EntityThumb name={piece.pieceTitle} image={piece.composerAvatarUrl} shape="square" size={44} />
+                </RepertoireThumb>
+              }
+              inRepertoire={repertoire.pieces.has(piece.pieceId)}
               title={piece.pieceTitle}
               meta={[piece.composerName, piece.opusNumber, `연주자 ${piece.performerCount}`].filter(Boolean).join(' · ')}
             />
@@ -170,12 +202,14 @@ function ResultRow({
   thumb,
   title,
   meta,
+  inRepertoire = false,
 }: {
   onPress: () => void;
   label: string;
   thumb: React.ReactNode;
   title: string;
   meta: string;
+  inRepertoire?: boolean;
 }) {
   return (
     <Pressable
@@ -185,9 +219,12 @@ function ResultRow({
       className="-mx-2 flex-row items-center gap-3.5 rounded-lg px-2 py-2 active:bg-surface-2 web:hover:bg-surface-2">
       {thumb}
       <View className="min-w-0 flex-1">
-        <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-          {title}
-        </Text>
+        <View className="flex-row items-center gap-1.5">
+          <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+            {title}
+          </Text>
+          {inRepertoire ? <RepertoireMark /> : null}
+        </View>
         <Text variant="caption" numberOfLines={1} className="mt-0.5">
           {meta}
         </Text>

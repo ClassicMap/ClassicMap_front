@@ -47,7 +47,8 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
       id: item.composerId,
       kind: 'composer' as const,
       title: item.name,
-      subtitle: '작곡가',
+      // 종류는 묶음 제목이 알려 주니 부제에는 시대를 적는다
+      subtitle: item.period || '작곡가',
       image: item.avatarUrl,
       shape: 'circle' as const,
       href: `/composer/${item.composerId}`,
@@ -89,4 +90,69 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
     })),
   ];
   return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** 레퍼토리 묶음 순서: 사람(작곡가·연주자) 먼저, 그다음 작품·공연 */
+export const LIBRARY_KIND_ORDER: readonly LibraryKind[] = ['composer', 'artist', 'piece', 'concert'];
+
+export interface LibrarySection {
+  kind: LibraryKind;
+  label: string;
+  /** 보여 줄 행 (limit 이 있으면 잘린 것) */
+  entries: LibraryEntry[];
+  /** 이 묶음 전체 개수 */
+  total: number;
+}
+
+/**
+ * 담은 순서 목록을 종류별 묶음으로 나눈다. 묶음 안에서는 받은 순서(최근에 담은 것 먼저)를 지킨다.
+ * perSection 을 주면 묶음마다 그만큼만 남긴다. 빈 묶음은 뺀다.
+ */
+export function groupLibraryEntries(entries: readonly LibraryEntry[], perSection?: number): LibrarySection[] {
+  return LIBRARY_KIND_ORDER.map((kind) => {
+    const all = entries.filter((entry) => entry.kind === kind);
+    return {
+      kind,
+      label: KIND_LABEL[kind],
+      entries: perSection === undefined ? all : all.slice(0, perSection),
+      total: all.length,
+    };
+  }).filter((section) => section.total > 0);
+}
+
+export function isLibraryKind(value: string | undefined): value is LibraryKind {
+  return value !== undefined && (LIBRARY_KIND_ORDER as readonly string[]).includes(value);
+}
+
+/** 종류별로 레퍼토리에 담긴 id. 목록에서 '담긴 것' 표시와 위로 올리기에 쓴다 */
+export interface RepertoireIds {
+  composers: ReadonlySet<number>;
+  artists: ReadonlySet<number>;
+  pieces: ReadonlySet<number>;
+  concerts: ReadonlySet<number>;
+}
+
+export const EMPTY_REPERTOIRE_IDS: RepertoireIds = {
+  composers: new Set(),
+  artists: new Set(),
+  pieces: new Set(),
+  concerts: new Set(),
+};
+
+export function toRepertoireIds(favorites: FavoriteGroups | undefined): RepertoireIds {
+  if (!favorites) return EMPTY_REPERTOIRE_IDS;
+  return {
+    composers: new Set(favorites.composers.map((item) => item.composerId)),
+    artists: new Set(favorites.artists.map((item) => item.artistId)),
+    pieces: new Set(favorites.pieces.map((item) => item.pieceId)),
+    concerts: new Set(favorites.concerts.map((item) => item.concertId)),
+  };
+}
+
+/** 레퍼토리에 담긴 것을 앞으로. 나머지 순서는 그대로 둔다 (안정 정렬) */
+export function repertoireFirst<T>(items: readonly T[], isInRepertoire: (item: T) => boolean): T[] {
+  const picked: T[] = [];
+  const rest: T[] = [];
+  for (const item of items) (isInRepertoire(item) ? picked : rest).push(item);
+  return picked.length === 0 ? [...items] : [...picked, ...rest];
 }
