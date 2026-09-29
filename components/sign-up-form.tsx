@@ -8,7 +8,12 @@ import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';
 import * as React from 'react';
-import { TextInput, View } from 'react-native';
+import { Platform, TextInput, View } from 'react-native';
+
+type SignUpErrors = { firstName?: string; lastName?: string; email?: string; password?: string; form?: string };
+
+/** 입력칸에 붙일 수 없는 오류(보안 확인·네트워크 등)도 사용자가 다음에 할 일을 알 수 있게 한다 */
+const SIGN_UP_FALLBACK_ERROR = '가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.';
 
 export function SignUpForm() {
   const { signUp, isLoaded } = useSignUp();
@@ -20,7 +25,7 @@ export function SignUpForm() {
   const lastNameInputRef = React.useRef<TextInput>(null);
   const emailInputRef = React.useRef<TextInput>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
-  const [error, setError] = React.useState<{ firstName?: string; lastName?: string; email?: string; password?: string }>({});
+  const [error, setError] = React.useState<SignUpErrors>({});
 
   async function onSubmit() {
     if (!isLoaded) return;
@@ -38,7 +43,7 @@ export function SignUpForm() {
       router.push(`/(auth)/sign-up/verify-email?email=${email}`);
     } catch (err: any) {
       if (err?.errors && Array.isArray(err.errors)) {
-        const newErrors: { firstName?: string; lastName?: string; email?: string; password?: string } = {};
+        const newErrors: SignUpErrors = {};
 
         err.errors.forEach((error: any) => {
           const field = error.meta?.paramName || '';
@@ -58,10 +63,12 @@ export function SignUpForm() {
             newErrors.email = translatedMessage;
           } else if (field === 'password') {
             newErrors.password = translatedMessage;
+          } else {
+            newErrors.form ??= translatedMessage;
           }
         });
 
-        setError(newErrors);
+        setError(Object.keys(newErrors).length > 0 ? newErrors : { form: SIGN_UP_FALLBACK_ERROR });
         return;
       }
 
@@ -87,9 +94,12 @@ export function SignUpForm() {
           setError({ email: translatedMessage });
         } else if (isPasswordMessage) {
           setError({ password: translatedMessage });
+        } else {
+          setError({ form: translatedMessage });
         }
         return;
       }
+      setError({ form: SIGN_UP_FALLBACK_ERROR });
     }
   }
 
@@ -183,6 +193,9 @@ export function SignUpForm() {
           />
           <FieldError message={error.password} />
         </View>
+        {/* 웹 봇 방지(Clerk CAPTCHA)가 필요할 때 여기에 그린다. 없으면 보이지 않는 방식으로만 시도한다 */}
+        {Platform.OS === 'web' ? <View nativeID="clerk-captcha" /> : null}
+        <FieldError message={error.form} />
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
           <Text className="font-bold">가입하고 인증 메일 받기</Text>
         </Button>

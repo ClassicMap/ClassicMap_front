@@ -35,6 +35,7 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   'verification code is incorrect': '인증 코드가 올바르지 않습니다.',
   'verification code has expired': '인증 코드가 만료되었습니다. 새 코드를 요청해주세요.',
   'too many requests': '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
+  'error loading captcha': '보안 확인을 불러오지 못했어요. 광고 차단 확장 프로그램을 끄거나 다른 브라우저에서 다시 시도해 주세요.',
 
   // 계정 관련
   'account not found': '계정을 찾을 수 없습니다.',
