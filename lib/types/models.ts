@@ -414,6 +414,11 @@ export interface Concert {
   isChild?: boolean;
   isDaehakro?: boolean;
   isFestival?: boolean;
+  /**
+   * 편성 코드(쉼표 구분). 분류 못 하면 null.
+   * 배포 전 백엔드는 이 필드를 보내지 않는다(undefined). 그때는 제목으로 나눈다.
+   */
+  instrumentation?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

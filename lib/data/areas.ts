@@ -31,6 +31,11 @@ const KNOWN_AREAS: { label: string; value: string; kopisCode: string }[] = [
   { label: '제주', value: '제주특별자치도', kopisCode: '50' },
 ];
 
+/** 표에 없어 KOPIS 코드는 모르지만 칩에는 짧게 보일 이름 (행정구역 통합으로 새로 생긴 값) */
+const SHORT_LABELS: Record<string, string> = {
+  전남광주통합특별시: '전남광주',
+};
+
 /**
  * 지역 API 응답을 칩 목록으로. `"대구광역시, 대구광역시"` 같은 중복 문자열은 쪼개서 합치고,
  * 표에 없는 값은 원문 그대로 둔다(박스오피스 코드는 없음). 순서는 표 순서, 모르는 값은 뒤.
@@ -46,6 +51,6 @@ export function normalizeAreas(raw: string[]): AreaOption[] {
   const knownValues = new Set(known.map((area) => area.value));
   const unknown = [...values]
     .filter((value) => !knownValues.has(value))
-    .map((value) => ({ label: value, value }));
+    .map((value) => ({ label: SHORT_LABELS[value] ?? value, value }));
   return [...known, ...unknown];
 }

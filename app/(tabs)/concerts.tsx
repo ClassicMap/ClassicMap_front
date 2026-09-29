@@ -1,6 +1,7 @@
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import { ConcertCard } from '@/components/concert/concert-card';
-import { ConcertFilterBar, ConcertSearchField } from '@/components/concert/concert-filter-bar';
+import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/components/concert/concert-filter-bar';
+import type { ArtistChoice } from '@/components/concert/concert-filter-panels';
 import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
 import { parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Button } from '@/components/ui/button';
@@ -18,8 +19,8 @@ import {
   type ConcertFilterParams,
   countActiveFilters,
   DEFAULT_CONCERT_FILTER,
-  matchesConcertFilter,
   parseConcertFilter,
+  selectVisibleConcerts,
   periodRange,
   toConcertFilterParams,
   toDayString,
@@ -27,6 +28,7 @@ import {
 import { getRankForeground } from '@/lib/design/rank-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useArtist } from '@/lib/query/hooks/useArtists';
 import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import type { Concert } from '@/lib/types/models';
@@ -109,9 +111,11 @@ export default function ConcertsScreen() {
         visit: params.visit,
         festival: params.festival,
         area: params.area,
+        instrument: params.instrument,
+        artist: params.artist,
         q: params.q,
       }),
-    [params.genre, params.period, params.visit, params.festival, params.area, params.q]
+    [params.genre, params.period, params.visit, params.festival, params.area, params.instrument, params.artist, params.q]
   );
   const updateFilter = React.useCallback(
     (next: Partial<ConcertFilter>) => router.setParams(toConcertFilterParams({ ...filter, ...next })),
@@ -139,14 +143,43 @@ export default function ConcertsScreen() {
   const areas = React.useMemo(() => normalizeAreas(areasQuery.data ?? []), [areasQuery.data]);
   const area = areas.find((option) => option.value === filter.area) ?? null;
 
+  const favorites = useMyFavorites(isSignedIn);
+  const favoriteArtists: ArtistChoice[] = React.useMemo(
+    () =>
+      (favorites.data?.artists ?? []).map((artist) => ({
+        artistId: artist.artistId,
+        name: artist.name,
+        imageUrl: artist.imageUrl,
+      })),
+    [favorites.data?.artists]
+  );
+
+  // 주소에는 연주자 id만 있다. 방금 고른 값 → 찜 목록 → 아티스트 상세 순으로 이름을 찾는다
+  const [pickedArtist, setPickedArtist] = React.useState<ArtistChoice | undefined>(undefined);
+  const knownArtist =
+    (pickedArtist?.artistId === filter.artist ? pickedArtist : undefined) ??
+    favoriteArtists.find((artist) => artist.artistId === filter.artist);
+  const artistDetail = useArtist(knownArtist ? undefined : filter.artist);
+  const selectedArtist: ArtistChoice | undefined =
+    knownArtist ??
+    (artistDetail.data && filter.artist
+      ? { artistId: filter.artist, name: artistDetail.data.name, imageUrl: artistDetail.data.imageUrl }
+      : undefined);
+  const changeArtist = (artist: ArtistChoice | undefined) => {
+    setPickedArtist(artist);
+    updateFilter({ artist: artist?.artistId });
+  };
+
   const range = React.useMemo(() => periodRange(filter.period), [filter.period]);
-  const concertsQuery = useFilteredConcerts(filter, range);
+  const { query: concertsQuery, localQuery, waiting } = useFilteredConcerts(filter, range, {
+    artistName: selectedArtist?.name,
+  });
   const pageCount = concertsQuery.data?.pages.length ?? 0;
-  const concerts = React.useMemo(() => {
-    const all = concertsQuery.data?.pages.flat() ?? [];
-    const unique = Array.from(new Map(all.map((concert) => [concert.id, concert])).values());
-    return unique.filter((concert) => matchesConcertFilter(concert, filter, range));
-  }, [concertsQuery.data, filter, range]);
+  const loaded = React.useMemo(() => concertsQuery.data?.pages.flat() ?? [], [concertsQuery.data]);
+  const concerts = React.useMemo(
+    () => selectVisibleConcerts(loaded, filter, range, localQuery),
+    [loaded, filter, range, localQuery]
+  );
   const groups = React.useMemo(() => groupByDay(concerts, range.from), [concerts, range.from]);
 
   // 서버가 아직 모르는 조건은 화면에서 걸러 한 페이지가 비어 보일 수 있다. 몇 페이지까지 더 채운다.
@@ -161,17 +194,6 @@ export default function ConcertsScreen() {
       void concertsQuery.fetchNextPage();
     }
   }, [concerts.length, pageCount, concertsQuery]);
-
-  const favorites = useMyFavorites(isSignedIn);
-  const favoriteArtists = React.useMemo(
-    () =>
-      (favorites.data?.artists ?? []).map((artist) => ({
-        artistId: artist.artistId,
-        name: artist.name,
-        imageUrl: artist.imageUrl,
-      })),
-    [favorites.data?.artists]
-  );
 
   const kopisCode = area ? area.kopisCode : '00';
   const boxofficeQuery = useQuery({
@@ -190,7 +212,7 @@ export default function ConcertsScreen() {
   }, [boxofficeQuery.data]);
 
   const columns = wide ? Math.max(3, Math.floor((gridWidth + 18) / 196)) : 2;
-  const activeCount = countActiveFilters(filter) + Number(Boolean(filter.area)) + Number(Boolean(filter.q.trim()));
+  const activeCount = countActiveFilters(filter) + Number(Boolean(filter.q.trim()));
   const cardWidth = gridWidth > 0 ? (gridWidth - 18 * (columns - 1)) / columns : 0;
 
   const onGridLayout = (event: LayoutChangeEvent) => setGridWidth(event.nativeEvent.layout.width);
@@ -273,21 +295,44 @@ export default function ConcertsScreen() {
             </Button>
           ) : null}
         </View>
-        {!wide ? <ConcertSearchField value={query} onChange={setQuery} className="mt-4" /> : null}
 
-        {isSignedIn && favoriteArtists.length > 0 && !filter.q.trim() ? (
+        {isSignedIn && favoriteArtists.length > 0 && !filter.q.trim() && !filter.artist ? (
           <FavoriteArtistConcerts artists={favoriteArtists} from={periodRange('all').from} cardWidth={wide ? 188 : 156} />
         ) : null}
 
-        <View className="mt-6 border-b border-border pb-4">
-          <ConcertFilterBar filter={filter} areas={areas} onChange={updateFilter} onReset={resetFilter} />
+        <View className={cn('border-b border-border pb-4', wide ? 'mt-6' : 'mt-4')}>
+          {wide ? (
+            <ConcertFilterBar
+              filter={filter}
+              areas={areas}
+              artist={selectedArtist}
+              favoriteArtists={favoriteArtists}
+              onChange={updateFilter}
+              onArtistChange={changeArtist}
+              onReset={resetFilter}
+            />
+          ) : (
+            <ConcertMobileFilter
+              filter={filter}
+              areas={areas}
+              artist={selectedArtist}
+              favoriteArtists={favoriteArtists}
+              onChange={updateFilter}
+              onArtistChange={changeArtist}
+              onReset={resetFilter}
+              query={query}
+              onQueryChange={setQuery}
+              resultCount={concerts.length}
+              more={Boolean(concertsQuery.hasNextPage)}
+            />
+          )}
         </View>
 
         {!wide ? <View className="mt-5">{boxofficePanel}</View> : null}
 
         <View className={cn(wide && 'flex-row gap-9')}>
           <View className="min-w-0 flex-1" onLayout={onGridLayout}>
-            {concertsQuery.isLoading ? (
+            {concertsQuery.isLoading || waiting ? (
               <View className="mt-8 flex-row flex-wrap gap-[18px]">
                 {Array.from({ length: wide ? 10 : 4 }, (_, index) => (
                   <View key={index} style={{ width: cardWidth || 160 }}>

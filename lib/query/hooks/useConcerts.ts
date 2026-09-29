@@ -1,7 +1,7 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
-import { ConcertAPI } from '@/lib/api/client';
+import { ArtistAPI, ConcertAPI, type ConcertArtistOption } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
-import type { Concert } from '@/lib/types/models';
+import type { Artist, Concert } from '@/lib/types/models';
 import {
   type ConcertFilter,
   type DayRange,
@@ -143,28 +143,79 @@ export function useAreas() {
 }
 
 const FILTERED_PAGE_SIZE = 20;
+const ARTIST_DIRECTORY_SIZE = 30;
+
+/**
+ * 공연 검색 백엔드가 연주자·편성 조건을 아는지.
+ * `/concerts/artists`가 있으면 새 백엔드다. 연주자 후보 목록과 같은 요청이라 따로 부르지 않는다.
+ */
+export type ConcertSearchSupport = 'modern' | 'legacy';
+
+function useConcertArtistDirectory() {
+  return useQuery({
+    queryKey: ['concerts', 'artists', ''] as const,
+    queryFn: () => ConcertAPI.getArtists({ limit: ARTIST_DIRECTORY_SIZE }),
+    staleTime: 1000 * 60 * 10,
+    retry: 1,
+  });
+}
+
+export function useConcertSearchSupport(): ConcertSearchSupport | undefined {
+  const directory = useConcertArtistDirectory();
+  if (directory.isError) return 'legacy';
+  if (directory.data === undefined) return undefined;
+  return directory.data === null ? 'legacy' : 'modern';
+}
+
+interface FilteredConcertsOptions {
+  /** 연주자 필터 이름. 배포 전 백엔드는 id를 몰라 이름으로 찾는다 */
+  artistName?: string;
+  enabled?: boolean;
+}
 
 /**
  * 공연 탭 목록. 필터를 `/concerts/search`로 넘기고 offset 페이지를 이어 붙인다.
- * 서버가 아직 모르는 조건이 있을 수 있어 화면에서 {@link matchesConcertFilter}로 한 번 더 거른다.
+ * 서버가 아직 모르는 조건이 있을 수 있어 화면에서 {@link selectVisibleConcerts}로 한 번 더 거른다.
+ *
+ * 연주자 필터는 새 백엔드면 `artist` id로, 배포 전 백엔드면 이름을 검색어로 보낸다.
+ * 이때 사용자가 친 검색어는 서버에 못 보내니 `localQuery`로 돌려줘 화면에서 거르게 한다.
  */
-export function useFilteredConcerts(filter: ConcertFilter, range: DayRange) {
-  const q = filter.q.trim();
-  return useInfiniteQuery({
+export function useFilteredConcerts(filter: ConcertFilter, range: DayRange, options: FilteredConcertsOptions = {}) {
+  const support = useConcertSearchSupport();
+  const typed = filter.q.trim();
+  const artistName = options.artistName?.trim();
+  const byName = Boolean(filter.artist) && support === 'legacy';
+  // 연주자 필터는 백엔드 종류와 (이름으로 찾을 땐) 이름을 알아야 보낼 수 있다
+  const waiting = Boolean(filter.artist) && (support === undefined || (byName && !artistName));
+  const q = byName ? artistName : typed || undefined;
+  const localQuery = byName && typed ? typed : undefined;
+
+  const query = useInfiniteQuery({
     queryKey: [
       'concerts',
       'list',
-      { genre: filter.genre, area: filter.area, visit: filter.visit, festival: filter.festival, q, ...range },
+      {
+        genre: filter.genre,
+        area: filter.area,
+        visit: filter.visit,
+        festival: filter.festival,
+        instrument: filter.instrument,
+        artist: byName ? undefined : filter.artist,
+        q,
+        ...range,
+      },
     ] as const,
     queryFn: ({ pageParam }) =>
       ConcertAPI.search({
-        q: q || undefined,
+        q,
         genre: genreValue(filter.genre),
         area: filter.area,
         from: range.from,
         to: range.to,
         visit: filter.visit || undefined,
         festival: filter.festival || undefined,
+        instrument: filter.instrument,
+        artist: byName ? undefined : filter.artist,
         offset: pageParam,
         limit: FILTERED_PAGE_SIZE,
       }),
@@ -175,7 +226,70 @@ export function useFilteredConcerts(filter: ConcertFilter, range: DayRange) {
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
     retry: 1,
+    enabled: !waiting && options.enabled !== false,
   });
+
+  return { query, localQuery, waiting };
+}
+
+export interface ConcertArtistOptions {
+  options: ConcertArtistOption[];
+  /** 새 백엔드면 공연 수가 붙는다 */
+  hasCounts: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}
+
+function fromArtist(artist: Artist): ConcertArtistOption {
+  return {
+    artistId: artist.id,
+    name: artist.name,
+    englishName: artist.englishName,
+    imageUrl: artist.imageUrl ?? null,
+    category: artist.category,
+  };
+}
+
+/**
+ * 연주자 필터 후보. 새 백엔드는 앞으로 공연이 있는 연주자를 공연 수 순으로 주고,
+ * 배포 전 백엔드면 이름을 쳤을 때 전체 아티스트 검색으로 대신한다.
+ */
+export function useConcertArtistOptions(search: string): ConcertArtistOptions {
+  const support = useConcertSearchSupport();
+  const directory = useConcertArtistDirectory();
+  const q = search.trim();
+  const modernSearch = useQuery({
+    queryKey: ['concerts', 'artists', q] as const,
+    queryFn: () => ConcertAPI.getArtists({ q, limit: 20 }),
+    enabled: support === 'modern' && q.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+  const legacySearch = useQuery({
+    queryKey: ['artists', 'search', 'concert-filter', q] as const,
+    queryFn: () => ArtistAPI.search({ q, limit: 12 }),
+    // 공연과 이어진 목록이 없으니 이름을 쳤을 때만 전체 아티스트에서 찾는다 (돌아가신 거장이 앞에 오지 않게)
+    enabled: support === 'legacy' && q.length > 0,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  if (support === 'modern') {
+    const active = q ? modernSearch : directory;
+    return {
+      options: active.data ?? [],
+      hasCounts: true,
+      isLoading: active.isLoading,
+      isError: active.isError,
+      refetch: () => void active.refetch(),
+    };
+  }
+  return {
+    options: (legacySearch.data ?? []).map(fromArtist),
+    hasCounts: false,
+    isLoading: support === undefined || (q.length > 0 && legacySearch.isLoading),
+    isError: legacySearch.isError,
+    refetch: () => void legacySearch.refetch(),
+  };
 }
 
 export interface FavoriteArtistRef {

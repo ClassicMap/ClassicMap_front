@@ -176,6 +176,8 @@ interface APIConcert {
   isChild?: boolean;
   isDaehakro?: boolean;
   isFestival?: boolean;
+  /** 편성 코드(쉼표 구분). 배포 전 백엔드는 보내지 않는다 */
+  instrumentation?: string | null;
 }
 
 interface APIVenue {
@@ -318,6 +320,8 @@ const mapConcert = (api: APIConcert): Concert => ({
   isChild: api.isChild,
   isDaehakro: api.isDaehakro,
   isFestival: api.isFestival,
+  // 필드가 없으면 undefined로 남겨 '백엔드가 아직 모름'과 '분류 못 함(null)'을 가른다
+  instrumentation: api.instrumentation,
 });
 
 // API Base URL
@@ -902,6 +906,17 @@ export const PeriodAPI = {
 /**
  * 공연 API
  */
+/** `/concerts/artists` 한 줄. 공연 필터의 연주자 후보 */
+export interface ConcertArtistOption {
+  artistId: number;
+  name: string;
+  englishName?: string | null;
+  imageUrl?: string | null;
+  category?: string | null;
+  /** 오늘 이후 공연 수. 배포 전 대체 목록에서는 모른다 */
+  concertCount?: number;
+}
+
 export const ConcertAPI = {
   /**
    * 모든 공연 조회 (페이지네이션 지원)
@@ -1031,6 +1046,10 @@ export const ConcertAPI = {
     visit?: boolean;
     /** true면 페스티벌 공연만 */
     festival?: boolean;
+    /** 이 아티스트가 연결된 공연만 */
+    artist?: number;
+    /** 편성 코드 하나 */
+    instrument?: string;
     offset?: number;
     limit?: number;
   }): Promise<Concert[]> {
@@ -1044,6 +1063,8 @@ export const ConcertAPI = {
       if (params.to) queryParams.append('to', params.to);
       if (params.visit !== undefined) queryParams.append('visit', String(params.visit));
       if (params.festival !== undefined) queryParams.append('festival', String(params.festival));
+      if (params.artist !== undefined) queryParams.append('artist', String(params.artist));
+      if (params.instrument) queryParams.append('instrument', params.instrument);
       if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
       if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
 
@@ -1054,6 +1075,22 @@ export const ConcertAPI = {
       return data.map(mapConcert);
     }
     return Promise.resolve([]);
+  },
+
+  /**
+   * 오늘 이후 공연이 연결된 아티스트 (공연 수 많은 순).
+   * 이 엔드포인트가 없는 배포 전 백엔드면 null을 돌려준다. 그 백엔드는 `artists`를 공연 id로
+   * 읽다가 422를 준다(없는 경로면 404).
+   */
+  async getArtists(params: { q?: string; limit?: number } = {}): Promise<ConcertArtistOption[] | null> {
+    const queryParams = new URLSearchParams();
+    if (params.q) queryParams.append('q', params.q);
+    if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    const response = await authenticatedFetch(`${API_BASE_URL}/concerts/artists?${queryParams.toString()}`);
+    if (response.status === 404 || response.status === 422) return null;
+    if (!response.ok) throw new Error('Failed to fetch concert artists');
+    const data: ConcertArtistOption[] = await response.json();
+    return data;
   },
 
   /**
