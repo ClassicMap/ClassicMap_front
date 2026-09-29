@@ -1737,6 +1737,15 @@ lib/design/
 > **백엔드에 넘길 것**: `/composers/{id}`에 `pieceCount` 없음(목록에는 있음), `/concerts/featured` 500, 일부 연주자 분류 데이터 오류(예: 양인모가 `pianist`).
 >
 > **남은 것**: 5.1의 헤더 반투명(탭바는 완료), 5.3 실기 확인, 로그인한 상태의 마이페이지·설정 화면 실측(로그인 계정이 없어 미확인), 6.2~6.4.
+>
+> **진행 (2026-09-29 오후)**
+>
+> - 5.1 헤더 반투명 완료(iOS만). 헤더 배경은 블러 위에 배경색(라이트 72%, 다크 80%)을 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 비칩니다. 탭 화면은 `useTabScrollInsets`(`components/navigation/tab-chrome.ts`)로 헤더 높이만큼 `contentInset`을 둡니다.
+> - `withAlpha()`가 `hsl(H S L / A)`를 내서 네이티브에서 색이 무시되던 것을 `hsla(...)`로 고쳤습니다.
+> - 5.3 iOS 시뮬레이터(iPhone 17, iOS 27) 확인: 탭 5개·상세 3종·연주자·타임라인·비교 상세·로그인 화면을 라이트/다크로 캡처해 봤고 레이아웃 깨짐은 없었습니다. 안드로이드는 에뮬레이터가 없어 미확인입니다.
+> - **iOS 27 차단 이슈**: Xcode 27 SDK로 빌드하면 앱이 실행 즉시 종료됩니다(`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). SDK 54 네이티브 템플릿이 UIScene 라이프사이클을 쓰지 않기 때문입니다. 로컬 확인은 `ios/`(gitignore)에 SceneDelegate를 임시로 붙여서 했습니다. 저장소에 반영하려면 config plugin 또는 Expo SDK 업그레이드가 필요합니다. 같은 빌드에서 일부 Pod의 최소 배포 버전(12.4·13.4)이 Xcode 27 하한(15.0)보다 낮아 빌드가 실패하는 것도 함께 풀어야 합니다.
+> - 백엔드 수정은 `ClassicMap_back` `fix/redesign-followups` 브랜치에 있습니다(미배포): `/concerts/featured` 500(DISTINCT + ORDER BY, MySQL 3065), `/composers/{id}` `pieceCount`, 성악 음역 원본값(`baritone` 등)이 `other`로 나가던 것, 양인모·대니구·이지윤·라쉬코프스키 악기 분류 migration.
+> - 아직 열린 데이터 판단: 위키데이터 악기로 들어온 지휘자(오라모·잉키넨·샬론·로비츠키·자발리슈·시몬 영·카틀레비치·요엘 레비·주이트너), 합창단·앙상블·트럼펫(`choir`·`ensemble`·`trumpeter`) 분류 코드, 양인모 소개 문구가 다른 사람 내용인 것.
 
 ### 단계 5 — 네이티브 크롬 (1일)
 
