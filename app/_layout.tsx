@@ -14,6 +14,8 @@ import * as React from 'react';
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
 import { RootChrome } from '@/components/navigation/root-chrome';
+import { setAdminTokenProvider } from '@/lib/api/admin';
+import { setTokenProvider } from '@/lib/api/client';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,8 +51,14 @@ export default function RootLayout() {
 SplashScreen.preventAutoHideAsync();
 
 function Routes() {
-  const { isLoaded, userId } = useAuth();
+  const { isLoaded, userId, getToken } = useAuth();
   const client = useQueryClient();
+
+  // API 요청에 붙일 토큰 공급자. 자식 화면의 첫 쿼리보다 먼저 있어야 해서 effect가 아니라 렌더 중에 건다
+  // (effect는 자식 것이 먼저 돌아 첫 '내 정보' 요청이 토큰 없이 나가 401이 났다)
+  const tokenProvider = isLoaded && userId ? getToken : null;
+  setTokenProvider(tokenProvider);
+  setAdminTokenProvider(tokenProvider);
   const previousUser = React.useRef<string | null | undefined>(undefined);
 
   // 로그아웃하거나 계정이 바뀌면 이전 사람의 내 정보(평가·레퍼토리·공개 설정) 캐시를 지운다

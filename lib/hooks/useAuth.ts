@@ -3,8 +3,6 @@
 
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { useEffect, useState } from 'react';
-import { setTokenProvider } from '@/lib/api/client';
-import { setAdminTokenProvider } from '@/lib/api/admin';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://34.60.221.92:1028/api';
 
@@ -22,21 +20,6 @@ export function useAuth() {
   const { getToken } = useClerkAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // 토큰 provider 설정 (매 API 요청마다 신선한 토큰을 가져옴)
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    if (user) {
-      const tokenProvider = () => getToken();
-      setTokenProvider(tokenProvider);
-      setAdminTokenProvider(tokenProvider);
-    } else {
-      setTokenProvider(null);
-      setAdminTokenProvider(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isLoaded]);
 
   useEffect(() => {
     // Clerk가 아직 로드 중이면 로그인 여부를 모르므로 계속 로딩으로 둔다
