@@ -17,12 +17,13 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 type Filter = 'all' | LibraryKind;
 
-const FILTERS: Filter[] = ['all', 'composer', 'artist', 'piece', 'concert'];
+const FILTERS: Filter[] = ['all', 'composer', 'artist', 'piece', 'album', 'concert'];
 
 const FAVORITE_KIND: Record<LibraryKind, FavoriteTargetType> = {
   composer: 'composers',
   artist: 'artists',
   piece: 'pieces',
+  album: 'recordings',
   concert: 'concerts',
 };
 
@@ -55,7 +56,7 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
   }, [initialFilter]);
   const entries = React.useMemo(() => buildLibraryEntries(favorites), [favorites]);
   const counts = React.useMemo(() => {
-    const map: Record<Filter, number> = { all: entries.length, composer: 0, artist: 0, piece: 0, concert: 0 };
+    const map: Record<Filter, number> = { all: entries.length, composer: 0, artist: 0, piece: 0, album: 0, concert: 0 };
     for (const entry of entries) map[entry.kind] += 1;
     return map;
   }, [entries]);

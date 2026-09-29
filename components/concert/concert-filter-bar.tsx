@@ -90,7 +90,7 @@ export interface ConcertFilterBarProps {
 
 // ─── 데스크톱: 드롭다운 버튼 한 줄 ───────────────────────────────────────────────
 
-interface FilterMenuProps {
+export interface FilterMenuProps {
   label: string;
   /** 고른 값이 있으면 버튼이 그 값을 보여 준다 */
   value?: string;
@@ -99,7 +99,7 @@ interface FilterMenuProps {
   children: (close: () => void) => React.ReactNode;
 }
 
-function FilterMenu({ label, value, leading, width, children }: FilterMenuProps) {
+export function FilterMenu({ label, value, leading, width, children }: FilterMenuProps) {
   const triggerRef = React.useRef<TriggerRef>(null);
   const close = React.useCallback(() => triggerRef.current?.close(), []);
   const active = value !== undefined;

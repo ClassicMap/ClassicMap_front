@@ -127,6 +127,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       {/* 탭바에는 없고 둘러보기·사이드바에서 들어가는 화면 */}
       <Tabs.Screen name="artists" options={{ href: null, title: '아티스트' }} />
       <Tabs.Screen name="timeline" options={{ href: null, title: '타임라인' }} />
+      <Tabs.Screen name="albums" options={{ href: null, title: '앨범' }} />
     </Tabs>
   );
 }

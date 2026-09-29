@@ -59,6 +59,12 @@ const PEOPLE_TILES: BrowseTile[] = [
 
 const MORE_TILES: BrowseTile[] = [
   {
+    label: '앨범',
+    description: '담은 연주자의 새 앨범과 레이블별 음반',
+    href: '/albums',
+    renderIcon: (className) => <Icon as={DiscIcon} size={22} className={className} />,
+  },
+  {
     label: '타임라인',
     description: '작곡가들이 살았던 시간을 겹쳐 봐요',
     href: '/timeline',
@@ -417,21 +423,6 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       <View className="gap-3">
         <Text variant="headline">더 둘러보기</Text>
         <BrowseTileRow tiles={MORE_TILES} isWide={isWide} />
-        <View
-          accessibilityState={{ disabled: true }}
-          className={cn('flex-row items-center gap-4 rounded-lg border border-dashed border-border p-4', isWide && 'w-[calc(50%-6px)]')}>
-          <View className="size-11 items-center justify-center rounded-md bg-surface-2">
-            <Icon as={DiscIcon} size={22} className="text-foreground-subtle" />
-          </View>
-          <View className="flex-1">
-            <Text variant="headline" className="text-foreground-muted">
-              앨범
-            </Text>
-            <Text variant="caption" className="mt-0.5">
-              담은 연주자의 새 앨범을 모아 보여 줄 거예요. 곧 열려요.
-            </Text>
-          </View>
-        </View>
       </View>
     </View>
   );

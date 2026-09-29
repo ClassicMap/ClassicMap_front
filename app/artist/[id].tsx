@@ -1,5 +1,7 @@
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
+import { AlbumCard } from '@/components/album/album-card';
+import { AlbumDetailModal } from '@/components/album/album-detail-modal';
 import { ArtistComparisons } from '@/components/artist/artist-comparisons';
 import { FavoriteButton } from '@/components/favorite-button';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
@@ -11,12 +13,13 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
-import { ConcertAPI, RecordingAPI } from '@/lib/api/client';
+import { ConcertAPI, RecordingAPI, type RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useArtist } from '@/lib/query/hooks/useArtists';
-import type { Concert, Recording, TicketVendor } from '@/lib/types/models';
+import type { Artist, Concert, Recording, TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useQuery } from '@tanstack/react-query';
@@ -25,12 +28,11 @@ import {
   AlertCircleIcon,
   ArrowLeftIcon,
   EditIcon,
-  ExternalLinkIcon,
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -66,11 +68,28 @@ function recordingYear(recording: Recording): string {
   return (recording.releaseDate ?? recording.year ?? '').slice(0, 4);
 }
 
-function listenUrl(recording: Recording): { url: string; label: string } | null {
-  if (recording.appleMusicUrl) return { url: recording.appleMusicUrl, label: 'Apple Music' };
-  if (recording.spotifyUrl) return { url: recording.spotifyUrl, label: 'Spotify' };
-  if (recording.youtubeMusicUrl) return { url: recording.youtubeMusicUrl, label: 'YouTube Music' };
-  return null;
+/** 음반을 앨범 카드·상세가 쓰는 목록 모양으로 맞춘다 */
+function toAlbumItem(recording: Recording, artist: Artist): RecordingListItem {
+  return {
+    id: recording.id,
+    title: recording.title,
+    year: recording.year,
+    releaseDate: recording.releaseDate ?? null,
+    label: recording.label ?? null,
+    coverUrl: recording.coverUrl ?? null,
+    trackCount: recording.trackCount ?? null,
+    isSingle: recording.isSingle ?? null,
+    isCompilation: recording.isCompilation ?? null,
+    isPreRelease: null,
+    appleMusicUrl: recording.appleMusicUrl ?? null,
+    spotifyUrl: recording.spotifyUrl ?? null,
+    youtubeMusicUrl: recording.youtubeMusicUrl ?? null,
+    artistId: artist.id,
+    artistName: artist.name,
+    artistEnglishName: artist.englishName ?? null,
+    artistImageUrl: artist.imageUrl ?? null,
+    artistCategory: artist.category ?? null,
+  };
 }
 
 export default function ArtistDetailScreen() {
@@ -87,6 +106,8 @@ export default function ArtistDetailScreen() {
   const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
   const [showVendorsModal, setShowVendorsModal] = React.useState(false);
   const [bioExpanded, setBioExpanded] = React.useState(false);
+  const [openedAlbum, setOpenedAlbum] = React.useState<RecordingListItem | null>(null);
+  const repertoire = useRepertoireIds();
 
   const artistQuery = useArtist(Number.isFinite(artistId) ? artistId : undefined);
   const artist = artistQuery.data;
@@ -398,27 +419,14 @@ export default function ArtistDetailScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-5">
               {recordings.map((recording) => {
-                const listen = listenUrl(recording);
                 return (
                   <View key={recording.id} className="w-[176px]">
-                    <Pressable
-                      disabled={!listen}
-                      onPress={() => listen && Linking.openURL(listen.url)}
-                      accessibilityLabel={listen ? `${recording.title} ${listen.label}에서 듣기` : recording.title}>
-                      <EntityThumb name={recording.title} image={recording.coverUrl} shape="square" size={176} />
-                      <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
-                        {recording.title}
-                      </Text>
-                      <Text variant="caption" numberOfLines={1} className="mt-0.5">
-                        {[recordingYear(recording), recording.label].filter(Boolean).join(' · ')}
-                      </Text>
-                      {listen ? (
-                        <View className="mt-1 flex-row items-center gap-1">
-                          <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
-                          <Text className="text-micro text-foreground-subtle">{listen.label}</Text>
-                        </View>
-                      ) : null}
-                    </Pressable>
+                    <AlbumCard
+                      album={toAlbumItem(recording, artist)}
+                      width={176}
+                      inRepertoire={repertoire.recordings.has(recording.id)}
+                      onPress={() => setOpenedAlbum(toAlbumItem(recording, artist))}
+                    />
                     {canEdit ? (
                       <View className="mt-2 flex-row gap-3">
                         <Pressable
@@ -450,6 +458,8 @@ export default function ArtistDetailScreen() {
         onClose={() => setEditModalVisible(false)}
         onSuccess={refresh}
       />
+      <AlbumDetailModal album={openedAlbum} onClose={() => setOpenedAlbum(null)} />
+
       <RecordingFormModal
         visible={recordingFormVisible}
         artistId={artist.id}

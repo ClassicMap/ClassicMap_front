@@ -1,5 +1,6 @@
 import { type FavoriteGroups, type FavoriteTargetType, MyPageAPI } from '@/lib/api/client';
 import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { useMyFavoriteRecordings } from '@/lib/query/hooks/useRecordings';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +18,8 @@ function isFavorite(groups: FavoriteGroups | undefined, kind: FavoriteTargetType
       return groups.composers.some((item) => item.composerId === id);
     case 'pieces':
       return groups.pieces.some((item) => item.pieceId === id);
+    case 'recordings':
+      return (groups.recordings ?? []).some((item) => item.recordingId === id);
   }
 }
 
@@ -30,6 +33,8 @@ function save(kind: FavoriteTargetType, id: number, next: boolean): Promise<void
       return next ? MyPageAPI.addFavoriteComposer(id) : MyPageAPI.deleteFavoriteComposer(id);
     case 'pieces':
       return next ? MyPageAPI.addFavoritePiece(id) : MyPageAPI.deleteFavoritePiece(id);
+    case 'recordings':
+      return next ? MyPageAPI.addFavoriteRecording(id) : MyPageAPI.deleteFavoriteRecording(id);
   }
 }
 
@@ -39,12 +44,18 @@ function save(kind: FavoriteTargetType, id: number, next: boolean): Promise<void
  */
 export function useFavorite(kind: FavoriteTargetType, id: number) {
   const { isSignedIn } = useClerkAuth();
-  const favorites = useMyFavorites(Boolean(isSignedIn));
+  const favorites = useMyFavorites(Boolean(isSignedIn) && kind !== 'recordings');
+  // 앨범은 /me/favorites 묶음에 없어 따로 부른다
+  const recordings = useMyFavoriteRecordings(Boolean(isSignedIn) && kind === 'recordings');
   const queryClient = useQueryClient();
   const router = useRouter();
   const [optimistic, setOptimistic] = React.useState<boolean | null>(null);
   // 로그아웃 직후 남은 캐시로 '담김'이 보이지 않게, 로그인 상태에서만 서버 목록을 믿는다
-  const saved = isSignedIn ? isFavorite(favorites.data, kind, id) : false;
+  const groups: FavoriteGroups | undefined =
+    kind === 'recordings'
+      ? recordings.data && { concerts: [], artists: [], composers: [], pieces: [], recordings: recordings.data }
+      : favorites.data;
+  const saved = isSignedIn ? isFavorite(groups, kind, id) : false;
   const active = optimistic ?? saved;
 
   const mutation = useMutation({

@@ -1,5 +1,5 @@
 import { EMPTY_REPERTOIRE_IDS, type RepertoireIds, toRepertoireIds } from '@/lib/data/library';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { useAuth } from '@clerk/clerk-expo';
 import * as React from 'react';
 
@@ -9,7 +9,7 @@ import * as React from 'react';
  */
 export function useRepertoireIds(): RepertoireIds {
   const { isSignedIn } = useAuth();
-  const favorites = useMyFavorites(isSignedIn === true);
+  const favorites = useMyRepertoire(isSignedIn === true);
   const data = isSignedIn ? favorites.data : undefined;
   return React.useMemo(() => (data ? toRepertoireIds(data) : EMPTY_REPERTOIRE_IDS), [data]);
 }

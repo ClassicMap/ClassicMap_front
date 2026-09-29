@@ -5,7 +5,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount, isLibraryKind } from '@/lib/data/library';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, BookmarkIcon, LogInIcon } from 'lucide-react-native';
@@ -23,7 +23,7 @@ export default function LibraryScreen() {
   const { isSignedIn, loading } = useAuth();
   const { layout } = useBreakpoint();
   const isWide = layout === 'desktop' || layout === 'wide';
-  const favorites = useMyFavorites(isSignedIn && !loading);
+  const favorites = useMyRepertoire(isSignedIn && !loading);
 
   const container = cn('px-4 pb-16', isWide && 'mx-auto w-full max-w-[880px] px-6');
 
@@ -33,7 +33,7 @@ export default function LibraryScreen() {
         <EmptyState
           icon={LogInIcon}
           title="로그인하면 레퍼토리를 모을 수 있어요"
-          description="작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
+          description="작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
           action={{ label: '로그인', onPress: () => router.push('/(auth)/sign-in') }}
         />
       </View>
@@ -66,7 +66,7 @@ export default function LibraryScreen() {
         <EmptyState
           icon={BookmarkIcon}
           title="아직 레퍼토리가 비어 있어요"
-          description="작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
+          description="작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
           action={{ label: '비교할 수 있는 작품 보기', onPress: () => router.push('/compare') }}
         />
       ) : (

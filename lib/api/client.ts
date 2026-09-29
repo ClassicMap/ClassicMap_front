@@ -379,6 +379,25 @@ const requestJson = async <T>(path: string, options?: RequestInit): Promise<T> =
   return parseJsonResponse<T>(response, 'API request failed');
 };
 
+/** 배포 전 백엔드가 아직 모르는 경로(404·422). 화면은 '준비 중' 빈 상태로 보여 준다 */
+export class ApiUnavailableError extends Error {
+  constructor(path: string) {
+    super(`API not available yet: ${path}`);
+    this.name = 'ApiUnavailableError';
+  }
+}
+
+export function isApiUnavailable(error: unknown): error is ApiUnavailableError {
+  return error instanceof ApiUnavailableError;
+}
+
+/** 새로 생긴 경로용. 404·422면 ApiUnavailableError 로 구분한다 */
+const requestOptionalJson = async <T>(path: string, options?: RequestInit): Promise<T> => {
+  const response = await authenticatedFetch(`${API_BASE_URL}${path}`, options);
+  if (response.status === 404 || response.status === 422) throw new ApiUnavailableError(path);
+  return parseJsonResponse<T>(response, 'API request failed');
+};
+
 const requestEmpty = async (path: string, options?: RequestInit): Promise<void> => {
   const response = await authenticatedFetch(`${API_BASE_URL}${path}`, options);
   if (!response.ok) {
@@ -434,11 +453,24 @@ export interface FavoritePieceItem {
   createdAt: string;
 }
 
+export interface FavoriteRecordingItem {
+  recordingId: number;
+  title: string;
+  coverUrl?: string | null;
+  releaseDate?: string | null;
+  label?: string | null;
+  artistId: number;
+  artistName: string;
+  createdAt: string;
+}
+
 export interface FavoriteGroups {
   concerts: FavoriteConcertItem[];
   artists: FavoriteArtistItem[];
   composers: FavoriteComposerItem[];
   pieces: FavoritePieceItem[];
+  /** 앨범은 /me/favorites 묶음과 따로 불러 합친다. 공개 프로필 응답에는 없다 */
+  recordings?: FavoriteRecordingItem[];
 }
 
 export interface ProfileVisibility {
@@ -487,7 +519,7 @@ export interface PublicProfileResponse {
   collections?: AutoCollection[] | null;
 }
 
-export type FavoriteTargetType = 'concerts' | 'artists' | 'composers' | 'pieces';
+export type FavoriteTargetType = 'concerts' | 'artists' | 'composers' | 'pieces' | 'recordings';
 
 export const emptyFavoriteGroups = (): FavoriteGroups => ({
   concerts: [],
@@ -559,6 +591,22 @@ export const MyPageAPI = {
 
   async deleteFavoritePiece(pieceId: number): Promise<void> {
     return requestEmpty(`/me/favorites/pieces/${pieceId}`, { method: 'DELETE' });
+  },
+
+  /** 앨범 레퍼토리. 백엔드가 아직 모르는 경로면 ApiUnavailableError */
+  async getFavoriteRecordings(): Promise<FavoriteRecordingItem[]> {
+    return requestOptionalJson<FavoriteRecordingItem[]>('/me/favorites/recordings');
+  },
+
+  async addFavoriteRecording(recordingId: number): Promise<void> {
+    return requestEmpty('/me/favorites/recordings', {
+      method: 'POST',
+      body: JSON.stringify({ recordingId }),
+    });
+  },
+
+  async deleteFavoriteRecording(recordingId: number): Promise<void> {
+    return requestEmpty(`/me/favorites/recordings/${recordingId}`, { method: 'DELETE' });
   },
 
   async getFavorites(): Promise<FavoriteGroups> {
@@ -1106,10 +1154,75 @@ export const ConcertAPI = {
   },
 };
 
+/** 앨범 목록 한 줄 (/recordings/browse, /me/recordings/new) */
+export interface RecordingListItem {
+  id: number;
+  title: string;
+  year?: string | null;
+  releaseDate?: string | null;
+  label?: string | null;
+  coverUrl?: string | null;
+  trackCount?: number | null;
+  isSingle?: boolean | null;
+  isCompilation?: boolean | null;
+  /** 발매 예정(예약) 앨범 */
+  isPreRelease?: boolean | null;
+  appleMusicUrl?: string | null;
+  spotifyUrl?: string | null;
+  youtubeMusicUrl?: string | null;
+  artistId: number;
+  artistName: string;
+  artistEnglishName?: string | null;
+  artistImageUrl?: string | null;
+  artistCategory?: string | null;
+}
+
+export interface RecordingLabel {
+  label: string;
+  albumCount: number;
+}
+
+export type RecordingSort = 'release' | 'title';
+
+export interface RecordingBrowseParams {
+  artist?: number;
+  label?: string;
+  year?: number;
+  q?: string;
+  sort?: RecordingSort;
+  offset: number;
+  limit: number;
+}
+
 /**
  * 녹음/앨범 API
  */
 export const RecordingAPI = {
+  /** 앨범 찾기 목록. 페이지로 나눠 받는다 */
+  async browse(params: RecordingBrowseParams): Promise<RecordingListItem[]> {
+    const query = new URLSearchParams();
+    if (params.artist !== undefined) query.set('artist', String(params.artist));
+    if (params.label) query.set('label', params.label);
+    if (params.year !== undefined) query.set('year', String(params.year));
+    if (params.q) query.set('q', params.q);
+    if (params.sort) query.set('sort', params.sort);
+    query.set('offset', String(params.offset));
+    query.set('limit', String(params.limit));
+    return requestOptionalJson<RecordingListItem[]>(`/recordings/browse?${query.toString()}`);
+  },
+
+  /** 레이블 필터 목록 (앨범 수 순) */
+  async labels(limit: number): Promise<RecordingLabel[]> {
+    return requestOptionalJson<RecordingLabel[]>(`/recordings/labels?limit=${limit}`);
+  },
+
+  /** 레퍼토리에 담은 연주자의 최근 앨범 (로그인 필요) */
+  async newForMe(params: { days: number; offset: number; limit: number }): Promise<RecordingListItem[]> {
+    return requestOptionalJson<RecordingListItem[]>(
+      `/me/recordings/new?days=${params.days}&offset=${params.offset}&limit=${params.limit}`
+    );
+  },
+
   /**
    * 특정 아티스트의 모든 녹음 조회
    */

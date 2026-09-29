@@ -1,7 +1,7 @@
 import type { FavoriteGroups } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 
-export type LibraryKind = 'composer' | 'artist' | 'piece' | 'concert';
+export type LibraryKind = 'composer' | 'artist' | 'piece' | 'album' | 'concert';
 
 export interface LibraryEntry {
   key: string;
@@ -23,6 +23,7 @@ const KIND_LABEL: Record<LibraryKind, string> = {
   composer: '작곡가',
   artist: '연주자',
   piece: '작품',
+  album: '앨범',
   concert: '공연',
 };
 
@@ -36,10 +37,16 @@ function shortDate(date: string): string {
 }
 
 export function getFavoriteCount(favorites: FavoriteGroups): number {
-  return favorites.composers.length + favorites.artists.length + favorites.pieces.length + favorites.concerts.length;
+  return (
+    favorites.composers.length +
+    favorites.artists.length +
+    favorites.pieces.length +
+    favorites.concerts.length +
+    (favorites.recordings?.length ?? 0)
+  );
 }
 
-/** 즐겨찾기 네 묶음을 하나의 레퍼토리 목록으로. 최근에 담은 것이 위로 온다. */
+/** 즐겨찾기 묶음(작곡가·연주자·작품·앨범·공연)을 하나의 레퍼토리 목록으로. 최근에 담은 것이 위로 온다. */
 export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
   const entries: LibraryEntry[] = [
     ...favorites.composers.map((item) => ({
@@ -77,6 +84,17 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
       href: `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}`,
       createdAt: item.createdAt,
     })),
+    ...(favorites.recordings ?? []).map((item) => ({
+      key: `album-${item.recordingId}`,
+      id: item.recordingId,
+      kind: 'album' as const,
+      title: item.title,
+      subtitle: item.artistName,
+      image: item.coverUrl ?? null,
+      shape: 'square' as const,
+      href: `/albums?album=${item.recordingId}`,
+      createdAt: item.createdAt,
+    })),
     ...favorites.concerts.map((item) => ({
       key: `concert-${item.concertId}`,
       id: item.concertId,
@@ -92,8 +110,8 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
   return entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-/** 레퍼토리 묶음 순서: 사람(작곡가·연주자) 먼저, 그다음 작품·공연 */
-export const LIBRARY_KIND_ORDER: readonly LibraryKind[] = ['composer', 'artist', 'piece', 'concert'];
+/** 레퍼토리 묶음 순서: 사람(작곡가·연주자) 먼저, 그다음 작품·앨범·공연 */
+export const LIBRARY_KIND_ORDER: readonly LibraryKind[] = ['composer', 'artist', 'piece', 'album', 'concert'];
 
 export interface LibrarySection {
   kind: LibraryKind;
@@ -130,6 +148,7 @@ export interface RepertoireIds {
   artists: ReadonlySet<number>;
   pieces: ReadonlySet<number>;
   concerts: ReadonlySet<number>;
+  recordings: ReadonlySet<number>;
 }
 
 export const EMPTY_REPERTOIRE_IDS: RepertoireIds = {
@@ -137,6 +156,7 @@ export const EMPTY_REPERTOIRE_IDS: RepertoireIds = {
   artists: new Set(),
   pieces: new Set(),
   concerts: new Set(),
+  recordings: new Set(),
 };
 
 export function toRepertoireIds(favorites: FavoriteGroups | undefined): RepertoireIds {
@@ -146,6 +166,7 @@ export function toRepertoireIds(favorites: FavoriteGroups | undefined): Repertoi
     artists: new Set(favorites.artists.map((item) => item.artistId)),
     pieces: new Set(favorites.pieces.map((item) => item.pieceId)),
     concerts: new Set(favorites.concerts.map((item) => item.concertId)),
+    recordings: new Set((favorites.recordings ?? []).map((item) => item.recordingId)),
   };
 }
 

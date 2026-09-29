@@ -5,11 +5,11 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, groupLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
 import { type Href, Link, usePathname } from 'expo-router';
-import { HomeIcon, SearchIcon } from 'lucide-react-native';
+import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -36,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
     match: ['/artists', '/timeline', '/composer', '/artist/'],
     renderIcon: (p) => <PerformerKindIcon {...p} />,
   },
+  { label: '앨범', href: '/albums', match: ['/albums'], renderIcon: (p) => <Icon as={DiscIcon} {...p} /> },
   { label: '공연', href: '/concerts', match: ['/concert'], renderIcon: (p) => <TicketIcon {...p} /> },
 ];
 
@@ -107,7 +108,7 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
 
 function Library() {
   const { isSignedIn } = useAuth();
-  const favorites = useMyFavorites(isSignedIn === true);
+  const favorites = useMyRepertoire(isSignedIn === true);
 
   const sections = React.useMemo(
     () => (favorites.data ? groupLibraryEntries(buildLibraryEntries(favorites.data), LIBRARY_PER_SECTION) : []),
