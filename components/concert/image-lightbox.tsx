@@ -18,10 +18,11 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDecay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ZOOM_STEPS = [1, 1.5, 2, 3, 4] as const;
@@ -42,7 +43,8 @@ interface ImageLightboxProps {
 /**
  * 공연 소개 이미지 크게 보기.
  * 웹: 클릭하면 그 지점으로 확대, 드래그로 이동, ⌘/Ctrl+휠·+/− 버튼·키보드(+ − 0 ← → Esc).
- * 네이티브: iOS는 두 손가락으로 확대, 긴 이미지는 폭에 맞춰 세로로 스크롤.
+ * 네이티브(iOS·Android): 두 손가락으로 확대, 두 번 톡 쳐서 2배/원래대로, 확대하거나 긴 이미지는 끌어서 이동,
+ * 원래 크기에서 좌우로 밀면 이전·다음 이미지.
  */
 export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLightboxProps) {
   const visible = index !== null && images.length > 0;
@@ -128,7 +130,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      <View className="flex-1" style={{ backgroundColor: 'rgba(6, 6, 6, 0.97)' }}>
+      {/* 모달은 앱 루트 밖에 그려져서 제스처 루트를 따로 둔다 */}
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'rgba(6, 6, 6, 0.97)' }}>
         <View
           style={{ paddingTop: insets.top, height: topBar }}
           className="flex-row items-center justify-between gap-3 px-3">
@@ -184,20 +187,15 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
               onBackdrop={onClose}
             />
           ) : (
-            <ScrollView
+            <NativeZoomCanvas
               key={uri}
-              maximumZoomScale={4}
-              minimumZoomScale={1}
-              bouncesZoom
-              centerContent
-              contentContainerStyle={{
-                minHeight: viewportHeight,
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingBottom: insets.bottom,
-              }}>
-              <Image source={{ uri }} style={{ width: imageWidth, height: imageHeight }} resizeMode="contain" />
-            </ScrollView>
+              uri={uri}
+              width={fitWidth}
+              height={ratio ? fitWidth / ratio : 0}
+              viewportWidth={viewportWidth}
+              viewportHeight={viewportHeight + insets.bottom}
+              onSwipe={go}
+            />
           )}
 
           {count > 1 ? (
@@ -213,7 +211,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
             누르면 확대돼요 · 드래그해서 옮기고 ⌘/Ctrl+휠로 크기를 바꿔요 · Esc로 닫아요
           </Text>
         ) : null}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -387,5 +385,131 @@ function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }
         </Pressable>
       </Pressable>
     </View>
+  );
+}
+
+const NATIVE_MAX_ZOOM = 4;
+const SWIPE_DISTANCE = 72;
+const DOUBLE_TAP_MS = 450;
+
+interface NativeZoomCanvasProps {
+  uri: string;
+  /** 원래 크기(1배)일 때 이미지 크기 */
+  width: number;
+  height: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  onSwipe: (delta: number) => void;
+}
+
+/**
+ * 네이티브 확대 캔버스. 확대·이동을 한 변환(이동 → 확대)으로 처리해 iOS와 Android가 같게 움직인다.
+ * 이미지 중심이 화면 중심에 오는 좌표계라, 이동 한계는 넘치는 크기의 절반이다.
+ */
+function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, onSwipe }: NativeZoomCanvasProps) {
+  // 긴 이미지는 위쪽부터 보이게 시작한다
+  const startY = Math.max(0, (height - viewportHeight) / 2);
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(startY);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(startY);
+
+  const bound = (size: number, view: number, s: number) => {
+    'worklet';
+    return Math.max(0, (size * s - view) / 2);
+  };
+  const clamp = (value: number, limit: number) => {
+    'worklet';
+    return Math.min(limit, Math.max(-limit, value));
+  };
+  const settle = () => {
+    'worklet';
+    tx.value = withTiming(clamp(tx.value, bound(width, viewportWidth, scale.value)), { duration: 180 });
+    ty.value = withTiming(clamp(ty.value, bound(height, viewportHeight, scale.value)), { duration: 180 });
+  };
+
+  const pinch = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+      savedTx.value = tx.value;
+      savedTy.value = ty.value;
+    })
+    .onUpdate((event) => {
+      const next = Math.min(NATIVE_MAX_ZOOM, Math.max(1, savedScale.value * event.scale));
+      const ratio = next / savedScale.value;
+      // 두 손가락 사이 지점이 제자리에 있게 이동을 함께 바꾼다
+      const fx = event.focalX - viewportWidth / 2;
+      const fy = event.focalY - viewportHeight / 2;
+      tx.value = fx - (fx - savedTx.value) * ratio;
+      ty.value = fy - (fy - savedTy.value) * ratio;
+      scale.value = next;
+    })
+    .onEnd(() => settle());
+
+  const pan = Gesture.Pan()
+    .averageTouches(true)
+    .onStart(() => {
+      savedTx.value = tx.value;
+      savedTy.value = ty.value;
+    })
+    .onUpdate((event) => {
+      tx.value = savedTx.value + event.translationX;
+      ty.value = savedTy.value + event.translationY;
+    })
+    .onEnd((event) => {
+      const limitX = bound(width, viewportWidth, scale.value);
+      const limitY = bound(height, viewportHeight, scale.value);
+      const horizontal = Math.abs(event.translationX) > Math.abs(event.translationY);
+      if (scale.value <= 1.01 && limitX === 0 && horizontal && Math.abs(event.translationX) > SWIPE_DISTANCE) {
+        runOnJS(onSwipe)(event.translationX < 0 ? 1 : -1);
+      }
+      tx.value = limitX > 0 ? withDecay({ velocity: event.velocityX, clamp: [-limitX, limitX] }) : withTiming(0, { duration: 180 });
+      ty.value = limitY > 0 ? withDecay({ velocity: event.velocityY, clamp: [-limitY, limitY] }) : withTiming(0, { duration: 180 });
+    });
+
+  // 두 번 톡: numberOfTaps(2)는 탭 간격이 길면 실패해서, 한 번 탭을 시간·거리로 직접 묶는다
+  const lastTap = useSharedValue({ at: 0, x: 0, y: 0 });
+  const doubleTap = Gesture.Tap()
+    .maxDuration(300)
+    .onEnd((event) => {
+      const now = Date.now();
+      const prev = lastTap.value;
+      const isDouble =
+        now - prev.at < DOUBLE_TAP_MS && Math.abs(event.x - prev.x) < 40 && Math.abs(event.y - prev.y) < 40;
+      lastTap.value = isDouble ? { at: 0, x: 0, y: 0 } : { at: now, x: event.x, y: event.y };
+      if (!isDouble) return;
+      if (scale.value > 1.01) {
+        scale.value = withTiming(1, { duration: 200 });
+        tx.value = withTiming(0, { duration: 200 });
+        ty.value = withTiming(clamp(startY, bound(height, viewportHeight, 1)), { duration: 200 });
+        return;
+      }
+      const next = 2;
+      const fx = event.x - viewportWidth / 2;
+      const fy = event.y - viewportHeight / 2;
+      const nextX = clamp(fx - (fx - tx.value) * next, bound(width, viewportWidth, next));
+      const nextY = clamp(fy - (fy - ty.value) * next, bound(height, viewportHeight, next));
+      scale.value = withTiming(next, { duration: 200 });
+      tx.value = withTiming(nextX, { duration: 200 });
+      ty.value = withTiming(nextY, { duration: 200 });
+    });
+
+  const gesture = Gesture.Race(doubleTap, Gesture.Simultaneous(pinch, pan));
+
+  const imageStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
+  }));
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        collapsable={false}
+        style={{ flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}
+        accessibilityHint="두 손가락으로 확대하고, 두 번 톡 치면 2배로 커져요">
+        <Animated.Image source={{ uri }} resizeMode="contain" style={[{ width, height }, imageStyle]} />
+      </View>
+    </GestureDetector>
   );
 }
