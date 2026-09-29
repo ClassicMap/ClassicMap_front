@@ -22,7 +22,7 @@ import { type Href, Redirect, useRouter } from 'expo-router';
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { type LayoutChangeEvent, Pressable, ScrollView, Switch, View } from 'react-native';
+import { type LayoutChangeEvent, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
 type SectionKey = 'profile' | 'visibility' | 'taste' | 'display' | 'account' | 'info';
 
@@ -433,6 +433,15 @@ function EraPreferences() {
   );
 }
 
+/**
+ * 웹은 dark 클래스로 테마를 바꾸는데, NativeWind에 'system'을 주면 클래스를 떼어 버려
+ * 시스템이 다크여도 라이트 색이 나온다. 웹에서는 지금 시스템 값으로 풀어서 넘긴다.
+ */
+function resolveThemeChoice(choice: 'system' | 'light' | 'dark'): 'system' | 'light' | 'dark' {
+  if (choice !== 'system' || Platform.OS !== 'web' || typeof window === 'undefined') return choice;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function ThemeSelector() {
   const { setColorScheme } = useColorScheme();
   // 테마 선택은 저장해 두지 않아서 화면을 열 때마다 시스템에서 시작한다
@@ -445,7 +454,7 @@ function ThemeSelector() {
           key={item.key}
           onPress={() => {
             setChoice(item.key);
-            setColorScheme(item.key);
+            setColorScheme(resolveThemeChoice(item.key));
           }}
           accessibilityRole="radio"
           accessibilityState={{ checked: choice === item.key }}
