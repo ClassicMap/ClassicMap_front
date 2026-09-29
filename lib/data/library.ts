@@ -11,6 +11,8 @@ export interface LibraryEntry {
   title: string;
   subtitle: string;
   image?: string | null;
+  /** 작품이면 작곡가. 목록에 초상이 없을 때 작곡가 초상을 찾는 데 쓴다 */
+  composerId?: number;
   /** 사람은 원, 콘텐츠는 사각 */
   shape: 'circle' | 'square';
   href: string;
@@ -69,6 +71,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
       title: item.title,
       subtitle: item.composerName,
       image: item.composerAvatarUrl ?? null,
+      composerId: item.composerId,
       shape: 'square' as const,
       href: `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}`,
       createdAt: item.createdAt,

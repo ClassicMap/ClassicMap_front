@@ -4,6 +4,7 @@ import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { CornerDownLeftIcon, MoonStarIcon, SearchIcon, type LucideIcon } from 'lucide-react-native';
@@ -24,6 +25,8 @@ interface PaletteItem {
   title: string;
   meta?: string;
   image?: string | null;
+  /** 작품이면 작곡가. 목록에 초상이 없을 때 작곡가 초상을 찾는 데 쓴다 */
+  composerId?: number;
   /** 사람은 원, 콘텐츠는 사각 */
   shape: 'circle' | 'square';
   icon?: LucideIcon;
@@ -85,6 +88,7 @@ export function CommandPalette() {
         title: piece.title,
         meta: [piece.composerName, piece.opusNumber].filter(Boolean).join(' · '),
         image: piece.composerAvatarUrl,
+        composerId: piece.composerId,
         shape: 'square',
         run: () => go(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`),
       }));
@@ -259,6 +263,7 @@ export function CommandPalette() {
 }
 
 function PaletteThumb({ item }: { item: PaletteItem }) {
+  const image = useComposerAvatar(item.composerId, item.image);
   if (item.icon) {
     return (
       <View className="size-6 items-center justify-center rounded-sm bg-surface-3">
@@ -266,5 +271,5 @@ function PaletteThumb({ item }: { item: PaletteItem }) {
       </View>
     );
   }
-  return <EntityThumb name={item.title} image={item.image} shape={item.shape} size={24} />;
+  return <EntityThumb name={item.title} image={image} shape={item.shape} size={24} />;
 }

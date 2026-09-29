@@ -4,6 +4,7 @@ import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, type LibraryEntry } from '@/lib/data/library';
+import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
@@ -154,5 +155,6 @@ function Library() {
 }
 
 function LibraryThumb({ entry }: { entry: LibraryEntry }) {
-  return <EntityThumb name={entry.title} image={entry.image} shape={entry.shape} size={38} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
+  const image = useComposerAvatar(entry.composerId, entry.image);
+  return <EntityThumb name={entry.title} image={image} shape={entry.shape} size={38} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
 }

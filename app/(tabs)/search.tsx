@@ -9,6 +9,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import type { Artist, Composer, Concert, PieceSearchResult } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
@@ -253,7 +254,7 @@ export default function SearchScreen() {
                     key={piece.id}
                     title={piece.title}
                     subtitle={[piece.composerName, piece.opusNumber].filter(Boolean).join(' · ')}
-                    thumb={<EntityThumb name={piece.title} image={piece.composerAvatarUrl} shape="square" size={44} />}
+                    thumb={<PieceThumb piece={piece} />}
                     onPress={() =>
                       router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`)
                     }
@@ -339,4 +340,10 @@ function ResultRow({
       </View>
     </Pressable>
   );
+}
+
+/** 작품은 사각. 음반 그림이 없어 작곡가 초상을 쓴다 */
+function PieceThumb({ piece }: { piece: PieceSearchResult }) {
+  const image = useComposerAvatar(piece.composerId, piece.composerAvatarUrl);
+  return <EntityThumb name={piece.title} image={image} shape="square" size={44} />;
 }

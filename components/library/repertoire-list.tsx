@@ -4,6 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Text } from '@/components/ui/text';
 import type { FavoriteGroups, FavoriteTargetType } from '@/lib/api/client';
 import { buildLibraryEntries, libraryKindLabel, type LibraryEntry, type LibraryKind } from '@/lib/data/library';
+import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -86,6 +87,7 @@ function RepertoireRow({ entry, editable, onPress }: { entry: LibraryEntry; edit
     entry.kind === 'composer' || entry.kind === 'artist'
       ? entry.subtitle
       : `${libraryKindLabel(entry.kind)} · ${entry.subtitle}`;
+  const image = useComposerAvatar(entry.composerId, entry.image);
   return (
     <Pressable
       onPress={onPress}
@@ -93,7 +95,7 @@ function RepertoireRow({ entry, editable, onPress }: { entry: LibraryEntry; edit
       className="-mx-2 min-h-16 flex-row items-center gap-3 rounded-md px-2 py-2 active:bg-surface-2 web:hover:bg-surface-2">
       <EntityThumb
         name={entry.title}
-        image={entry.image}
+        image={image}
         shape={entry.shape}
         size={48}
         aspect={entry.kind === 'concert' ? 4 / 3 : 1}

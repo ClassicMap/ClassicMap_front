@@ -96,6 +96,21 @@ export function useComposer(id: number | undefined) {
 }
 
 /**
+ * 작품 썸네일에 쓸 작곡가 초상. 목록 응답에 초상이 있으면 그대로 쓰고,
+ * 없으면 작곡가 상세(작곡가 화면과 같은 캐시)에서 가져온다.
+ */
+export function useComposerAvatar(composerId: number | undefined, direct?: string | null): string | null {
+  const lookup = !direct && composerId !== undefined && composerId > 0;
+  const { data } = useQuery({
+    queryKey: COMPOSER_QUERY_KEYS.detail(composerId ?? 0),
+    queryFn: () => ComposerAPI.getById(composerId ?? 0),
+    enabled: lookup,
+    staleTime: 1000 * 60 * 30,
+  });
+  return direct || (lookup ? data?.avatarUrl ?? null : null);
+}
+
+/**
  * 작곡가 생성 뮤테이션 훅
  */
 export function useCreateComposer() {
