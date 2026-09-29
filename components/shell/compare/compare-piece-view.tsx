@@ -870,6 +870,9 @@ interface PlayerBarProps {
   onToggleFocus: () => void;
 }
 
+/** 재생 바가 이보다 좁으면 버튼 글자를 접는다 (px) */
+const BAR_COMPACT_WIDTH = 1080;
+
 /** 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다 */
 function PlayerBar({
   active,
@@ -895,9 +898,55 @@ function PlayerBar({
   const duration = progress.duration || (active ? clipDurationMs(active) / 1000 : 0);
   const shownSeconds = scrub !== null ? scrub * duration : progress.current;
 
+  // 좌우를 같은 폭으로 두어 가운데 재생 조작이 정확히 가운데 온다. 좁으면 버튼 글자를 접는다
+  const [barWidth, setBarWidth] = React.useState(0);
+  const compact = barWidth > 0 && barWidth < BAR_COMPACT_WIDTH;
+
+  const focusButton = (
+    <Pressable
+      accessibilityLabel={picking ? '1:1 비교 고르기 취소' : '1:1 비교'}
+      accessibilityState={{ selected: picking, disabled: !canFocus }}
+      onPress={onToggleFocus}
+      disabled={!canFocus}
+      className={cn(
+        'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border',
+        compact ? 'w-8 justify-center' : 'px-3',
+        picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
+        !canFocus && 'opacity-40'
+      )}>
+      <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
+      {compact ? null : (
+        <Text numberOfLines={1} className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
+          {picking ? '고르는 중' : '1:1 비교'}
+        </Text>
+      )}
+    </Pressable>
+  );
+  const nextButton = (
+    <Pressable
+      accessibilityLabel="다음 연주자"
+      onPress={onNextTake}
+      disabled={!canSwitch}
+      className={cn(
+        'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border border-border-strong web:hover:bg-surface-2',
+        compact ? 'w-8 justify-center' : 'px-3',
+        !canSwitch && 'opacity-40'
+      )}>
+      <SwitchTakeIcon size={15} className="text-foreground" />
+      {compact ? null : (
+        <Text numberOfLines={1} className="text-label text-foreground">
+          다음 연주자
+        </Text>
+      )}
+    </Pressable>
+  );
+
   return (
-    <View className="h-[76px] flex-row items-center gap-4 border-t border-border px-4">
-      <View className="min-w-0 flex-1 flex-row items-center gap-3">
+    <View
+      onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
+      className="h-[76px] flex-row items-center gap-4 border-t border-border px-4">
+      {/* 왼쪽: 누구를 듣는지 + 비교 동작 */}
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
         {active ? (
           <>
             <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={48} />
@@ -909,14 +958,19 @@ function PlayerBar({
                 {`${active.sectorName} · ${active.pieceTitle}`}
               </Text>
             </View>
+            <View className="shrink-0 flex-row items-center gap-2">
+              {nextButton}
+              {focusButton}
+            </View>
           </>
         ) : (
-          <Text variant="caption" className="text-foreground-subtle">
+          <Text variant="caption" numberOfLines={2} className="text-foreground-subtle">
             연주를 골라 재생해 보세요. 스페이스 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면
           </Text>
         )}
       </View>
-      <View className="flex-[1.3] items-center gap-1.5">
+      {/* 가운데: 재생 조작 */}
+      <View className={cn('items-center gap-1.5', compact ? 'w-[300px]' : 'w-[380px]')}>
         <View className="flex-row items-center gap-4">
           <Pressable
             accessibilityLabel="이전 구간"
@@ -961,12 +1015,13 @@ function PlayerBar({
           </Text>
         </View>
       </View>
-      <View className="flex-1 flex-row items-center justify-end gap-2.5">
-        <VolumeControl />
+      {/* 오른쪽: 소리·화면·원본 */}
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
+        <VolumeControl width={compact ? 56 : 76} />
         <Pressable
           onPress={onFullscreen}
           accessibilityLabel="전체 화면 (F)"
-          className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+          className="size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2">
           <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
         </Pressable>
         {active && youtubeWatchUrl(active) ? (
@@ -974,34 +1029,16 @@ function PlayerBar({
             href={youtubeWatchUrl(active)}
             target="_blank"
             rel="noreferrer"
+            aria-label="YouTube 원본 새 창으로 보기"
             style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
             <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
-            <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
-              YouTube 원본
-            </Text>
+            {compact ? null : (
+              <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
+                YouTube 원본
+              </Text>
+            )}
           </a>
         ) : null}
-        <Pressable
-          accessibilityLabel={picking ? '1:1 비교 고르기 취소' : '1:1 비교'}
-          accessibilityState={{ selected: picking, disabled: !canFocus }}
-          onPress={onToggleFocus}
-          disabled={!canFocus}
-          className={cn(
-            'h-8 flex-row items-center gap-1.5 rounded-full border px-3',
-            picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
-            !canFocus && 'opacity-40'
-          )}>
-          <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
-          <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>{picking ? '고르는 중' : '1:1 비교'}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="다음 연주자"
-          onPress={onNextTake}
-          disabled={!canSwitch}
-          className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
-          <SwitchTakeIcon size={15} className="text-foreground" />
-          <Text className="text-label text-foreground">다음 연주자</Text>
-        </Pressable>
       </View>
     </View>
   );
