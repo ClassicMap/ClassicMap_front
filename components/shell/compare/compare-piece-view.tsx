@@ -1,6 +1,8 @@
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { FavoriteButton } from '@/components/favorite-button';
+import { PlayerSlot } from '@/components/player/player-slot';
+import { VolumeControl } from '@/components/player/volume-control';
 import { RepertoireThumb } from '@/components/library/repertoire-badge';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Chip } from '@/components/ui/chip';
@@ -27,7 +29,7 @@ import {
   youtubeThumbnailUrl,
   youtubeWatchUrl,
 } from '@/lib/data/comparison';
-import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { comparePlayer, type ComparePlayerTrack, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { repertoireFirst } from '@/lib/data/library';
 import type { ComparisonPerformance } from '@/lib/types/models';
@@ -45,11 +47,9 @@ import {
   PlayIcon,
   RectangleHorizontalIcon,
   SettingsIcon,
-  Volume1Icon,
-  Volume2Icon,
-  VolumeXIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface ComparePieceViewProps {
@@ -128,6 +128,9 @@ export function ComparePieceView({
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
   const theater = useComparePlayer((state) => state.theater);
+  const fullscreen = useComparePlayer((state) => state.fullscreen);
+  // 셸 영상이 이 화면 자리에 떠 있을 때 그 위에 겹칠 자리 (전체 화면 버튼·전체 화면 조작부)
+  const overlay = usePlayerOverlay();
 
   // 지금 이 작품·구간의 연주를 골라 둔 경우에만 그 연주가 활성이다
   const activeId =
@@ -139,6 +142,17 @@ export function ComparePieceView({
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
   const staged = active ?? playable[0];
 
+  // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
+  const queue = React.useMemo<ComparePlayerTrack[]>(
+    () => playable.map((performance) => trackFromPerformance(performance, imageOf(performance))),
+    [playable, imageOf]
+  );
+  const choose = React.useCallback(
+    (performance: ComparisonPerformance) =>
+      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue }),
+    [imageOf, queue]
+  );
+
   const start = React.useCallback(
     (performance: ComparisonPerformance) => {
       if (!isPlayablePerformance(performance)) return;
@@ -146,25 +160,24 @@ export function ComparePieceView({
         comparePlayer.togglePlay();
         return;
       }
-      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true });
+      choose(performance);
     },
-    [activeId, imageOf]
+    [activeId, choose]
   );
 
   const togglePlay = React.useCallback(() => {
-    if (comparePlayer.togglePlay()) return;
+    if (activeId !== null && comparePlayer.togglePlay()) return;
     const target = active ?? playable[0];
-    if (target) comparePlayer.select(trackFromPerformance(target, imageOf(target)), { play: true });
-  }, [active, playable, imageOf]);
+    if (target) choose(target);
+  }, [active, activeId, playable, choose]);
 
   const switchTake = React.useCallback(
     (direction: 1 | -1) => {
       if (playable.length === 0) return;
       const index = playable.findIndex((performance) => performance.id === activeId);
-      const next = playable[(index + direction + playable.length) % playable.length];
-      comparePlayer.select(trackFromPerformance(next, imageOf(next)), { play: true });
+      choose(playable[(index + direction + playable.length) % playable.length]);
     },
-    [activeId, playable, imageOf]
+    [activeId, playable, choose]
   );
 
   const sectorIndex = sectors.findIndex((sector) => sector.id === activeSector?.id);
@@ -173,44 +186,16 @@ export function ComparePieceView({
     if (next) onSelectSector(next.id);
   };
 
-  // 전체 화면: 크게 보기 무대를 통째로 띄운다. 연주자를 바꿔도 무대는 그대로라 전체 화면이 풀리지 않는다
-  const stageRef = React.useRef<HTMLDivElement | null>(null);
-  const [fullscreen, setFullscreen] = React.useState(false);
-  const pendingFullscreen = React.useRef(false);
-  const theaterBeforeFullscreen = React.useRef(false);
-
-  const enterFullscreen = React.useCallback(() => {
-    theaterBeforeFullscreen.current = comparePlayer.getState().theater;
-    if (stageRef.current) {
-      void stageRef.current.requestFullscreen?.().catch(() => undefined);
-    } else {
-      pendingFullscreen.current = true;
-      comparePlayer.setTheater(true);
-    }
-  }, []);
-
+  // 전체 화면: 셸 영상을 통째로 띄운다. 연주자를 바꿔도 같은 영상이라 전체 화면이 풀리지 않는다
   const toggleFullscreen = React.useCallback(() => {
-    if (typeof document !== 'undefined' && document.fullscreenElement) void document.exitFullscreen();
-    else enterFullscreen();
-  }, [enterFullscreen]);
-
-  React.useEffect(() => {
-    if (pendingFullscreen.current && theater && stageRef.current) {
-      pendingFullscreen.current = false;
-      void stageRef.current.requestFullscreen?.().catch(() => undefined);
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
     }
-  }, [theater]);
-
-  React.useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const onChange = () => {
-      const on = document.fullscreenElement !== null && document.fullscreenElement === stageRef.current;
-      setFullscreen(on);
-      if (!on) comparePlayer.setTheater(theaterBeforeFullscreen.current);
-    };
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
+    // 아직 고른 연주가 없으면 무대의 연주를 틀면서 띄운다
+    if (activeId === null && staged && isPlayablePerformance(staged)) choose(staged);
+    comparePlayer.requestFullscreen();
+  }, [activeId, staged, choose]);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -374,18 +359,9 @@ export function ComparePieceView({
         ) : theater ? (
           <View className="mt-6 flex-row items-start gap-6">
             <View className="min-w-0 flex-1">
-              <div
-                ref={stageRef}
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  aspectRatio: '16 / 9',
-                  background: '#000',
-                  borderRadius: fullscreen ? 0 : 12,
-                  overflow: 'hidden',
-                }}>
+              <View className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
                 {staged && active && staged.id === active.id ? (
-                  <CompareVideo performance={active} fit="contain" />
+                  <PlayerSlot performanceId={active.id} fit="contain" radius={14} />
                 ) : staged ? (
                   <Poster performance={staged} onPlay={() => start(staged)} large />
                 ) : (
@@ -395,40 +371,7 @@ export function ComparePieceView({
                     </Text>
                   </View>
                 )}
-                {fullscreen ? (
-                  <FullscreenOverlay
-                    performances={playable}
-                    activeId={activeId}
-                    imageOf={imageOf}
-                    onPick={start}
-                    onTogglePlay={togglePlay}
-                    playing={playing}
-                    onExit={toggleFullscreen}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    aria-label="전체 화면 (F)"
-                    title="전체 화면 (F)"
-                    onClick={enterFullscreen}
-                    style={{
-                      position: 'absolute',
-                      top: 12,
-                      right: 12,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 999,
-                      border: 'none',
-                      background: 'rgba(0,0,0,0.55)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}>
-                    <Icon as={MaximizeIcon} size={16} className="text-white" />
-                  </button>
-                )}
-              </div>
+              </View>
               {staged ? (
                 <StageCaption performance={staged} image={imageOf(staged)} active={staged.id === activeId} inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)} />
               ) : null}
@@ -469,6 +412,49 @@ export function ComparePieceView({
         )}
       </ScrollView>
 
+      {overlay && fullscreen ? (
+        createPortal(
+          <FullscreenOverlay
+            performances={playable}
+            activeId={activeId}
+            imageOf={imageOf}
+            onPick={start}
+            onTogglePlay={togglePlay}
+            playing={playing}
+            onExit={toggleFullscreen}
+          />,
+          overlay
+        )
+      ) : overlay && theater ? (
+        createPortal(
+          <button
+            type="button"
+            aria-label="전체 화면 (F)"
+            title="전체 화면 (F)"
+            onClick={toggleFullscreen}
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              border: 'none',
+              background: 'rgba(0,0,0,0.55)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              pointerEvents: 'auto',
+            }}>
+            <Icon as={MaximizeIcon} size={16} className="text-white" />
+          </button>,
+          overlay
+        )
+      ) : null}
+
+      {/* 다른 작품을 듣는 중이면 셸의 플레이바가 그 연주를 보여 준다 */}
+      {current && !active ? null : (
       <PlayerBar
         active={active}
         activeImage={active ? imageOf(active) : null}
@@ -482,60 +468,8 @@ export function ComparePieceView({
         canSwitch={playable.length >= 2}
         onFullscreen={toggleFullscreen}
       />
+      )}
     </View>
-  );
-}
-
-/**
- * 고른 연주의 <video>. 붙으면 스토어에 손잡이를 걸고, 기억해 둔 위치로 옮긴 뒤
- * 사용자가 방금 누른 경우에만 재생한다 (돌아와서 다시 그릴 때 저절로 소리 나지 않게).
- */
-function CompareVideo({ performance, fit }: { performance: ComparisonPerformance; fit: 'cover' | 'contain' }) {
-  const ref = React.useRef<HTMLVideoElement | null>(null);
-  const id = performance.id;
-
-  React.useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
-    return comparePlayer.registerMedia({
-      performanceId: id,
-      play: () => {
-        void video.play().catch(() => comparePlayer.reportPlaying(id, false));
-      },
-      pause: () => video.pause(),
-      seek: (seconds) => {
-        video.currentTime = seconds;
-      },
-      applyVolume: (volume, muted) => {
-        video.volume = volume;
-        video.muted = muted;
-      },
-    });
-  }, [id]);
-
-  return (
-    <video
-      ref={ref}
-      src={performance.clipUrl}
-      playsInline
-      preload="auto"
-      style={{ width: '100%', height: '100%', objectFit: fit, background: '#000', display: 'block' }}
-      onLoadedMetadata={(event) => {
-        const video = event.currentTarget;
-        const resume = comparePlayer.positionFor(id);
-        if (resume > 0 && resume < video.duration) video.currentTime = resume;
-        comparePlayer.reportProgress(id, video.currentTime, video.duration);
-        if (comparePlayer.consumePlayIntent(id)) {
-          void video.play().catch(() => comparePlayer.reportPlaying(id, false));
-        }
-      }}
-      onPlay={() => comparePlayer.reportPlaying(id, true)}
-      onPause={() => comparePlayer.reportPlaying(id, false)}
-      onEnded={() => comparePlayer.reportEnded(id)}
-      onTimeUpdate={(event) =>
-        comparePlayer.reportProgress(id, event.currentTarget.currentTime, event.currentTarget.duration || 0)
-      }
-    />
   );
 }
 
@@ -616,7 +550,7 @@ function Slot({ performance, image, longest, active, inRepertoire, onPlay }: Slo
           active && 'ring-2 ring-primary'
         )}>
         {active && isPlayablePerformance(performance) ? (
-          <CompareVideo performance={performance} fit="cover" />
+          <PlayerSlot performanceId={performance.id} fit="cover" radius={10} />
         ) : (
           <Poster performance={performance} onPlay={onPlay} />
         )}
@@ -785,6 +719,7 @@ function FullscreenOverlay({
         left: 0,
         right: 0,
         bottom: 0,
+        pointerEvents: 'auto',
         padding: '48px 32px 24px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))',
         display: 'flex',
@@ -982,38 +917,6 @@ function PlayerBar({
           <SwitchTakeIcon size={15} className="text-foreground" />
           <Text className="text-label text-foreground">다음 연주자</Text>
         </Pressable>
-      </View>
-    </View>
-  );
-}
-
-/** 음소거 버튼 + 볼륨 슬라이더. 값은 이 브라우저에 남는다 */
-function VolumeControl() {
-  const volume = useComparePlayer((state) => state.volume);
-  const muted = useComparePlayer((state) => state.muted);
-  const level = muted ? 0 : volume;
-  return (
-    <View className="flex-row items-center gap-1.5">
-      <Pressable
-        onPress={() => comparePlayer.toggleMute()}
-        accessibilityLabel={muted ? '소리 켜기 (M)' : '음소거 (M)'}
-        className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
-        <Icon
-          as={level === 0 ? VolumeXIcon : level < 0.5 ? Volume1Icon : Volume2Icon}
-          size={17}
-          className="text-foreground-muted"
-        />
-      </Pressable>
-      <View className="flex-row" style={{ width: 76 }}>
-        <ScrubBar
-          value={level}
-          onScrub={(value) => comparePlayer.setVolume(value)}
-          onCommit={(value) => comparePlayer.setVolume(value)}
-          label="볼륨"
-          valueText={(value) => `${Math.round(value * 100)}%`}
-          step={0.1}
-          fill="hsl(var(--foreground-muted))"
-        />
       </View>
     </View>
   );

@@ -6,6 +6,7 @@ import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/compo
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { repertoireFirst } from '@/lib/data/library';
 import { PerformanceVideoPlayer } from '@/components/performance-video-player';
+import { PlayerSlot } from '@/components/player/player-slot';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
@@ -56,7 +57,7 @@ import {
   SettingsIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 interface CompareMobileCatalogProps {
@@ -353,7 +354,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const choose = (performance: ComparisonPerformance) => {
     if (!isPlayablePerformance(performance)) return;
     if (performance.id === activeId && comparePlayer.togglePlay()) return;
-    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true });
+    // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
+    const queue = performances
+      .filter(isPlayablePerformance)
+      .map((item) => trackFromPerformance(item, imageOf(item)));
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue });
   };
 
   const recordRecent = useRecordRecentPiece();
@@ -463,7 +468,10 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
 
       {/* 영상: 고른 연주 하나만 */}
       <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
-        {active && active.clipStatus === 'ready' ? (
+        {active && isPlayablePerformance(active) && Platform.OS === 'web' ? (
+          // 웹은 셸에 하나 둔 영상이 이 자리에 뜬다. 다른 화면으로 가도 미니 플레이어로 옮겨 가며 이어진다
+          <PlayerSlot performanceId={active.id} fit="contain" radius={14} controls />
+        ) : active && active.clipStatus === 'ready' ? (
           <PerformanceVideoPlayer
             key={active.id}
             performanceId={active.id}

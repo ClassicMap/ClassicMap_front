@@ -2,6 +2,8 @@ import type { NavMode } from '@/lib/design/breakpoints';
 import * as React from 'react';
 import { View } from 'react-native';
 
+import { GlobalPlayerBar } from '@/components/player/global-player-bar';
+
 import { CommandPalette } from './command-palette';
 import { CommandPaletteProvider } from './command-palette-context';
 import { SideNav } from './side-nav';
@@ -19,6 +21,8 @@ export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; chi
         <View className="min-w-0 flex-1 overflow-hidden rounded-[9px] bg-surface-1">
           <TopBar />
           <View className="min-h-0 flex-1">{children}</View>
+          {/* 비교 화면 밖에서 듣고 있으면 본문 아래에 플레이바가 남는다 */}
+          <GlobalPlayerBar />
         </View>
       </View>
       <CommandPalette />

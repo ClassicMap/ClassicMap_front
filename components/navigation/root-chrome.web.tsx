@@ -1,3 +1,5 @@
+import { ComparePlayerHost } from '@/components/player/compare-player-host';
+import { MiniPlayerBar } from '@/components/player/mini-player-bar';
 import { AppShell } from '@/components/shell/app-shell';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { usePathname } from 'expo-router';
@@ -14,6 +16,15 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
   const { nav } = useBreakpoint();
   const pathname = usePathname();
   const bare = BARE_PATHS.some((path) => pathname.startsWith(path));
-  if (nav === 'tabs' || bare) return <>{children}</>;
-  return <AppShell nav={nav}>{children}</AppShell>;
+  if (bare) return <>{children}</>;
+  // 비교 영상은 앱 전체에 하나만 두고 라우트 밖에 둔다. 화면을 오가도, 창 폭이 바뀌어도 같은 요소라 재생이 이어진다
+  return (
+    <>
+      <React.Fragment key="content">
+        {nav === 'tabs' ? children : <AppShell nav={nav}>{children}</AppShell>}
+      </React.Fragment>
+      {nav === 'tabs' ? <MiniPlayerBar key="mini" /> : null}
+      <ComparePlayerHost key="host" />
+    </>
+  );
 }
