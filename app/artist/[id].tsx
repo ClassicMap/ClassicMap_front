@@ -293,10 +293,10 @@ export default function ArtistDetailScreen() {
           </Pressable>
         ) : null}
 
-        {/* 머리: 사람은 원형 */}
-        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-end gap-8' : 'mt-2 items-center')}>
+        {/* 머리: 사람은 원형. 넓으면 이름·소개·버튼을 사진 옆 위쪽부터 쌓는다 (애플 클래식처럼) */}
+        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-start gap-8' : 'mt-2 items-center')}>
           <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={wide ? 208 : 148} />
-          <View className={cn('min-w-0', wide ? 'flex-1 pb-2' : 'items-center')}>
+          <View className={cn('min-w-0', wide ? 'flex-1 pt-3' : 'w-full items-center')}>
             {wide ? (
               <Text variant="micro" className="uppercase tracking-widest">
                 아티스트
@@ -314,23 +314,49 @@ export default function ArtistDetailScreen() {
               {meta.slice(1).map((part) => `  ·  ${part}`).join('')}
               {artist.englishName ? `  ·  ${artist.englishName}` : ''}
             </Text>
-          </View>
-        </View>
 
-        <View className={cn('mt-6 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
-          <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
-          {canEdit ? (
-            <>
-              <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
-                <Icon as={EditIcon} size={14} className="text-foreground" />
-                <Text>수정</Text>
-              </Button>
-              <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
-                <Icon as={TrashIcon} size={14} className="text-destructive" />
-                <Text className="text-destructive">삭제</Text>
-              </Button>
-            </>
-          ) : null}
+            {artist.bio || artist.style ? (
+              <View className={cn('mt-4 max-w-[640px]', !wide && 'w-full')}>
+                {artist.bio ? (
+                  <Text variant="bodySm" numberOfLines={bioExpanded ? undefined : 3} className="text-foreground-muted">
+                    {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
+                    {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
+                  </Text>
+                ) : null}
+                {artist.style && (bioExpanded || !artist.bio) ? (
+                  <Text variant="bodySm" className={cn('text-foreground-muted', artist.bio && 'mt-3')}>
+                    {artist.style}
+                  </Text>
+                ) : null}
+                {(artist.bio && artist.bio.length > 120) || (artist.bio && artist.style) ? (
+                  <Pressable
+                    onPress={() => setBioExpanded((value) => !value)}
+                    accessibilityRole="button"
+                    className="mt-1.5 self-start">
+                    <Text variant="label" className="text-foreground">
+                      {bioExpanded ? '접기' : '더 보기'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+
+            <View className={cn('mt-5 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
+              <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
+              {canEdit ? (
+                <>
+                  <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
+                    <Icon as={EditIcon} size={14} className="text-foreground" />
+                    <Text>수정</Text>
+                  </Button>
+                  <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
+                    <Icon as={TrashIcon} size={14} className="text-destructive" />
+                    <Text className="text-destructive">삭제</Text>
+                  </Button>
+                </>
+              ) : null}
+            </View>
+          </View>
         </View>
 
         {/* 본문: 넓으면 두 열 (비교 | 공연·수상) */}
@@ -416,30 +442,6 @@ export default function ArtistDetailScreen() {
           )}
         </View>
 
-        {artist.bio || artist.style ? (
-          <View className="mt-12 max-w-[680px]">
-            <Text variant="title3" className="mb-3">
-              소개
-            </Text>
-            {artist.bio ? (
-              <Text variant="body" numberOfLines={bioExpanded ? undefined : 4} className="text-foreground">
-                {artist.bio}
-              </Text>
-            ) : null}
-            {artist.style ? (
-              <Text variant="body" className="mt-3 text-foreground-muted">
-                {artist.style}
-              </Text>
-            ) : null}
-            {artist.bio && artist.bio.length > 160 ? (
-              <Pressable onPress={() => setBioExpanded((value) => !value)} className="mt-3 self-start">
-                <Text variant="label" className="text-foreground-muted">
-                  {bioExpanded ? '접기' : '더 보기'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
       </ScrollView>
 
       <ArtistFormModal
