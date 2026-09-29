@@ -3,7 +3,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { OptimizedImage } from '@/components/optimized-image';
 import { Scrim } from '@/components/ui/scrim';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
   clipClock,
@@ -220,7 +220,7 @@ function TodaySkeleton({ wide }: { wide: boolean }) {
   if (!wide) {
     return (
       <View>
-        <Skeleton className="aspect-video w-full rounded-xl" />
+        <SkeletonMedia className="aspect-video" />
         <Skeleton className="mt-3 h-4 w-3/4" />
         <Skeleton className="mt-2 h-3 w-1/2" />
       </View>
@@ -228,7 +228,7 @@ function TodaySkeleton({ wide }: { wide: boolean }) {
   }
   return (
     <View className="flex-row gap-7 rounded-2xl border border-border p-5">
-      <Skeleton className="aspect-video flex-[1.35] rounded-xl" />
+      <SkeletonMedia className="aspect-video flex-[1.35] w-auto" />
       <View className="flex-1 gap-3 py-1">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-7 w-4/5" />

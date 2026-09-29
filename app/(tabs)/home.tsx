@@ -3,7 +3,7 @@ import { EraPreferenceCard, PREFERENCE_ERAS } from '@/components/home/era-prefer
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { type RecentPiece, useRecentPieces } from '@/hooks/use-recent-pieces';
@@ -147,7 +147,7 @@ export default function HomeScreen() {
     ) : null;
 
   const todaySection = catalog.isLoading ? (
-    <Skeleton className={cn('w-full rounded-xl', wide ? 'h-[300px]' : 'aspect-video')} />
+    <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
   ) : catalog.isError ? (
     <View className="rounded-xl border border-border">
       <EmptyState

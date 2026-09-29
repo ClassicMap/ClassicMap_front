@@ -5,7 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
 import {
@@ -265,7 +265,7 @@ export function ComparePieceView({
           {performancesQuery.isLoading
             ? Array.from({ length: 3 }, (_, index) => (
                 <View key={index} className="min-w-[280px] flex-1 gap-3">
-                  <Skeleton className="aspect-video w-full rounded-lg" />
+                  <SkeletonMedia performers={0} className="aspect-video rounded-lg" />
                   <Skeleton className="h-3 w-full" />
                   <Skeleton className="h-4 w-1/2" />
                 </View>

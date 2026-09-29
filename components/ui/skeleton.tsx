@@ -1,22 +1,55 @@
 import { cn } from '@/lib/utils';
 import * as React from 'react';
-import { Platform, View } from 'react-native';
+import { THEME } from '@/lib/theme';
+import { useColorScheme } from 'nativewind';
+import { Platform, StyleSheet, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 
 /**
  * 로딩 플레이스홀더 (설계 문서 4.8). 목록·카드 로딩은 스피너 대신 이걸 쓴다.
- * 웹은 은은한 펄스, 네이티브는 정지 상태로 둔다 (reduced-motion 처리 부담을 피함).
+ * 웹은 화면 전체를 한 줄기로 지나가는 쉬머(global.css `.cm-shimmer`),
+ * 네이티브는 은은하게 숨 쉬듯 밝아졌다 어두워진다. 움직임 줄이기 설정이면 둘 다 멈춘다.
  */
 function Skeleton({ className, ...props }: React.ComponentProps<typeof View>) {
+  if (Platform.OS === 'web') {
+    return <View aria-hidden className={cn('cm-shimmer rounded-md', className)} {...props} />;
+  }
+  return <NativeSkeleton className={className} {...props} />;
+}
+
+function NativeSkeleton({ className, children, ...props }: React.ComponentProps<typeof View>) {
+  const reduceMotion = useReducedMotion();
+  const { colorScheme } = useColorScheme();
+  const opacity = useSharedValue(0);
+
+  React.useEffect(() => {
+    if (reduceMotion) return;
+    opacity.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
+    return () => cancelAnimation(opacity);
+  }, [opacity, reduceMotion]);
+
+  const highlightStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
   return (
-    <View
-      aria-hidden
-      className={cn(
-        'rounded-md bg-surface-2',
-        Platform.select({ web: 'animate-pulse motion-reduce:animate-none' }),
-        className
-      )}
-      {...props}
-    />
+    <View aria-hidden className={cn('overflow-hidden rounded-md bg-surface-2', className)} {...props}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: THEME[colorScheme === 'dark' ? 'dark' : 'light'].surface3 },
+          highlightStyle,
+        ]}
+      />
+      {children}
+    </View>
   );
 }
 
@@ -85,4 +118,31 @@ function SkeletonCard({ aspect = 'square', className }: { aspect?: 'square' | 'p
   );
 }
 
-export { Skeleton, SkeletonCard, SkeletonList, SkeletonRow, SkeletonText };
+/**
+ * 영상·히어로 자리. 빈 네모 대신 재생 버튼과 연주자 원을 흐리게 깔아
+ * 무엇이 올지 미리 보여 준다.
+ */
+function SkeletonMedia({ performers = 3, className }: { performers?: number; className?: string }) {
+  return (
+    <Skeleton className={cn('w-full items-center justify-center rounded-xl', className)}>
+      <View className="size-14 items-center justify-center rounded-full bg-background/40">
+        <View
+          className="ml-1 border-y-[9px] border-l-[14px] border-y-transparent border-l-foreground/15"
+          style={{ width: 0, height: 0 }}
+        />
+      </View>
+      {performers > 0 ? (
+        <View className="absolute bottom-4 left-4 flex-row">
+          {Array.from({ length: performers }, (_, index) => (
+            <View
+              key={index}
+              className={cn('size-8 rounded-full border-2 border-surface-2 bg-background/40', index > 0 && '-ml-2')}
+            />
+          ))}
+        </View>
+      ) : null}
+    </Skeleton>
+  );
+}
+
+export { Skeleton, SkeletonCard, SkeletonList, SkeletonMedia, SkeletonRow, SkeletonText };
