@@ -1,6 +1,7 @@
 import type { ComparePlayerTrack } from '@/lib/player/compare-player-store';
 import type { Href } from 'expo-router';
 import * as React from 'react';
+import { Platform } from 'react-native';
 
 /** 이 트랙의 비교 화면. 돌아가면 같은 연주가 같은 자리에서 이어진다 */
 export function compareHrefFor(track: ComparePlayerTrack): Href {
@@ -22,4 +23,10 @@ export function useSettled(value: boolean, delayMs = 180): boolean {
     return () => clearTimeout(timer);
   }, [value, delayMs]);
   return settled;
+}
+
+/** 탭바 높이. components/navigation/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */
+export function tabBarHeight(insetBottom: number): number {
+  const bottomPadding = Platform.OS === 'android' ? insetBottom + 8 : 20;
+  return 58 + bottomPadding;
 }

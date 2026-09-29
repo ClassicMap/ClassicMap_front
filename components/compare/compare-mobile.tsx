@@ -5,7 +5,6 @@ import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire
 import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/components/shell/compare/compare-catalog';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { repertoireFirst } from '@/lib/data/library';
-import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
@@ -57,7 +56,7 @@ import {
   SettingsIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 interface CompareMobileCatalogProps {
@@ -481,18 +480,10 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
 
       {/* 영상: 고른 연주 하나만 */}
       <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
-        {active && isPlayablePerformance(active) && Platform.OS === 'web' ? (
-          // 웹은 셸에 하나 둔 영상이 이 자리에 뜬다. 다른 화면으로 가도 미니 플레이어로 옮겨 가며 이어진다
+        {active && isPlayablePerformance(active) ? (
+          // 앱에 하나 둔 영상(웹은 셸의 video, 네이티브는 루트의 YouTube)이 이 자리에 뜬다.
+          // 다른 화면으로 가도 미니 플레이어로 옮겨 가며 이어진다
           <PlayerSlot performanceId={active.id} fit="contain" radius={14} controls />
-        ) : active && active.clipStatus === 'ready' ? (
-          <PerformanceVideoPlayer
-            key={active.id}
-            performanceId={active.id}
-            clipUrl={active.clipUrl}
-            videoId={active.videoId}
-            startTime={Math.floor(active.startMs / 1000)}
-            endTime={Math.ceil(active.endMs / 1000)}
-          />
         ) : preview ? (
           <Pressable
             onPress={() => choose(preview)}

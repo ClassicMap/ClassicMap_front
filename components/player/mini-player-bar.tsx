@@ -1,30 +1,22 @@
 import { MiniVideoTarget } from '@/components/player/mini-video-target';
-import { compareHrefFor, useSettled } from '@/components/player/player-bar-helpers';
+import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/player-bar-helpers';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import { usePathname, useRouter, useSegments } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-/** 탭바 높이. components/navigation/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */
-function tabBarHeight(insetBottom: number): number {
-  const bottomPadding = Platform.OS === 'android' ? insetBottom + 8 : 20;
-  return 58 + bottomPadding;
-}
-
 /**
  * 모바일(좁은 웹·네이티브) 미니 플레이어. 비교 화면 밖에서 듣고 있을 때 탭바 바로 위에 뜬다.
  * 누르면 그 비교 화면으로 돌아가 같은 연주가 같은 자리에서 이어진다.
- * 웹은 셸 영상이 왼쪽 작은 자리에 뜨고, 네이티브는 연주자 사진을 보여 준다
- * (네이티브 영상은 비교 탭 화면에 남아 계속 재생된다).
+ * 왼쪽 작은 자리에 재생 중인 영상이 그대로 옮겨 와 뜬다 (웹은 셸 영상, 네이티브는 루트의 YouTube).
  */
 export function MiniPlayerBar() {
   const router = useRouter();
-  const pathname = usePathname();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const current = useComparePlayer((state) => state.current);
@@ -35,9 +27,8 @@ export function MiniPlayerBar() {
   const progress = useComparePlayer((state) => state.progress);
   const hasMedia = useComparePlayer((state) => state.mediaAttached);
 
-  const onCompare = pathname === '/compare';
-  // 웹은 영상이 비교 화면 자리에 떠 있지 않으면, 네이티브는 비교 화면이 아니면 띄운다
-  const wanted = Boolean(current) && !focus && (Platform.OS === 'web' ? surface !== 'slot' : !onCompare);
+  // 영상이 비교 화면 자리에 떠 있지 않으면 띄운다 (다른 화면이거나, 비교 화면이 다른 작품을 보고 있을 때)
+  const wanted = Boolean(current) && !focus && surface !== 'slot';
   const visible = useSettled(wanted);
   if (!current || !visible) return null;
 
@@ -57,7 +48,7 @@ export function MiniPlayerBar() {
             accessibilityRole="link"
             accessibilityLabel={`${current.artistName} 비교 화면으로`}
             className="min-w-0 flex-1 flex-row items-center gap-3">
-            {Platform.OS === 'web' ? (
+            {current.videoId || Platform.OS === 'web' ? (
               <MiniVideoTarget width={80} height={45} />
             ) : (
               <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={40} />

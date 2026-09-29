@@ -1,4 +1,6 @@
-import { PerformanceVideoPlayer } from '@/components/performance-video-player';
+import { OptimizedImage } from '@/components/optimized-image';
+import { PlayerSlot } from '@/components/player/player-slot';
+import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { VolumeControl } from '@/components/player/volume-control';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -13,6 +15,7 @@ import {
   primaryCredit,
   sortComparisonSectors,
   supportingCredits,
+  youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
@@ -213,7 +216,7 @@ function FocusStage(props: FocusStageProps) {
   const [editingLoop, setEditingLoop] = React.useState(false);
 
   const web = useWebFocusEngine(props, mode, loop);
-  const native = useNativeFocusEngine(props, mode);
+  const native = useNativeFocusEngine(props, mode, loop);
   const engine = Platform.OS === 'web' ? web.engine : native;
   const active = engine.side === 'a' ? a : b;
   // 위치가 바뀔 때마다 새 engine이 오므로 타이머·단축키는 최신 engine을 ref로 본다
@@ -318,7 +321,9 @@ function FocusStage(props: FocusStageProps) {
               options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? '끔' : `${value}초` }))}
               onChange={setAuto}
             />
-            {Platform.OS === 'web' ? (
+            {Platform.OS !== 'web' ? (
+              <NativeLoopButton loop={loop} progress={engine.progress} onChange={setLoop} />
+            ) : (
               <Pressable
                 onPress={toggleLoop}
                 accessibilityRole="button"
@@ -333,7 +338,7 @@ function FocusStage(props: FocusStageProps) {
                   {loop ? '반복 해제' : editingLoop ? '진행바를 끌어 지정' : '구간 반복'}
                 </Text>
               </Pressable>
-            ) : null}
+            )}
           </View>
         </View>
 
@@ -366,19 +371,22 @@ function FocusStage(props: FocusStageProps) {
                   onPress={() => (on ? engine.togglePlay() : engine.switchTo(side))}
                   accessibilityRole="button"
                   accessibilityLabel={on ? `${side.toUpperCase()} 재생·일시정지` : `${side.toUpperCase()}로 바꾸기`}
+                  // 테두리는 늘 두고 색만 바꾼다. ring(그림자)을 켜고 끄면 NativeWind가 개발 모드에서 컴포넌트를 바꿔 끼우며 오류를 낸다
                   className={cn(
-                    'relative aspect-video w-full overflow-hidden rounded-xl bg-black',
-                    on ? 'ring-2 ring-primary' : 'opacity-80'
+                    'relative aspect-video w-full overflow-hidden rounded-xl border-2 bg-black',
+                    on ? 'border-primary' : 'border-transparent opacity-80'
                   )}>
                   {Platform.OS === 'web' ? (
                     web.renderVideo(side)
                   ) : on ? (
-                    <PerformanceVideoPlayer
-                      key={performance.id}
-                      performanceId={performance.id}
-                      videoId={performance.videoId}
-                      startTime={Math.floor(performance.startMs / 1000)}
-                      endTime={Math.ceil(performance.endMs / 1000)}
+                    // 앱 루트의 YouTube 하나가 이 자리에 뜬다. 나가도 같은 플레이어로 이어진다
+                    <PlayerSlot performanceId={performance.id} radius={12} />
+                  ) : youtubeThumbnailUrl(performance) ? (
+                    // 소리 안 나는 쪽은 영상 첫 장면. 누르면 이쪽으로 바꾼다
+                    <OptimizedImage
+                      uri={youtubeThumbnailUrl(performance)}
+                      resizeMode="cover"
+                      style={{ width: '100%', height: '100%' }}
                     />
                   ) : null}
                   <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
@@ -550,12 +558,19 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
 
 // ─── 네이티브: 플레이어 하나. 전환은 스토어가 위치를 잡아 준다 ──────────────────
 
-function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode): FocusEngine {
+function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null): FocusEngine {
   const { a, b, imageOf, startPlaying } = props;
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
   const progress = useComparePlayer((state) => state.progress);
   const side: Side = current?.performanceId === b.id ? 'b' : 'a';
+
+  // 구간 반복: 네이티브는 위치를 초마다 받아서 끝 지점을 넘으면 시작 지점으로 돌린다 (1초 안팎 오차)
+  React.useEffect(() => {
+    if (Platform.OS === 'web' || !loop || !playing || progress.duration <= 0) return;
+    const ratio = progress.current / progress.duration;
+    if (ratio >= loop.end || ratio < loop.start - 0.02) comparePlayer.seek(loop.start * progress.duration);
+  }, [loop, playing, progress]);
 
   React.useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -590,6 +605,51 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode): FocusEng
 
 // ─── 조각들 ──────────────────────────────────────────────────
 
+/**
+ * 네이티브 구간 반복. 진행바를 끌 수 없어 한 번 누르면 지금 지점이 시작, 한 번 더 누르면 끝이 되고,
+ * 세 번째에 풀린다.
+ */
+function NativeLoopButton({
+  loop,
+  progress,
+  onChange,
+}: {
+  loop: LoopRange | null;
+  progress: { current: number; duration: number };
+  onChange: (loop: LoopRange | null) => void;
+}) {
+  const [start, setStart] = React.useState<number | null>(null);
+  const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
+  const active = Boolean(loop) || start !== null;
+  const onPress = () => {
+    if (loop) {
+      onChange(null);
+      return;
+    }
+    if (start === null) {
+      setStart(ratio);
+      return;
+    }
+    const from = Math.min(start, ratio);
+    const to = Math.max(start, ratio);
+    setStart(null);
+    if (to - from >= 0.02) onChange({ start: from, end: to });
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={loop ? '구간 반복 해제' : start !== null ? '구간 반복 끝 지점 정하기' : '구간 반복 시작 지점 정하기'}
+      className={cn('h-8 flex-row items-center gap-1.5 rounded-full border px-3', active ? 'border-primary bg-primary-muted' : 'border-border-strong')}>
+      <Icon as={RepeatIcon} size={14} className={active ? 'text-primary' : 'text-foreground'} />
+      <Text className={cn('text-label', active ? 'text-primary' : 'text-foreground')}>
+        {loop ? '반복 해제' : start !== null ? '끝 지점에서 한 번 더' : '구간 반복'}
+      </Text>
+    </Pressable>
+  );
+}
+
 function Segmented<T extends string | number>({
   label,
   value,
@@ -615,7 +675,8 @@ function Segmented<T extends string | number>({
               onPress={() => onChange(option.value)}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
-              className={cn('h-7 items-center justify-center rounded-full px-2.5', selected && 'bg-surface-1 shadow-sm shadow-black/10')}>
+              style={selected ? SELECTED_SHADOW : undefined}
+              className={cn('h-7 items-center justify-center rounded-full px-2.5', selected && 'bg-surface-1')}>
               <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
                 {option.label}
               </Text>

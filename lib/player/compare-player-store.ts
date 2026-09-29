@@ -451,9 +451,12 @@ export const comparePlayer = {
     setState({ theater });
   },
 
-  /** 집중 비교를 열고 닫는다. 여는 동안 셸 영상은 멈추고 집중 비교 화면이 재생을 맡는다 */
+  /**
+   * 집중 비교를 열고 닫는다. 웹은 여는 동안 셸 영상이 멈추고 집중 비교 화면의 두 영상이 재생을 맡는다.
+   * 네이티브는 루트의 영상 하나가 집중 비교 자리로 옮겨 가 그대로 이어진다
+   */
   setFocus(focus: { a: number; b: number } | null) {
-    if (focus && state.playing) media?.pause();
+    if (focus && state.playing && Platform.OS === 'web') media?.pause();
     setState({ focus });
   },
 
