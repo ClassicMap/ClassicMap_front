@@ -1,5 +1,5 @@
 import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
-import { CompareCatalog } from '@/components/shell/compare/compare-catalog';
+import { CompareCatalog, CompareComposerPieces } from '@/components/shell/compare/compare-catalog';
 import { ComparePieceView } from '@/components/shell/compare/compare-piece-view';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,7 +14,7 @@ function toId(value: string | string[] | undefined): number | undefined {
 
 /**
  * 웹 비교 화면 (설계 문서 5.2). 좁은 웹은 모바일 비교 화면을 쓰고,
- * 데스크톱은 새 비교 API(공개 섹터·구간 연주)로 카탈로그 → 작품 비교를 보여 준다.
+ * 데스크톱은 새 비교 API(공개 섹터·구간 연주)로 작곡가 → 작곡가의 작품 → 작품 비교를 보여 준다.
  */
 export default function CompareScreenWeb() {
   const { nav } = useBreakpoint();
@@ -33,19 +33,24 @@ export default function CompareScreenWeb() {
           pieceId={pieceId}
           composerId={composerId}
           sectorId={sectorId}
-          onBack={() => router.setParams({ pieceId: undefined, sectorId: undefined, composerId: undefined })}
-          onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
-        />
-      ) : (
-        <CompareCatalog
-          onOpen={(piece) =>
+          // 작품에서 나오면 그 작곡가의 작품 목록으로 돌아간다
+          onBack={(backComposerId) =>
             router.setParams({
-              composerId: String(piece.composerId),
-              pieceId: String(piece.pieceId),
+              pieceId: undefined,
               sectorId: undefined,
+              composerId: backComposerId ? String(backComposerId) : undefined,
             })
           }
+          onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
         />
+      ) : composerId ? (
+        <CompareComposerPieces
+          composerId={composerId}
+          onBack={() => router.setParams({ composerId: undefined })}
+          onOpen={(piece) => router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })}
+        />
+      ) : (
+        <CompareCatalog onOpenComposer={(id) => router.setParams({ composerId: String(id) })} />
       )}
     </View>
   );

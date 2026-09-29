@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueries, useQuery } from '@tanstack/react-query';
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
+import type { ComparisonPiecePerformer } from '@/lib/types/models';
 
 const PAGE_SIZE = 10;
 
@@ -82,6 +83,25 @@ export function useComparisonPiece(pieceId: number | undefined, composerId: numb
 
 const CATALOG_SCAN_PAGE = 50;
 const CATALOG_SCAN_LIMIT = 2000;
+const COMPOSER_FACES = 5;
+
+/** 비교할 수 있는 작품이 있는 작곡가 한 명 */
+export interface ComparableComposer {
+  composerId: number;
+  composerName: string;
+  composerAvatarUrl: string | null;
+  pieceCount: number;
+  /** 작품별 연주자 수의 합. 같은 연주자가 여러 작품에 있으면 여러 번 센다 */
+  performanceCount: number;
+  /** 카드에 얼굴로 보일 연주자. 사진 있는 사람을 먼저 담는다 */
+  performers: ComparisonPiecePerformer[];
+}
+
+export interface ComparableComposers {
+  /** 비교할 수 있는 작품이 많은 순 (같으면 연주자 수 합이 많은 순) */
+  composers: ComparableComposer[];
+  byId: Map<number, ComparableComposer>;
+}
 
 /**
  * 비교할 수 있는 작품이 있는 작곡가와 그 작품 수.
@@ -90,14 +110,43 @@ const CATALOG_SCAN_LIMIT = 2000;
 export function useComparableComposers() {
   return useQuery({
     queryKey: ['comparison-pieces', 'composers'] as const,
-    queryFn: async () => {
-      const counts = new Map<number, number>();
+    queryFn: async (): Promise<ComparableComposers> => {
+      const byId = new Map<number, ComparableComposer>();
+      const seen = new Map<number, Set<number>>();
       for (let offset = 0; offset < CATALOG_SCAN_LIMIT; offset += CATALOG_SCAN_PAGE) {
         const page = await ComparisonAPI.getPieces({ offset, limit: CATALOG_SCAN_PAGE });
-        for (const piece of page) counts.set(piece.composerId, (counts.get(piece.composerId) ?? 0) + 1);
+        for (const piece of page) {
+          const entry = byId.get(piece.composerId) ?? {
+            composerId: piece.composerId,
+            composerName: piece.composerName,
+            composerAvatarUrl: piece.composerAvatarUrl,
+            pieceCount: 0,
+            performanceCount: 0,
+            performers: [],
+          };
+          entry.pieceCount += 1;
+          entry.performanceCount += piece.performerCount;
+          entry.composerAvatarUrl ??= piece.composerAvatarUrl;
+          const ids = seen.get(piece.composerId) ?? new Set<number>();
+          for (const performer of piece.performers) {
+            if (ids.has(performer.artistId)) continue;
+            ids.add(performer.artistId);
+            entry.performers.push(performer);
+          }
+          seen.set(piece.composerId, ids);
+          byId.set(piece.composerId, entry);
+        }
         if (page.length < CATALOG_SCAN_PAGE) break;
       }
-      return counts;
+      const composers = [...byId.values()]
+        .map((entry) => ({
+          ...entry,
+          performers: [...entry.performers]
+            .sort((a, b) => Number(Boolean(b.imageUrl)) - Number(Boolean(a.imageUrl)))
+            .slice(0, COMPOSER_FACES),
+        }))
+        .sort((a, b) => b.pieceCount - a.pieceCount || b.performanceCount - a.performanceCount);
+      return { composers, byId: new Map(composers.map((entry) => [entry.composerId, entry])) };
     },
     staleTime: 10 * 60_000,
   });

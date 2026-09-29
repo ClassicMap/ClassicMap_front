@@ -1,7 +1,7 @@
 import { FavoriteButton } from '@/components/favorite-button';
-import { PieceCard } from '@/components/home/cards';
-import { Grid, ScrollShelf } from '@/components/home/shelf';
+import { ScrollShelf } from '@/components/home/shelf';
 import { SectionStaff } from '@/components/compare/section-staff';
+import { Faces } from '@/components/shell/compare/compare-catalog';
 import { PerformanceVideoPlayer } from '@/components/performance-video-player';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 } from '@/lib/data/comparison';
 import { useAuth } from '@/lib/hooks/useAuth';
 import {
+  useComparableComposers,
   useComparisonPiece,
   useComparisonPieces,
   usePieceComparisonSectors,
@@ -34,55 +35,179 @@ import {
 import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, ExternalLinkIcon, PlayIcon, SettingsIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  ChevronRightIcon,
+  ExternalLinkIcon,
+  PlayIcon,
+  SettingsIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
-/** 모바일 비교 첫 화면: 비교할 수 있는 작품만 2열로 */
-export function CompareMobileCatalog({ onOpen }: { onOpen: (piece: ComparisonPiece) => void }) {
+/** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로 */
+export function CompareMobileCatalog({ onOpenComposer }: { onOpenComposer: (composerId: number) => void }) {
   const scrollInsets = useTabScrollInsets();
-  const catalog = useComparisonPieces();
-  const pieces = React.useMemo(() => catalog.data?.pages.flat() ?? [], [catalog.data]);
+  const comparable = useComparableComposers();
+  const composers = comparable.data?.composers ?? [];
 
   return (
     <ScrollView
       {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName="px-4 pb-24 pt-2"
-      refreshControl={<RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />}>
+      refreshControl={<RefreshControl refreshing={comparable.isRefetching} onRefresh={() => comparable.refetch()} />}>
       <Text variant="title1">비교</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
-        같은 구간을 연주자별로 들어 봐요. 연주자가 많은 작품부터 보여요.
+        작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
       </Text>
-      {catalog.isLoading ? (
-        <View className="mt-6 flex-row gap-3">
-          <Skeleton className="aspect-square flex-1 rounded-lg" />
-          <Skeleton className="aspect-square flex-1 rounded-lg" />
+      {comparable.isLoading ? (
+        <View className="mt-5 gap-4">
+          {Array.from({ length: 5 }, (_, index) => (
+            <View key={index} className="flex-row items-center gap-3.5">
+              <Skeleton className="size-14 rounded-full" />
+              <View className="flex-1 gap-2">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-3 w-1/3" />
+              </View>
+            </View>
+          ))}
         </View>
-      ) : catalog.isError ? (
+      ) : comparable.isError ? (
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="비교할 수 있는 작품을 불러오지 못했어요"
+          title="비교할 수 있는 작곡가를 불러오지 못했어요"
           description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
+          action={{ label: '다시 시도', onPress: () => comparable.refetch() }}
         />
-      ) : pieces.length === 0 ? (
+      ) : composers.length === 0 ? (
         <EmptyState
           icon={CompareIcon}
           title="아직 비교할 수 있는 작품이 없어요"
           description="연주자 세 명 이상의 영상이 모이면 여기에 나와요."
         />
       ) : (
-        <View className="mt-6">
-          <Grid
-            items={pieces}
-            columns={2}
-            gap={14}
-            keyOf={(piece) => piece.pieceId}
-            renderItem={(piece, width) => <PieceCard piece={piece} width={width} onPress={() => onOpen(piece)} />}
-          />
+        <View className="mt-4">
+          {composers.map((composer) => (
+            <Pressable
+              key={composer.composerId}
+              onPress={() => onOpenComposer(composer.composerId)}
+              accessibilityRole="link"
+              accessibilityLabel={`${composer.composerName}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+              className="-mx-2 flex-row items-center gap-3.5 rounded-lg px-2 py-2.5 active:bg-surface-2">
+              <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={56} />
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
+                  {composer.composerName}
+                </Text>
+                <Text variant="caption" className="mt-0.5">
+                  비교할 수 있는 작품 {composer.pieceCount}곡
+                </Text>
+              </View>
+              <Faces performers={composer.performers.slice(0, 3)} ringClassName="border-background" />
+              <Icon as={ChevronRightIcon} size={18} className="text-foreground-subtle" />
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+interface CompareMobileComposerPiecesProps {
+  composerId: number;
+  onBack: () => void;
+  onOpen: (piece: ComparisonPiece) => void;
+}
+
+/** 모바일 비교 둘째 단: 한 작곡가의 비교할 수 있는 작품 2열 */
+export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: CompareMobileComposerPiecesProps) {
+  const scrollInsets = useTabScrollInsets();
+  const catalog = useComparisonPieces(composerId);
+  const pieces = React.useMemo(() => catalog.data?.pages.flat() ?? [], [catalog.data]);
+  const summary = useComparableComposers().data?.byId.get(composerId);
+  const name = summary?.composerName ?? pieces[0]?.composerName;
+  const avatar = summary?.composerAvatarUrl ?? pieces[0]?.composerAvatarUrl ?? null;
+  const count = summary?.pieceCount ?? (catalog.hasNextPage ? undefined : pieces.length);
+
+  return (
+    <ScrollView
+      {...scrollInsets}
+      className="flex-1 bg-background"
+      contentContainerClassName="px-4 pb-24"
+      refreshControl={<RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />}>
+      <BackButton onPress={onBack} />
+      <View className="mt-4 flex-row items-center gap-4">
+        {name ? (
+          <EntityThumb name={name} image={avatar} shape="circle" size={72} />
+        ) : (
+          <Skeleton className="size-[72px] rounded-full" />
+        )}
+        <View className="min-w-0 flex-1">
+          {name ? (
+            <Text variant="title1" numberOfLines={1}>
+              {name}
+            </Text>
+          ) : (
+            <Skeleton className="h-7 w-2/3" />
+          )}
+          {count !== undefined ? (
+            <Text variant="caption" className="mt-1">
+              비교할 수 있는 작품 {count}곡
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {catalog.isLoading ? (
+        <View className="mt-6 gap-5">
+          {Array.from({ length: 5 }, (_, index) => (
+            <View key={index} className="gap-2">
+              <Skeleton className="h-4 w-3/5" />
+              <Skeleton className="h-3 w-2/5" />
+            </View>
+          ))}
+        </View>
+      ) : catalog.isError ? (
+        <EmptyState
+          icon={AlertCircleIcon}
+          tone="error"
+          title="작품 목록을 불러오지 못했어요"
+          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
+        />
+      ) : pieces.length === 0 ? (
+        <EmptyState
+          icon={CompareIcon}
+          title="이 작곡가는 아직 비교할 수 있는 작품이 없어요"
+          description="다른 작곡가를 골라 보세요."
+          action={{ label: '작곡가 목록 보기', onPress: onBack }}
+        />
+      ) : (
+        <View className="mt-5 border-t border-border">
+          {pieces.map((piece) => (
+            <Pressable
+              key={piece.pieceId}
+              onPress={() => onOpen(piece)}
+              accessibilityRole="link"
+              accessibilityLabel={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
+              className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={2} className="text-body-sm font-semibold text-foreground">
+                  {piece.pieceTitle}
+                </Text>
+                <Text variant="caption" numberOfLines={1} className="mt-1">
+                  {[piece.opusNumber, `연주자 ${piece.performerCount}`, `구간 ${piece.sectorCount}`]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              <Faces performers={piece.performers.slice(0, 3)} ringClassName="border-background" />
+              <Icon as={ChevronRightIcon} size={18} className="text-foreground-subtle" />
+            </Pressable>
+          ))}
           {catalog.hasNextPage ? (
             <Button
               variant="outline"
@@ -102,7 +227,8 @@ interface CompareMobilePieceProps {
   pieceId: number;
   composerId?: number;
   sectorId?: number;
-  onBack: () => void;
+  /** 돌아갈 작곡가. 주소에 작곡가가 없던 딥링크면 연주에서 알아낸 작곡가를 넘긴다 */
+  onBack: (composerId?: number) => void;
   onSelectSector: (sectorId: number) => void;
 }
 
@@ -122,6 +248,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data]);
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
+  const goBack = () => onBack(composerId ?? first?.composerId);
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
     [pieceInfo?.performers]
@@ -152,7 +279,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
       <View className="flex-1 bg-background px-4" style={{ paddingTop: headerInset }}>
-        <BackButton onPress={onBack} />
+        <BackButton onPress={goBack} />
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
@@ -173,7 +300,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   return (
     <ScrollView {...scrollInsets} className="flex-1 bg-background" contentContainerClassName="px-4 pb-28">
       <View className="flex-row items-center justify-between">
-        <BackButton onPress={onBack} />
+        <BackButton onPress={goBack} />
         <View className="mt-3 flex-row items-center gap-1">
           {canEdit ? (
             <Pressable

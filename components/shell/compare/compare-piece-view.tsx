@@ -41,7 +41,8 @@ interface ComparePieceViewProps {
   pieceId: number;
   composerId?: number;
   sectorId?: number;
-  onBack: () => void;
+  /** 돌아갈 작곡가. 주소에 작곡가가 없던 딥링크면 연주에서 알아낸 작곡가를 넘긴다 */
+  onBack: (composerId?: number) => void;
   onSelectSector: (sectorId: number) => void;
 }
 
@@ -66,6 +67,9 @@ export function ComparePieceView({
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const composerAvatar = pieceInfo?.composerAvatarUrl ?? null;
+  const backComposerId = composerId ?? first?.composerId;
+  const backLabel = first?.composerName ?? pieceInfo?.composerName;
+  const goBack = () => onBack(backComposerId);
 
   // 홈의 "최근 본 작품"에 남긴다 (이 기기에만)
   const recordRecent = useRecordRecentPiece();
@@ -178,7 +182,7 @@ export function ComparePieceView({
         icon={CompareIcon}
         title="이 작품은 아직 비교할 수 없어요"
         description="연주자 세 명 이상의 영상이 모이면 비교할 수 있어요."
-        action={{ label: '비교할 수 있는 작품 보기', onPress: onBack }}
+        action={{ label: '비교할 수 있는 작품 보기', onPress: goBack }}
       />
     );
   }
@@ -186,10 +190,10 @@ export function ComparePieceView({
   return (
     <View className="flex-1">
       <ScrollView className="flex-1" contentContainerClassName="px-7 pb-10">
-        <Pressable onPress={onBack} className="mb-4 flex-row items-center gap-1 self-start">
+        <Pressable onPress={goBack} className="mb-4 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
-            비교할 수 있는 작품
+            {backLabel ? `${backLabel}의 비교 작품` : '비교할 수 있는 작품'}
           </Text>
         </Pressable>
 

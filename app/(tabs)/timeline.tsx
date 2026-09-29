@@ -139,7 +139,14 @@ export default function TimelineScreen() {
 
   const composersQuery = useAllComposers();
   const comparableQuery = useComparableComposers();
-  const comparable = comparableQuery.data;
+  // 작곡가 id → 비교할 수 있는 작품 수
+  const comparable = React.useMemo<ReadonlyMap<number, number> | undefined>(
+    () =>
+      comparableQuery.data
+        ? new Map(comparableQuery.data.composers.map((entry) => [entry.composerId, entry.pieceCount]))
+        : undefined,
+    [comparableQuery.data]
+  );
   const currentYear = new Date().getFullYear();
 
   const validComposers = React.useMemo(
