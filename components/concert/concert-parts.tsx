@@ -1,5 +1,7 @@
 import { clipClock } from '@/lib/data/comparison';
+import { ImageLightbox } from '@/components/concert/image-lightbox';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { getImageUrl } from '@/lib/utils/image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
@@ -9,6 +11,7 @@ import {
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, Concert, ConcertArtist, ConcertImage } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
+import { Maximize2Icon } from 'lucide-react-native';
 import * as React from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
@@ -176,29 +179,57 @@ function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; co
  */
 export function IntroImages({ images }: { images: ConcertImage[] }) {
   const [expanded, setExpanded] = React.useState(false);
+  const [viewing, setViewing] = React.useState<number | null>(null);
   const sorted = React.useMemo(
     () => [...images].sort((a, b) => a.displayOrder - b.displayOrder),
     [images]
   );
+  const uris = React.useMemo(() => sorted.map((image) => getImageUrl(image.imageUrl)), [sorted]);
   if (sorted.length === 0) return null;
   return (
     <View>
-      <Text variant="headline" className="mb-3">
-        공연 소개
-      </Text>
+      <View className="mb-3 flex-row items-baseline gap-2">
+        <Text variant="headline">공연 소개</Text>
+        {sorted.length > 1 ? <Text variant="caption">이미지 {sorted.length}장</Text> : null}
+      </View>
       <View className="relative w-full max-w-[420px] overflow-hidden rounded-md" style={expanded ? undefined : { maxHeight: 330 }}>
-        {sorted.map((image) => (
-          <ScaledImage key={image.id} uri={getImageUrl(image.imageUrl)} />
+        {uris.map((uri, index) => (
+          <Pressable
+            key={sorted[index].id}
+            onPress={() => setViewing(index)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`공연 소개 이미지 ${index + 1} 크게 보기`}
+            className="web:cursor-zoom-in">
+            <ScaledImage uri={uri} />
+          </Pressable>
         ))}
         {!expanded ? (
-          <View className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background web:to-surface-1" />
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background web:to-surface-1"
+          />
         ) : null}
       </View>
-      <Pressable onPress={() => setExpanded((value) => !value)} className="mt-3 self-start rounded-full border border-border-strong px-4 py-1.5">
-        <Text variant="label" className="text-foreground">
-          {expanded ? '소개 접기' : '소개 전체 보기'}
-        </Text>
-      </Pressable>
+      <View className="mt-3 flex-row flex-wrap gap-2">
+        <Pressable
+          onPress={() => setViewing(0)}
+          accessibilityRole="button"
+          className="flex-row items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 active:opacity-80 web:hover:opacity-90">
+          <Icon as={Maximize2Icon} size={13} className="text-background" />
+          <Text variant="label" className="text-background">
+            크게 보기
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          accessibilityRole="button"
+          className="rounded-full border border-border-strong px-4 py-1.5 web:hover:bg-surface-2">
+          <Text variant="label" className="text-foreground">
+            {expanded ? '소개 접기' : '여기서 펼치기'}
+          </Text>
+        </Pressable>
+      </View>
+      <ImageLightbox images={uris} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
     </View>
   );
 }

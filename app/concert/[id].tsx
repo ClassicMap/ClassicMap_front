@@ -10,7 +10,7 @@ import {
 } from '@/components/concert/concert-parts';
 import { StarRating } from '@/components/StarRating';
 import { FavoriteButton } from '@/components/favorite-button';
-import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
+import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -92,6 +92,17 @@ export default function ConcertDetailScreen() {
 
   const openTickets = async () => {
     if (!concert) return;
+    // 상세에 예매처가 이미 있으면 다시 부르지 않는다. 한 곳뿐이면 고를 게 없어 바로 연다
+    const known = concert.ticketVendors ?? [];
+    if (known.length === 1) {
+      openVendorUrl(known[0].vendorUrl);
+      return;
+    }
+    if (known.length > 1) {
+      setVendors(known);
+      setShowVendorsModal(true);
+      return;
+    }
     setLoadingVendors(true);
     try {
       setVendors(await ConcertAPI.getTicketVendors(concert.id));
@@ -153,7 +164,8 @@ export default function ConcertDetailScreen() {
   const prices = parsePrices(concert.priceInfo);
   const cast = concert.artists ?? [];
   const bookable = concert.status === 'upcoming' || concert.status === 'ongoing';
-  const firstVendor = concert.ticketVendors?.[0]?.vendorName;
+  const knownVendors = concert.ticketVendors ?? [];
+  const firstVendor = knownVendors[0]?.vendorName?.trim() || (knownVendors[0] ? vendorDomain(knownVendors[0].vendorUrl) : undefined);
   const ranking = concert.boxofficeRanking;
   const time = concertClock(concert.concertTime);
   const multiDay = concert.endDate && concert.endDate !== concert.startDate;
@@ -178,7 +190,11 @@ export default function ConcertDetailScreen() {
         <Icon as={ExternalLinkIcon} size={16} className="text-primary-foreground" />
       </Button>
       <Text variant="caption" className="text-center">
-        {firstVendor ? `${firstVendor} 등 예매처로 이동해요` : '예매처로 이동해요'}
+        {knownVendors.length > 1
+          ? `${firstVendor} 등 예매처 ${knownVendors.length}곳 중에서 골라요`
+          : firstVendor
+            ? `${firstVendor} 예매 페이지가 새 창으로 열려요`
+            : '예매처로 이동해요'}
       </Text>
     </View>
   ) : null;
@@ -375,7 +391,32 @@ export default function ConcertDetailScreen() {
         onClose={() => setEditModalVisible(false)}
         onSuccess={() => refetch()}
       />
-      <TicketVendorsModal visible={showVendorsModal} vendors={vendors} onClose={() => setShowVendorsModal(false)} />
+      <TicketVendorsModal
+        visible={showVendorsModal}
+        vendors={vendors}
+        onClose={() => setShowVendorsModal(false)}
+        summary={{
+          title: concert.title,
+          posterUrl: concert.posterUrl,
+          when: facts[0]?.value,
+          where: concert.facilityName ?? undefined,
+          price: priceSummary(prices),
+        }}
+      />
     </View>
   );
+}
+
+/** 모달 머리에 한 줄로: 한 좌석이면 '전석 5,000원', 여러 좌석이면 최저–최고 */
+function priceSummary(prices: { seat: string; price: string }[]): string | undefined {
+  if (prices.length === 0) return undefined;
+  if (prices.length === 1) return [prices[0].seat, prices[0].price].filter(Boolean).join(' ');
+  const amounts = prices
+    .map((price) => Number(price.price.replace(/[^\d]/g, '')))
+    .filter((amount) => Number.isFinite(amount) && amount > 0);
+  if (amounts.length === 0) return undefined;
+  const min = Math.min(...amounts);
+  const max = Math.max(...amounts);
+  const won = (amount: number) => amount.toLocaleString('ko-KR');
+  return min === max ? `${won(min)}원` : `${won(min)}–${won(max)}원`;
 }
