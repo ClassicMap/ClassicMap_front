@@ -1,445 +1,390 @@
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Input } from '@/components/ui/input';
-import { View, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
-import { Alert } from '@/lib/utils/alert';
-import { StarIcon, SearchIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import * as React from 'react';
-import { AdminArtistAPI } from '@/lib/api/admin';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
-import type { Artist } from '@/lib/types/models';
-import { prefetchImages } from '@/components/optimized-image';
-import { getImageUrl } from '@/lib/utils/image';
-import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { useArtists, ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
-import { useQueryClient } from '@tanstack/react-query';
+import { PeopleGrid, PeopleShelf, type PersonItem } from '@/components/artists/people-grid';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { Button } from '@/components/ui/button';
+import { Chip, ChipDot } from '@/components/ui/chip';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Icon } from '@/components/ui/icon';
+import { EraIcon } from '@/components/ui/icons';
+import { Input } from '@/components/ui/input';
+import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { ArtistAPI } from '@/lib/api/client';
+import { PERIODS } from '@/lib/data/periods';
+import { type ArtistCategoryCode, getArtistCategoryLabel, isArtistCategoryCode } from '@/lib/design/artist-category';
+import { getEraForeground } from '@/lib/design/era-palette';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useDebounce } from '@/lib/hooks/useDebounce';
+import { ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
+import { useBrowseComposers } from '@/lib/query/hooks/useComposers';
+import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import type { Artist, Composer } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircleIcon, PlusIcon, SearchIcon, UsersIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
+import * as React from 'react';
+import { type NativeScrollEvent, type NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
+type Segment = 'composer' | 'artist';
+
+const ARTIST_PAGE_SIZE = 30;
+
+/** 작곡가가 있는 시대만. 칩 라벨은 짧게 */
+const ERA_FILTERS = PERIODS.filter((era) => era.id !== 'medieval').map((era) => ({
+  id: era.id,
+  name: era.name,
+  label: era.name.replace(/주의$/, ''),
+}));
+
+/** 자주 찾는 분류만 칩으로. 나머지는 이름으로 찾는다 */
+const CATEGORY_FILTERS: ArtistCategoryCode[] = [
+  'pianist',
+  'violinist',
+  'cellist',
+  'violist',
+  'vocalist',
+  'conductor',
+  'orchestra',
+  'choir',
+  'ensemble',
+  'flutist',
+  'guitarist',
+];
+
+function paramOf(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw || undefined;
+}
+
+function lifeSpan(composer: { birthYear?: number | null; deathYear?: number | null }): string {
+  if (!composer.birthYear) return '';
+  return `${composer.birthYear}–${composer.deathYear ?? ''}`;
+}
+
+/**
+ * 아티스트 탭 (기획 C): 작곡가 | 연주자를 목록으로 훑는다.
+ * 세그먼트·시대·분류는 주소 파라미터(type·period·category)라 링크로 그대로 열린다.
+ */
 export default function ArtistsScreen() {
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState('');
-  const [showFormModal, setShowFormModal] = React.useState(false);
-  const [searchResults, setSearchResults] = React.useState<Artist[]>([]);
-  const [isSearching, setIsSearching] = React.useState(false);
-  const [searchOffset, setSearchOffset] = React.useState(0);
-  const [hasMoreSearchResults, setHasMoreSearchResults] = React.useState(true);
+  const scrollInsets = useTabScrollInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string; period?: string; category?: string }>();
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+  const segment: Segment = paramOf(params.type) === 'artist' ? 'artist' : 'composer';
+  const eraId = paramOf(params.period);
+  const era = ERA_FILTERS.find((item) => item.id === eraId) ?? null;
+  const categoryParam = paramOf(params.category);
+  const category = categoryParam && isArtistCategoryCode(categoryParam) ? categoryParam : null;
+  const [query, setQuery] = React.useState('');
+  const debounced = useDebounce(query.trim(), 300);
   const { canEdit } = useAuth();
+  const [showForm, setShowForm] = React.useState(false);
   const queryClient = useQueryClient();
 
-  // Debounce search query (300ms delay)
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-      // Reset search pagination when query changes
-      setSearchOffset(0);
-      setSearchResults([]);
-      setHasMoreSearchResults(true);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  // 세그먼트를 바꾸면 검색어는 비운다 (작곡가 이름으로 연주자를 찾지 않게)
+  React.useEffect(() => setQuery(''), [segment]);
 
-  // React Query 무한 스크롤로 아티스트 데이터 로드
-  const {
-    data,
-    isLoading: loading,
-    error: queryError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-    isRefetching: refreshing,
-  } = useArtists();
+  const composers = useBrowseComposers(era?.name, segment === 'composer' ? debounced : '');
+  const artists = useInfiniteQuery({
+    queryKey: [...ARTIST_QUERY_KEYS.all, 'browse', debounced, category ?? 'all'] as const,
+    queryFn: ({ pageParam }) =>
+      debounced || category
+        ? ArtistAPI.search({
+            q: debounced || undefined,
+            category: category ?? undefined,
+            offset: pageParam,
+            limit: ARTIST_PAGE_SIZE,
+          })
+        : ArtistAPI.getAll(pageParam, ARTIST_PAGE_SIZE),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < ARTIST_PAGE_SIZE ? undefined : pages.length * ARTIST_PAGE_SIZE,
+    initialPageParam: 0,
+    staleTime: 3 * 60_000,
+    enabled: segment === 'artist',
+  });
+  const active = segment === 'composer' ? composers : artists;
 
-  // 페이지 데이터를 평탄화 및 중복 제거
-  const artists = React.useMemo(() => {
-    if (!data?.pages) return [];
+  const { isSignedIn } = useClerkAuth();
+  const favorites = useMyFavorites(isSignedIn === true);
+  const repertoire = useRepertoireIds();
 
-    const allArtists = data.pages.flat();
+  const openComposer = React.useCallback((id: number) => router.push(`/composer/${id}` as Href), [router]);
+  const openArtist = React.useCallback((id: number) => router.push(`/artist/${id}` as Href), [router]);
 
-    // ID 기준으로 중복 제거
-    const uniqueArtists = Array.from(
-      new Map(allArtists.map(artist => [artist.id, artist])).values()
-    );
-
-    return uniqueArtists;
-  }, [data]);
-
-  // 에러 처리
-  const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
-
-  // Backend search effect - initial search
-  React.useEffect(() => {
-    if (debouncedSearchQuery.trim().length > 0) {
-      setIsSearching(true);
-      ArtistAPI.search({
-        q: debouncedSearchQuery,
-        offset: 0,
-        limit: 20,
-      })
-        .then((results) => {
-          setSearchResults(results);
-          setSearchOffset(20);
-          setHasMoreSearchResults(results.length === 20);
-          setIsSearching(false);
-        })
-        .catch((error) => {
-          console.error('Search failed:', error);
-          setSearchResults([]);
-          setIsSearching(false);
-        });
-    } else {
-      setSearchResults([]);
-      setSearchOffset(0);
-      setHasMoreSearchResults(true);
-      setIsSearching(false);
+  // 레퍼토리에 담은 사람: 지금 시대·분류에 맞는 사람만 위 선반에. 검색 중에는 선반을 숨긴다
+  const shelf: PersonItem[] = React.useMemo(() => {
+    if (debounced || !favorites.data) return [];
+    if (segment === 'composer') {
+      return favorites.data.composers
+        .filter((item) => !era || item.period === era.name)
+        .map((item) => ({
+          key: `c-${item.composerId}`,
+          name: item.name,
+          image: item.avatarUrl,
+          caption: item.period,
+          onPress: () => openComposer(item.composerId),
+        }));
     }
-  }, [debouncedSearchQuery]);
+    return favorites.data.artists
+      .filter((item) => !category || item.category === category)
+      .map((item) => ({
+        key: `a-${item.artistId}`,
+        name: item.name,
+        image: item.imageUrl,
+        caption: getArtistCategoryLabel(item.category),
+        onPress: () => openArtist(item.artistId),
+      }));
+  }, [category, debounced, era, favorites.data, openArtist, openComposer, segment]);
 
-  // Load more search results
-  const loadMoreSearchResults = React.useCallback(() => {
-    if (!debouncedSearchQuery.trim() || !hasMoreSearchResults || isSearching) {
-      return;
+  const grid: PersonItem[] = React.useMemo(() => {
+    const seen = new Set<number>();
+    if (segment === 'composer') {
+      return (composers.data?.pages.flat() ?? [])
+        .filter((composer: Composer) => (seen.has(composer.id) ? false : (seen.add(composer.id), true)))
+        .map((composer) => ({
+          key: `c-${composer.id}`,
+          name: composer.name,
+          image: composer.avatarUrl,
+          caption: era ? lifeSpan(composer) : [composer.period, lifeSpan(composer)].filter(Boolean).join(' · '),
+          inRepertoire: repertoire.composers.has(composer.id),
+          onPress: () => openComposer(composer.id),
+        }));
     }
+    return (artists.data?.pages.flat() ?? [])
+      .filter((artist: Artist) => (seen.has(artist.id) ? false : (seen.add(artist.id), true)))
+      .map((artist) => ({
+        key: `a-${artist.id}`,
+        name: artist.name,
+        image: artist.imageUrl,
+        caption: getArtistCategoryLabel(artist.category),
+        inRepertoire: repertoire.artists.has(artist.id),
+        onPress: () => openArtist(artist.id),
+      }));
+  }, [artists.data, composers.data, era, openArtist, openComposer, repertoire, segment]);
 
-    setIsSearching(true);
-    ArtistAPI.search({
-      q: debouncedSearchQuery,
-      offset: searchOffset,
-      limit: 20,
-    })
-      .then((results) => {
-        if (results.length > 0) {
-          // Deduplicate by ID
-          const existingIds = new Set(searchResults.map(a => a.id));
-          const newResults = results.filter(a => !existingIds.has(a.id));
-          setSearchResults(prev => [...prev, ...newResults]);
-          setSearchOffset(prev => prev + 20);
-          setHasMoreSearchResults(results.length === 20);
-        } else {
-          setHasMoreSearchResults(false);
-        }
-        setIsSearching(false);
-      })
-      .catch((error) => {
-        console.error('Failed to load more search results:', error);
-        setIsSearching(false);
-      });
-  }, [debouncedSearchQuery, searchOffset, hasMoreSearchResults, isSearching, searchResults]);
+  const setParams = (next: { type?: Segment; period?: string | null; category?: string | null }) =>
+    router.setParams({
+      type: (next.type ?? segment) === 'artist' ? 'artist' : undefined,
+      period: next.period === undefined ? eraId : next.period ?? undefined,
+      category: next.category === undefined ? categoryParam : next.category ?? undefined,
+    });
 
-  // 새로고침 핸들러 (첫 페이지만 다시 로드) - early return 전에 정의
-  const handleRefresh = React.useCallback(() => {
-    // Clear search state
-    setSearchQuery('');
-    setDebouncedSearchQuery('');
-    setSearchResults([]);
-    setSearchOffset(0);
-    setHasMoreSearchResults(true);
-
-    // resetQueries를 사용하여 무한 스크롤 상태를 초기화
-    // 이렇게 하면 첫 페이지만 로드됨
-    queryClient.resetQueries({ queryKey: ARTIST_QUERY_KEYS.all });
-  }, [queryClient]);
-
-  // 무한 스크롤 처리 - 마지막 요청 추적 - early return 전에 정의
-  const lastFetchRef = React.useRef<number>(0);
-
-  const handleScroll = React.useCallback(
-    (event: any) => {
-      const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-      const paddingToBottom = 200; // 하단 200px 전에 로드 시작
-
-      // contentSize가 0이면 아직 렌더링 안 됨 (초기 로드 중)
-      if (contentSize.height === 0) {
-        return;
-      }
-
-      // 음수 스크롤은 무시 (RefreshControl 당기는 동작)
-      if (contentOffset.y < 0) {
-        return;
-      }
-
-      // 실제로 스크롤을 했는지 체크 (최소 200px 이상 스크롤)
-      const hasScrolled = contentOffset.y > 200;
-
-      const isNearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-
-      if (!hasScrolled || !isNearBottom) {
-        return;
-      }
-
-      const now = Date.now();
-      // 마지막 요청 후 1초 이내면 무시 (중복 방지)
-      if (now - lastFetchRef.current < 1000) {
-        return;
-      }
-
-      // If searching, load more search results
-      if (debouncedSearchQuery.trim().length > 0) {
-        if (hasMoreSearchResults && !isSearching) {
-          lastFetchRef.current = now;
-          loadMoreSearchResults();
-        }
-      } else {
-        // Otherwise, load more paginated results
-        if (hasNextPage && !isFetchingNextPage) {
-          lastFetchRef.current = now;
-          fetchNextPage();
-        }
-      }
-    },
-    [
-      hasNextPage,
-      isFetchingNextPage,
-      fetchNextPage,
-      debouncedSearchQuery,
-      hasMoreSearchResults,
-      isSearching,
-      loadMoreSearchResults,
-    ]
-  );
-
-  const filteredArtists = React.useMemo(() => {
-    // Use search results if searching, otherwise use paginated artists
-    let filtered = debouncedSearchQuery.trim().length > 0 ? searchResults : artists;
-
-    // Deduplicate by ID to prevent duplicate key errors
-    filtered = Array.from(
-      new Map(filtered.map(artist => [artist.id, artist])).values()
-    );
-
-    return filtered;
-  }, [artists, searchResults, debouncedSearchQuery]);
-
-  // 이미지 프리페치 (첫 10개만 - 성능 최적화)
-  React.useEffect(() => {
-    if (artists.length > 0) {
-      const firstBatch = artists.slice(0, 10).map((a) => a.imageUrl).filter(Boolean);
-      if (firstBatch.length > 0) {
-        prefetchImages(firstBatch);
-      }
-    }
-  }, [artists.length]);
-
-  const handleDelete = (id: number, name: string) => {
-    Alert.alert(
-      '아티스트 삭제',
-      `${name}을(를) 삭제하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AdminArtistAPI.delete(id);
-              Alert.alert('성공', '아티스트가 삭제되었습니다.');
-              refetch();
-            } catch (error) {
-              Alert.alert('오류', '삭제에 실패했습니다.');
-            }
-          },
-        },
-      ]
-    );
+  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nearEnd =
+      nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 600;
+    if (nearEnd && active.hasNextPage && !active.isFetchingNextPage) void active.fetchNextPage();
   };
 
-  if (loading && !isSearching) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-        <Text className="mt-2 text-muted-foreground">로딩 중...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>다시 시도</Text>
-          </Button>
-        </Card>
-      </View>
-    );
-  }
+  const noun = segment === 'composer' ? '작곡가' : '연주자';
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      onScroll={handleScroll}
-      scrollEventThrottle={400}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
-    >
-      <View className="gap-6 p-4">
-        <View className="gap-2">
-          <View className="flex-row items-center justify-between">
-            <Text variant="h1" className="text-3xl font-bold">
-              아티스트 DB
+    <View className="flex-1 bg-background web:bg-surface-1">
+      <ScrollView
+        {...scrollInsets}
+        className="flex-1"
+        onScroll={onScroll}
+        scrollEventThrottle={200}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={active.isRefetching} onRefresh={() => active.refetch()} />}
+        contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}>
+        <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
+          <View>
+            <Text variant={wide ? 'display' : 'title1'}>아티스트</Text>
+            <Text variant="bodySm" className="mt-1 text-foreground-muted">
+              {segment === 'composer'
+                ? '추천 순으로 보여요. 시대를 고르거나 이름으로 찾아보세요.'
+                : '추천 순으로 보여요. 악기나 편성을 고르거나 이름으로 찾아보세요.'}
             </Text>
-            {canEdit && (
-              <Button onPress={() => setShowFormModal(true)} size="sm">
-                <Icon as={PlusIcon} size={16} className="text-primary-foreground mr-1" />
-                <Text>추가</Text>
-              </Button>
-            )}
           </View>
-          <Text className="text-muted-foreground">
-            세계적인 클래식 연주자들을 만나보세요
-          </Text>
-        </View>
-
-        {/* Search */}
-        <View className="relative">
-          <Input
-            placeholder="아티스트 검색..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            className="pl-10"
-          />
-          <View className="absolute left-3 top-3.5">
-            <Icon as={SearchIcon} size={18} className="text-muted-foreground" />
-          </View>
-        </View>
-
-        {/* Artists List */}
-        <View className="gap-3">
-          {(isSearching && filteredArtists.length === 0) ? (
-            <View className="py-12">
-              <ActivityIndicator size="large" />
-              <Text className="mt-4 text-center text-muted-foreground">검색 중...</Text>
-            </View>
-          ) : filteredArtists.length > 0 ? (
-            filteredArtists.map((artist) => (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                canEdit={canEdit}
-                onDelete={handleDelete}
+          <View className={cn('flex-row items-center gap-2', wide && 'w-[380px]')}>
+            <View className="flex-1 justify-center">
+              <Input
+                value={query}
+                onChangeText={setQuery}
+                placeholder={`${noun} 이름으로 찾기`}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                accessibilityLabel={`${noun} 이름으로 찾기`}
+                className="h-11 rounded-full pl-10 sm:h-11"
               />
-            ))
-          ) : (
-            <Card className="p-8">
-              <Text className="text-center text-muted-foreground">
-                {debouncedSearchQuery
-                  ? `"${debouncedSearchQuery}"에 대한 검색 결과가 없습니다`
-                  : '아티스트가 없습니다'}
-              </Text>
-            </Card>
-          )}
+              <View pointerEvents="none" className="absolute left-3.5">
+                <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
+              </View>
+            </View>
+            {canEdit && segment === 'artist' ? (
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+                accessibilityLabel="연주자 추가"
+                onPress={() => setShowForm(true)}>
+                <Icon as={PlusIcon} size={16} className="text-foreground" />
+              </Button>
+            ) : null}
+          </View>
         </View>
 
-        {/* 무한 스크롤 로딩 인디케이터 */}
-        {debouncedSearchQuery ? (
-          // 검색 중일 때
-          isSearching && filteredArtists.length > 0 && (
-            <View className="py-4">
-              <ActivityIndicator size="small" />
-              <Text className="mt-2 text-center text-sm text-muted-foreground">
-                더 많은 검색 결과를 불러오는 중...
-              </Text>
-            </View>
-          )
-        ) : (
-          // 일반 무한 스크롤
-          isFetchingNextPage && (
-            <View className="py-4">
-              <ActivityIndicator size="small" />
-              <Text className="mt-2 text-center text-sm text-muted-foreground">
-                더 많은 아티스트를 불러오는 중...
-              </Text>
-            </View>
-          )
-        )}
+        <SegmentedControl value={segment} onChange={(type) => setParams({ type, period: null, category: null })} />
 
-        {/* 더 이상 데이터가 없을 때 */}
-        {debouncedSearchQuery ? (
-          // 검색 모드
-          !hasMoreSearchResults && filteredArtists.length > 0 && (
-            <View className="py-4">
-              <Text className="text-center text-sm text-muted-foreground">
-                "{debouncedSearchQuery}" 검색 결과: 총 {filteredArtists.length}개
-              </Text>
-            </View>
-          )
-        ) : (
-          // 일반 모드
-          !hasNextPage && artists.length > 0 && (
-            <View className="py-4">
-              <Text className="text-center text-muted-foreground text-sm">
-                모든 아티스트를 불러왔습니다
-              </Text>
-            </View>
-          )
-        )}
-      </View>
+        <View className="mt-4 flex-row items-center gap-3">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="gap-2">
+            {segment === 'composer' ? (
+              <>
+                <Chip label="전체" selected={era === null} onPress={() => setParams({ period: null })} />
+                {ERA_FILTERS.map((item) => (
+                  <EraChip
+                    key={item.id}
+                    name={item.name}
+                    label={item.label}
+                    selected={era?.id === item.id}
+                    onPress={() => setParams({ period: item.id })}
+                  />
+                ))}
+              </>
+            ) : (
+              <>
+                <Chip label="전체" selected={category === null} onPress={() => setParams({ category: null })} />
+                {CATEGORY_FILTERS.map((code) => (
+                  <Chip
+                    key={code}
+                    label={getArtistCategoryLabel(code)}
+                    selected={category === code}
+                    onPress={() => setParams({ category: code })}
+                  />
+                ))}
+              </>
+            )}
+          </ScrollView>
+          {segment === 'composer' && wide ? (
+            <TimelineLink onPress={() => router.push((era ? `/timeline?era=${era.id}` : '/timeline') as Href)} />
+          ) : null}
+        </View>
+        {segment === 'composer' && !wide ? (
+          <View className="mt-3 flex-row">
+            <TimelineLink onPress={() => router.push((era ? `/timeline?era=${era.id}` : '/timeline') as Href)} />
+          </View>
+        ) : null}
+
+        {shelf.length > 0 ? (
+          <View className="mt-7">
+            <Text variant="caption" className="mb-3 font-semibold text-foreground-subtle">
+              레퍼토리에 담은 {noun} {shelf.length}
+            </Text>
+            <PeopleShelf items={shelf} wide={wide} />
+          </View>
+        ) : null}
+
+        <View className="mt-7">
+          {shelf.length > 0 && grid.length > 0 ? (
+            <Text variant="caption" className="mb-3 font-semibold text-foreground-subtle">
+              {debounced ? `‘${debounced}’ 검색 결과` : `모든 ${noun}`}
+            </Text>
+          ) : null}
+          <PeopleGrid items={grid} loading={active.isLoading} wide={wide} />
+        </View>
+
+        {active.isError ? (
+          <EmptyState
+            icon={AlertCircleIcon}
+            tone="error"
+            title={`${noun}를 불러오지 못했어요`}
+            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+            action={{ label: '다시 시도', onPress: () => active.refetch() }}
+          />
+        ) : !active.isLoading && grid.length === 0 ? (
+          <EmptyState
+            icon={UsersIcon}
+            title={debounced ? `‘${debounced}’에 맞는 ${noun}가 없어요` : `이 조건에는 아직 ${noun}가 없어요`}
+            description={debounced ? '다른 표기나 영문 이름으로 찾아보세요.' : '다른 시대나 분류를 골라 보세요.'}
+            action={
+              debounced
+                ? { label: '검색어 지우기', onPress: () => setQuery('') }
+                : { label: '전체 보기', onPress: () => setParams({ period: null, category: null }) }
+            }
+          />
+        ) : active.isFetchingNextPage ? (
+          <Text variant="caption" className="mt-6 text-center">
+            더 불러오는 중…
+          </Text>
+        ) : null}
+      </ScrollView>
 
       <ArtistFormModal
-        visible={showFormModal}
-        onClose={() => setShowFormModal(false)}
-        onSuccess={() => refetch()}
+        visible={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={() => {
+          setShowForm(false);
+          void queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });
+        }}
       />
-    </ScrollView>
+    </View>
   );
 }
 
-const ArtistCard = React.memo(({
-  artist,
-  canEdit,
-  onDelete
-}: {
-  artist: Artist;
-  canEdit: boolean;
-  onDelete: (id: number, name: string) => void;
-}) => {
-  const router = useRouter();
-
-  const handlePress = React.useCallback(() => {
-    router.push(`/artist/${artist.id}` as any);
-  }, [router, artist.id]);
-
-  const handleDeletePress = React.useCallback((e: any) => {
-    e.stopPropagation();
-    onDelete(artist.id, artist.name);
-  }, [onDelete, artist.id, artist.name]);
-
+function SegmentedControl({ value, onChange }: { value: Segment; onChange: (value: Segment) => void }) {
+  const options: { value: Segment; label: string }[] = [
+    { value: 'composer', label: '작곡가' },
+    { value: 'artist', label: '연주자' },
+  ];
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <Card className="p-4">
-        <View className="flex-row gap-4">
-          <Avatar alt={artist.name} className="size-16">
-            <AvatarImage source={{ uri: getImageUrl(artist.imageUrl) }} />
-            <AvatarFallback>
-              <Text>{artist.name[0]}</Text>
-            </AvatarFallback>
-          </Avatar>
-          <View className="flex-1 gap-2">
-            <Text className="text-lg font-semibold">{artist.name}</Text>
-            <Text className="text-sm text-muted-foreground">{getArtistCategoryLabel(artist.category)}</Text>
-            <Text className="text-sm text-muted-foreground">{artist.nationality}</Text>
-          </View>
-          {canEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onPress={handleDeletePress}
-            >
-              <Icon as={TrashIcon} size={18} className="text-destructive" />
-            </Button>
-          )}
-        </View>
-      </Card>
-    </TouchableOpacity>
+    <View
+      accessibilityRole="tablist"
+      className="mt-5 flex-row self-start rounded-full border border-border bg-surface-2 p-1">
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(option.value)}
+            // 그림자는 className으로 켜고 끄지 않는다 (SELECTED_SHADOW 주석)
+            style={selected ? SELECTED_SHADOW : undefined}
+            className={cn(
+              'h-9 min-w-[88px] items-center justify-center rounded-full px-5 web:transition-colors',
+              selected ? 'bg-background web:bg-surface-1' : 'web:hover:bg-surface-3'
+            )}>
+            <Text className={cn('text-body-sm font-semibold', selected ? 'text-foreground' : 'text-foreground-muted')}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
-});
+}
+
+function EraChip({
+  name,
+  label,
+  selected,
+  onPress,
+}: {
+  name: string;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { colorScheme } = useColorScheme();
+  const color = getEraForeground(name, colorScheme === 'dark' ? 'dark' : 'light');
+  return <Chip label={label} selected={selected} onPress={onPress} leading={color ? <ChipDot color={color} /> : undefined} />;
+}
+
+function TimelineLink({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      className="h-8 shrink-0 flex-row items-center gap-1.5 rounded-full px-3 active:bg-surface-2 web:hover:bg-surface-2">
+      <EraIcon size={16} className="text-primary" />
+      <Text className="text-label font-semibold text-foreground">타임라인으로 보기</Text>
+    </Pressable>
+  );
+}

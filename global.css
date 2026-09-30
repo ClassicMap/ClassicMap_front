@@ -2,57 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ClassicMap 디자인 토큰 — 리디자인 보고서 4.1절.
+   HSL 채널 값 + hsl(var(--x)) 구조를 유지해 기존 shadcn 클래스가 그대로 동작합니다. */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* 표면 — 3단계 */
+    --background: 40 24% 98%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 40 20% 96%;
+    --surface-3: 38 18% 92%;
+
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 30 10% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 63%;
+    --popover-foreground: 30 10% 10%;
+
+    /* 전경 — 4단계 위계 */
+    --foreground: 30 10% 10%;
+    --foreground-muted: 33 7% 40%;
+    --foreground-subtle: 33 6% 52%;
+    --foreground-faint: 33 5% 68%;
+    --muted: 40 20% 96%;
+    --muted-foreground: 33 7% 40%;
+
+    /* 보더 — 2단계 */
+    --border: 36 14% 88%;
+    --border-strong: 36 12% 76%;
+    --input: 36 14% 84%;
+
+    /* 브랜드 액센트 — Brass Gold. 라이트에서는 어둡게 내려 대비를 확보합니다 */
+    --primary: 36 62% 40%;
+    --primary-foreground: 40 30% 98%;
+    --primary-muted: 38 62% 92%;
+    --ring: 36 62% 40%;
+
+    --secondary: 40 20% 95%;
+    --secondary-foreground: 30 10% 10%;
+    --accent: 38 20% 93%;
+    --accent-foreground: 30 10% 10%;
+
+    /* 상태 */
+    --success: 152 52% 34%;
+    --success-foreground: 40 30% 98%;
+    --warning: 34 88% 42%;
+    --warning-foreground: 40 30% 98%;
+    --destructive: 4 68% 48%;
+    --destructive-foreground: 40 30% 98%;
+    --info: 205 70% 42%;
+    --info-foreground: 40 30% 98%;
+
     --radius: 0.625rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
   }
 
   .dark:root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 70.9% 59.4%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 300 0% 45%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: 30 8% 4%;
+    --surface-1: 30 7% 7%;
+    --surface-2: 30 7% 10%;
+    --surface-3: 30 6% 14%;
+
+    --card: 30 7% 7%;
+    --card-foreground: 40 12% 96%;
+    --popover: 30 7% 10%;
+    --popover-foreground: 40 12% 96%;
+
+    --foreground: 40 12% 96%;
+    --foreground-muted: 35 7% 64%;
+    --foreground-subtle: 33 6% 46%;
+    --foreground-faint: 32 5% 32%;
+    --muted: 30 7% 12%;
+    --muted-foreground: 35 7% 64%;
+
+    --border: 32 6% 16%;
+    --border-strong: 32 6% 26%;
+    --input: 32 6% 20%;
+
+    --primary: 38 62% 60%;
+    --primary-foreground: 30 25% 8%;
+    --primary-muted: 38 55% 22%;
+    --ring: 38 62% 60%;
+
+    --secondary: 30 7% 12%;
+    --secondary-foreground: 40 12% 96%;
+    --accent: 30 7% 14%;
+    --accent-foreground: 40 12% 96%;
+
+    --success: 152 48% 48%;
+    --success-foreground: 152 60% 10%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 38 80% 10%;
+    --destructive: 4 72% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 205 72% 58%;
+    --info-foreground: 205 70% 10%;
+
+    --radius: 0.625rem;
+  }
+}
+
+/* 스켈레톤 쉬머: 배경을 화면에 고정해(background-attachment: fixed) 화면 안의 모든 스켈레톤이
+   한 줄기 빛으로 같이 흐른다. 움직임 줄이기 설정이면 멈춘다. */
+@layer components {
+  .cm-shimmer {
+    background-color: hsl(var(--surface-2));
+    background-image: linear-gradient(
+      100deg,
+      transparent 35%,
+      hsl(var(--foreground) / 0.07) 50%,
+      transparent 65%
+    );
+    background-size: 200vw 100%;
+    background-attachment: fixed;
+    animation: cm-shimmer 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes cm-shimmer {
+    from {
+      background-position: 100vw 0;
+    }
+    to {
+      background-position: -100vw 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-shimmer {
+      animation: none;
+    }
   }
 }

@@ -1,218 +1,126 @@
+import { SubPage } from '@/components/account/sub-page';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
-import { Stack, useRouter } from 'expo-router';
-import { ChevronLeftIcon, ChevronDownIcon, ChevronUpIcon, MailIcon, AlertCircleIcon, FileTextIcon } from 'lucide-react-native';
+import { cn } from '@/lib/utils';
+import { Alert } from '@/lib/utils/alert';
+import Constants from 'expo-constants';
+import { type Href, useRouter } from 'expo-router';
+import { ChevronDownIcon, ChevronRightIcon, MailIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { ScrollView, View, Linking, Alert } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
+
+const SUPPORT_EMAIL = 'kang3171611@naver.com';
+
+const FAQS: { question: string; answer: string }[] = [
+  {
+    question: 'ClassicMap은 무엇을 하는 앱인가요?',
+    answer:
+      '같은 곡의 같은 구간을 여러 연주자로 이어 들으며 비교하는 앱이에요. 작곡가·연주자·작품·공연 정보도 함께 볼 수 있어요.',
+  },
+  {
+    question: '비교는 어떻게 하나요?',
+    answer:
+      '비교 탭에서 작품을 고르면 구간 칩과 연주자 목록이 나와요. 연주자를 누르면 그 연주의 해당 구간만 재생되고, 데스크톱에서는 ←→ 키로 같은 지점에서 연주자를 바꿔 들을 수 있어요.',
+  },
+  {
+    question: '영상은 어디서 가져오나요?',
+    answer: '연주 영상은 YouTube 원본의 해당 구간이에요. 비교 화면의 "YouTube 원본" 링크로 전체 영상을 볼 수 있어요.',
+  },
+  {
+    question: '공연 정보는 어디서 오나요?',
+    answer: 'KOPIS 공연예술통합전산망의 공개 데이터를 매일 받아 와요. 예매는 각 예매처로 연결돼요.',
+  },
+  {
+    question: '레퍼토리는 무엇인가요?',
+    answer:
+      '작곡가·연주자·작품·공연에서 "레퍼토리에 담기"를 누르면 모이는 나만의 목록이에요. 로그인하면 어느 기기에서든 이어서 볼 수 있어요.',
+  },
+  {
+    question: '계정은 어떻게 삭제하나요?',
+    answer: '설정 > 계정 > 계정 삭제에서 지울 수 있어요. 지우면 별점과 레퍼토리가 모두 사라지고 되돌릴 수 없어요.',
+  },
+];
+
+function openMail(subject: string, body = '') {
+  const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  Linking.openURL(url).catch(() =>
+    Alert.alert('메일 앱을 열지 못했어요', `${SUPPORT_EMAIL}로 직접 보내 주세요.`)
+  );
+}
 
 export default function HelpScreen() {
   const router = useRouter();
-  const [expandedFaq, setExpandedFaq] = React.useState<number | null>(null);
-
-  const faqs = [
-    {
-      question: 'ClassicMap이란 무엇인가요?',
-      answer: 'ClassicMap은 클래식 음악 입문자를 위한 로드맵 서비스입니다. 다양한 아티스트, 공연 정보, 작곡가 정보를 제공하여 클래식 음악을 쉽게 접할 수 있도록 도와드립니다.'
-    },
-    {
-      question: '어떻게 아티스트를 검색하나요?',
-      answer: '홈 화면 상단의 검색창을 통해 아티스트 이름을 입력하거나, 아티스트 탭에서 카테고리별로 아티스트를 탐색할 수 있습니다.'
-    },
-    {
-      question: '영상 비교 기능은 어떻게 사용하나요?',
-      answer: '비교 탭에서 동일한 곡의 서로 다른 연주를 선택하여 나란히 비교할 수 있습니다. 여러 아티스트의 해석을 비교해보세요.'
-    },
-    {
-      question: '공연 정보는 어디서 가져오나요?',
-      answer: 'ClassicMap은 다양한 클래식 음악 공연장 및 공식 데이터베이스에서 정보를 수집하여 제공합니다.'
-    },
-    {
-      question: '계정을 어떻게 삭제하나요?',
-      answer: '설정 > 계정 관리 > 계정 삭제 메뉴에서 계정을 삭제할 수 있습니다. 계정 삭제 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.'
-    }
-  ];
-
-  const handleSendEmail = () => {
-    const email = 'kang3171611@naver.com';
-    const subject = 'ClassicMap 문의';
-    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-
-    Linking.canOpenURL(mailtoUrl).then((supported) => {
-      if (supported) {
-        Linking.openURL(mailtoUrl);
-      } else {
-        Alert.alert('이메일 앱을 열 수 없습니다', `직접 ${email}로 이메일을 보내주세요.`);
-      }
-    });
-  };
-
-  const handleReportProblem = () => {
-    const email = 'kang3171611@naver.com';
-    const subject = 'ClassicMap 문제 신고';
-    const body = '문제 내용:\n\n\n발생 시점:\n\n\n기기 정보:\n\n';
-    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-    Linking.canOpenURL(mailtoUrl).then((supported) => {
-      if (supported) {
-        Linking.openURL(mailtoUrl);
-      } else {
-        Alert.alert('이메일 앱을 열 수 없습니다', `직접 ${email}로 이메일을 보내주세요.`);
-      }
-    });
-  };
-
-  const toggleFaq = (index: number) => {
-    setExpandedFaq(expandedFaq === index ? null : index);
-  };
+  const [open, setOpen] = React.useState<number | null>(0);
+  const version = Constants.expoConfig?.version;
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTitle: '도움말 및 지원',
-          headerLeft: () => (
-            <Button
-              variant="ghost"
-              size="icon"
-              onPress={() => router.back()}
-              className="ml-2"
-            >
-              <Icon as={ChevronLeftIcon} className="size-6" />
-            </Button>
-          ),
-        }}
-      />
-      <ScrollView className="flex-1 bg-background">
-        <View className="gap-6 p-6">
-          {/* 앱 정보 섹션 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>ClassicMap</CardTitle>
-              <CardDescription>버전 1.0.0</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Text className="text-base leading-6">
-                클래식 음악 입문자를 위한 로드맵 서비스
-              </Text>
-              <Text className="text-sm text-muted-foreground mt-2">
-                아티스트, 공연, 작곡가 정보를 제공하여 클래식 음악의 세계를 쉽게 탐험할 수 있습니다.
-              </Text>
-            </CardContent>
-          </Card>
+    <SubPage title="도움말" description={version ? `ClassicMap ${version}` : undefined}>
+      <Text variant="headline">자주 묻는 질문</Text>
+      <View className="mt-2">
+        {FAQS.map((faq, index) => {
+          const expanded = open === index;
+          return (
+            <View key={faq.question} className={cn(index > 0 && 'border-t border-border')}>
+              <Pressable
+                onPress={() => setOpen(expanded ? null : index)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded }}
+                className="min-h-12 flex-row items-center gap-3 py-3">
+                <Text className="flex-1 text-body-sm font-semibold text-foreground">{faq.question}</Text>
+                <Icon
+                  as={ChevronDownIcon}
+                  size={16}
+                  className={cn('text-foreground-subtle', expanded && 'rotate-180')}
+                />
+              </Pressable>
+              {expanded ? (
+                <Text variant="bodySm" className="pb-4 text-foreground-muted">
+                  {faq.answer}
+                </Text>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
 
-          {/* FAQ 섹션 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>자주 묻는 질문</CardTitle>
-              <CardDescription>궁금하신 내용을 확인해보세요</CardDescription>
-            </CardHeader>
-            <CardContent className="gap-2">
-              {faqs.map((faq, index) => (
-                <View key={index}>
-                  {index > 0 && <Separator className="my-2" />}
-                  <Button
-                    variant="ghost"
-                    className="flex-col items-start px-0 py-2"
-                    onPress={() => toggleFaq(index)}
-                  >
-                    <View className="flex-row justify-between items-center w-full">
-                      <Text className="text-base font-medium flex-1">{faq.question}</Text>
-                      <Icon
-                        as={expandedFaq === index ? ChevronUpIcon : ChevronDownIcon}
-                        className="size-5 text-muted-foreground ml-2"
-                      />
-                    </View>
-                    {expandedFaq === index && (
-                      <Text className="text-sm text-muted-foreground mt-2 leading-6">
-                        {faq.answer}
-                      </Text>
-                    )}
-                  </Button>
-                </View>
-              ))}
-            </CardContent>
-          </Card>
+      <Text variant="headline" className="mt-10">
+        문의
+      </Text>
+      <Text variant="bodySm" className="mt-1 text-foreground-muted">
+        {`답은 ${SUPPORT_EMAIL}로 보내 드려요.`}
+      </Text>
+      <View className="mt-4 flex-row flex-wrap gap-2">
+        <Button className="rounded-full" onPress={() => openMail('ClassicMap 문의')}>
+          <Icon as={MailIcon} size={15} className="text-primary-foreground" />
+          <Text>메일로 문의하기</Text>
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-full"
+          onPress={() => openMail('ClassicMap 문제 신고', '문제 내용:\n\n\n발생 시점:\n\n\n기기 정보:\n\n')}>
+          <Text>문제 신고하기</Text>
+        </Button>
+      </View>
 
-          {/* 문의하기 섹션 */}
-          <Card>
-            <CardHeader>
-              <View className="flex-row items-center gap-2">
-                <Icon as={MailIcon} className="size-5 text-foreground" />
-                <CardTitle>문의하기</CardTitle>
-              </View>
-              <CardDescription>서비스 이용 중 문의사항이 있으신가요?</CardDescription>
-            </CardHeader>
-            <CardContent className="gap-4">
-              <View className="gap-2">
-                <Text className="text-sm text-muted-foreground">이메일</Text>
-                <Text className="text-base">kang3171611@naver.com</Text>
-              </View>
-              <Button onPress={handleSendEmail} className="w-full">
-                <View className="flex-row items-center gap-2">
-                  <Icon as={MailIcon} className="size-4 text-primary-foreground" />
-                  <Text className="text-primary-foreground">이메일 보내기</Text>
-                </View>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* 문제 신고 섹션 */}
-          <Card>
-            <CardHeader>
-              <View className="flex-row items-center gap-2">
-                <Icon as={AlertCircleIcon} className="size-5 text-foreground" />
-                <CardTitle>문제 신고</CardTitle>
-              </View>
-              <CardDescription>버그나 오류를 발견하셨나요?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                onPress={handleReportProblem}
-                className="w-full"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Icon as={AlertCircleIcon} className="size-4" />
-                  <Text>버그 리포트 보내기</Text>
-                </View>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* 약관 및 정책 링크 */}
-          <Card>
-            <CardHeader>
-              <View className="flex-row items-center gap-2">
-                <Icon as={FileTextIcon} className="size-5 text-foreground" />
-                <CardTitle>약관 및 정책</CardTitle>
-              </View>
-            </CardHeader>
-            <CardContent className="gap-2">
-              <Button
-                variant="ghost"
-                className="flex-row justify-between items-center px-4"
-                onPress={() => router.push('/terms-of-service')}
-              >
-                <Text className="text-base">이용약관 (EULA)</Text>
-                <Icon as={ChevronLeftIcon} className="size-5 text-muted-foreground rotate-180" />
-              </Button>
-              <Separator />
-              <Button
-                variant="ghost"
-                className="flex-row justify-between items-center px-4"
-                onPress={() => router.push('/privacy-policy')}
-              >
-                <Text className="text-base">개인정보 처리방침</Text>
-                <Icon as={ChevronLeftIcon} className="size-5 text-muted-foreground rotate-180" />
-              </Button>
-            </CardContent>
-          </Card>
-        </View>
-      </ScrollView>
-    </>
+      <Text variant="headline" className="mt-10">
+        약관 및 정책
+      </Text>
+      <View className="mt-2">
+        {[
+          { label: '이용약관', href: '/terms-of-service' },
+          { label: '개인정보 처리방침', href: '/privacy-policy' },
+        ].map((item, index) => (
+          <Pressable
+            key={item.href}
+            onPress={() => router.push(item.href as Href)}
+            accessibilityRole="link"
+            className={cn('min-h-12 flex-row items-center justify-between', index > 0 && 'border-t border-border')}>
+            <Text className="text-body-sm text-foreground">{item.label}</Text>
+            <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" />
+          </Pressable>
+        ))}
+      </View>
+    </SubPage>
   );
 }

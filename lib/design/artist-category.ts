@@ -16,12 +16,15 @@ export const ARTIST_CATEGORY_CODES = [
   'bassoonist',
   'saxophonist',
   'hornist',
+  'trumpeter',
   'percussionist',
   'recorder_player',
   'gambist',
   'vocalist',
   'conductor',
   'orchestra',
+  'choir',
+  'ensemble',
   'other',
 ] as const;
 
@@ -41,12 +44,15 @@ const ARTIST_CATEGORY_LABELS: Record<ArtistCategoryCode, string> = {
   bassoonist: '바순',
   saxophonist: '색소폰',
   hornist: '호른',
+  trumpeter: '트럼펫',
   percussionist: '타악기',
   recorder_player: '리코더',
   gambist: '비올라 다 감바',
   vocalist: '성악',
   conductor: '지휘',
   orchestra: '오케스트라',
+  choir: '합창',
+  ensemble: '실내악',
   other: '그 외',
 };
 

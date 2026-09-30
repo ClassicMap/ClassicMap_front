@@ -1,1321 +1,646 @@
-import { Text } from '@/components/ui/text';
-import {
-  View,
-  ScrollView,
-  FlatList,
-  TouchableOpacity,
-  Dimensions,
-  Image,
-  TextInput,
-  Modal,
-  Pressable,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import * as React from 'react';
-import { useState, useRef } from 'react';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  interpolate,
-  Extrapolate,
-  FadeIn,
-  FadeOut,
-  SlideInDown,
-  SlideOutDown,
-} from 'react-native-reanimated';
-import { GestureHandlerRootView, PanGestureHandler } from 'react-native-gesture-handler';
-import { XIcon, RefreshCw, Plus } from 'lucide-react-native';
-import { Icon } from '@/components/ui/icon';
-import { getAllPeriods, type PeriodInfo } from '@/lib/data/mockDTO';
-import type { Composer } from '@/lib/types/models';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/hooks/useAuth';
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
-
-import { getImageUrl } from '@/lib/utils/image';
-import { useColorScheme, Platform } from 'react-native';
+import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import {
+  ComposerGantt,
+  GANTT_DOT_SPACE,
+  GANTT_LANES_TOP,
+  GANTT_OVERFLOW_ROW,
+  GANTT_PORTRAIT_SPACE,
+  GANTT_ROW_HEIGHT,
+  type OverflowGroup,
+} from '@/components/timeline/composer-gantt';
+import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/components/timeline/density-strip';
+import { Button } from '@/components/ui/button';
+import { Chip, ChipDot } from '@/components/ui/chip';
+import { EmptyState } from '@/components/ui/empty-state';
+import { EntityThumb } from '@/components/ui/entity-thumb';
+import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { PERIODS } from '@/lib/data/periods';
+import { getEraForeground } from '@/lib/design/era-palette';
+import {
+  decadeDensity,
+  estimateLabelWidth,
+  placeLabeledSpans,
+  yearTicks,
+  type LabeledSpanInput,
+} from '@/lib/design/timeline-layout';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useAllComposers } from '@/lib/query/hooks/useComposers';
+import type { Composer, Period } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertCircleIcon, ChevronLeftIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
+import * as React from 'react';
+import {
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const TIMELINE_HEIGHT = SCREEN_HEIGHT * 0.4;
-const COMPOSER_AVATAR_SIZE = 45;
-const TIMELINE_PADDING = 20;
-const VERTICAL_LANES = 5; // 레인 수 증가
+type Scope = 'major' | 'comparable' | 'all';
+
+const SCOPES: { key: Scope; label: string }[] = [
+  { key: 'major', label: '주요 작곡가' },
+  { key: 'comparable', label: '비교 있는 작곡가' },
+  { key: 'all', label: '전체' },
+];
+
+/**
+ * 줌 단계: 기본 폭(데스크톱은 화면 폭에 맞춤)에 곱하는 배율.
+ * 누구를 보여 줄지는 위 칩이 정하고, 줌은 가로 해상도만 바꾼다.
+ * 줄 수는 화면 높이로 묶고, 못 들어간 작곡가는 우선순위가 낮은 쪽부터 시대별 "+N"으로 모은다.
+ */
+const ZOOM_MULTIPLIERS = [1, 2, 3.5, 6] as const;
+const PAD_LEFT = 24;
+const PAD_RIGHT = 24;
+/** 모바일은 화면 폭에 맞추면 이름이 안 읽힌다. 이보다 좁히지 않고 가로 스크롤을 둔다 */
+const MIN_PX_PER_YEAR = 1.5;
+const LABEL_GAP_PX = 8;
+const MIN_LANES = 8;
+const MAX_LANES = 26;
+/** 밀도 띠 위 설명 줄(16) + 띠 + 차트와의 간격 */
+const STRIP_BLOCK = 16 + DENSITY_STRIP_HEIGHT + 10;
+
+/** 줄이 모자랄 때 먼저 자리를 받는 순서: 초점 시대 → S → A → 비교 영상 → 나머지 */
+function priorityOf(composer: Composer, hasComparison: boolean, focusEraName: string | null): number {
+  const base =
+    composer.tier === 'S' ? 0 : composer.tier === 'A' ? 1 : hasComparison ? 2 : composer.tier === 'B' ? 3 : 4;
+  return focusEraName !== null && composer.period === focusEraName ? base - 10 : base;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** 시대별 "+N" 칩을 시대 가운데에 두되 서로 겹치지 않게 민다 */
+function layoutOverflowGroups(
+  overflow: readonly Composer[],
+  eras: readonly Period[],
+  x: (year: number) => number,
+  fromYear: number,
+  toYear: number,
+  chartWidth: number
+): OverflowGroup[] {
+  const counts = new Map<string, number>();
+  for (const composer of overflow) counts.set(composer.period, (counts.get(composer.period) ?? 0) + 1);
+  const groups: OverflowGroup[] = [];
+  for (const era of eras) {
+    const count = counts.get(era.name) ?? 0;
+    if (count === 0) continue;
+    const width = estimateLabelWidth(`${era.name} +${count}`, 12) + 30;
+    const center = x((Math.max(era.startYear, fromYear) + Math.min(era.endYear, toYear)) / 2);
+    groups.push({ eraId: era.id, eraName: era.name, count, width, left: center - width / 2 });
+  }
+  groups.sort((a, b) => a.left - b.left);
+  for (let index = 0; index < groups.length; index += 1) {
+    const previous = groups[index - 1];
+    const minLeft = previous ? previous.left + previous.width + 6 : 4;
+    groups[index].left = clamp(Math.max(groups[index].left, minLeft), 4, chartWidth - groups[index].width - 4);
+  }
+  for (let index = groups.length - 2; index >= 0; index -= 1) {
+    groups[index].left = Math.min(groups[index].left, groups[index + 1].left - groups[index].width - 6);
+  }
+  return groups;
+}
 
 export default function TimelineScreen() {
+  const scrollInsets = useTabScrollInsets();
   const router = useRouter();
+  // 홈 "시대로 듣기"에서 오면 그 시대에 초점을 맞춰 연다
+  const { era: focusEraParam } = useLocalSearchParams<{ era?: string }>();
+  const chartScrollRef = React.useRef<ScrollView>(null);
   const { canEdit } = useAuth();
-  const systemColorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(false);
-  const scrollX = useSharedValue(0);
-  const scrollViewRef = useRef<ScrollView>(null);
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+  const { height: windowHeight } = useWindowDimensions();
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const [scope, setScope] = React.useState<Scope>('major');
+  const [zoom, setZoom] = React.useState(0);
+  const [focusEraId, setFocusEraId] = React.useState<string | null>(null);
+  const [expanded, setExpanded] = React.useState(false);
+  const [selectedId, setSelectedId] = React.useState<number | null>(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [viewportWidth, setViewportWidth] = React.useState(0);
+  const [pageHeight, setPageHeight] = React.useState(0);
+  const [headerHeight, setHeaderHeight] = React.useState(0);
+  const [scrollX, setScrollX] = React.useState(0);
+  const pendingCenterRef = React.useRef<number | null>(null);
+  const appliedParamRef = React.useRef<string | null>(null);
 
-  // 웹과 네이티브 모두에서 다크모드 감지
-  React.useEffect(() => {
-    if (Platform.OS === 'web') {
-      const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      setIsDark(darkModeMediaQuery.matches);
+  const composersQuery = useAllComposers();
+  const comparableQuery = useComparableComposers();
+  // 작곡가 id → 비교할 수 있는 작품 수
+  const comparable = React.useMemo<ReadonlyMap<number, number> | undefined>(
+    () =>
+      comparableQuery.data
+        ? new Map(comparableQuery.data.composers.map((entry) => [entry.composerId, entry.pieceCount]))
+        : undefined,
+    [comparableQuery.data]
+  );
+  const currentYear = new Date().getFullYear();
 
-      const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-      darkModeMediaQuery.addEventListener('change', handler);
-      return () => darkModeMediaQuery.removeEventListener('change', handler);
-    } else {
-      setIsDark(systemColorScheme === 'dark');
-    }
-  }, [systemColorScheme]);
-  const [currentEraIndex, setCurrentEraIndex] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEra, setSelectedEra] = useState<PeriodInfo | null>(null);
-  const [showEraModal, setShowEraModal] = useState(false);
-  const [showComposerForm, setShowComposerForm] = useState(false);
-  const [selectedComposerArea, setSelectedComposerArea] = useState<{
-    composers: any[];
-    era: PeriodInfo;
-    centerYear: number;
-  } | null>(null);
-  const [showComposerAreaModal, setShowComposerAreaModal] = useState(false);
-  const [rotationIndex, setRotationIndex] = useState(0);
+  const validComposers = React.useMemo(
+    () => (composersQuery.data ?? []).filter((c) => Number.isFinite(c.birthYear) && c.birthYear > 0),
+    [composersQuery.data]
+  );
+  const composers = React.useMemo(() => {
+    if (scope === 'major') return validComposers.filter((c) => c.tier === 'S' || c.tier === 'A');
+    if (scope === 'comparable') return validComposers.filter((c) => comparable?.has(c.id));
+    return validComposers;
+  }, [validComposers, scope, comparable]);
 
-  const ERAS = React.useMemo(() => getAllPeriods(), []);
+  // 축은 칩과 상관없이 전체 작곡가 범위로 고정한다. 칩을 바꿔도 눈금이 흔들리지 않고 밀도 띠와 맞는다
+  const fromYear =
+    validComposers.length > 0
+      ? Math.floor((Math.min(...validComposers.map((c) => c.birthYear)) - 10) / 50) * 50
+      : 1600;
+  const toYear = Math.max(currentYear, ...validComposers.map((c) => c.deathYear ?? currentYear));
+  const span = Math.max(1, toYear - fromYear);
 
-  // 전체 작곡가 한번에 로드 (타임라인용)
-  const {
-    data: composers = [],
-    isLoading: loading,
-    error: queryError,
-    refetch,
-    isRefetching: refreshing,
-  } = useAllComposers();
+  const fitPxPerYear = viewportWidth > 0 ? (viewportWidth - PAD_LEFT - PAD_RIGHT) / span : MIN_PX_PER_YEAR;
+  const basePxPerYear = wide ? fitPxPerYear : Math.max(fitPxPerYear, MIN_PX_PER_YEAR);
+  const pxPerYearAt = React.useCallback(
+    (level: number) => basePxPerYear * ZOOM_MULTIPLIERS[clamp(level, 0, ZOOM_MULTIPLIERS.length - 1)],
+    [basePxPerYear]
+  );
+  const ppy = pxPerYearAt(zoom);
+  const x = React.useCallback((year: number) => PAD_LEFT + (year - fromYear) * ppy, [fromYear, ppy]);
+  const chartWidth = Math.max(viewportWidth, PAD_LEFT + span * ppy + PAD_RIGHT);
+  const scrollable = chartWidth > viewportWidth + 1;
 
-  // 에러 처리
-  const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
+  // 화면 높이에서 머리·밀도 띠·차트 머리를 빼고 남는 만큼만 줄을 쓴다
+  const laneBudget =
+    pageHeight > 0 && headerHeight > 0
+      ? pageHeight - (wide ? 8 : 12) - headerHeight - STRIP_BLOCK - GANTT_LANES_TOP - GANTT_OVERFLOW_ROW - 20
+      : windowHeight * 0.45;
+  const maxLanes = expanded
+    ? Number.POSITIVE_INFINITY
+    : clamp(Math.floor(laneBudget / GANTT_ROW_HEIGHT), MIN_LANES, MAX_LANES);
 
-  // 새로고침 핸들러
-  const onRefresh = React.useCallback(() => {
-    refetch();
-  }, [refetch]);
+  const eras = React.useMemo(() => PERIODS.filter((era) => era.endYear > fromYear), [fromYear]);
+  const focusEra = eras.find((era) => era.id === focusEraId) ?? null;
 
-  // 2초마다 로테이션 인덱스 변경
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setRotationIndex((prev) => prev + 1);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const COMPOSERS = React.useMemo(() => {
-    return composers.map((c) => {
-      const imageUrl = c.avatarUrl || c.coverImageUrl;
+  const { placed, overflow, laneCount } = React.useMemo(() => {
+    const inputs: LabeledSpanInput<Composer>[] = composers.map((composer) => {
+      const hasComparison = (comparable?.get(composer.id) ?? 0) > 0;
       return {
-        id: c.id,
-        name: c.name,
-        fullName: c.fullName || c.name,
-        birthYear: c.birthYear || 0,
-        deathYear: c.deathYear ?? null,
-        period: c.period,
-        nationality: c.nationality || '',
-        image: imageUrl,
+        item: composer,
+        startX: x(composer.birthYear),
+        endX: x(Math.max(composer.birthYear + 1, composer.deathYear ?? currentYear)),
+        labelWidth:
+          estimateLabelWidth(composer.name) +
+          (composer.tier === 'S' ? GANTT_PORTRAIT_SPACE : 0) +
+          (hasComparison ? GANTT_DOT_SPACE : 0) +
+          2,
+        priority: priorityOf(composer, hasComparison, focusEra?.name ?? null),
       };
     });
-  }, [composers]);
+    return placeLabeledSpans(inputs, { gapPx: LABEL_GAP_PX, maxLanes, rightEdge: chartWidth - 4 });
+  }, [composers, comparable, x, currentYear, focusEra, maxLanes, chartWidth]);
 
-  // 타임라인 그래프 계산 최적화 - 무거운 계산들을 useMemo로 캐싱
-  const timelineCalculations = React.useMemo(() => {
-    // 각 시대별 작곡가들을 그룹화하고 정렬
-    const composersByEra: { [key: string]: typeof COMPOSERS } = {};
-    ERAS.forEach((era) => {
-      composersByEra[era.id] = COMPOSERS.filter((c) => {
-        const periodMap: { [key: string]: string } = {
-          중세: 'medieval',
-          르네상스: 'renaissance',
-          바로크: 'baroque',
-          고전주의: 'classical',
-          낭만주의: 'romantic',
-          근현대: 'modern',
-        };
-        return periodMap[c.period] === era.id;
-      }).sort((a, b) => a.birthYear - b.birthYear);
-    });
+  const overflowGroups = React.useMemo(
+    () => layoutOverflowGroups(overflow, eras, x, fromYear, toYear, chartWidth),
+    [overflow, eras, x, fromYear, toYear, chartWidth]
+  );
+  const density = React.useMemo(
+    () => decadeDensity(validComposers, { fromYear, toYear, currentYear }),
+    [validComposers, fromYear, toYear, currentYear]
+  );
+  const eraOrder = React.useMemo(() => PERIODS.map((era) => era.name), []);
+  const ticks = yearTicks(fromYear, toYear, ppy);
 
-    // 전체 연도 범위 계산
-    const globalMinYear = Math.min(...ERAS.map((e) => e.startYear));
-    const globalMaxYear = Math.max(...ERAS.map((e) => e.endYear));
+  const yearAt = (px: number) => fromYear + (px - PAD_LEFT) / ppy;
+  const stripViewport = scrollable
+    ? { startYear: yearAt(scrollX), endYear: yearAt(scrollX + viewportWidth) }
+    : null;
 
-    // 각 시대의 작곡가 밀도를 고려한 픽셀 계산
-    const basePixelPerYear = 4;
-    const emptyPixelPerYear = 1;
-    const composerDensityFactor = 100;
-
-    // 각 연도별로 작곡가가 있는지 확인
-    const hasComposerInYear: { [year: number]: boolean } = {};
-    COMPOSERS.forEach((composer) => {
-      // 생존 작곡가는 사망 연도가 비어 있어 현재 연도까지 채운다
-      const lastYear = composer.deathYear ?? new Date().getFullYear();
-      for (let year = composer.birthYear; year <= lastYear; year++) {
-        hasComposerInYear[year] = true;
-      }
-    });
-
-    // 각 연도별로 최대 픽셀 밀도 계산
-    const pixelPerYearMap: { [year: number]: number } = {};
-    for (let year = globalMinYear; year <= globalMaxYear; year++) {
-      if (!hasComposerInYear[year]) {
-        pixelPerYearMap[year] = emptyPixelPerYear;
-        continue;
-      }
-
-      let maxPixelPerYear = basePixelPerYear;
-
-      ERAS.forEach((era) => {
-        if (year >= era.startYear && year <= era.endYear) {
-          const yearSpan = era.endYear - era.startYear;
-          const composerCount = composersByEra[era.id].length;
-          const density = composerCount / yearSpan;
-          const pixelForThisEra = basePixelPerYear + density * composerDensityFactor;
-          maxPixelPerYear = Math.max(maxPixelPerYear, pixelForThisEra);
-        }
-      });
-
-      pixelPerYearMap[year] = maxPixelPerYear;
-    }
-
-    // 각 시대의 실제 위치와 넓이 계산
-    const eraPositions: { [key: string]: { start: number; width: number } } = {};
-
-    ERAS.forEach((era) => {
-      let width = 0;
-      for (let year = era.startYear; year < era.endYear; year++) {
-        width += pixelPerYearMap[year] || basePixelPerYear;
-      }
-
-      let start = 0;
-      for (let year = globalMinYear; year < era.startYear; year++) {
-        start += pixelPerYearMap[year] || basePixelPerYear;
-      }
-
-      eraPositions[era.id] = { start, width };
-    });
-
-    // 전체 너비 계산
-    let totalWidth = 0;
-    for (let year = globalMinYear; year < globalMaxYear; year++) {
-      totalWidth += pixelPerYearMap[year] || basePixelPerYear;
-    }
-
-    // 각 작곡가의 위치 및 레인 계산
-    const composerPositions: { [key: number]: { x: number; lane: number; crowded: boolean } } = {};
-
-    ERAS.forEach((era) => {
-      const composers = composersByEra[era.id];
-      const eraStart = eraPositions[era.id].start;
-      const eraWidth = eraPositions[era.id].width;
-
-      const composersWithX: Array<{ composer: (typeof COMPOSERS)[0]; x: number }> = [];
-      composers.forEach((composer) => {
-        const yearRatio = (composer.birthYear - era.startYear) / (era.endYear - era.startYear);
-        const x = eraStart + eraWidth * yearRatio;
-        composersWithX.push({ composer, x });
-      });
-
-      composersWithX.sort((a, b) => a.x - b.x);
-
-      const collisionRange = 60;
-
-      composersWithX.forEach(({ composer, x }) => {
-        const nearbyComposers = Object.entries(composerPositions).filter(([id, pos]) => {
-          return Math.abs(pos.x - x) < collisionRange;
-        });
-
-        const usedLanes = new Set(nearbyComposers.map(([id, pos]) => pos.lane));
-
-        let lane = 0;
-        while (usedLanes.has(lane) && lane < VERTICAL_LANES) {
-          lane++;
-        }
-        if (lane >= VERTICAL_LANES) {
-          lane = Math.floor(Math.random() * VERTICAL_LANES);
-        }
-
-        const isCrowded = nearbyComposers.length > 0;
-        composerPositions[composer.id] = { x, lane, crowded: isCrowded };
-      });
-    });
-
-    return {
-      composersByEra,
-      eraPositions,
-      totalWidth,
-      composerPositions,
-    };
-  }, [COMPOSERS, ERAS]);
-
-  const handleComposerPress = React.useCallback(
-    (composer: any) => {
-      router.push(`/composer/${composer.id}`);
+  const scrollToYear = React.useCallback(
+    (year: number, level: number, animated: boolean) => {
+      const targetPpy = pxPerYearAt(level);
+      const targetWidth = Math.max(viewportWidth, PAD_LEFT + span * targetPpy + PAD_RIGHT);
+      const left = clamp(
+        PAD_LEFT + (year - fromYear) * targetPpy - viewportWidth / 2,
+        0,
+        Math.max(0, targetWidth - viewportWidth)
+      );
+      chartScrollRef.current?.scrollTo({ x: left, animated });
+      setScrollX(left);
     },
-    [router]
+    [pxPerYearAt, viewportWidth, span, fromYear]
   );
 
-  const handleComposerAreaPress = React.useCallback(
-    (composer: any, nearbyComposers: any[], era: PeriodInfo) => {
-      setSelectedComposerArea({
-        composers: [composer, ...nearbyComposers],
-        era,
-        centerYear: composer.birthYear,
-      });
-      setShowComposerAreaModal(true);
-    },
-    []
-  );
-
-  const renderTimelineGraph = () => {
-    // useMemo로 캐싱된 계산 결과 사용
-    const { composersByEra, eraPositions, totalWidth, composerPositions } = timelineCalculations;
-
-    return (
-      <View style={{ height: TIMELINE_HEIGHT }}>
-        <TouchableOpacity
-          onPress={() => {
-            setSelectedEra(ERAS[currentEraIndex]);
-            setShowEraModal(true);
-          }}
-          activeOpacity={0.8}>
-          <View className="items-center justify-center border-b border-border bg-card/50 py-4">
-            <Text className="text-2xl font-bold" style={{ color: ERAS[currentEraIndex].color }}>
-              {ERAS[currentEraIndex].name}
-            </Text>
-            <Text
-              className="text-sm font-semibold"
-              style={{ color: ERAS[currentEraIndex].color, opacity: 0.7 }}>
-              {ERAS[currentEraIndex].period}
-            </Text>
-            <Text className="mt-1 text-xs text-muted-foreground">탭하여 자세히 보기</Text>
-          </View>
-        </TouchableOpacity>
-
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          showsVerticalScrollIndicator={false}
-          decelerationRate="normal"
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            scrollX.value = e.nativeEvent.contentOffset.x;
-            const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
-            const offsetX = contentOffset.x;
-
-            // Update current era based on scroll position
-            ERAS.forEach((era, index) => {
-              const { start, width } = eraPositions[era.id];
-              const eraEnd = start + width;
-              const viewCenter = offsetX + SCREEN_WIDTH / 2;
-
-              if (viewCenter >= start && viewCenter <= eraEnd) {
-                setCurrentEraIndex(index);
-              }
-            });
-          }}>
-          <ScrollView showsVerticalScrollIndicator={false} scrollEnabled={true} style={{ flex: 1 }}>
-            <View style={{ width: totalWidth, paddingHorizontal: TIMELINE_PADDING }}>
-              {/* Era backgrounds */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: TIMELINE_HEIGHT - 60,
-                  flexDirection: 'row',
-                }}>
-                {ERAS.map((era) => {
-                  const { start, width } = eraPositions[era.id];
-
-                  return (
-                    <View
-                      key={era.id}
-                      style={{
-                        position: 'absolute',
-                        left: start,
-                        width: width,
-                        height: TIMELINE_HEIGHT - 60,
-                        backgroundColor: era.color + '15',
-                        borderLeftWidth: 2,
-                        borderRightWidth: 2,
-                        borderColor: era.color + '40',
-                      }}
-                    />
-                  );
-                })}
-              </View>
-
-              {/* Timeline axis */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: (TIMELINE_HEIGHT - 60) / 2,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  backgroundColor: '#888',
-                  opacity: 0.3,
-                }}
-              />
-
-              {/* Year markers */}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: (TIMELINE_HEIGHT - 60) / 2 + 10,
-                  left: 0,
-                  right: 0,
-                }}>
-                {(() => {
-                  const interval = 20;
-                  const allMarkers: React.ReactNode[] = [];
-                  const renderedYears = new Set<number>();
-
-                  ERAS.forEach((era) => {
-                    const { start, width } = eraPositions[era.id];
-                    const startYear = Math.floor(era.startYear / interval) * interval;
-                    const endYear = Math.ceil(era.endYear / interval) * interval;
-
-                    for (let year = startYear; year <= endYear; year += interval) {
-                      if (year < era.startYear || year > era.endYear) continue;
-                      if (renderedYears.has(year)) continue;
-
-                      renderedYears.add(year);
-                      const yearRatio = (year - era.startYear) / (era.endYear - era.startYear);
-                      const x = start + width * yearRatio;
-
-                      allMarkers.push(
-                        <View
-                          key={`${year}`}
-                          style={{
-                            position: 'absolute',
-                            left: x,
-                            alignItems: 'center',
-                          }}>
-                          <View
-                            style={{
-                              width: 2,
-                              height: 10,
-                              backgroundColor: era.color,
-                              opacity: 0.7,
-                            }}
-                          />
-                          <Text
-                            style={{
-                              fontSize: 9,
-                              color: era.color,
-                              opacity: 0.9,
-                              fontWeight: '700',
-                              marginTop: 3,
-                            }}>
-                            {year}
-                          </Text>
-                        </View>
-                      );
-                    }
-                  });
-
-                  return allMarkers;
-                })()}
-              </View>
-
-              {/* Composers on timeline */}
-              {(() => {
-                // 타임라인 높이 범위 계산
-                const timelineMinY = 0;
-                const timelineMaxY = TIMELINE_HEIGHT - 60;
-
-                // 각 x 위치별로 작곡가들을 그룹화
-                const composersByXPosition: { [key: number]: typeof COMPOSERS } = {};
-
-                COMPOSERS.forEach((composer) => {
-                  const position = composerPositions[composer.id];
-                  if (!position) return;
-
-                  const { x } = position;
-                  const xKey = Math.round(x / 10) * 10; // 10px 단위로 그룹화
-
-                  if (!composersByXPosition[xKey]) {
-                    composersByXPosition[xKey] = [];
-                  }
-                  composersByXPosition[xKey].push(composer);
-                });
-
-                // 각 위치별로 표시할 작곡가와 숨길 작곡가 결정
-                const composerGroups: {
-                  [key: string]: { visible: typeof COMPOSERS; hidden: typeof COMPOSERS };
-                } = {};
-                const processedComposers = new Set<number>();
-
-                Object.entries(composersByXPosition).forEach(([xKey, composersAtX]) => {
-                  if (composersAtX.length === 0) return;
-
-                  // Y 위치별로 정렬
-                  const composersWithY = composersAtX
-                    .map((c) => {
-                      const position = composerPositions[c.id];
-                      if (!position) return null;
-
-                      const { lane } = position;
-                      const laneHeight = timelineMaxY / VERTICAL_LANES;
-                      const y = lane * laneHeight + laneHeight / 2 - timelineMaxY / 2;
-
-                      return { composer: c, y, position };
-                    })
-                    .filter(Boolean) as Array<{ composer: any; y: number; position: any }>;
-
-                  composersWithY.sort((a, b) => a.y - b.y);
-
-                  // 타임라인 범위 내에 있는 작곡가들
-                  const visibleComposers: typeof COMPOSERS = [];
-                  const hiddenComposers: typeof COMPOSERS = [];
-
-                  composersWithY.forEach(({ composer, y }) => {
-                    const topY = y - COMPOSER_AVATAR_SIZE / 2;
-                    const bottomY = y + COMPOSER_AVATAR_SIZE / 2;
-
-                    // 완전히 범위 안에 있거나, 일부라도 보이면 visible로
-                    if (
-                      topY >= timelineMinY - COMPOSER_AVATAR_SIZE &&
-                      bottomY <= timelineMaxY + COMPOSER_AVATAR_SIZE
-                    ) {
-                      // 이미 visible에 있는 작곡가와 겹치는지 확인
-                      const overlaps = visibleComposers.some((vc) => {
-                        const vcPos = composerPositions[vc.id];
-                        if (!vcPos) return false;
-                        const vcLaneHeight = timelineMaxY / VERTICAL_LANES;
-                        const vcY = vcPos.lane * vcLaneHeight + vcLaneHeight / 2 - timelineMaxY / 2;
-                        return Math.abs(y - vcY) < COMPOSER_AVATAR_SIZE * 0.8;
-                      });
-
-                      if (overlaps) {
-                        hiddenComposers.push(composer);
-                      } else {
-                        visibleComposers.push(composer);
-                      }
-                    } else {
-                      // 범위 밖이면 hidden
-                      hiddenComposers.push(composer);
-                    }
-                  });
-
-                  // 최소 1명은 보여야 함
-                  if (visibleComposers.length === 0 && composersWithY.length > 0) {
-                    visibleComposers.push(composersWithY[0].composer);
-                    hiddenComposers.splice(0, 1);
-                  }
-
-                  visibleComposers.forEach((c) => processedComposers.add(c.id));
-                  hiddenComposers.forEach((c) => processedComposers.add(c.id));
-
-                  if (visibleComposers.length > 0) {
-                    composerGroups[xKey] = { visible: visibleComposers, hidden: hiddenComposers };
-                  }
-                });
-
-                return Object.entries(composerGroups).map(([groupKey, { visible, hidden }]) => {
-                  if (visible.length === 0) return null;
-
-                  const hasHidden = hidden.length > 0;
-                  const allComposers = [...visible, ...hidden];
-
-                  // 로테이션: visible 작곡가들 중에서 순환
-                  const currentComposerIndex =
-                    hasHidden || visible.length > 1 ? rotationIndex % allComposers.length : 0;
-                  const displayComposer = allComposers[currentComposerIndex];
-
-                  const periodMap: { [key: string]: string } = {
-                    중세: 'medieval',
-                    르네상스: 'renaissance',
-                    바로크: 'baroque',
-                    고전주의: 'classical',
-                    낭만주의: 'romantic',
-                    근현대: 'modern',
-                  };
-                  const eraId = periodMap[displayComposer.period];
-                  const era = ERAS.find((e) => e.id === eraId);
-                  if (!era) return null;
-
-                  const position = composerPositions[visible[0].id]; // 위치는 첫번째 작곡가 기준
-                  if (!position) return null;
-
-                  const { x, lane } = position;
-                  const laneHeight = (TIMELINE_HEIGHT - 60) / VERTICAL_LANES;
-                  const verticalOffset =
-                    lane * laneHeight + laneHeight / 2 - (TIMELINE_HEIGHT - 60) / 2;
-
-                  return (
-                    <TouchableOpacity
-                      key={groupKey}
-                      onPress={() => {
-                        if (hasHidden || visible.length > 1) {
-                          handleComposerAreaPress(
-                            displayComposer,
-                            allComposers.filter((c) => c.id !== displayComposer.id),
-                            era
-                          );
-                        } else {
-                          handleComposerPress(displayComposer);
-                        }
-                      }}
-                      activeOpacity={0.8}
-                      style={{
-                        position: 'absolute',
-                        left: x - COMPOSER_AVATAR_SIZE / 2,
-                        top: (TIMELINE_HEIGHT - 60) / 2 - COMPOSER_AVATAR_SIZE / 2 + verticalOffset,
-                        zIndex: 10,
-                      }}>
-                      <View
-                        style={{
-                          alignItems: 'center',
-                          gap: 4,
-                          zIndex: 10,
-                        }}>
-                        {/* 메인 아바타 (로테이션) */}
-                        <View
-                          style={{
-                            position: 'relative',
-                            width: COMPOSER_AVATAR_SIZE,
-                            height: COMPOSER_AVATAR_SIZE,
-                          }}>
-                          <Animated.View
-                            key={`${groupKey}-${currentComposerIndex}`}
-                            entering={FadeIn.duration(400)}
-                            exiting={FadeOut.duration(300)}
-                            style={{
-                              position: 'absolute',
-                              left: 0,
-                              top: 0,
-                              width: COMPOSER_AVATAR_SIZE,
-                              height: COMPOSER_AVATAR_SIZE,
-                            }}>
-                            {hasHidden || visible.length > 1 ? (
-                              <>
-                                {/* 뒤에 희미한 아바타 (다음 작곡가 힌트) */}
-                                {allComposers.length > 1 && (
-                                  <View
-                                    style={{
-                                      position: 'absolute',
-                                      left: 4,
-                                      top: 4,
-                                      width: COMPOSER_AVATAR_SIZE,
-                                      height: COMPOSER_AVATAR_SIZE,
-                                      borderRadius: COMPOSER_AVATAR_SIZE / 2,
-                                      borderWidth: 2,
-                                      borderColor: era.color,
-                                      overflow: 'hidden',
-                                      backgroundColor: '#fff',
-                                      opacity: 0.3,
-                                    }}>
-                                    {allComposers[(currentComposerIndex + 1) % allComposers.length]
-                                      .image ? (
-                                      <Image
-                                        source={{
-                                          uri: getImageUrl(
-                                            allComposers[
-                                              (currentComposerIndex + 1) % allComposers.length
-                                            ].image
-                                          ),
-                                        }}
-                                        style={{ width: '100%', height: '100%' }}
-                                        resizeMode="cover"
-                                      />
-                                    ) : (
-                                      <View
-                                        className="size-full items-center justify-center"
-                                        style={{ backgroundColor: era.color + '30' }}>
-                                        <Text
-                                          className="text-sm font-bold"
-                                          style={{ color: era.color }}>
-                                          {
-                                            allComposers[
-                                              (currentComposerIndex + 1) % allComposers.length
-                                            ].name[0]
-                                          }
-                                        </Text>
-                                      </View>
-                                    )}
-                                  </View>
-                                )}
-                                {/* 현재 표시 중인 아바타 */}
-                                <View
-                                  style={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    width: COMPOSER_AVATAR_SIZE,
-                                    height: COMPOSER_AVATAR_SIZE,
-                                    borderRadius: COMPOSER_AVATAR_SIZE / 2,
-                                    borderWidth: 2,
-                                    borderColor: era.color,
-                                    overflow: 'hidden',
-                                    backgroundColor: '#fff',
-                                  }}>
-                                  {displayComposer.image ? (
-                                    <Image
-                                      source={{ uri: getImageUrl(displayComposer.image) }}
-                                      style={{ width: '100%', height: '100%' }}
-                                      resizeMode="cover"
-                                    />
-                                  ) : (
-                                    <View
-                                      className="size-full items-center justify-center"
-                                      style={{ backgroundColor: era.color + '30' }}>
-                                      <Text
-                                        className="text-sm font-bold"
-                                        style={{ color: era.color }}>
-                                        {displayComposer.name[0]}
-                                      </Text>
-                                    </View>
-                                  )}
-                                </View>
-                              </>
-                            ) : (
-                              <View
-                                style={{
-                                  width: COMPOSER_AVATAR_SIZE,
-                                  height: COMPOSER_AVATAR_SIZE,
-                                  borderRadius: COMPOSER_AVATAR_SIZE / 2,
-                                  borderWidth: 2,
-                                  borderColor: era.color,
-                                  overflow: 'hidden',
-                                  backgroundColor: '#fff',
-                                }}>
-                                {displayComposer.image ? (
-                                  <Image
-                                    source={{ uri: getImageUrl(displayComposer.image) }}
-                                    style={{ width: '100%', height: '100%' }}
-                                    resizeMode="cover"
-                                  />
-                                ) : (
-                                  <View
-                                    className="size-full items-center justify-center"
-                                    style={{ backgroundColor: era.color + '30' }}>
-                                    <Text
-                                      className="text-sm font-bold"
-                                      style={{ color: era.color }}>
-                                      {displayComposer.name[0]}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-                            )}
-                          </Animated.View>
-                        </View>
-
-                        {/* 이름 라벨 - 애니메이션 적용 */}
-                        <Animated.View
-                          key={`label-${groupKey}-${currentComposerIndex}`}
-                          entering={FadeIn.duration(400)}
-                          exiting={FadeOut.duration(300)}>
-                          {!(hasHidden || visible.length > 1) && (
-                            <View
-                              className="rounded-full border px-2 py-0.5"
-                              style={{
-                                borderColor: era.color,
-                                borderWidth: 1.5,
-                                backgroundColor: era.color + (isDark ? '30' : '20'),
-                                ...(Platform.OS === 'web'
-                                  ? {
-                                      boxShadow: `0 1px 3px ${era.color}40`,
-                                    }
-                                  : {
-                                      shadowColor: era.color,
-                                      shadowOffset: { width: 0, height: 1 },
-                                      shadowOpacity: 0.3,
-                                      shadowRadius: 2,
-                                      elevation: 3,
-                                    }),
-                              }}>
-                              <Text
-                                className="text-[9px] font-bold"
-                                style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                                {displayComposer.name}
-                              </Text>
-                            </View>
-                          )}
-                          {hasHidden && (
-                            <View
-                              className="rounded-full px-2 py-0.5"
-                              style={{
-                                borderColor: era.color,
-                                borderWidth: 1.5,
-                                backgroundColor: era.color + (isDark ? '40' : '30'),
-                                ...(Platform.OS === 'web'
-                                  ? {
-                                      boxShadow: `0 1px 3px ${era.color}50`,
-                                    }
-                                  : {
-                                      shadowColor: era.color,
-                                      shadowOffset: { width: 0, height: 1 },
-                                      shadowOpacity: 0.4,
-                                      shadowRadius: 2,
-                                      elevation: 4,
-                                    }),
-                              }}>
-                              <Text
-                                className="text-[9px] font-bold"
-                                style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                                {displayComposer.name}+{allComposers.length - 1}
-                              </Text>
-                            </View>
-                          )}
-                          {!hasHidden && visible.length > 1 && (
-                            <View
-                              className="rounded-full px-2 py-0.5"
-                              style={{
-                                borderColor: era.color,
-                                borderWidth: 1.5,
-                                backgroundColor: era.color + (isDark ? '35' : '25'),
-                                ...(Platform.OS === 'web'
-                                  ? {
-                                      boxShadow: `0 1px 3px ${era.color}45`,
-                                    }
-                                  : {
-                                      shadowColor: era.color,
-                                      shadowOffset: { width: 0, height: 1 },
-                                      shadowOpacity: 0.35,
-                                      shadowRadius: 2,
-                                      elevation: 3,
-                                    }),
-                              }}>
-                              <Text
-                                className="text-[9px] font-bold"
-                                style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                                {visible.length}명
-                              </Text>
-                            </View>
-                          )}
-                        </Animated.View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                });
-              })()}
-            </View>
-          </ScrollView>
-        </ScrollView>
-
-        <View className="absolute bottom-2 left-0 right-0 items-center">
-          <View className="rounded-full bg-muted/80 px-4 py-2">
-            <Text className="text-xs text-muted-foreground">← 좌우/위아래로 스크롤하세요 →</Text>
-          </View>
-        </View>
-      </View>
-    );
+  /** 그 해가 가운데 오게 줌 단계를 바꾼다. 단계가 바뀌면 다시 그린 다음 옮긴다 */
+  const centerAt = (year: number, level: number) => {
+    const next = clamp(level, 0, ZOOM_MULTIPLIERS.length - 1);
+    if (next === zoom) {
+      scrollToYear(year, next, true);
+      return;
+    }
+    pendingCenterRef.current = year;
+    setZoom(next);
   };
 
-  const getComposersForEra = React.useCallback(
-    (eraId: string) => {
-      const periodMap: { [key: string]: string[] } = {
-        medieval: ['중세'],
-        renaissance: ['르네상스'],
-        baroque: ['바로크'],
-        classical: ['고전주의'],
-        romantic: ['낭만주의'],
-        modern: ['근현대'],
-      };
-      const periodNames = periodMap[eraId] || [];
-      return COMPOSERS.filter((c) => periodNames.includes(c.period)).sort(
-        (a, b) => a.birthYear - b.birthYear
-      );
-    },
-    [COMPOSERS]
+  React.useEffect(() => {
+    const year = pendingCenterRef.current;
+    if (year === null || viewportWidth === 0) return;
+    pendingCenterRef.current = null;
+    // 차트 폭이 새로 잡힌 다음 프레임에 옮겨야 스크롤 범위가 맞다
+    const frame = requestAnimationFrame(() => scrollToYear(year, zoom, false));
+    return () => cancelAnimationFrame(frame);
+  }, [zoom, viewportWidth, scrollToYear]);
+
+  const currentCenterYear = () =>
+    scrollable ? yearAt(scrollX + viewportWidth / 2) : focusEra ? eraMid(focusEra) : (fromYear + toYear) / 2;
+
+  const eraMid = (era: Period) => (Math.max(era.startYear, fromYear) + Math.min(era.endYear, toYear)) / 2;
+
+  /** 데스크톱은 그 시대가 화면에 꽉 차게 확대하고, 모바일은 그 자리로 옮기기만 한다 */
+  const focusOnEra = (era: Period) => {
+    setFocusEraId(era.id);
+    setExpanded(false);
+    if (!wide) {
+      centerAt(eraMid(era), zoom);
+      return;
+    }
+    const eraSpan = Math.min(era.endYear, toYear) - Math.max(era.startYear, fromYear);
+    const target = (viewportWidth * 0.9) / (eraSpan + 16);
+    let level = 1;
+    for (let index = 1; index < ZOOM_MULTIPLIERS.length; index += 1) {
+      if (pxPerYearAt(index) <= target) level = index;
+    }
+    centerAt(eraMid(era), level);
+  };
+
+  const clearFocus = () => {
+    setFocusEraId(null);
+    setExpanded(false);
+    if (wide) centerAt((fromYear + toYear) / 2, 0);
+  };
+
+  const onOverflowPress = (group: OverflowGroup) => {
+    const era = eras.find((item) => item.id === group.eraId);
+    if (!era) return;
+    if (focusEraId !== era.id) focusOnEra(era);
+    else setExpanded(true);
+  };
+
+  const onStripPress = (year: number) => {
+    // 전체가 보이는 기본 줌에서 누르면 한 단계 확대해 그 해로 간다
+    centerAt(year, scrollable ? zoom : Math.max(1, zoom));
+  };
+
+  const ready = viewportWidth > 0 && validComposers.length > 0;
+  React.useEffect(() => {
+    if (!ready || !focusEraParam || appliedParamRef.current === focusEraParam) return;
+    appliedParamRef.current = focusEraParam;
+    const era = eras.find((item) => item.id === focusEraParam);
+    // 딥링크는 처음 한 번만 적용한다
+    if (era) focusOnEra(era);
+  }, [ready, focusEraParam, eras]);
+
+  // 모바일은 가로로 넘겨 보는 차트라, 처음에는 대표 작곡가들이 몰린 곳을 가운데에 둔다
+  const initialCenteredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (!ready || initialCenteredRef.current || focusEraParam) return;
+    initialCenteredRef.current = true;
+    if (!scrollable) return;
+    const stars = validComposers
+      .filter((c) => c.tier === 'S')
+      .map((c) => (c.birthYear + (c.deathYear ?? currentYear)) / 2)
+      .sort((a, b) => a - b);
+    const center = stars.length > 0 ? stars[Math.floor(stars.length / 2)] : (fromYear + toYear) / 2;
+    const frame = requestAnimationFrame(() => scrollToYear(center, zoom, false));
+    return () => cancelAnimationFrame(frame);
+  }, [ready, focusEraParam, scrollable, validComposers, currentYear, fromYear, toYear, scrollToYear, zoom]);
+
+  // 스크롤할 때마다 화면이 다시 그려진다. 막대 줄(memo)이 다시 그려지지 않게 콜백을 고정한다
+  const toggleSelected = React.useCallback(
+    (id: number) => setSelectedId((current) => (current === id ? null : id)),
+    []
+  );
+  const selected = composers.find((c) => c.id === selectedId) ?? null;
+  const hiddenCount = overflow.length;
+  const comparableLoading = scope === 'comparable' && comparableQuery.isLoading;
+
+  const zoomControls = (
+    <View className="flex-row items-center gap-1.5">
+      <Pressable
+        accessibilityLabel="축소"
+        disabled={zoom === 0}
+        onPress={() => centerAt(currentCenterYear(), zoom - 1)}
+        className={cn('size-8 items-center justify-center rounded-full bg-surface-2', zoom === 0 && 'opacity-40')}>
+        <Icon as={MinusIcon} size={16} className="text-foreground" />
+      </Pressable>
+      <Pressable
+        accessibilityLabel="확대"
+        disabled={zoom === ZOOM_MULTIPLIERS.length - 1}
+        onPress={() => centerAt(currentCenterYear(), zoom + 1)}
+        className={cn(
+          'size-8 items-center justify-center rounded-full bg-surface-2',
+          zoom === ZOOM_MULTIPLIERS.length - 1 && 'opacity-40'
+        )}>
+        <Icon as={PlusIcon} size={16} className="text-foreground" />
+      </Pressable>
+    </View>
   );
 
-  const filterComposers = React.useCallback(
-    (composers: typeof COMPOSERS) => {
-      if (!searchQuery.trim()) return composers;
-
-      const query = searchQuery.toLowerCase();
-      return composers.filter(
-        (composer) =>
-          composer.name.toLowerCase().includes(query) ||
-          composer.fullName.toLowerCase().includes(query) ||
-          composer.nationality.toLowerCase().includes(query)
-      );
-    },
-    [searchQuery]
+  const eraChips = (
+    <>
+      <Chip size="sm" label="전체 기간" selected={focusEraId === null} onPress={clearFocus} />
+      {eras.map((era) => (
+        <Chip
+          key={era.id}
+          size="sm"
+          label={era.name}
+          selected={focusEraId === era.id}
+          leading={<ChipDot color={getEraForeground(era.name, scheme) ?? era.color} />}
+          onPress={() => (focusEraId === era.id ? clearFocus() : focusOnEra(era))}
+        />
+      ))}
+    </>
   );
-
-  // FlatList용 flat 데이터 생성 (시대별 헤더 + 작곡가 아이템)
-  const composerListData = React.useMemo(() => {
-    const items: any[] = [];
-    ERAS.forEach((era) => {
-      const eraComposers = getComposersForEra(era.id);
-      const filtered = filterComposers(eraComposers);
-      if (filtered.length === 0) return;
-
-      items.push({ key: `header-${era.id}`, type: 'header', era, count: filtered.length });
-      filtered.forEach((composer) => {
-        items.push({ key: `composer-${composer.id}`, type: 'composer', composer, era });
-      });
-    });
-    return items;
-  }, [ERAS, getComposersForEra, filterComposers]);
-
-  if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center gap-4 bg-background">
-        <ActivityIndicator size="large" />
-        <Text className="text-lg font-semibold">작곡가 정보 로딩 중...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">{error}</Text>
-          <Button variant="outline" onPress={() => refetch()}>
-            <Text>다시 시도</Text>
-          </Button>
-        </Card>
-      </View>
-    );
-  }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View className="flex-1 bg-background">
-        {renderTimelineGraph()}
-
-        {/* Era Info Modal */}
-        <Modal
-          visible={showEraModal}
-          transparent={true}
-          animationType="none"
-          onRequestClose={() => setShowEraModal(false)}>
-          <Pressable
-            className="flex-1 justify-end bg-black/50"
-            onPress={() => setShowEraModal(false)}>
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <Animated.View
-                entering={SlideInDown.duration(300).springify()}
-                exiting={SlideOutDown.duration(200)}
-                className="overflow-hidden rounded-t-3xl"
-                style={{
-                  maxHeight: SCREEN_HEIGHT * 0.8,
-                  backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
-                }}>
-                {selectedEra && (
-                  <>
-                    {/* 헤더 */}
-                    <View
-                      className="px-6 pb-4 pt-6"
-                      style={{
-                        backgroundColor: selectedEra.color + '20',
-                        borderBottomWidth: 3,
-                        borderBottomColor: selectedEra.color,
-                      }}>
-                      <View className="mb-3 flex-row items-center justify-between">
-                        <View className="flex-1">
-                          <Text className="text-4xl font-bold" style={{ color: selectedEra.color }}>
-                            {selectedEra.name}
-                          </Text>
-                          <Text
-                            className="mt-1 text-base font-semibold"
-                            style={{ color: selectedEra.color, opacity: 0.8 }}>
-                            {selectedEra.period}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          onPress={() => setShowEraModal(false)}
-                          className="rounded-full p-2.5"
-                          style={{
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-                          }}>
-                          <Icon as={XIcon} size={24} color={selectedEra.color} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* 스크롤 가능한 내용 */}
-                    <ScrollView className="px-6 py-5" showsVerticalScrollIndicator={false}>
-                      <View className="gap-5 pb-8">
-                        {/* 설명 */}
-                        <View
-                          className="rounded-2xl p-5"
-                          style={{
-                            backgroundColor: isDark
-                              ? 'rgba(255,255,255,0.05)'
-                              : selectedEra.color + '10',
-                            borderWidth: 1,
-                            borderColor: selectedEra.color + '30',
-                          }}>
-                          <Text
-                            className="text-base leading-7"
-                            style={{ color: isDark ? '#e5e5e5' : '#171717' }}>
-                            {selectedEra.description}
-                          </Text>
-                        </View>
-
-                        {/* 주요 특징 */}
-                        {selectedEra.characteristics && (
-                          <View className="gap-3">
-                            <Text
-                              className="text-xl font-bold"
-                              style={{ color: isDark ? '#e5e5e5' : '#171717' }}>
-                              주요 특징
-                            </Text>
-                            <View className="gap-3">
-                              {selectedEra.characteristics.map((char, index) => (
-                                <Animated.View
-                                  key={index}
-                                  entering={FadeIn.delay(index * 80).duration(300)}
-                                  className="flex-row items-start gap-3 rounded-xl p-4"
-                                  style={{
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
-                                    borderLeftWidth: 4,
-                                    borderLeftColor: selectedEra.color,
-                                    ...(Platform.OS === 'web'
-                                      ? {
-                                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                        }
-                                      : {
-                                          shadowColor: '#000',
-                                          shadowOffset: { width: 0, height: 1 },
-                                          shadowOpacity: 0.1,
-                                          shadowRadius: 2,
-                                          elevation: 2,
-                                        }),
-                                  }}>
-                                  <View
-                                    className="mt-1.5 size-2.5 rounded-full"
-                                    style={{ backgroundColor: selectedEra.color }}
-                                  />
-                                  <Text
-                                    className="flex-1 text-base leading-6"
-                                    style={{ color: isDark ? '#e5e5e5' : '#171717' }}>
-                                    {char}
-                                  </Text>
-                                </Animated.View>
-                              ))}
-                            </View>
-                          </View>
-                        )}
-
-                        {/* 대표 작곡가 */}
-                        {selectedEra.keyComposers && (
-                          <View className="gap-3">
-                            <Text
-                              className="text-xl font-bold"
-                              style={{ color: isDark ? '#e5e5e5' : '#171717' }}>
-                              대표 작곡가
-                            </Text>
-                            <View className="flex-row flex-wrap gap-2.5">
-                              {selectedEra.keyComposers.map((composer, index) => (
-                                <Animated.View
-                                  key={index}
-                                  entering={FadeIn.delay(index * 60 + 200).duration(300)}
-                                  className="rounded-full px-5 py-2.5"
-                                  style={{
-                                    backgroundColor: selectedEra.color + '25',
-                                    borderWidth: 1.5,
-                                    borderColor: selectedEra.color,
-                                  }}>
-                                  <Text
-                                    className="text-sm font-bold"
-                                    style={{ color: selectedEra.color }}>
-                                    {composer}
-                                  </Text>
-                                </Animated.View>
-                              ))}
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    </ScrollView>
-                  </>
-                )}
-              </Animated.View>
-            </Pressable>
-          </Pressable>
-        </Modal>
-
-        {/* Composer Area Modal - 작곡가 밀집 영역 확대 */}
-        <Modal
-          visible={showComposerAreaModal}
-          transparent={true}
-          animationType="none"
-          onRequestClose={() => setShowComposerAreaModal(false)}>
-          <Pressable
-            className="flex-1 justify-center bg-black/70"
-            onPress={() => setShowComposerAreaModal(false)}>
-            <Pressable onPress={(e) => e.stopPropagation()}>
-              <Animated.View
-                entering={FadeIn.duration(200)}
-                exiting={FadeOut.duration(200)}
-                className="mx-4 rounded-3xl bg-background"
-                style={{
-                  maxHeight: SCREEN_HEIGHT * 0.8,
-                }}>
-                {selectedComposerArea && (
-                  <ScrollView className="p-6">
-                    <View className="mb-6 flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text
-                          className="text-2xl font-bold"
-                          style={{ color: selectedComposerArea.era.color }}>
-                          {selectedComposerArea.era.name}
-                        </Text>
-                        <Text className="mt-1 text-sm text-muted-foreground">
-                          {selectedComposerArea.centerYear}년 전후 작곡가들
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => setShowComposerAreaModal(false)}
-                        className="rounded-full bg-muted p-2">
-                        <Icon as={XIcon} size={24} className="text-foreground" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View className="gap-3">
-                      {selectedComposerArea.composers
-                        .sort((a, b) => a.birthYear - b.birthYear)
-                        .map((composer, index) => (
-                          <Animated.View
-                            key={composer.id}
-                            entering={FadeIn.delay(index * 80).duration(300)}>
-                            <TouchableOpacity
-                              onPress={() => {
-                                setShowComposerAreaModal(false);
-                                handleComposerPress(composer);
-                              }}
-                              className="flex-row items-center gap-4 rounded-2xl bg-card p-4"
-                              style={{
-                                borderLeftWidth: 4,
-                                borderLeftColor: selectedComposerArea.era.color,
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 4,
-                                elevation: 3,
-                              }}>
-                              <View
-                                style={{
-                                  width: 70,
-                                  height: 70,
-                                  borderRadius: 35,
-                                  overflow: 'hidden',
-                                  backgroundColor: selectedComposerArea.era.color + '20',
-                                  borderWidth: 3,
-                                  borderColor: selectedComposerArea.era.color,
-                                }}>
-                                {composer.image ? (
-                                  <Image
-                                    source={{ uri: getImageUrl(composer.image) }}
-                                    style={{ width: '100%', height: '100%' }}
-                                    resizeMode="cover"
-                                  />
-                                ) : (
-                                  <View className="size-full items-center justify-center">
-                                    <Text
-                                      className="text-2xl font-bold"
-                                      style={{ color: selectedComposerArea.era.color }}>
-                                      {composer.name[0]}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-
-                              <View className="flex-1">
-                                <Text className="text-lg font-bold">{composer.name}</Text>
-                                <Text className="text-sm text-muted-foreground">
-                                  {composer.fullName}
-                                </Text>
-                                <View className="mt-2 flex-row items-center gap-2">
-                                  <View
-                                    className="rounded-full px-3 py-1"
-                                    style={{
-                                      backgroundColor: selectedComposerArea.era.color + '20',
-                                    }}>
-                                    <Text
-                                      className="text-xs font-semibold"
-                                      style={{ color: selectedComposerArea.era.color }}>
-                                      {composer.birthYear}~{composer.deathYear || '현재'}
-                                    </Text>
-                                  </View>
-                                  <Text className="text-xs text-muted-foreground">
-                                    {composer.nationality}
-                                  </Text>
-                                </View>
-                              </View>
-
-                              <View className="items-center justify-center">
-                                <Text
-                                  className="text-2xl"
-                                  style={{ color: selectedComposerArea.era.color }}>
-                                  →
-                                </Text>
-                              </View>
-                            </TouchableOpacity>
-                          </Animated.View>
-                        ))}
-                    </View>
-
-                    <View className="mt-6 rounded-xl bg-muted p-4">
-                      <Text className="text-center text-sm text-muted-foreground">
-                        작곡가를 선택하면 상세 정보를 볼 수 있습니다
-                      </Text>
-                    </View>
-                  </ScrollView>
-                )}
-              </Animated.View>
-            </Pressable>
-          </Pressable>
-        </Modal>
-
-        {/* Composer List */}
-        <FlatList
-          className="flex-1"
-          data={composerListData}
-          keyExtractor={(item) => item.key}
-          contentContainerClassName="gap-2 p-6"
-          ListHeaderComponent={
-            <View className="mb-2 gap-4">
-              <View className="flex-row items-center">
-                <View className="flex-1" />
-                <View className="items-center gap-2">
-                  <Text variant="h1" className="text-center text-2xl font-bold">
-                    작곡가 목록
-                  </Text>
-                  <Text className="text-center text-sm text-muted-foreground">
-                    시대별로 정리된 작곡가들을 탐험하세요
-                  </Text>
-                </View>
-                <View className="flex-1 flex-row items-end justify-end gap-2">
-                  {canEdit && (
-                    <TouchableOpacity
-                      onPress={() => setShowComposerForm(true)}
-                      className="rounded-full bg-primary p-2"
-                      activeOpacity={0.7}>
-                      <Icon as={Plus} size={18} color="white" />
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    onPress={onRefresh}
-                    disabled={refreshing}
-                    className="rounded-full border border-border bg-card p-2"
-                    activeOpacity={0.7}>
-                    <Icon
-                      as={RefreshCw}
-                      size={18}
-                      className={`text-foreground ${refreshing ? 'opacity-50' : ''}`}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View className="gap-2">
-                <TextInput
-                  className="rounded-xl border border-border bg-card px-4 py-3 text-base text-foreground"
-                  placeholder="작곡가 검색 (이름, 국적)"
-                  placeholderTextColor="#888"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
-                    className="absolute right-3 top-3">
-                    <View className="rounded-full bg-muted p-1">
-                      <Text className="text-xs text-muted-foreground">✕</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
+    <View className="flex-1 bg-background web:bg-surface-1">
+      <ScrollView
+        {...scrollInsets}
+        onLayout={(event: LayoutChangeEvent) => setPageHeight(event.nativeEvent.layout.height)}
+        contentContainerClassName={cn('pb-40', wide ? 'px-7 pt-2' : 'px-4 pt-3')}>
+        <View onLayout={(event: LayoutChangeEvent) => setHeaderHeight(event.nativeEvent.layout.height)}>
+          <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
+            <View className="min-w-0 flex-1">
+              <Pressable
+                onPress={() => router.push('/artists' as Href)}
+                accessibilityRole="link"
+                className="mb-1 flex-row items-center gap-1 self-start">
+                <Icon as={ChevronLeftIcon} size={14} className="text-foreground-muted" />
+                <Text variant="caption" className="text-foreground-muted">
+                  작곡가 목록으로 보기
+                </Text>
+              </Pressable>
+              <Text variant={wide ? 'display' : 'title1'}>타임라인</Text>
+              <Text variant="bodySm" className="mt-1 text-foreground-muted">
+                작곡가들이 살았던 시간을 겹쳐 봐요. 누가 같은 시대를 살았는지 한눈에 보여요.
+              </Text>
             </View>
-          }
-          renderItem={({ item }) => {
-            if (item.type === 'header') {
-              return (
-                <View
-                  className="mt-4 rounded-xl p-4"
-                  style={{ backgroundColor: item.era.color + '20' }}>
-                  <Text className="text-xl font-bold" style={{ color: item.era.color }}>
-                    {item.era.name} ({item.era.period})
-                  </Text>
-                  {searchQuery.length > 0 && (
-                    <Text className="mt-1 text-xs" style={{ color: item.era.color, opacity: 0.7 }}>
-                      {item.count}명
+            <View className="flex-row items-center gap-2.5">
+              <View className="flex-row gap-0.5 rounded-full bg-surface-2 p-[3px]" accessibilityRole="tablist">
+                {SCOPES.map((item) => (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: scope === item.key }}
+                    onPress={() => {
+                      setScope(item.key);
+                      setExpanded(false);
+                    }}
+                    className={cn('h-[30px] justify-center rounded-full px-3.5', scope === item.key && 'bg-surface-3')}>
+                    <Text
+                      className={cn(
+                        'text-label font-semibold',
+                        scope === item.key ? 'text-foreground' : 'text-foreground-muted'
+                      )}>
+                      {item.label}
                     </Text>
-                  )}
-                </View>
-              );
-            }
+                  </Pressable>
+                ))}
+              </View>
+              {zoomControls}
+            </View>
+          </View>
 
-            const { composer, era } = item;
-            return (
-              <TouchableOpacity
-                onPress={() => handleComposerPress(composer)}
-                className="flex-row items-center gap-3 rounded-xl bg-card p-3"
-                style={{
-                  borderLeftWidth: 4,
-                  borderLeftColor: era.color,
-                }}>
-                <View
-                  style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 25,
-                    overflow: 'hidden',
-                    backgroundColor: era.color + '20',
-                  }}>
-                  {composer.image ? (
-                    <Image
-                      source={{ uri: getImageUrl(composer.image) }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View className="size-full items-center justify-center">
-                      <Text className="text-lg font-bold" style={{ color: era.color }}>
-                        {composer.name[0]}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+          {wide ? (
+            <View className="mt-4 flex-row items-center gap-4">
+              <View className="flex-row flex-wrap gap-1.5">{eraChips}</View>
+              <Legend className="ml-auto" />
+              {canEdit ? (
+                <Button variant="outline" size="sm" onPress={() => setShowForm(true)}>
+                  <Icon as={PlusIcon} size={14} className="text-foreground" />
+                  <Text>작곡가 추가</Text>
+                </Button>
+              ) : null}
+            </View>
+          ) : (
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="-mx-4 mt-3"
+                contentContainerClassName="gap-1.5 px-4">
+                {eraChips}
+              </ScrollView>
+              <View className="mt-3 flex-row flex-wrap items-center gap-3">
+                <Legend />
+                {canEdit ? (
+                  <Button variant="outline" size="sm" className="ml-auto" onPress={() => setShowForm(true)}>
+                    <Icon as={PlusIcon} size={14} className="text-foreground" />
+                    <Text>작곡가 추가</Text>
+                  </Button>
+                ) : null}
+              </View>
+            </>
+          )}
+        </View>
 
-                <View className="flex-1">
-                  <Text className="font-bold">{composer.name}</Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {composer.birthYear}~{composer.deathYear ? composer.deathYear : '현재'} ·{' '}
-                    {composer.nationality}
+        <View
+          className="mt-4"
+          onLayout={(event: LayoutChangeEvent) => setViewportWidth(Math.floor(event.nativeEvent.layout.width))}>
+          {composersQuery.isLoading || comparableLoading ? (
+            <TimelineSkeleton />
+          ) : composersQuery.isError ? (
+            <EmptyState
+              icon={AlertCircleIcon}
+              tone="error"
+              title="작곡가를 불러오지 못했어요"
+              description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+              action={{ label: '다시 시도', onPress: () => composersQuery.refetch() }}
+            />
+          ) : scope === 'comparable' && comparableQuery.isError ? (
+            <EmptyState
+              icon={AlertCircleIcon}
+              tone="error"
+              title="비교 영상 정보를 불러오지 못했어요"
+              description="잠시 뒤 다시 시도하거나 주요 작곡가부터 둘러봐 주세요."
+              action={{ label: '다시 시도', onPress: () => comparableQuery.refetch() }}
+            />
+          ) : composers.length === 0 ? (
+            <EmptyState
+              icon={UsersIcon}
+              title="보여 줄 작곡가가 아직 없어요"
+              description="다른 범위를 골라 보세요."
+              action={{ label: '전체 작곡가 보기', onPress: () => setScope('all') }}
+            />
+          ) : viewportWidth > 0 ? (
+            <>
+              <View className="h-4 flex-row items-center justify-between gap-3">
+                <Text numberOfLines={1} className="min-w-0 shrink text-micro text-foreground-subtle">
+                  {`10년마다 살았던 작곡가 수 · ${scrollable ? '누르면 그 해로 가요' : '누르면 확대해요'}`}
+                </Text>
+                {expanded ? (
+                  <Pressable accessibilityRole="button" onPress={() => setExpanded(false)} hitSlop={8}>
+                    <Text className="text-micro text-primary">한 화면으로 접기</Text>
+                  </Pressable>
+                ) : hiddenCount > 0 && wide ? (
+                  <Text numberOfLines={1} className="shrink-0 text-micro text-foreground-subtle">
+                    {`${hiddenCount}명은 시대별로 묶었어요`}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-          initialNumToRender={15}
-          maxToRenderPerBatch={10}
-          windowSize={5}
-        />
+                ) : null}
+              </View>
+              <DensityStrip
+                buckets={density}
+                eraOrder={eraOrder}
+                fromYear={fromYear}
+                toYear={toYear}
+                width={viewportWidth}
+                padLeft={PAD_LEFT}
+                padRight={PAD_RIGHT}
+                scheme={scheme}
+                viewport={stripViewport}
+                onPressYear={onStripPress}
+              />
+              <ScrollView
+                ref={chartScrollRef}
+                horizontal
+                scrollEnabled={scrollable}
+                showsHorizontalScrollIndicator={scrollable}
+                scrollEventThrottle={32}
+                onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) =>
+                  setScrollX(event.nativeEvent.contentOffset.x)
+                }
+                className="mt-2.5">
+                <ComposerGantt
+                  width={chartWidth}
+                  placed={placed}
+                  laneCount={laneCount}
+                  overflowGroups={overflowGroups}
+                  eras={eras}
+                  ticks={ticks}
+                  x={x}
+                  fromYear={fromYear}
+                  toYear={toYear}
+                  focusEraId={focusEraId}
+                  selectedId={selectedId}
+                  comparable={comparable}
+                  scheme={scheme}
+                  onSelect={toggleSelected}
+                  onOverflowPress={onOverflowPress}
+                />
+              </ScrollView>
+            </>
+          ) : null}
+        </View>
+      </ScrollView>
 
-        {/* Composer Form Modal */}
-        {canEdit && (
-          <ComposerFormModal
-            visible={showComposerForm}
-            onClose={() => setShowComposerForm(false)}
-            onSuccess={() => {
-              refetch();
-            }}
+      {/* 선택 카드는 스크롤과 상관없이 화면 아래에 뜬다 */}
+      {selected ? (
+        <View className={cn('absolute bottom-4', wide ? 'right-6 w-[380px]' : 'left-3 right-3')}>
+          <SelectedComposer
+            composer={selected}
+            comparableCount={comparable?.get(selected.id) ?? 0}
+            onOpenComposer={() => router.push(`/composer/${selected.id}` as Href)}
+            onClose={() => setSelectedId(null)}
           />
-        )}
+        </View>
+      ) : null}
+
+      <ComposerFormModal
+        visible={showForm}
+        onClose={() => setShowForm(false)}
+        onSuccess={() => {
+          setShowForm(false);
+          void composersQuery.refetch();
+        }}
+      />
+    </View>
+  );
+}
+
+function Legend({ className }: { className?: string }) {
+  return (
+    <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', className)}>
+      <View className="flex-row items-center gap-1.5">
+        <View className="size-1.5 rounded-full bg-primary" />
+        <Text variant="caption">비교 영상 있음</Text>
       </View>
-    </GestureHandlerRootView>
+      <Text variant="caption">사진은 대표 작곡가 · 막대는 생애</Text>
+    </View>
+  );
+}
+
+function TimelineSkeleton() {
+  return (
+    <View className="gap-2.5">
+      <Skeleton className="h-8 w-full rounded-md" />
+      {Array.from({ length: 12 }, (_, index) => (
+        <View key={index} style={{ marginLeft: `${(index * 13) % 60}%`, width: `${14 + ((index * 17) % 26)}%` }}>
+          <Skeleton className="h-2.5 w-3/5 rounded-sm" />
+          <Skeleton className="mt-1 h-1 rounded-full" />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** 선택한 작곡가: 여기서 바로 비교로 간다 */
+function SelectedComposer({
+  composer,
+  comparableCount,
+  onOpenComposer,
+  onClose,
+}: {
+  composer: Composer;
+  comparableCount: number;
+  onOpenComposer: () => void;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const pieces = useComparisonPieces(composer.id, comparableCount > 0);
+  const firstPiece = comparableCount > 0 ? pieces.data?.pages[0]?.[0] : undefined;
+
+  return (
+    <View
+      className="rounded-xl border border-border-strong bg-surface-2 p-4"
+      style={{ shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }}>
+      <View className="flex-row items-center gap-3">
+        <EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={48} />
+        <View className="min-w-0 flex-1">
+          <Text className="text-body font-bold text-foreground">{composer.name}</Text>
+          <Text variant="mono" className="mt-0.5 text-foreground-muted">
+            {`${composer.birthYear}–${composer.deathYear ?? ''} · ${composer.period}`}
+          </Text>
+        </View>
+        <Pressable accessibilityLabel="닫기" onPress={onClose} hitSlop={10} className="size-8 items-center justify-center">
+          <Icon as={XIcon} size={16} className="text-foreground-muted" />
+        </Pressable>
+      </View>
+      <Text variant="caption" className="mt-3">
+        {comparableCount > 0 ? `비교할 수 있는 작품 ${comparableCount}곡` : '아직 비교할 수 있는 작품이 없어요'}
+      </Text>
+      <View className="mt-3 flex-row gap-2">
+        {firstPiece ? (
+          <Button
+            size="sm"
+            className="rounded-full"
+            onPress={() =>
+              router.push(`/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}` as Href)
+            }>
+            <Text className="text-primary-foreground">비교 보기</Text>
+          </Button>
+        ) : null}
+        <Button size="sm" variant="outline" className="rounded-full" onPress={onOpenComposer}>
+          <Text>작곡가 정보</Text>
+        </Button>
+      </View>
+    </View>
   );
 }

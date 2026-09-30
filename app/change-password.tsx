@@ -1,173 +1,89 @@
+import { FieldMessage, SubPage } from '@/components/account/sub-page';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
+import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useUser } from '@clerk/clerk-expo';
-import { Stack, useRouter } from 'expo-router';
-import { ChevronLeftIcon, LockIcon, ShieldCheckIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+
+const MIN_LENGTH = 8;
+
+function clerkMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'errors' in error) {
+    const list = (error as { errors?: { message?: string }[] }).errors;
+    if (list?.[0]?.message) return translateClerkError(list[0].message);
+  }
+  return '비밀번호를 바꾸지 못했어요. 현재 비밀번호를 확인한 뒤 다시 시도해 주세요.';
+}
 
 export default function ChangePasswordScreen() {
-  const router = useRouter();
   const { user } = useUser();
+  const [current, setCurrent] = React.useState('');
+  const [next, setNext] = React.useState('');
+  const [confirm, setConfirm] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [saved, setSaved] = React.useState(false);
 
-  // 비밀번호 변경 상태
-  const [currentPassword, setCurrentPassword] = React.useState('');
-  const [newPassword, setNewPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
-  const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false);
-
-  // 비밀번호 업데이트 함수
-  const handleUpdatePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert('오류', '모든 비밀번호 필드를 입력해주세요.');
+  const save = async () => {
+    if (!current || !next || !confirm) {
+      setError('세 칸을 모두 입력해 주세요.');
       return;
     }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert('오류', '새 비밀번호가 일치하지 않습니다.');
+    if (next.length < MIN_LENGTH) {
+      setError(`새 비밀번호는 ${MIN_LENGTH}자 이상으로 정해 주세요.`);
       return;
     }
-
-    if (newPassword.length < 8) {
-      Alert.alert('오류', '비밀번호는 최소 8자 이상이어야 합니다.');
+    if (next !== confirm) {
+      setError('새 비밀번호 두 칸이 달라요. 다시 입력해 주세요.');
       return;
     }
-
-    setIsUpdatingPassword(true);
+    setSaving(true);
+    setError(null);
+    setSaved(false);
     try {
-      await user?.updatePassword({
-        currentPassword,
-        newPassword,
-      });
-      Alert.alert('성공', '비밀번호가 성공적으로 변경되었습니다.', [
-        {
-          text: '확인',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (err: any) {
-      console.error('Password update error:', JSON.stringify(err, null, 2));
-      Alert.alert('오류', err?.errors?.[0]?.message || '비밀번호 변경에 실패했습니다.');
+      await user?.updatePassword({ currentPassword: current, newPassword: next });
+      setCurrent('');
+      setNext('');
+      setConfirm('');
+      setSaved(true);
+    } catch (err) {
+      setError(clerkMessage(err));
     } finally {
-      setIsUpdatingPassword(false);
+      setSaving(false);
     }
-  };
-
-  const handleCancel = () => {
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    router.back();
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTitle: '비밀번호 변경',
-          headerLeft: () => (
-            <Button
-              variant="ghost"
-              size="icon"
-              onPress={handleCancel}
-              className="ml-2"
-            >
-              <Icon as={ChevronLeftIcon} className="size-6" />
-            </Button>
-          ),
-        }}
-      />
-      <ScrollView className="flex-1 bg-background">
-        <View className="gap-6 p-6">
-          <Card>
-            <CardHeader>
-              <View className="flex-row items-center gap-2">
-                <Icon as={LockIcon} className="size-5 text-foreground" />
-                <CardTitle>새 비밀번호 설정</CardTitle>
-              </View>
-              <CardDescription>
-                계정 보안을 위해 안전한 비밀번호를 설정해주세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="gap-4">
-              <View className="gap-2">
-                <Label nativeID="currentPassword">현재 비밀번호</Label>
-                <Input
-                  placeholder="현재 비밀번호를 입력하세요"
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry
-                  aria-labelledby="currentPassword"
-                  editable={!isUpdatingPassword}
-                  autoCapitalize="none"
-                />
-              </View>
-              <View className="gap-2">
-                <Label nativeID="newPassword">새 비밀번호</Label>
-                <Input
-                  placeholder="새 비밀번호를 입력하세요 (최소 8자)"
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                  aria-labelledby="newPassword"
-                  editable={!isUpdatingPassword}
-                  autoCapitalize="none"
-                />
-              </View>
-              <View className="gap-2">
-                <Label nativeID="confirmPassword">새 비밀번호 확인</Label>
-                <Input
-                  placeholder="새 비밀번호를 다시 입력하세요"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  aria-labelledby="confirmPassword"
-                  editable={!isUpdatingPassword}
-                  autoCapitalize="none"
-                />
-              </View>
-              <View className="mt-4 gap-3">
-                <Button
-                  onPress={handleUpdatePassword}
-                  disabled={isUpdatingPassword}
-                >
-                  <Text>{isUpdatingPassword ? '변경 중...' : '비밀번호 변경'}</Text>
-                </Button>
-                <Button
-                  variant="outline"
-                  onPress={handleCancel}
-                  disabled={isUpdatingPassword}
-                >
-                  <Text>취소</Text>
-                </Button>
-              </View>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <View className="flex-row items-center gap-2">
-                <Icon as={ShieldCheckIcon} className="size-5 text-foreground" />
-                <CardTitle>안전한 비밀번호 가이드</CardTitle>
-              </View>
-            </CardHeader>
-            <CardContent>
-              <Text className="text-sm text-muted-foreground leading-6">
-                • 최소 8자 이상 사용{'\n'}
-                • 영문 대소문자, 숫자, 특수문자를 조합{'\n'}
-                • 다른 사이트와 동일한 비밀번호 사용 금지{'\n'}
-                • 생일, 전화번호 등 개인정보 사용 금지{'\n'}
-                • 정기적으로 비밀번호 변경 권장
-              </Text>
-            </CardContent>
-          </Card>
+    <SubPage title="비밀번호 변경" description="이메일로 가입한 계정의 비밀번호를 바꿔요.">
+      <View className="gap-4">
+        <View className="gap-1.5">
+          <Label nativeID="current">현재 비밀번호</Label>
+          <Input aria-labelledby="current" secureTextEntry autoComplete="current-password" value={current} onChangeText={setCurrent} editable={!saving} />
         </View>
-      </ScrollView>
-    </>
+        <View className="gap-1.5">
+          <Label nativeID="next">새 비밀번호</Label>
+          <Input
+            aria-labelledby="next"
+            secureTextEntry
+            autoComplete="new-password"
+            placeholder={`${MIN_LENGTH}자 이상`}
+            value={next}
+            onChangeText={setNext}
+            editable={!saving}
+          />
+        </View>
+        <View className="gap-1.5">
+          <Label nativeID="confirm">새 비밀번호 확인</Label>
+          <Input aria-labelledby="confirm" secureTextEntry autoComplete="new-password" value={confirm} onChangeText={setConfirm} editable={!saving} />
+        </View>
+        <FieldMessage error={error} success={saved ? '비밀번호를 바꿨어요.' : null} />
+        <Button className="self-start rounded-full px-6" onPress={save} disabled={saving}>
+          <Text>{saving ? '바꾸는 중…' : '비밀번호 바꾸기'}</Text>
+        </Button>
+      </View>
+    </SubPage>
   );
 }

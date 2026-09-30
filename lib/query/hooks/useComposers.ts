@@ -71,6 +71,39 @@ export function useAllComposers() {
 }
 
 /**
+ * 추천 순 작곡가 (홈 셸프·시대 타일용). 첫 페이지만 쓴다.
+ */
+export function useRecommendedComposers(limit = 40) {
+  return useQuery({
+    queryKey: ['composers', 'recommended', limit] as const,
+    queryFn: () => ComposerAPI.getAll({ offset: 0, limit, sort: 'recommended' }),
+    staleTime: 1000 * 60 * 10,
+    retry: 1,
+  });
+}
+
+const BROWSE_PAGE_SIZE = 20;
+
+/**
+ * 아티스트 탭 작곡가 둘러보기. 추천 순으로 20명씩 이어 붙인다.
+ * 이름을 치면 같은 시대 안에서 이름으로 찾는다.
+ */
+export function useBrowseComposers(period: string | undefined, query: string) {
+  const q = query.trim();
+  return useInfiniteQuery({
+    queryKey: ['composers', 'browse', period ?? 'all', q] as const,
+    queryFn: ({ pageParam }) =>
+      q
+        ? ComposerAPI.search({ q, period, offset: pageParam, limit: BROWSE_PAGE_SIZE })
+        : ComposerAPI.getAll({ offset: pageParam, limit: BROWSE_PAGE_SIZE, period, sort: 'recommended' }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < BROWSE_PAGE_SIZE ? undefined : pages.length * BROWSE_PAGE_SIZE,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
  * 특정 작곡가 조회 훅
  * - id가 없으면 쿼리 비활성화
  * - 작곡가 상세 정보 캐싱
@@ -81,6 +114,21 @@ export function useComposer(id: number | undefined) {
     queryFn: () => ComposerAPI.getById(id!),
     enabled: !!id && id > 0,
   });
+}
+
+/**
+ * 작품 썸네일에 쓸 작곡가 초상. 목록 응답에 초상이 있으면 그대로 쓰고,
+ * 없으면 작곡가 상세(작곡가 화면과 같은 캐시)에서 가져온다.
+ */
+export function useComposerAvatar(composerId: number | undefined, direct?: string | null): string | null {
+  const lookup = !direct && composerId !== undefined && composerId > 0;
+  const { data } = useQuery({
+    queryKey: COMPOSER_QUERY_KEYS.detail(composerId ?? 0),
+    queryFn: () => ComposerAPI.getById(composerId ?? 0),
+    enabled: lookup,
+    staleTime: 1000 * 60 * 30,
+  });
+  return direct || (lookup ? data?.avatarUrl ?? null : null);
 }
 
 /**

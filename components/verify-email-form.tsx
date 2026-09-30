@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/components/auth/auth-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignUp } from '@clerk/clerk-expo';
-import { router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
 import { type TextStyle, View } from 'react-native';
 
@@ -33,11 +33,12 @@ export function VerifyEmailForm() {
       // and redirect the user
       if (signUpAttempt.status === 'complete') {
         await setActive({ session: signUpAttempt.createdSessionId });
+        // 가입·인증 화면을 모두 닫고 홈으로 (아래 화면들이 하나씩만 닫혀 가입 폼이 남던 문제)
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/home' as Href);
         return;
       }
-      // TODO: Handle other statuses
-      // If the status is not complete, check why. User may need to
-      // complete further steps.
+      setError('인증을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.');
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 
@@ -81,53 +82,47 @@ export function VerifyEmailForm() {
   }
 
   return (
-    <View className="gap-6">
-      <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
-        <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">이메일 인증</CardTitle>
-          <CardDescription className="text-center sm:text-left">
-            {email || '입력하신 이메일'}로 발송된 인증 코드를 입력해주세요
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-6">
-          <View className="gap-6">
-            <View className="gap-1.5">
-              <Label htmlFor="code">인증 코드</Label>
-              <Input
-                id="code"
-                autoCapitalize="none"
-                onChangeText={setCode}
-                returnKeyType="send"
-                keyboardType="numeric"
-                autoComplete="sms-otp"
-                textContentType="oneTimeCode"
-                onSubmitEditing={onSubmit}
-              />
-              {!error ? null : (
-                <Text className="text-sm font-medium text-destructive">{error}</Text>
-              )}
-              <Button variant="link" size="sm" disabled={countdown > 0} onPress={onResendCode}>
-                <Text className="text-center text-xs">
-                  코드를 받지 못하셨나요? 재발송{' '}
-                  {countdown > 0 ? (
-                    <Text className="text-xs" style={TABULAR_NUMBERS_STYLE}>
-                      ({countdown})
-                    </Text>
-                  ) : null}
+    <View>
+      <AuthHeading
+        title="이메일 인증"
+        description={`${email || '입력한 이메일'}로 보낸 인증 코드를 입력해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.`}
+      />
+      <View className="gap-4">
+        <View className="gap-1.5">
+          <Label htmlFor="code">인증 코드</Label>
+          <Input
+            id="code"
+            autoCapitalize="none"
+            aria-invalid={Boolean(error)}
+            className={`${AUTH_INPUT_CLASS} font-mono tracking-[0.3em]`}
+            onChangeText={setCode}
+            returnKeyType="send"
+            keyboardType="numeric"
+            autoComplete="sms-otp"
+            textContentType="oneTimeCode"
+            onSubmitEditing={onSubmit}
+          />
+          <FieldError message={error} />
+        </View>
+        <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
+          <Text className="font-bold">인증하고 시작하기</Text>
+        </Button>
+        <View className="flex-row items-center justify-center gap-4">
+          <Button variant="link" size="sm" disabled={countdown > 0} onPress={onResendCode}>
+            <Text className="text-caption">
+              코드 다시 받기{' '}
+              {countdown > 0 ? (
+                <Text className="text-caption" style={TABULAR_NUMBERS_STYLE}>
+                  ({countdown}초)
                 </Text>
-              </Button>
-            </View>
-            <View className="gap-3">
-              <Button className="w-full" onPress={onSubmit}>
-                <Text>계속하기</Text>
-              </Button>
-              <Button variant="link" className="mx-auto" onPress={router.back}>
-                <Text>취소</Text>
-              </Button>
-            </View>
-          </View>
-        </CardContent>
-      </Card>
+              ) : null}
+            </Text>
+          </Button>
+          <Button variant="link" size="sm" onPress={router.back}>
+            <Text className="text-caption text-foreground-muted">취소</Text>
+          </Button>
+        </View>
+      </View>
     </View>
   );
 }

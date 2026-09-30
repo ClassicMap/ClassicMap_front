@@ -161,6 +161,8 @@ export type PerformanceCreditRole =
 export interface PerformanceCredit {
   artistId: number;
   artistName: string;
+  /** 연주자 사진. 서버가 크레딧에 싣는다(없으면 null) */
+  imageUrl: string | null;
   role: PerformanceCreditRole;
   isPrimary: boolean;
   displayOrder: number;
@@ -181,6 +183,39 @@ export interface ComparisonPerformance {
   clipUrl?: string;
   videoId?: string;
   credits: PerformanceCredit[];
+}
+
+/** `/pieces/{id}/comparison-sectors`: 공개 기준(연주자 3명 이상)을 통과한 섹터 */
+export interface ComparisonSector {
+  id: number;
+  pieceId: number;
+  sectorName: string;
+  sectorNameEn: string | null;
+  description: string | null;
+  displayOrder: number | null;
+  measureStart: string | null;
+  measureEnd: string | null;
+  readyPerformanceCount: number;
+  primaryArtistCount: number;
+}
+
+export interface ComparisonPiecePerformer {
+  artistId: number;
+  artistName: string;
+  imageUrl: string | null;
+}
+
+/** `/comparison-pieces`: 공개 섹터가 하나 이상 있는 작품 */
+export interface ComparisonPiece {
+  pieceId: number;
+  pieceTitle: string;
+  opusNumber: string | null;
+  composerId: number;
+  composerName: string;
+  composerAvatarUrl: string | null;
+  sectorCount: number;
+  performerCount: number;
+  performers: ComparisonPiecePerformer[];
 }
 
 export interface ComparisonPerformancePage {
@@ -252,6 +287,12 @@ export interface ArtistDTO {
 
 export interface ComposerWithPieces extends Composer {
   majorPieces: Piece[]; // 작곡가의 모든 작품 목록
+}
+
+/** `/pieces/search` 결과. 목록에 작곡가 이름을 함께 보여주려고 서버가 싣는다. */
+export interface PieceSearchResult extends Piece {
+  composerName: string;
+  composerAvatarUrl: string | null;
 }
 
 export interface PieceWithPerformances extends Piece {
@@ -373,6 +414,11 @@ export interface Concert {
   isChild?: boolean;
   isDaehakro?: boolean;
   isFestival?: boolean;
+  /**
+   * 편성 코드(쉼표 구분). 분류 못 하면 null.
+   * 배포 전 백엔드는 이 필드를 보내지 않는다(undefined). 그때는 제목으로 나눈다.
+   */
+  instrumentation?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

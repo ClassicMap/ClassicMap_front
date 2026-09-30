@@ -1,45 +1,22 @@
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { SubPage } from '@/components/account/sub-page';
 import { Text } from '@/components/ui/text';
-import { Stack, useRouter } from 'expo-router';
-import { ChevronLeftIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
 export default function TermsOfServiceScreen() {
-  const router = useRouter();
-
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTitle: '이용약관',
-          headerLeft: () => (
-            <Button
-              variant="ghost"
-              size="icon"
-              onPress={() => router.back()}
-              className="ml-2"
-            >
-              <Icon as={ChevronLeftIcon} className="size-6" />
-            </Button>
-          ),
-        }}
-      />
-      <ScrollView className="flex-1 bg-background">
-        <View className="gap-6 p-6">
+    <SubPage title="이용약관" fallbackHref="/settings">
+        <View className="gap-6">
           <View className="gap-4">
-            <Text className="text-2xl font-bold">ClassicMap 이용약관</Text>
-            <Text className="text-sm text-muted-foreground">
+            <Text className="text-caption text-foreground-subtle">
               최종 업데이트: 2025년 1월
             </Text>
           </View>
 
           <View className="gap-4">
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 1 조 (목적)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 1 조 (목적)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 본 약관은 ClassicMap(이하 "서비스")이 제공하는 클래식 음악 정보 서비스의
                 이용과 관련하여 회사와 이용자의 권리, 의무 및 책임사항, 기타 필요한
                 사항을 규정함을 목적으로 합니다.
@@ -47,8 +24,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 2 조 (용어의 정의)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 2 조 (용어의 정의)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. "서비스"라 함은 구현되는 단말기(PC, TV, 휴대형 단말기 등의 각종
                 유무선 장치를 포함)와 상관없이 "이용자"가 이용할 수 있는 ClassicMap
                 서비스를 의미합니다.{'\n\n'}
@@ -61,8 +38,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 3 조 (약관의 게시와 개정)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 3 조 (약관의 게시와 개정)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 회사는 본 약관의 내용을 이용자가 쉽게 알 수 있도록 서비스 초기
                 화면에 게시합니다.{'\n\n'}
                 2. 회사는 필요하다고 인정되는 경우 본 약관을 개정할 수 있으며, 회사가
@@ -73,8 +50,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 4 조 (회원가입)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 4 조 (회원가입)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 이용자는 회사가 정한 가입 양식에 따라 회원정보를 기입한 후 이
                 약관에 동의한다는 의사표시를 함으로서 회원가입을 신청합니다.{'\n\n'}
                 2. 회사는 제1항과 같이 회원으로 가입할 것을 신청한 이용자 중 다음
@@ -88,8 +65,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 5 조 (서비스의 제공 및 변경)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 5 조 (서비스의 제공 및 변경)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 회사는 다음과 같은 업무를 수행합니다:{'\n'}
                    - 클래식 음악 아티스트, 공연, 작곡가 정보 제공{'\n'}
                    - 음악 비교 및 타임라인 기능 제공{'\n'}
@@ -100,8 +77,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 6 조 (서비스의 중단)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 6 조 (서비스의 중단)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 회사는 컴퓨터 등 정보통신설비의 보수점검, 교체 및 고장, 통신의
                 두절 등의 사유가 발생한 경우에는 서비스의 제공을 일시적으로 중단할
                 수 있습니다.{'\n\n'}
@@ -112,8 +89,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 7 조 (회원탈퇴 및 자격 상실 등)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 7 조 (회원탈퇴 및 자격 상실 등)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 회원은 회사에 언제든지 탈퇴를 요청할 수 있으며 회사는 즉시
                 회원탈퇴를 처리합니다.{'\n\n'}
                 2. 회원이 다음 각 호의 사유에 해당하는 경우, 회사는 회원자격을 제한
@@ -127,8 +104,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 8 조 (개인정보보호)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 8 조 (개인정보보호)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 회사는 이용자의 개인정보 수집시 서비스제공을 위하여 필요한 범위에서
                 최소한의 개인정보를 수집합니다. 회사는 관련법령이 정하는 바에 따라
                 이용자의 개인정보를 보호하기 위해 노력합니다. 이용자 개인정보의
@@ -138,8 +115,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 9 조 (회사의 의무)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 9 조 (회사의 의무)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 1. 회사는 법령과 이 약관이 금지하거나 공서양속에 반하는 행위를 하지
                 않으며 이 약관이 정하는 바에 따라 지속적이고, 안정적으로 서비스를
                 제공하는데 최선을 다하여야 합니다.{'\n\n'}
@@ -149,8 +126,8 @@ export default function TermsOfServiceScreen() {
             </View>
 
             <View className="gap-2">
-              <Text className="text-lg font-semibold">제 10 조 (이용자의 의무)</Text>
-              <Text className="text-base leading-6">
+              <Text className="text-headline font-semibold text-foreground">제 10 조 (이용자의 의무)</Text>
+              <Text className="text-body-sm leading-6 text-foreground-muted">
                 이용자는 다음 행위를 하여서는 안 됩니다:{'\n'}
                 1. 신청 또는 변경 시 허위 내용의 등록{'\n'}
                 2. 타인의 정보 도용{'\n'}
@@ -165,7 +142,6 @@ export default function TermsOfServiceScreen() {
             </View>
           </View>
         </View>
-      </ScrollView>
-    </>
+    </SubPage>
   );
 }

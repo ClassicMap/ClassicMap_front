@@ -8,13 +8,27 @@ const textVariants = cva(
   cn(
     'text-base text-foreground',
     Platform.select({
-      web: 'select-text',
+      web: 'select-text font-sans',
     })
   ),
   {
     variants: {
       variant: {
         default: '',
+        // 의미 기반 스케일 (설계 문서 4.2.2). 새 코드는 이 variant만 쓴다.
+        display: 'text-display text-foreground',
+        title1: 'text-title-1 text-foreground',
+        title2: 'text-title-2 text-foreground',
+        title3: 'text-title-3 text-foreground',
+        headline: 'text-headline text-foreground',
+        // 네이티브 본문은 16으로 올린다 (4.2.2 플랫폼 조정)
+        body: Platform.select({ web: 'text-body', default: 'text-base leading-6' }),
+        bodySm: 'text-body-sm',
+        label: 'text-label',
+        caption: 'text-caption text-foreground-muted',
+        micro: 'text-micro text-foreground-subtle',
+        // 폰트 패밀리는 웹에서만 지정한다. 네이티브에 없는 이름을 주면 iOS가 오류를 낸다.
+        mono: cn('text-mono-sm tabular-nums', Platform.select({ web: 'font-mono' })),
         h1: cn(
           'text-center text-4xl font-extrabold tracking-tight',
           Platform.select({ web: 'scroll-m-20 text-balance' })
@@ -47,6 +61,10 @@ type TextVariantProps = VariantProps<typeof textVariants>;
 type TextVariant = NonNullable<TextVariantProps['variant']>;
 
 const ROLE: Partial<Record<TextVariant, Role>> = {
+  display: 'heading',
+  title1: 'heading',
+  title2: 'heading',
+  title3: 'heading',
   h1: 'heading',
   h2: 'heading',
   h3: 'heading',
@@ -56,6 +74,10 @@ const ROLE: Partial<Record<TextVariant, Role>> = {
 };
 
 const ARIA_LEVEL: Partial<Record<TextVariant, string>> = {
+  display: '1',
+  title1: '1',
+  title2: '2',
+  title3: '3',
   h1: '1',
   h2: '2',
   h3: '3',

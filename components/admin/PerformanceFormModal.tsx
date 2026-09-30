@@ -1,26 +1,27 @@
-// components/admin/PerformanceFormModal.tsx
-import * as React from 'react';
 import {
-  View,
-  Modal,
-  ScrollView,
-  Alert,
-  TextInput,
-  TouchableOpacity,
-  Platform,
-  Animated,
-  Dimensions,
-} from 'react-native';
+  FormField,
+  FormRow,
+  FormSection,
+  TextAreaField,
+  TextField,
+  hasErrors,
+  useSubmitAttempt,
+  type FieldErrors,
+} from '@/components/admin/form-field';
+import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
+import {
+  PickerMessage,
+  PickerOption,
+  PickerPanel,
+  PickerTrigger,
+} from '@/components/admin/form-picker';
 import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Icon } from '@/components/ui/icon';
-import { XIcon } from 'lucide-react-native';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
-import { ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
-import type { Performance, Artist, PerformanceSectorWithCount } from '@/lib/types/models';
+import { PerformanceSectorAPI } from '@/lib/api/client';
 import { useArtistSearch } from '@/lib/hooks/useArtistSearch';
+import type { Performance, PerformanceSectorWithCount } from '@/lib/types/models';
+import { Alert } from '@/lib/utils/alert';
+import * as React from 'react';
 
 interface PerformanceFormModalProps {
   visible: boolean;
@@ -31,6 +32,43 @@ interface PerformanceFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+// 초를 "분:초" 형식으로 변환
+function formatSeconds(seconds: number): string {
+  if (isNaN(seconds)) return '';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// "분:초" 형식을 초로 변환
+function parseTimeToSeconds(time: string): number {
+  const parts = time.split(':');
+  if (parts.length === 2) {
+    const mins = parseInt(parts[0]) || 0;
+    const secs = parseInt(parts[1]) || 0;
+    return mins * 60 + secs;
+  }
+  return parseInt(time) || 0;
+}
+
+// YouTube URL에서 video ID 추출
+function extractYouTubeVideoId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+    /youtube\.com\/embed\/([^&\n?#]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+type PerformanceField = 'sectorId' | 'artistId' | 'youtubeUrl' | 'startTime' | 'endTime';
 
 export function PerformanceFormModal({
   visible,
@@ -56,24 +94,11 @@ export function PerformanceFormModal({
   const [submitting, setSubmitting] = React.useState(false);
   const [showArtistPicker, setShowArtistPicker] = React.useState(false);
   const [artistSearch, setArtistSearch] = React.useState('');
-
-  const slideAnim = React.useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  // 검색어를 비우면 결과 목록도 비므로, 고른 연주자 이름은 따로 들고 있다가 보여 준다
+  const [pickedArtistName, setPickedArtistName] = React.useState<string | null>(null);
+  const { attempted, setAttempted } = useSubmitAttempt(visible);
 
   const { data: artistSearchResults = [], isLoading } = useArtistSearch(artistSearch, visible);
-
-  // 슬라이드 애니메이션
-  React.useEffect(() => {
-    if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 90,
-      }).start();
-    } else {
-      slideAnim.setValue(Dimensions.get('window').height);
-    }
-  }, [visible]);
 
   // 초기 데이터 로드
   React.useEffect(() => {
@@ -81,6 +106,7 @@ export function PerformanceFormModal({
       setShowArtistPicker(false);
       setShowSectorPicker(false);
       setArtistSearch('');
+      setPickedArtistName(null);
 
       if (performance) {
         // 수정 모드
@@ -127,7 +153,7 @@ export function PerformanceFormModal({
         }
       } catch (error) {
         console.error('Failed to load sectors:', error);
-        Alert.alert('오류', '섹터 목록을 불러오는데 실패했습니다.');
+        Alert.alert('구간 목록을 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.');
         setSectors([]);
       } finally {
         setLoadingSectors(false);
@@ -139,58 +165,30 @@ export function PerformanceFormModal({
     }
   }, [visible, pieceId]);
 
-  // 초를 "분:초" 형식으로 변환
-  const formatSeconds = (seconds: number): string => {
-    if (isNaN(seconds)) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const videoId = youtubeUrl ? extractYouTubeVideoId(youtubeUrl) : null;
+  const startSeconds = parseTimeToSeconds(startTime);
+  const endSeconds = parseTimeToSeconds(endTime);
 
-  // "분:초" 형식을 초로 변환
-  const parseTimeToSeconds = (time: string): number => {
-    const parts = time.split(':');
-    if (parts.length === 2) {
-      const mins = parseInt(parts[0]) || 0;
-      const secs = parseInt(parts[1]) || 0;
-      return mins * 60 + secs;
-    }
-    return parseInt(time) || 0;
+  const errors: FieldErrors<PerformanceField> = {
+    sectorId: sectorId ? undefined : '구간을 골라 주세요.',
+    artistId: artistId ? undefined : '연주자를 골라 주세요.',
+    youtubeUrl: !youtubeUrl
+      ? 'YouTube 주소를 입력해 주세요.'
+      : !videoId
+        ? 'YouTube 영상 주소가 아니에요. 아래 예시처럼 watch?v= 주소를 넣어 주세요.'
+        : undefined,
+    startTime: startTime ? undefined : '시작 시간을 입력해 주세요.',
+    endTime: !endTime
+      ? '종료 시간을 입력해 주세요.'
+      : startTime && endSeconds <= startSeconds
+        ? '종료 시간은 시작 시간보다 뒤여야 해요.'
+        : undefined,
   };
-
-  // YouTube URL에서 video ID 추출
-  const extractYouTubeVideoId = (url: string): string | null => {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
-      /youtube\.com\/embed\/([^&\n?#]+)/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-    return null;
-  };
+  const shown: FieldErrors<PerformanceField> = attempted ? errors : {};
 
   const handleSubmit = async () => {
-    if (!sectorId || !artistId || !youtubeUrl || !startTime || !endTime) {
-      Alert.alert('오류', '섹터, 연주자, URL, 시작/종료 시간은 필수 항목입니다.');
-      return;
-    }
-
-    const videoId = extractYouTubeVideoId(youtubeUrl);
-    if (!videoId) {
-      Alert.alert('오류', '올바른 YouTube URL을 입력해주세요.');
-      return;
-    }
-
-    const startSeconds = parseTimeToSeconds(startTime);
-    const endSeconds = parseTimeToSeconds(endTime);
-
-    if (endSeconds <= startSeconds) {
-      Alert.alert('오류', '종료 시간은 시작 시간보다 커야 합니다.');
+    if (!sectorId || !artistId || !videoId || hasErrors(errors)) {
+      setAttempted(true);
       return;
     }
 
@@ -198,7 +196,7 @@ export function PerformanceFormModal({
       sectorId,
       pieceId: pieceId!, // 하위 호환성
       artistId,
-      videoPlatform: 'youtube' as 'youtube',
+      videoPlatform: 'youtube' as const,
       videoId,
       startTime: startSeconds,
       endTime: endSeconds,
@@ -211,247 +209,180 @@ export function PerformanceFormModal({
     try {
       if (performance) {
         await AdminPerformanceAPI.update(performance.id, performanceData);
-        Alert.alert('성공', '연주가 수정되었습니다.');
+        Alert.alert('연주를 수정했어요');
       } else {
         await AdminPerformanceAPI.create(performanceData);
-        Alert.alert('성공', '연주가 추가되었습니다.');
+        Alert.alert('연주를 추가했어요');
       }
       onSuccess();
       onClose();
     } catch (error) {
-      console.error(error);
-      Alert.alert('오류', performance ? '연주 수정에 실패했습니다.' : '연주 추가에 실패했습니다.');
+      console.error('Failed to save performance:', error);
+      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const maxHeight = Dimensions.get('window').height * 0.9;
+  const sectorLabel =
+    !loadingSectors && sectorId
+      ? sectors.find((s) => s.id === sectorId)?.sectorName || `선택됨 · ID ${sectorId}`
+      : undefined;
+
+  const artistLabel = artistId
+    ? artistSearchResults.find((a) => a.id === artistId)?.name ||
+      pickedArtistName ||
+      `선택됨 · ID ${artistId}`
+    : undefined;
+
+  let artistMessage = '연주자 이름을 입력하면 찾아 드려요.';
+  if (isLoading) artistMessage = '찾는 중…';
+  else if (artistSearch) artistMessage = '검색 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.';
 
   return (
-    <Modal visible={visible} animationType="none" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Animated.View
-          style={{
-            transform: [{ translateY: slideAnim }],
-            height: maxHeight,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          className="rounded-t-3xl bg-background">
-        {/* Header */}
-        <View className="border-b border-border bg-background">
-          <View className="flex-row items-center justify-between px-4 pb-4 pt-6">
-            <Text className="text-2xl font-bold">{performance ? '연주 수정' : '연주 추가'}</Text>
-            <Button variant="ghost" size="icon" onPress={onClose}>
-              <Icon as={XIcon} size={24} />
-            </Button>
-          </View>
-        </View>
-
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, flexGrow: 1 }}>
-          {/* 섹터 선택 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="sector">섹터 선택 *</Label>
-            <TouchableOpacity
-              onPress={() => setShowSectorPicker(!showSectorPicker)}
-              className="h-10 w-full flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2">
-              <Text className={sectorId ? 'text-base' : 'text-base text-muted-foreground'}>
-                {loadingSectors
-                  ? '섹터 로딩 중...'
-                  : sectorId
-                    ? sectors.find((s) => s.id === sectorId)?.sectorName || `선택됨 (ID: ${sectorId})`
-                    : '섹터를 선택하세요'}
-              </Text>
-              <Text className="text-muted-foreground">▼</Text>
-            </TouchableOpacity>
-
-            {showSectorPicker && (
-              <View className="mt-1 rounded-md border border-border bg-background">
-                <ScrollView className="max-h-48">
-                  {sectors.length === 0 ? (
-                    <View className="items-center p-4">
-                      <Text className="text-sm text-muted-foreground">
-                        {loadingSectors ? '섹터 로딩 중...' : '섹터가 없습니다'}
-                      </Text>
-                    </View>
-                  ) : (
-                    sectors.map((sector) => (
-                      <TouchableOpacity
-                        key={sector.id}
-                        onPress={() => {
-                          setSectorId(sector.id);
-                          setShowSectorPicker(false);
-                        }}
-                        className={`border-b border-border p-3 ${sectorId === sector.id ? 'bg-primary/10' : ''}`}>
-                        <Text className="text-base font-medium">{sector.sectorName}</Text>
-                        {sector.description && (
-                          <Text className="text-sm text-muted-foreground">{sector.description}</Text>
-                        )}
-                        <Text className="mt-1 text-xs text-muted-foreground">
-                          연주 {sector.performanceCount}개
-                        </Text>
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {/* 아티스트 선택 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="artist">연주자 선택 *</Label>
-            <TouchableOpacity
-              onPress={() => setShowArtistPicker(!showArtistPicker)}
-              className="h-10 w-full flex-row items-center justify-between rounded-md border border-input bg-background px-3 py-2">
-              <Text className={artistId ? 'text-base' : 'text-base text-muted-foreground'}>
-                {artistId
-                  ? artistSearchResults.find((a) => a.id === artistId)?.name ||
-                    `선택됨 (ID: ${artistId})`
-                  : '연주자를 선택하세요'}
-              </Text>
-              <Text className="text-muted-foreground">▼</Text>
-            </TouchableOpacity>
-
-            {showArtistPicker && (
-              <View className="mt-1 rounded-md border border-border bg-background">
-                {/* 검색 필드 */}
-                <View className="border-b border-border p-2">
-                  <Input
-                    placeholder="연주자 검색..."
-                    value={artistSearch}
-                    onChangeText={setArtistSearch}
-                    className="h-9"
+    <FormModal
+      visible={visible}
+      title={performance ? '연주 수정' : '연주 추가'}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
+      <FormSection title="연결">
+        <FormField label="구간" required error={shown.sectorId}>
+          <PickerTrigger
+            label="구간"
+            value={sectorLabel}
+            placeholder={loadingSectors ? '구간을 불러오는 중…' : '구간을 골라 주세요'}
+            open={showSectorPicker}
+            invalid={Boolean(shown.sectorId)}
+            onPress={() => setShowSectorPicker(!showSectorPicker)}
+          />
+          {showSectorPicker && (
+            <PickerPanel>
+              {sectors.length === 0 ? (
+                <PickerMessage>
+                  {loadingSectors
+                    ? '구간을 불러오는 중…'
+                    : '이 곡에 등록된 구간이 없어요. 구간을 먼저 추가해 주세요.'}
+                </PickerMessage>
+              ) : (
+                sectors.map((sector) => (
+                  <PickerOption
+                    key={sector.id}
+                    title={sector.sectorName}
+                    description={sector.description || undefined}
+                    meta={`연주 ${sector.performanceCount}개`}
+                    selected={sectorId === sector.id}
+                    onPress={() => {
+                      setSectorId(sector.id);
+                      setShowSectorPicker(false);
+                    }}
                   />
-                </View>
+                ))
+              )}
+            </PickerPanel>
+          )}
+        </FormField>
 
-                {/* 연주자 목록 */}
-                <ScrollView className="max-h-48">
-                  {artistSearchResults.length === 0 ? (
-                    <View className="items-center p-4">
-                      <Text className="text-sm text-muted-foreground">
-                        {isLoading ? '검색 중...' : '검색 결과가 없습니다'}
-                      </Text>
-                    </View>
-                  ) : (
-                    artistSearchResults.map((artist) => (
-                      <TouchableOpacity
-                        key={artist.id}
-                        onPress={() => {
-                          setArtistId(artist.id);
-                          setShowArtistPicker(false);
-                          setArtistSearch('');
-                        }}
-                        className={`border-b border-border p-3 ${artistId === artist.id ? 'bg-primary/10' : ''}`}>
-                        <Text className="text-base font-medium">{artist.name}</Text>
-                        <Text className="text-sm text-muted-foreground">{artist.englishName}</Text>
-                      </TouchableOpacity>
-                    ))
-                  )}
-                </ScrollView>
-              </View>
-            )}
-          </View>
+        <FormField label="연주자" required error={shown.artistId}>
+          <PickerTrigger
+            label="연주자"
+            value={artistLabel}
+            placeholder="연주자를 골라 주세요"
+            open={showArtistPicker}
+            invalid={Boolean(shown.artistId)}
+            onPress={() => setShowArtistPicker(!showArtistPicker)}
+          />
+          {showArtistPicker && (
+            <PickerPanel
+              search={{
+                value: artistSearch,
+                onChangeText: setArtistSearch,
+                placeholder: '연주자 이름으로 찾기',
+              }}>
+              {artistSearchResults.length === 0 ? (
+                <PickerMessage>{artistMessage}</PickerMessage>
+              ) : (
+                artistSearchResults.map((artist) => (
+                  <PickerOption
+                    key={artist.id}
+                    title={artist.name}
+                    description={artist.englishName}
+                    selected={artistId === artist.id}
+                    onPress={() => {
+                      setArtistId(artist.id);
+                      setPickedArtistName(artist.name);
+                      setShowArtistPicker(false);
+                      setArtistSearch('');
+                    }}
+                  />
+                ))
+              )}
+            </PickerPanel>
+          )}
+        </FormField>
+      </FormSection>
 
-          {/* YouTube URL */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="youtube">YouTube URL *</Label>
-            <Input
-              placeholder="https://www.youtube.com/watch?v=..."
-              value={youtubeUrl}
-              onChangeText={setYoutubeUrl}
-              aria-labelledby="youtube"
-            />
-            <Text className="text-xs text-muted-foreground">
-              예시: https://www.youtube.com/watch?v=dQw4w9WgXcQ
-            </Text>
-          </View>
+      <FormSection title="영상">
+        <TextField
+          label="YouTube 주소"
+          required
+          value={youtubeUrl}
+          onChangeText={setYoutubeUrl}
+          placeholder="https://www.youtube.com/watch?v=…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          error={shown.youtubeUrl}
+          help="예: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        />
+        <FormRow>
+          <TextField
+            label="시작 시간 (분:초)"
+            required
+            value={startTime}
+            onChangeText={setStartTime}
+            placeholder="0:30"
+            keyboardType="numeric"
+            error={shown.startTime}
+          />
+          <TextField
+            label="종료 시간 (분:초)"
+            required
+            value={endTime}
+            onChangeText={setEndTime}
+            placeholder="1:30"
+            keyboardType="numeric"
+            error={shown.endTime}
+          />
+        </FormRow>
+        <Text variant="caption">예: 0:30은 30초, 1:15는 1분 15초예요.</Text>
+      </FormSection>
 
-          {/* 시작 시간 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="startTime">시작 시간 (분:초) *</Label>
-            <Input
-              placeholder="0:30"
-              value={startTime}
-              onChangeText={setStartTime}
-              aria-labelledby="startTime"
-              keyboardType="numeric"
-            />
-            <Text className="text-xs text-muted-foreground">
-              예시: 0:30 (30초), 1:15 (1분 15초)
-            </Text>
-          </View>
-
-          {/* 종료 시간 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="endTime">종료 시간 (분:초) *</Label>
-            <Input
-              placeholder="1:30"
-              value={endTime}
-              onChangeText={setEndTime}
-              aria-labelledby="endTime"
-              keyboardType="numeric"
-            />
-          </View>
-
-          {/* 조회수 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="viewCount">조회수</Label>
-            <Input
-              placeholder="0"
-              value={viewCount}
-              onChangeText={setViewCount}
-              aria-labelledby="viewCount"
-              keyboardType="number-pad"
-            />
-          </View>
-
-          {/* 평점 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="rating">평점</Label>
-            <Input
-              placeholder="0.0"
-              value={rating}
-              onChangeText={setRating}
-              aria-labelledby="rating"
-              keyboardType="decimal-pad"
-            />
-          </View>
-
-          {/* 특징 */}
-          <View className="mb-4 gap-2">
-            <Label nativeID="characteristic">연주 특징</Label>
-            <TextInput
-              className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
-              placeholder="이 연주의 특징을 입력하세요"
-              placeholderTextColor={Platform.select({
-                ios: '#999999',
-                android: '#999999',
-                default: undefined,
-              })}
-              value={characteristic}
-              onChangeText={setCharacteristic}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
-        </ScrollView>
-
-        {/* Footer */}
-        <View className="border-t border-border p-4">
-          <View className="flex-row gap-3">
-            <Button variant="outline" className="flex-1" onPress={onClose}>
-              <Text>취소</Text>
-            </Button>
-            <Button className="flex-1" onPress={handleSubmit} disabled={submitting}>
-              <Text>{submitting ? '저장 중...' : performance ? '수정' : '추가'}</Text>
-            </Button>
-          </View>
-        </View>
-        </Animated.View>
-      </View>
-    </Modal>
+      <FormSection title="부가 정보">
+        <FormRow>
+          <TextField
+            label="조회수"
+            value={viewCount}
+            onChangeText={setViewCount}
+            placeholder="0"
+            keyboardType="number-pad"
+          />
+          <TextField
+            label="평점"
+            value={rating}
+            onChangeText={setRating}
+            placeholder="0.0"
+            keyboardType="decimal-pad"
+          />
+        </FormRow>
+        <TextAreaField
+          label="연주 특징"
+          value={characteristic}
+          onChangeText={setCharacteristic}
+          placeholder="이 연주의 특징을 적어 주세요"
+        />
+      </FormSection>
+    </FormModal>
   );
 }

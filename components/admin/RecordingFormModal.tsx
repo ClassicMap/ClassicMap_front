@@ -1,17 +1,21 @@
-// components/admin/RecordingFormModal.tsx
-import * as React from 'react';
-import { View, Modal, ScrollView, Alert, TouchableOpacity, Image, Platform } from 'react-native';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Icon } from '@/components/ui/icon';
-import { XIcon, ImageIcon, UploadIcon } from 'lucide-react-native';
+import {
+  ChoiceField,
+  FormRow,
+  FormSection,
+  TextField,
+  hasErrors,
+  useSubmitAttempt,
+  type ChoiceOption,
+  type FieldErrors,
+} from '@/components/admin/form-field';
+import { ImageUploadField } from '@/components/admin/form-image';
+import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
 import { AdminRecordingAPI } from '@/lib/api/admin';
-import * as ImagePicker from 'expo-image-picker';
 import type { Recording } from '@/lib/types/models';
-import { getImageUrl } from '@/lib/utils/image';
+import { Alert } from '@/lib/utils/alert';
+import * as ImagePicker from 'expo-image-picker';
+import * as React from 'react';
+import { Platform } from 'react-native';
 
 interface RecordingFormModalProps {
   visible: boolean;
@@ -20,6 +24,15 @@ interface RecordingFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+type ReleaseKind = 'album' | 'single';
+
+const RELEASE_KIND_OPTIONS: ReadonlyArray<ChoiceOption<ReleaseKind>> = [
+  { value: 'album', label: '앨범' },
+  { value: 'single', label: '싱글' },
+];
+
+type RecordingField = 'title' | 'year';
 
 export function RecordingFormModal({ visible, artistId, recording, onClose, onSuccess }: RecordingFormModalProps) {
   const [title, setTitle] = React.useState('');
@@ -35,6 +48,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   const [externalUrl, setExternalUrl] = React.useState('');
   const [selectedCover, setSelectedCover] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const { attempted, setAttempted } = useSubmitAttempt(visible);
 
   React.useEffect(() => {
     if (visible) {
@@ -71,7 +85,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   const pickCover = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('권한 필요', '갤러리 접근 권한이 필요합니다.');
+      Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.');
       return;
     }
 
@@ -103,19 +117,20 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
         formData.append('file', file);
       } else {
         let filename = uri.split('/').pop() || 'cover.jpg';
-        
+
         if (!filename.includes('.')) {
           filename = `${filename}.jpg`;
         }
-        
+
         const match = /\.(\w+)$/.exec(filename);
         const fileType = match ? `image/${match[1]}` : 'image/jpeg';
 
+        // React Native의 FormData는 파일을 { uri, name, type } 객체로 받는다. DOM 타입에는 없는 모양이다.
         formData.append('file', {
           uri,
           name: filename,
           type: fileType,
-        } as any);
+        } as unknown as Blob);
       }
 
       const uploadResponse = await fetch(`${API_BASE_URL}/upload/artist/cover`, {
@@ -124,22 +139,28 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
       });
 
       if (uploadResponse.ok) {
-        const data = await uploadResponse.json();
+        const data: { url: string } = await uploadResponse.json();
         const serverUrl = data.url;
         setCoverUrl(serverUrl);
         setSelectedCover(serverUrl);
-        Alert.alert('성공', '커버 이미지가 업로드되었습니다.');
+        Alert.alert('커버 이미지를 올렸어요');
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
-      Alert.alert('오류', '커버 이미지 업로드에 실패했습니다.');
+      Alert.alert('커버 이미지를 올리지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     }
   };
 
+  const errors: FieldErrors<RecordingField> = {
+    title: title ? undefined : '제목을 입력해 주세요.',
+    year: year ? undefined : '발매 연도를 입력해 주세요.',
+  };
+  const shown: FieldErrors<RecordingField> = attempted ? errors : {};
+
   const handleSubmit = async () => {
-    if (!title || !year) {
-      Alert.alert('오류', '제목과 발매 연도를 입력해주세요.');
+    if (hasErrors(errors)) {
+      setAttempted(true);
       return;
     }
 
@@ -159,7 +180,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           youtubeMusicUrl: youtubeMusicUrl || undefined,
           externalUrl: externalUrl || undefined,
         });
-        Alert.alert('성공', '앨범이 수정되었습니다.');
+        Alert.alert('음반을 수정했어요');
       } else {
         await AdminRecordingAPI.create({
           artistId,
@@ -175,190 +196,114 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           youtubeMusicUrl: youtubeMusicUrl || undefined,
           externalUrl: externalUrl || undefined,
         });
-        Alert.alert('성공', '앨범이 추가되었습니다.');
+        Alert.alert('음반을 추가했어요');
       }
       onSuccess();
       onClose();
     } catch (error) {
-      Alert.alert('오류', recording ? '앨범 수정에 실패했습니다.' : '앨범 추가에 실패했습니다.');
+      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-background">
-        {/* Header */}
-        <View className="flex-row items-center justify-between px-4 pt-12 pb-4 border-b border-border">
-          <Text className="text-lg font-bold">
-            {recording ? '앨범 수정' : '앨범 추가'}
-          </Text>
-          <TouchableOpacity onPress={onClose}>
-            <Icon as={XIcon} size={24} />
-          </TouchableOpacity>
-        </View>
+    <FormModal
+      visible={visible}
+      title={recording ? '음반 수정' : '음반 추가'}
+      subtitle={recording?.title}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
+      <FormSection title="이미지">
+        <ImageUploadField
+          label="커버 이미지"
+          uri={selectedCover}
+          heightRatio={1}
+          onPick={pickCover}
+          help="고르면 바로 올라가요. 저장을 눌러야 음반에 반영돼요."
+        />
+      </FormSection>
 
-        <ScrollView className="flex-1 p-4">
-          {/* Cover Image */}
-          <Card className="overflow-hidden p-0 mb-6 mx-auto" style={{ width: '60%', maxWidth: 240 }}>
-            {selectedCover ? (
-              <Image 
-                source={{ uri: getImageUrl(selectedCover) }} 
-                className="w-full"
-                style={{ aspectRatio: 1 }}
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="w-full bg-muted items-center justify-center" style={{ aspectRatio: 1 }}>
-                <Icon as={ImageIcon} size={48} className="text-muted-foreground" />
-              </View>
-            )}
-            <TouchableOpacity 
-              onPress={pickCover}
-              className="absolute bottom-2 right-2 bg-primary rounded-full p-2"
-            >
-              <Icon as={UploadIcon} size={20} color="white" />
-            </TouchableOpacity>
-          </Card>
+      <FormSection title="기본 정보">
+        <TextField
+          label="제목"
+          required
+          value={title}
+          onChangeText={setTitle}
+          placeholder="음반 제목"
+          error={shown.title}
+        />
+        <FormRow>
+          <TextField
+            label="발매 연도"
+            required
+            value={year}
+            onChangeText={setYear}
+            placeholder="2024"
+            keyboardType="numeric"
+            error={shown.year}
+          />
+          <TextField
+            label="정확한 발매일"
+            value={releaseDate}
+            onChangeText={setReleaseDate}
+            placeholder="2024-01-15"
+          />
+        </FormRow>
+        <FormRow>
+          <TextField label="레이블" value={label} onChangeText={setLabel} placeholder="레이블 이름" />
+          <TextField
+            label="트랙 수"
+            value={trackCount}
+            onChangeText={setTrackCount}
+            placeholder="10"
+            keyboardType="numeric"
+          />
+        </FormRow>
+        <ChoiceField
+          label="구분"
+          options={RELEASE_KIND_OPTIONS}
+          value={isSingle ? 'single' : 'album'}
+          onChange={(kind) => setIsSingle(kind === 'single')}
+        />
+      </FormSection>
 
-          {/* Title */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="title">앨범 제목 *</Label>
-            <Input 
-              placeholder="앨범 제목 입력" 
-              value={title}
-              onChangeText={setTitle}
-              aria-labelledby="title"
-            />
-          </View>
-
-          {/* Year */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="year">발매 연도 *</Label>
-            <Input
-              placeholder="2024"
-              value={year}
-              onChangeText={setYear}
-              aria-labelledby="year"
-              keyboardType="numeric"
-            />
-          </View>
-
-          {/* Release Date */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="releaseDate">정확한 발매일</Label>
-            <Input
-              placeholder="2024-01-15"
-              value={releaseDate}
-              onChangeText={setReleaseDate}
-              aria-labelledby="releaseDate"
-            />
-          </View>
-
-          {/* Label */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="label">레이블</Label>
-            <Input
-              placeholder="레이블 입력"
-              value={label}
-              onChangeText={setLabel}
-              aria-labelledby="label"
-            />
-          </View>
-
-          {/* Track Count */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="trackCount">트랙 수</Label>
-            <Input
-              placeholder="10"
-              value={trackCount}
-              onChangeText={setTrackCount}
-              aria-labelledby="trackCount"
-              keyboardType="numeric"
-            />
-          </View>
-
-          {/* Is Single */}
-          <View className="flex-row items-center gap-2 mb-4">
-            <Label nativeID="isSingle">싱글 앨범</Label>
-            <Button
-              size="sm"
-              variant={isSingle ? "default" : "outline"}
-              onPress={() => setIsSingle(!isSingle)}
-            >
-              <Text>{isSingle ? '예' : '아니오'}</Text>
-            </Button>
-          </View>
-
-          {/* Streaming Links Section */}
-          <Text className="text-lg font-bold mb-3">스트리밍 링크</Text>
-
-          {/* Spotify URL */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="spotifyUrl">Spotify URL</Label>
-            <Input
-              placeholder="https://open.spotify.com/..."
-              value={spotifyUrl}
-              onChangeText={setSpotifyUrl}
-              aria-labelledby="spotifyUrl"
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-
-          {/* Apple Music URL */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="appleMusicUrl">Apple Music URL</Label>
-            <Input
-              placeholder="https://music.apple.com/..."
-              value={appleMusicUrl}
-              onChangeText={setAppleMusicUrl}
-              aria-labelledby="appleMusicUrl"
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-
-          {/* YouTube Music URL */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="youtubeMusicUrl">YouTube Music URL</Label>
-            <Input
-              placeholder="https://music.youtube.com/..."
-              value={youtubeMusicUrl}
-              onChangeText={setYoutubeMusicUrl}
-              aria-labelledby="youtubeMusicUrl"
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-
-          {/* External URL */}
-          <View className="gap-2 mb-4">
-            <Label nativeID="externalUrl">기타 링크</Label>
-            <Input
-              placeholder="https://..."
-              value={externalUrl}
-              onChangeText={setExternalUrl}
-              aria-labelledby="externalUrl"
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-        </ScrollView>
-
-        {/* Footer */}
-        <View className="p-4 border-t border-border">
-          <View className="flex-row gap-3">
-            <Button variant="outline" className="flex-1" onPress={onClose}>
-              <Text>취소</Text>
-            </Button>
-            <Button className="flex-1" onPress={handleSubmit} disabled={submitting}>
-              <Text>{submitting ? '저장 중...' : recording ? '수정' : '추가'}</Text>
-            </Button>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <FormSection title="스트리밍 링크">
+        <TextField
+          label="Spotify URL"
+          value={spotifyUrl}
+          onChangeText={setSpotifyUrl}
+          placeholder="https://open.spotify.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextField
+          label="Apple Music URL"
+          value={appleMusicUrl}
+          onChangeText={setAppleMusicUrl}
+          placeholder="https://music.apple.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextField
+          label="YouTube Music URL"
+          value={youtubeMusicUrl}
+          onChangeText={setYoutubeMusicUrl}
+          placeholder="https://music.youtube.com/…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        <TextField
+          label="기타 링크"
+          value={externalUrl}
+          onChangeText={setExternalUrl}
+          placeholder="https://…"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+      </FormSection>
+    </FormModal>
   );
 }

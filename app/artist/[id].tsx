@@ -1,260 +1,146 @@
-import { Text } from '@/components/ui/text';
-import { Card } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import {
-  View,
-  ScrollView,
-  Image,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Animated,
-  Platform,
-  Linking,
-} from 'react-native';
-import { Alert } from '@/lib/utils/alert';
-import {
-  ArrowLeftIcon,
-  StarIcon,
-  MapPinIcon,
-  CalendarIcon,
-  AwardIcon,
-  MusicIcon,
-  MoonStarIcon,
-  SunIcon,
-  TrashIcon,
-  EditIcon,
-  Disc3Icon,
-  PlusIcon,
-  TicketIcon,
-} from 'lucide-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { UserMenu } from '@/components/user-menu';
-import { useColorScheme } from 'nativewind';
-import * as React from 'react';
-import { RecordingAPI, ConcertAPI } from '@/lib/api/client';
-import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
-import { useAuth } from '@/lib/hooks/useAuth';
-import type { Artist, Recording, Concert, TicketVendor } from '@/lib/types/models';
-import { getImageUrl } from '@/lib/utils/image';
-import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
 import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
+import { AlbumCard } from '@/components/album/album-card';
+import { AlbumDetailModal } from '@/components/album/album-detail-modal';
+import { ArtistComparisons } from '@/components/artist/artist-comparisons';
+import { FavoriteButton } from '@/components/favorite-button';
 import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
-import { prefetchImages } from '@/components/optimized-image';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { EntityThumb } from '@/components/ui/entity-thumb';
+import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Text } from '@/components/ui/text';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
+import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
+import { ConcertAPI, RecordingAPI, type RecordingListItem } from '@/lib/api/client';
+import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { useArtist } from '@/lib/query/hooks/useArtists';
-import { ArtistComparisonSection } from '@/components/artist-comparison-section';
+import type { Artist, Concert, Recording, TicketVendor } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { Alert } from '@/lib/utils/alert';
+import { useQuery } from '@tanstack/react-query';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  EditIcon,
+  PlusIcon,
+  TrashIcon,
+} from 'lucide-react-native';
+import * as React from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-// Recording Cover Component with error handling (small)
-function RecordingCover({ coverUrl }: { coverUrl?: string | null }) {
-  const [imageError, setImageError] = React.useState(false);
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-  if (!coverUrl || imageError) {
-    return (
-      <View className="h-20 w-20 items-center justify-center rounded bg-muted">
-        <Icon as={Disc3Icon} size={32} className="text-muted-foreground" />
-      </View>
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: getImageUrl(coverUrl) }}
-      className="h-20 w-20 rounded"
-      resizeMode="cover"
-      onError={() => setImageError(true)}
-    />
-  );
+function parseDate(value: string): Date | null {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-// Recording Cover Component with error handling (large for horizontal scroll)
-function RecordingCoverLarge({ coverUrl }: { coverUrl?: string | null }) {
-  const [imageError, setImageError] = React.useState(false);
-
-  if (!coverUrl || imageError) {
-    return (
-      <View className="aspect-square w-full items-center justify-center rounded-lg bg-muted">
-        <Icon as={Disc3Icon} size={64} className="text-muted-foreground" />
-      </View>
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: getImageUrl(coverUrl) }}
-      className="aspect-square w-full rounded-lg"
-      resizeMode="cover"
-      onError={() => setImageError(true)}
-    />
-  );
+function formatConcertDay(value: string): string {
+  const date = parseDate(value);
+  if (!date) return '날짜 미정';
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]})`;
 }
 
-// Concert Poster Component with error handling
-function ConcertPoster({ posterUrl }: { posterUrl?: string | null }) {
-  const [imageError, setImageError] = React.useState(false);
-
-  if (!posterUrl || imageError) {
-    return (
-      <View
-        className="w-full items-center justify-center rounded-lg bg-muted"
-        style={{ aspectRatio: 3 / 4, minHeight: 240 }}>
-        <Icon as={CalendarIcon} size={64} className="text-muted-foreground" />
-      </View>
-    );
-  }
-
-  return (
-    <Image
-      source={{ uri: getImageUrl(posterUrl) }}
-      className="w-full rounded-lg"
-      style={{ aspectRatio: 3 / 4 }}
-      resizeMode="cover"
-      onError={() => setImageError(true)}
-    />
-  );
-}
-
-/**
- * 최근 공연 필터링 (과거 30일 ~ 미래 180일)
- * 날짜순 오름차순 정렬
- */
-function filterRecentConcerts(concerts: Concert[]): Concert[] {
+/** 오늘 기준 남은 날. 지난 공연이면 null */
+function daysUntil(value: string): number | null {
+  const date = parseDate(value);
+  if (!date) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  const diff = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+  return diff >= 0 ? diff : null;
+}
 
-  const startRange = new Date(today);
-  startRange.setDate(startRange.getDate() - 30);
-
-  const endRange = new Date(today);
-  endRange.setDate(endRange.getDate() + 180);
-
+function upcomingConcerts(concerts: Concert[]): Concert[] {
   return concerts
-    .filter(concert => {
-      try {
-        if (!concert.startDate) return false;
+    .filter((concert) => daysUntil(concert.startDate) !== null || concert.status === 'ongoing')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
 
-        const startDate = new Date(concert.startDate);
-        if (isNaN(startDate.getTime())) return false;
+function recordingYear(recording: Recording): string {
+  return (recording.releaseDate ?? recording.year ?? '').slice(0, 4);
+}
 
-        startDate.setHours(0, 0, 0, 0);
-        return startDate >= startRange && startDate <= endRange;
-      } catch (error) {
-        console.warn(`Invalid concert date: ${concert.startDate}`, error);
-        return false;
-      }
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.startDate).getTime();
-      const dateB = new Date(b.startDate).getTime();
-      return dateA - dateB; // 오름차순
-    });
+/** 음반을 앨범 카드·상세가 쓰는 목록 모양으로 맞춘다 */
+function toAlbumItem(recording: Recording, artist: Artist): RecordingListItem {
+  return {
+    id: recording.id,
+    title: recording.title,
+    year: recording.year,
+    releaseDate: recording.releaseDate ?? null,
+    label: recording.label ?? null,
+    coverUrl: recording.coverUrl ?? null,
+    trackCount: recording.trackCount ?? null,
+    isSingle: recording.isSingle ?? null,
+    isCompilation: recording.isCompilation ?? null,
+    isPreRelease: null,
+    appleMusicUrl: recording.appleMusicUrl ?? null,
+    spotifyUrl: recording.spotifyUrl ?? null,
+    youtubeMusicUrl: recording.youtubeMusicUrl ?? null,
+    artistId: artist.id,
+    artistName: artist.name,
+    artistEnglishName: artist.englishName ?? null,
+    artistImageUrl: artist.imageUrl ?? null,
+    artistCategory: artist.category ?? null,
+  };
 }
 
 export default function ArtistDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const artistId = Number(id);
   const router = useRouter();
-  const { colorScheme, toggleColorScheme } = useColorScheme();
-  const [imagesLoaded, setImagesLoaded] = React.useState(false);
-  const [coverImageLoaded, setCoverImageLoaded] = React.useState(false);
-  const coverImageOpacity = React.useRef(new Animated.Value(0)).current;
   const { canEdit } = useAuth();
+  const { layout } = useBreakpoint();
+  const wide = layout === 'desktop' || layout === 'wide';
+
   const [editModalVisible, setEditModalVisible] = React.useState(false);
-  const [recordings, setRecordings] = React.useState<Recording[]>([]);
   const [recordingFormVisible, setRecordingFormVisible] = React.useState(false);
   const [selectedRecording, setSelectedRecording] = React.useState<Recording | undefined>();
-  const [concerts, setConcerts] = React.useState<Concert[]>([]);
-  const [isLoadingVendors, setIsLoadingVendors] = React.useState<number | null>(null);
-  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
   const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
+  const [showVendorsModal, setShowVendorsModal] = React.useState(false);
+  const [bioExpanded, setBioExpanded] = React.useState(false);
+  const [openedAlbum, setOpenedAlbum] = React.useState<RecordingListItem | null>(null);
+  const repertoire = useRepertoireIds();
 
-  // React Query로 아티스트 데이터 로드 (자동 캐싱)
-  const {
-    data: artist,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-    isRefetching: refreshing,
-  } = useArtist(id ? Number(id) : undefined);
+  const artistQuery = useArtist(Number.isFinite(artistId) ? artistId : undefined);
+  const artist = artistQuery.data;
+  const recordingsQuery = useQuery({
+    queryKey: ['artists', artistId, 'recordings'],
+    queryFn: () => RecordingAPI.getByArtist(artistId),
+    enabled: Boolean(artist),
+  });
+  const concertsQuery = useQuery({
+    queryKey: ['artists', artistId, 'concerts'],
+    queryFn: () => ConcertAPI.getByArtist(artistId),
+    enabled: Boolean(artist),
+  });
 
-  // 에러 처리
-  const error = queryError ? '아티스트 정보를 불러오는데 실패했습니다.' : null;
+  const recordings = React.useMemo(
+    () => [...(recordingsQuery.data ?? [])].sort((a, b) => recordingYear(b).localeCompare(recordingYear(a))),
+    [recordingsQuery.data]
+  );
+  const concerts = React.useMemo(() => upcomingConcerts(concertsQuery.data ?? []), [concertsQuery.data]);
+  const awards = React.useMemo(
+    () => [...(artist?.awards ?? [])].sort((a, b) => b.year.localeCompare(a.year)),
+    [artist?.awards]
+  );
 
-  // 아티스트 데이터 로드 시 녹음/공연 목록 로드
-  React.useEffect(() => {
-    if (artist) {
-      loadAdditionalData();
-    }
-  }, [artist]);
-
-  const loadAdditionalData = async () => {
-    if (!id) return;
-
-    // 녹음 목록 로드
-    try {
-      const recordingData = await RecordingAPI.getByArtist(Number(id));
-      setRecordings(recordingData);
-    } catch (error) {
-      console.error('Failed to fetch recordings:', error);
-    }
-
-    // 공연 목록 로드
-    try {
-      const concertData = await ConcertAPI.getByArtist(Number(id));
-      const filteredConcerts = filterRecentConcerts(concertData);
-      setConcerts(filteredConcerts);
-    } catch (error) {
-      console.error('Failed to fetch concerts:', error);
-    }
-  };
-
-  // 이미지 프리페치 (타임아웃 추가)
-  React.useEffect(() => {
-    if (artist && !imagesLoaded) {
-      const imagesToLoad = [
-        artist.imageUrl,
-        artist.coverImageUrl,
-        ...recordings.map((r) => r.coverUrl),
-        ...concerts.map((c) => c.posterUrl),
-      ].filter(Boolean);
-
-      // 이미지 로딩 실패 또는 지연 시 1초 후 자동으로 표시
-      const timeout = setTimeout(() => {
-        setImagesLoaded(true);
-      }, 1000);
-
-      prefetchImages(imagesToLoad)
-        .then(() => setImagesLoaded(true))
-        .catch(() => setImagesLoaded(true))
-        .finally(() => clearTimeout(timeout));
-
-      return () => clearTimeout(timeout);
-    }
-  }, [artist, recordings, concerts, imagesLoaded]);
-
-  const handleCoverImageLoad = () => {
-    setCoverImageLoaded(true);
-    Animated.timing(coverImageOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleCoverImageError = () => {
-    setCoverImageLoaded(true);
-    Animated.timing(coverImageOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+  const refresh = () => {
+    void artistQuery.refetch();
+    void recordingsQuery.refetch();
+    void concertsQuery.refetch();
   };
 
   const handleDeleteArtist = () => {
     if (!artist) return;
-    Alert.alert('아티스트 삭제', `${artist.name}을(를) 삭제하시겠습니까?`, [
+    Alert.alert('아티스트 삭제', `${artist.name}을(를) 삭제할까요?`, [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -262,10 +148,9 @@ export default function ArtistDetailScreen() {
         onPress: async () => {
           try {
             await AdminArtistAPI.delete(artist.id);
-            Alert.alert('성공', '아티스트가 삭제되었습니다.');
             router.back();
-          } catch (error) {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+          } catch {
+            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
           }
         },
       },
@@ -273,7 +158,7 @@ export default function ArtistDetailScreen() {
   };
 
   const handleDeleteRecording = (recordingId: number) => {
-    Alert.alert('앨범 삭제', '정말 이 앨범을 삭제하시겠습니까?', [
+    Alert.alert('앨범 삭제', '이 앨범을 삭제할까요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -281,561 +166,311 @@ export default function ArtistDetailScreen() {
         onPress: async () => {
           try {
             await AdminRecordingAPI.delete(recordingId);
-            Alert.alert('성공', '앨범이 삭제되었습니다.');
-            refetch();
-            loadAdditionalData();
-          } catch (error) {
-            Alert.alert('오류', '앨범 삭제에 실패했습니다.');
+            void recordingsQuery.refetch();
+          } catch {
+            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
           }
         },
       },
     ]);
   };
 
-  const handleBookTicket = async (concert: Concert) => {
-    if (!concert) return;
-
-    setIsLoadingVendors(concert.id);
+  const openTickets = async (concert: Concert) => {
     try {
-      const fetchedVendors = await ConcertAPI.getTicketVendors(concert.id);
-      setVendors(fetchedVendors);
-      setIsLoadingVendors(null);
+      setVendors(await ConcertAPI.getTicketVendors(concert.id));
       setShowVendorsModal(true);
-    } catch (error) {
-      setIsLoadingVendors(null);
-      console.error('Failed to fetch ticket vendors:', error);
-      Alert.alert('오류', '예매 정보를 불러오는데 실패했습니다.');
+    } catch {
+      Alert.alert('예매처를 불러오지 못했어요', '공연 상세에서 다시 시도해 주세요.');
     }
   };
 
-  const formatConcertDate = (dateStr: string) => {
-    if (!dateStr) return '날짜 미정';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return '날짜 미정';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-    const weekday = weekdays[date.getDay()];
-    return `${year}년 ${month}월 ${day}일 (${weekday})`;
-  };
-
-  if (loading || !imagesLoaded) {
+  if (artistQuery.isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-        <Text className="mt-4 text-center text-muted-foreground">
-          {loading ? '아티스트 정보를 불러오는 중...' : '이미지를 불러오는 중...'}
+      <View className="flex-1 bg-background p-6">
+        <View className="flex-row items-end gap-6">
+          <Skeleton className="size-40 rounded-full" />
+          <View className="flex-1 gap-3">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-12 w-1/2" />
+            <Skeleton className="h-3 w-1/3" />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (artistQuery.isError || !artist) {
+    return (
+      <View className="flex-1 bg-background">
+        <EmptyState
+          icon={AlertCircleIcon}
+          tone="error"
+          title="아티스트 정보를 불러오지 못했어요"
+          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          action={{ label: '다시 시도', onPress: () => artistQuery.refetch() }}
+        />
+      </View>
+    );
+  }
+
+  const meta = [
+    getArtistCategoryLabel(artist.category),
+    artist.nationality,
+    artist.birthYear ? `${artist.birthYear}년생` : null,
+  ].filter(Boolean);
+  const nextConcert = concerts[0];
+
+  const aside = (
+    <View className="gap-8">
+      <View>
+        <Text variant="headline" className="mb-3">
+          다가오는 공연
         </Text>
-      </View>
-    );
-  }
-
-  if (error || !artist) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md p-8">
-          <Text className="mb-4 text-center text-destructive">
-            {error || '아티스트를 찾을 수 없습니다'}
+        {concertsQuery.isLoading ? (
+          <Skeleton className="h-32 w-full rounded-lg" />
+        ) : nextConcert ? (
+          <View className="gap-2">
+            {concerts.slice(0, 3).map((concert) => {
+              const days = daysUntil(concert.startDate);
+              return (
+                <Pressable
+                  key={concert.id}
+                  onPress={() => router.push(`/concert/${concert.id}` as Href)}
+                  className="-mx-3 flex-row gap-3.5 rounded-lg p-3 active:bg-surface-2 web:hover:bg-surface-2">
+                  <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={72} aspect={4 / 3} />
+                  <View className="min-w-0 flex-1">
+                    {days !== null ? (
+                      <Badge tone="accent" label={days === 0 ? '오늘' : `D-${days}`} />
+                    ) : null}
+                    <Text numberOfLines={2} className="mt-1.5 text-body-sm font-bold text-foreground">
+                      {concert.title}
+                    </Text>
+                    <Text variant="caption" numberOfLines={1} className="mt-1">
+                      {formatConcertDay(concert.startDate)}
+                    </Text>
+                    {concert.facilityName ? (
+                      <Text variant="caption" numberOfLines={1}>
+                        {concert.facilityName}
+                      </Text>
+                    ) : null}
+                    {concert.status === 'upcoming' ? (
+                      <Pressable onPress={() => openTickets(concert)} className="mt-1.5 self-start">
+                        <Text variant="label" className="text-primary">
+                          예매처 보기
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <Text variant="bodySm" className="text-foreground-muted">
+            예정된 공연이 없어요.
           </Text>
-          <Button variant="outline" onPress={() => router.back()}>
-            <Text>뒤로 가기</Text>
-          </Button>
-        </Card>
+        )}
       </View>
-    );
-  }
+
+      {awards.length > 0 ? (
+        <View>
+          <Text variant="headline" className="mb-3">
+            수상
+          </Text>
+          <View className="gap-3.5">
+            {awards.map((award, index) => (
+              <View key={award.id} className="flex-row gap-3">
+                <Text variant="mono" className={cn('w-11 pt-0.5', index === 0 ? 'text-primary' : 'text-foreground-muted')}>
+                  {award.year}
+                </Text>
+                <View className="min-w-0 flex-1">
+                  <Text className="text-body-sm font-semibold text-foreground">{award.awardName}</Text>
+                  {[award.ranking, award.category].filter(Boolean).length > 0 ? (
+                    <Text variant="caption" className="mt-0.5">
+                      {[award.ranking, award.category].filter(Boolean).join(' · ')}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { refetch(); loadAdditionalData(); }} />}>
-        {/* Cover Image with overlays */}
-        <View className="relative h-64">
-          {!coverImageLoaded && (
-            <View className="h-full w-full items-center justify-center bg-muted">
-              <ActivityIndicator size="large" />
-            </View>
-          )}
-          {artist.coverImageUrl ? (
-            Platform.OS === 'web' ? (
-              <Image
-                source={{ uri: getImageUrl(artist.coverImageUrl) }}
-                className="h-full w-full"
-                style={{ opacity: coverImageLoaded ? 1 : 0 }}
-                resizeMode="cover"
-                onLoad={handleCoverImageLoad}
-                onError={handleCoverImageError}
-              />
-            ) : (
-              <Animated.Image
-                source={{ uri: getImageUrl(artist.coverImageUrl) }}
-                className="h-full w-full"
-                style={{ opacity: coverImageOpacity }}
-                resizeMode="cover"
-                onLoad={handleCoverImageLoad}
-                onError={handleCoverImageError}
-              />
-            )
-          ) : (
-            <View
-              className="h-full w-full items-center justify-center bg-muted"
-              onLayout={handleCoverImageLoad}>
-              <Icon as={MusicIcon} size={64} className="text-muted-foreground" />
-            </View>
-          )}
-          <View className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
+        refreshControl={<RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />}
+        contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
+        {!wide ? (
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.push('/search'))}
+            accessibilityLabel="뒤로"
+            className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
+            <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
+          </Pressable>
+        ) : null}
 
-          {/* Theme and User Menu overlay at top */}
-          <View className="absolute left-0 right-0 top-0 flex-row items-center justify-between px-4 pb-3 pt-12">
-            <TouchableOpacity
-              onPress={toggleColorScheme}
-              className="size-10 items-center justify-center rounded-full bg-black/30">
-              <Icon as={colorScheme === 'dark' ? SunIcon : MoonStarIcon} size={24} color="white" />
-            </TouchableOpacity>
-            <View className="items-center justify-center rounded-full bg-black/30">
-              <UserMenu iconColor="white" />
-            </View>
-          </View>
+        {/* 머리: 사람은 원형. 넓으면 이름·소개·버튼을 사진 옆 위쪽부터 쌓는다 (애플 클래식처럼) */}
+        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-start gap-8' : 'mt-2 items-center')}>
+          <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={wide ? 208 : 148} />
+          <View className={cn('min-w-0', wide ? 'flex-1 pt-3' : 'w-full items-center')}>
+            {wide ? (
+              <Text variant="micro" className="uppercase tracking-widest">
+                아티스트
+              </Text>
+            ) : null}
+            <Text
+              className={cn(
+                'font-extrabold tracking-tight text-foreground',
+                wide ? 'mt-2 text-[64px] leading-[66px]' : 'text-[34px] leading-10'
+              )}>
+              {artist.name}
+            </Text>
+            <Text variant="bodySm" className={cn('mt-3 text-foreground-muted', !wide && 'text-center')}>
+              <Text className="font-semibold text-foreground">{meta[0]}</Text>
+              {meta.slice(1).map((part) => `  ·  ${part}`).join('')}
+              {artist.englishName ? `  ·  ${artist.englishName}` : ''}
+            </Text>
 
-          {/* Back Button */}
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="absolute bottom-4 left-4 rounded-full bg-black/50 p-2">
-            <Icon as={ArrowLeftIcon} size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-
-        <View className="gap-6 p-4 pb-20">
-          {/* Profile Section */}
-          <View className="-mt-12 items-center gap-3">
-            <Avatar alt={artist.name} className="size-24 border-4 border-background">
-              <AvatarImage source={{ uri: getImageUrl(artist.imageUrl) }} />
-              <AvatarFallback>
-                <Text className="text-2xl">{artist.name[0]}</Text>
-              </AvatarFallback>
-            </Avatar>
-
-            <View className="items-center gap-2">
-              <Text className="text-2xl font-bold">{artist.name}</Text>
-              <Text className="text-muted-foreground">{artist.englishName}</Text>
-              <Text className="text-sm text-muted-foreground">{getArtistCategoryLabel(artist.category)}</Text>
-            </View>
-          </View>
-
-          {/* Basic Info */}
-          <Card className="p-4">
-            <View className="gap-3">
-              <View className="flex-row items-center gap-2">
-                <Icon as={MusicIcon} size={16} className="text-muted-foreground" />
-                <Text className="text-sm font-medium">{getArtistCategoryLabel(artist.category)}</Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <Icon as={MapPinIcon} size={16} className="text-muted-foreground" />
-                <Text className="text-sm">{artist.nationality}</Text>
-              </View>
-              {artist.birthYear && (
-                <View className="flex-row items-center gap-2">
-                  <Icon as={CalendarIcon} size={16} className="text-muted-foreground" />
-                  <Text className="text-sm">{artist.birthYear}년생</Text>
-                </View>
-              )}
-            </View>
-            {canEdit && (
-              <View className="flex-row gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onPress={() => setEditModalVisible(true)}>
-                  <Icon as={EditIcon} size={16} className="mr-2" />
-                  <Text>수정</Text>
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="flex-1"
-                  onPress={handleDeleteArtist}>
-                  <Icon as={TrashIcon} size={16} className="mr-2" />
-                  <Text>삭제</Text>
-                </Button>
-              </View>
-            )}
-          </Card>
-
-          {/* Top Award - 주요 수상 */}
-          {(() => {
-            if (!artist.awards || artist.awards.length === 0) return null;
-            // displayOrder가 가장 큰 것(가장 높은 점수) 찾기
-            const topAward = artist.awards.reduce((prev, current) => {
-              const prevOrder = prev.displayOrder ?? 0;
-              const currentOrder = current.displayOrder ?? 0;
-              return currentOrder > prevOrder ? current : prev;
-            });
-            if (!topAward) return null;
-
-            return (
-              <Card className="p-4 bg-amber-500/10 border-amber-500/20">
-                <View className="flex-row items-center gap-2 mb-3">
-                  <Icon as={AwardIcon} size={22} className="text-amber-600" />
-                  <Text className="text-lg font-bold text-amber-800">주요 수상</Text>
-                </View>
-                <View className="gap-2">
-                  <Text className="text-lg font-semibold text-amber-900">{topAward.awardName}</Text>
-                  <Text className="text-base text-amber-700">{topAward.year}</Text>
-                  {topAward.category && (
-                    <Text className="text-sm text-amber-700">{topAward.category}</Text>
-                  )}
-                  {topAward.ranking && (
-                    <Text className="text-sm text-amber-600">{topAward.ranking}</Text>
-                  )}
-                  {topAward.organization && (
-                    <Text className="text-xs text-amber-600 mt-1">{topAward.organization}</Text>
-                  )}
-                </View>
-              </Card>
-            );
-          })()}
-
-          {/* Stats */}
-          <View className="flex-row gap-3">
-            <Card className="flex-1 items-center gap-1 p-4">
-              <Text className="text-2xl font-bold">{artist.concertCount}+</Text>
-              <Text className="text-xs text-muted-foreground">공연</Text>
-            </Card>
-            <Card className="flex-1 items-center gap-1 p-4">
-              <Text className="text-2xl font-bold">{artist.albumCount}+</Text>
-              <Text className="text-xs text-muted-foreground">앨범</Text>
-            </Card>
-          </View>
-
-          {/* Biography */}
-          <Card className="p-4">
-            <Text className="mb-2 text-lg font-bold">소개</Text>
-            {artist.bio ? (
-              <Text className="leading-6 text-muted-foreground">{artist.bio}</Text>
-            ) : (
-              <Text className="leading-6 text-muted-foreground/50 italic">소개가 아직 등록되지 않았습니다.</Text>
-            )}
-          </Card>
-
-
-          {/* Awards History - 수상 경력 */}
-          <Card className="p-4">
-            <Text className="mb-3 text-lg font-bold">수상 경력</Text>
-            {artist.awards && artist.awards.length > 0 ? (
-              <View className="gap-3">
-                {artist.awards.map((award) => (
-                  <View key={award.id} className="flex-row items-start gap-3">
-                    <Icon as={AwardIcon} size={18} className="mt-1 text-amber-500" />
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2">
-                        <Text className="font-semibold">{award.awardName}</Text>
-                        {award.ranking && (
-                          <Text className="text-sm font-medium text-amber-600">({award.ranking})</Text>
-                        )}
-                      </View>
-                      <Text className="text-sm text-muted-foreground">{award.year}</Text>
-                      {award.category && (
-                        <Text className="text-xs text-muted-foreground mt-0.5">{award.category}</Text>
-                      )}
-                      {award.organization && (
-                        <Text className="text-xs text-muted-foreground mt-0.5">{award.organization}</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text className="text-muted-foreground/50 italic">수상 경력이 아직 등록되지 않았습니다.</Text>
-            )}
-          </Card>
-
-          {/* Style Description */}
-          {artist.style && (
-            <Card className="p-5 bg-primary/5 border-primary/10">
-              <View className="gap-3">
-                <Text className="text-base font-semibold text-primary">연주 스타일</Text>
-                <View className="border-l-4 border-primary/30 pl-4">
-                  <Text className="text-base leading-7 text-foreground/80 italic">
+            {artist.bio || artist.style ? (
+              <View className={cn('mt-4 max-w-[640px]', !wide && 'w-full')}>
+                {artist.bio ? (
+                  <Text variant="bodySm" numberOfLines={bioExpanded ? undefined : 3} className="text-foreground-muted">
+                    {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
+                    {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
+                  </Text>
+                ) : null}
+                {artist.style && (bioExpanded || !artist.bio) ? (
+                  <Text variant="bodySm" className={cn('text-foreground-muted', artist.bio && 'mt-3')}>
                     {artist.style}
                   </Text>
-                </View>
+                ) : null}
+                {(artist.bio && artist.bio.length > 120) || (artist.bio && artist.style) ? (
+                  <Pressable
+                    onPress={() => setBioExpanded((value) => !value)}
+                    accessibilityRole="button"
+                    className="mt-1.5 self-start">
+                    <Text variant="label" className="text-foreground">
+                      {bioExpanded ? '접기' : '더 보기'}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
-            </Card>
-          )}
+            ) : null}
 
-          <ArtistComparisonSection artistId={artist.id} />
+            <View className={cn('mt-5 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
+              <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
+              {canEdit ? (
+                <>
+                  <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
+                    <Icon as={EditIcon} size={14} className="text-foreground" />
+                    <Text>수정</Text>
+                  </Button>
+                  <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
+                    <Icon as={TrashIcon} size={14} className="text-destructive" />
+                    <Text className="text-destructive">삭제</Text>
+                  </Button>
+                </>
+              ) : null}
+            </View>
+          </View>
+        </View>
 
-          {/* Recordings/Albums */}
-          <View className="gap-3">
-            <View className="flex-row items-center justify-between px-4">
-              <View className="flex-row items-center gap-2">
-                <Icon as={Disc3Icon} size={20} className="text-primary" />
-                <Text className="text-lg font-bold">앨범</Text>
-              </View>
-              {canEdit && (
-                <Button
-                  size="sm"
-                  variant="outline"
+        {/* 본문: 넓으면 두 열 (비교 | 공연·수상) */}
+        <View className={cn('mt-10', wide ? 'flex-row gap-10' : 'gap-10')}>
+          <View className="min-w-0 flex-1">
+            <ArtistComparisons artistId={artist.id} wide={wide} />
+          </View>
+          <View className={cn(wide && 'w-[340px]')}>{aside}</View>
+        </View>
+
+        {/* 음반: 콘텐츠라 사각. 들으러 가는 곳을 숨기지 않는다 */}
+        <View className="mt-12">
+          <View className="mb-4 flex-row items-baseline justify-between">
+            <Text variant="title3">음반</Text>
+            <View className="flex-row items-center gap-3">
+              {recordings.length > 0 ? <Text variant="caption">{`${recordings.length}장 · 최신순`}</Text> : null}
+              {canEdit ? (
+                <Pressable
+                  accessibilityLabel="앨범 추가"
                   onPress={() => {
                     setSelectedRecording(undefined);
                     setRecordingFormVisible(true);
                   }}>
-                  <Icon as={PlusIcon} size={16} />
-                </Button>
-              )}
+                  <Icon as={PlusIcon} size={18} className="text-foreground-muted" />
+                </Pressable>
+              ) : null}
             </View>
-
-            {recordings.length === 0 ? (
-              <Card className="mx-4 p-6">
-                <Text className="text-center text-muted-foreground">
-                  아직 등록된 앨범이 없습니다.
-                </Text>
-              </Card>
-            ) : (
-              <FlatList
-                horizontal
-                data={recordings}
-                keyExtractor={(item) => item.id.toString()}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-                renderItem={({ item: recording }) => (
-                  <View className="w-48">
-                    <Card className="p-3" style={{ minHeight: canEdit ? 460 : 360 }}>
-                      <View className="flex-1 gap-3">
-                        <RecordingCoverLarge coverUrl={recording.coverUrl} />
-                        <View className="gap-1.5" style={{ minHeight: 80 }}>
-                          <Text className="text-base font-semibold" numberOfLines={2}>
-                            {recording.title}
+          </View>
+          {recordingsQuery.isLoading ? (
+            <View className="flex-row gap-5">
+              {Array.from({ length: wide ? 6 : 2 }, (_, index) => (
+                <Skeleton key={index} className="aspect-square flex-1 rounded-lg" />
+              ))}
+            </View>
+          ) : recordings.length === 0 ? (
+            <Text variant="bodySm" className="text-foreground-muted">
+              등록된 음반이 없어요.
+            </Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-5">
+              {recordings.map((recording) => {
+                return (
+                  <View key={recording.id} className="w-[176px]">
+                    <AlbumCard
+                      album={toAlbumItem(recording, artist)}
+                      width={176}
+                      inRepertoire={repertoire.recordings.has(recording.id)}
+                      onPress={() => setOpenedAlbum(toAlbumItem(recording, artist))}
+                    />
+                    {canEdit ? (
+                      <View className="mt-2 flex-row gap-3">
+                        <Pressable
+                          onPress={() => {
+                            setSelectedRecording(recording);
+                            setRecordingFormVisible(true);
+                          }}>
+                          <Text variant="caption">수정</Text>
+                        </Pressable>
+                        <Pressable onPress={() => handleDeleteRecording(recording.id)}>
+                          <Text variant="caption" className="text-destructive">
+                            삭제
                           </Text>
-                          <Text className="text-sm text-muted-foreground">{recording.year}</Text>
-                          {recording.label && (
-                            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                              {recording.label}
-                            </Text>
-                          )}
-                        </View>
-                        <View className="flex-1" />
-                        {(recording.spotifyUrl ||
-                          recording.appleMusicUrl ||
-                          recording.youtubeMusicUrl ||
-                          recording.externalUrl) && (
-                          <View className="flex-row flex-wrap gap-2">
-                            {recording.spotifyUrl && (
-                              <TouchableOpacity
-                                onPress={() => Linking.openURL(recording.spotifyUrl!)}
-                                className="h-10 w-10 items-center justify-center rounded-full bg-green-600">
-                                <Image
-                                  source={require('@/assets/spotify.png')}
-                                  className="h-10 w-10"
-                                  style={{ width: 40, height: 40 }}
-                                  resizeMode="contain"
-                                  defaultSource={require('@/assets/spotify.png')}
-                                />
-                              </TouchableOpacity>
-                            )}
-                            {recording.appleMusicUrl && (
-                              <TouchableOpacity
-                                onPress={() => Linking.openURL(recording.appleMusicUrl!)}
-                                className="h-10 w-10 items-center justify-center rounded-full bg-pink-600">
-                                <Image
-                                  source={require('@/assets/apple_music_classical.png')}
-                                  className="h-10 w-10"
-                                  style={{ width: 40, height: 40 }}
-                                  resizeMode="contain"
-                                  defaultSource={require('@/assets/apple_music_classical.png')}
-                                />
-                              </TouchableOpacity>
-                            )}
-                            {recording.youtubeMusicUrl && (
-                              <TouchableOpacity
-                                onPress={() => Linking.openURL(recording.youtubeMusicUrl!)}
-                                className="h-8 w-8 items-center justify-center rounded-full bg-red-600">
-                                <Text className="text-xs font-bold text-white">Y</Text>
-                              </TouchableOpacity>
-                            )}
-                            {recording.externalUrl && (
-                              <TouchableOpacity
-                                onPress={() => Linking.openURL(recording.externalUrl!)}
-                                className="h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-                                <Icon
-                                  as={ArrowLeftIcon}
-                                  size={14}
-                                  color="white"
-                                  className="rotate-[-45deg]"
-                                />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        )}
-                        {canEdit && (
-                          <View className="mt-2 flex-row gap-2 border-t border-border pt-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onPress={() => {
-                                setSelectedRecording(recording);
-                                setRecordingFormVisible(true);
-                              }}>
-                              <Icon as={EditIcon} size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onPress={() => handleDeleteRecording(recording.id)}>
-                              <Icon as={TrashIcon} size={14} className="text-destructive" />
-                            </Button>
-                          </View>
-                        )}
+                        </Pressable>
                       </View>
-                    </Card>
+                    ) : null}
                   </View>
-                )}
-              />
-            )}
-          </View>
-
-          {/* Recent Concerts */}
-          <View className="gap-3">
-            <Text className="px-4 text-lg font-bold">최근 공연</Text>
-            {concerts.length === 0 ? (
-              <Card className="mx-4 p-6">
-                <Text className="text-center text-muted-foreground">등록된 공연이 없습니다.</Text>
-              </Card>
-            ) : (
-              <FlatList
-                horizontal
-                data={concerts}
-                keyExtractor={(item) => item.id.toString()}
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16 }}
-                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
-                renderItem={({ item: concert }) => (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => router.push(`/concert/${concert.id}` as any)}>
-                    <View className="w-56">
-                      <Card className="p-3" style={{ minHeight: 440 }}>
-                        <View className="gap-3">
-                          <ConcertPoster posterUrl={concert.posterUrl} />
-                          <View className="gap-2" style={{ minHeight: 100 }}>
-                            <Text className="text-base font-semibold" numberOfLines={2}>
-                              {concert.title}
-                            </Text>
-                            {concert.composerInfo && (
-                              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                                {concert.composerInfo}
-                              </Text>
-                            )}
-                            <View className="flex-row items-center gap-2">
-                              <Icon as={CalendarIcon} size={14} className="text-muted-foreground" />
-                              <Text className="text-xs text-muted-foreground">
-                                {formatConcertDate(concert.startDate)}
-                                {concert.endDate && concert.endDate !== concert.startDate &&
-                                  ` ~ ${formatConcertDate(concert.endDate)}`}
-                              </Text>
-                            </View>
-                            {concert.status && (
-                              <View
-                                className={`self-start rounded-full px-2 py-1 ${
-                                  concert.status === 'upcoming'
-                                    ? 'bg-blue-500/20'
-                                    : concert.status === 'completed'
-                                      ? 'bg-gray-500/20'
-                                      : concert.status === 'ongoing'
-                                        ? 'bg-green-500/20'
-                                        : 'bg-red-500/20'
-                                }`}>
-                                <Text
-                                  className={`text-xs font-medium ${
-                                    concert.status === 'upcoming'
-                                      ? 'text-blue-600'
-                                      : concert.status === 'completed'
-                                        ? 'text-gray-600'
-                                        : concert.status === 'ongoing'
-                                          ? 'text-green-600'
-                                          : 'text-red-600'
-                                  }`}>
-                                  {concert.status === 'upcoming'
-                                    ? '예정'
-                                    : concert.status === 'completed'
-                                      ? '완료'
-                                      : concert.status === 'ongoing'
-                                        ? '진행중'
-                                        : '취소'}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* 예매하기 버튼 */}
-                          {concert.status === 'upcoming' && (
-                            <Button
-                              size="sm"
-                              className="mt-2 w-full"
-                              onPress={(e) => {
-                                e?.stopPropagation?.();
-                                handleBookTicket(concert);
-                              }}
-                              disabled={isLoadingVendors === concert.id}>
-                              <View className="flex-row items-center justify-center">
-                                {isLoadingVendors !== concert.id && (
-                                  <Icon as={TicketIcon} size={16} className="mr-2 text-primary-foreground" />
-                                )}
-                                <Text className="text-sm">
-                                  {isLoadingVendors === concert.id ? '로딩 중...' : '예매하기'}
-                                </Text>
-                              </View>
-                            </Button>
-                          )}
-                        </View>
-                      </Card>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-          </View>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
+
       </ScrollView>
 
-      {/* Edit Modal */}
-      {artist && (
-        <ArtistFormModal
-          visible={editModalVisible}
-          artist={artist}
-          onClose={() => setEditModalVisible(false)}
-          onSuccess={() => {
-            refetch();
-            loadAdditionalData();
-          }}
-        />
-      )}
+      <ArtistFormModal
+        visible={editModalVisible}
+        artist={artist}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={refresh}
+      />
+      <AlbumDetailModal album={openedAlbum} onClose={() => setOpenedAlbum(null)} />
 
-      {/* Recording Form Modal */}
       <RecordingFormModal
         visible={recordingFormVisible}
-        artistId={Number(id)}
+        artistId={artist.id}
         recording={selectedRecording}
         onClose={() => setRecordingFormVisible(false)}
         onSuccess={() => {
           setRecordingFormVisible(false);
-          refetch();
-          loadAdditionalData();
+          void recordingsQuery.refetch();
         }}
       />
-
-      {/* Ticket Vendors Modal */}
-      <TicketVendorsModal
-        visible={showVendorsModal}
-        vendors={vendors}
-        onClose={() => setShowVendorsModal(false)}
-      />
+      <TicketVendorsModal visible={showVendorsModal} vendors={vendors} onClose={() => setShowVendorsModal(false)} />
     </View>
   );
 }

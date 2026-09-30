@@ -2,6 +2,7 @@
 
 - 작성일: 2026-09-10
 - **개정: 2026-09-12 — 시드 데이터 최신화 반영. B4·B6 해소, 신규 P0 1건(19번) 추가, 백엔드 요청 B15~B17 추가**
+- **개정: 2026-09-16 — 2차 데이터 조사 반영. B6 해소 철회, B17 갱신, 백엔드 요청 B20~B21 추가**
 - 짝 문서: `2026-09-10-classicmap-redesign-report.md` (레이아웃·디자인 시스템 재설계)
 - 이 문서의 범위: **리디자인 과정에서 "이건 반드시 추가되어야 한다"고 판단된 기능**과, 새 레이아웃이 성립하려면 필요한 데이터·API 요구사항
 - 원칙: 기존 로직과 기능은 보존합니다. 아래 제안은 전부 **추가**이며, 기존 동작을 대체하는 항목은 그 사실을 명시했습니다.
@@ -659,10 +660,10 @@ A·B는 **추가 없이 구현 가능**합니다. `/composers/with-performances`
 | B3 | `PATCH /users/me { favoriteEra }` 선호 시대 저장 | 8 | 높음 |
 | ~~B4~~ | ~~`Performance.rating`/`viewCount` 의미 확정~~ → **해소(2026-09-12): 전 레코드 0, 미사용** | 13 | — |
 | B5 | 원본 영상 링크 노출 정책 확정 (권리 검토) | 14 | 높음 |
-| ~~B6~~ | ~~`Piece` 필드 채움률 확인~~ → **해소(2026-09-12): 전부 채워짐** | 2 | — |
+| **B6** | **`Piece` 메타데이터 채움** — 2026-09-12에 "전부 채워짐"으로 해소했으나 **2026-09-16 2차 조사에서 철회합니다.** 작품이 11,294 → 18,642곡으로 늘면서 메타데이터 채움률이 약 **10%** 로 떨어졌습니다. 작품 카드는 제목·작곡가만 보장 가능 | 2 | **높음** |
 | **B15** | **`GET /composers/{id}/pieces?offset=&limit=` pagination** — 현재 바흐 **1,695곡 / 566KB**를 한 번에 반환. 프로젝트 지침 "전체 작품을 한 번에 요청하지 않습니다"와 충돌 | 리디자인 7.4 | **높음** |
 | **B16** | **`ComparisonPerformance` 계약 구현** — `/pieces/{id}/comparison-sectors`와 `/sectors/{id}/comparison-performances`가 **404**, `/artists/{id}/comparison-performances`는 **항상 빈 배열**. `clipStatus`·`clipUrl`·`credits`·`startMs`/`endMs`를 아직 받을 수 없음 (버그 D2의 원인) | 4, 14 | **높음** |
-| **B17** | **`Artist.category` 정규화** — `피아니스트`(5건)·`피아노`(4건)를 `pianist`로. `Artist.rating`이 문자열/null로 오는데 타입은 `number`. `/concerts/areas`의 `"대구광역시, 대구광역시"` 중복 문자열과 `"전남광주통합특별시"` 정리 | 리디자인 7.2·7.3 | **높음** |
+| **B17** | **`Artist.category` 정규화** — 2차 조사에서 값이 **29종**으로 늘고 파편화가 심해졌습니다(`pianist` 58 · `피아노` 43 · `피아니스트` 5). 초기 9건 수준이 아니라 **100건 이상이 한글 값**입니다. `Artist.rating`이 문자열/null로 오는데 타입은 `number`. `/concerts/areas`의 `"대구광역시, 대구광역시"` 중복 문자열과 `"전남광주통합특별시"` 정리 | 리디자인 7.2·7.3 | **높음** |
 | B18 | `POST /pieces/{id}/comparison-requests`, `GET /admin/comparison-requests` | 19 | 중간 |
 | B19 | `GET /periods` **404** — `PeriodAPI.getAll()`이 항상 실패. 구현하거나 프론트에서 제거 결정 (버그 D3) | — | 낮음 |
 | B7 | `GET /me/listening-history`, `POST /me/listening-history`, `GET /me/continue` | 5 | 중간 |
@@ -673,6 +674,35 @@ A·B는 **추가 없이 구현 가능**합니다. `/composers/with-performances`
 | B12 | 투표 API | 13 | 낮음 |
 | B13 | 관리자 클립/품질 API | 16 | 낮음 |
 | B14 | 푸시 인프라 | 11 | 낮음 |
+| **B20** | **공연 세부 장르 또는 키워드 필드** — KOPIS `genre`는 `서양음악(클래식)` 한 값이라 게임·영화 IP 오케스트라(트릭컬 리바이브, 인터스텔라 필름콘서트)가 정통 클래식과 섞입니다. 박스오피스 상위를 이들이 차지해도 걸러낼 축이 없습니다. **제목 문자열로 추측하지 않으므로** 서버에서 세부 분류를 내려 주어야 합니다 | 리디자인 7.3 | 중간 |
+| **B21** | **`GET /composers?sort=recommended`** — 현재 기본 정렬이 `birthYear` 오름차순이라 목록 진입 첫 화면이 곰베르·카베손·세르통 등 이미지도 비교 데이터도 없는 항목으로 채워집니다. `tier`(S>A>없음>B>C) → 완성도 → `pieceCount` 정렬이 서버에 있으면 프론트 전량 로드 없이 해결됩니다 | 리디자인 1.7.4 | **높음** |
+| **B22** | **연주 ↔ 음반 연결** — 재생 바 아트워크에 앨범 표지를 쓰려면 `Performance`/`ComparisonPerformance`에 `recordingId`(또는 `GET /performances/{id}/recording`)가 필요합니다. `Recording.coverUrl`로 표지 자체는 이미 옵니다(임윤찬 음반 12건, 그중 라흐 3번 Decca 2025가 시안 곡과 일치). **제목 문자열 매칭은 추측이라 프론트에서 하지 않습니다.** 연결이 없으면 앨범 칸은 작곡가 초상 폴백이고, 그러면 작곡가 원과 같은 그림이 됩니다 | 리디자인 6.5 | 중간 |
+| **B23** | **연주 참여자(credits) — 특히 지휘자** — `GET /sectors/{id}/performances`가 지금 `artistId` 하나만 줍니다. 협주곡은 독주자만으로 성립하지 않는데 **지휘자·오케스트라를 받을 방법이 없습니다.** 프론트에는 `PerformanceCredit`(`role: soloist / conductor / orchestra / ensemble / accompanist / vocalist / other`, `isPrimary`, `displayOrder`) 타입이 이미 있으므로 **이 엔드포인트 응답에 `credits` 배열을 실어 주기만 하면 됩니다.** B16(비교 계약 전체)의 일부지만 재생 바·비교 화면에 바로 필요하므로 따로 뺍니다. 없는 동안 지휘자는 **비워 둡니다. 곡명이나 상식으로 추론해 채우지 않습니다** | 리디자인 6.5 · 7.4 | **높음** |
+| **B24** | **작품의 악보 메타데이터** — 구간 오선지 머리에 조표와 빠르기말을 그리려면 `Piece`에 `key`(으뜸음+장단조), `tempoMarking`, `timeSignature`가 필요합니다. 지금은 조성이 **제목 문자열에만**(`피아노 협주곡 3번 D단조`) 있고 나머지는 없습니다. 악장별 경계 시각도 없어 겹세로줄을 구간 사이 중간값으로 추정합니다. **제목 파싱이나 곡 상식으로 채우지 않습니다** | 리디자인 4.7.5·4.7.6 | 중간 |
+| **B25** | **`GET /pieces/search?q=`** — 작곡가·연주자·공연은 전부 `/{kind}/search?q=`가 동작하는데 **작품만 없습니다(404).** 비교의 단위가 작품인데 이름으로 찾을 수가 없습니다. 지금은 작곡가 검색 결과에서 파생해 보여주는 우회밖에 없습니다 | 리디자인 7.12 | **높음** |
+| **B26** | **검색 결과 관련도 정렬** — `/artists/search?q=임`이 뉴욕 필하모닉·사이먼 래틀을 먼저 주고 **임윤찬이 4번째**입니다. tier 우선 정렬로 보입니다. 접두사·완전 일치를 앞세우는 관련도 정렬이 필요합니다 | 리디자인 7.12 | 중간 |
+
+### 20.1 백엔드 구현 현황 (2026-09-17)
+
+`ClassicMap_back` 로컬 master에 커밋했고 **아직 배포 전**입니다(master push가 곧 배포).
+
+| # | 커밋 | 확정된 계약 |
+|---|---|---|
+| B16 + B23 | `2f5a69f` | `GET /pieces/{id}/comparison-sectors` → 공개 섹터 배열(`sectorName`, `sectorNameEn`, `description`, `displayOrder`, `measureStart`, `measureEnd`, `readyPerformanceCount`, `primaryArtistCount`). 작품 없음 404, 공개 섹터 없음 빈 배열. `GET /sectors/{id}/comparison-performances` → 페이지 없는 배열, `credits[]`·`clipUrl`·`videoId` 포함. 세 비교 조회가 공개 기준 하나(발행 + 현재 클립 ready + 섹터 편집 승인 + 서로 다른 primary artist 3명 이상)를 공유합니다 |
+| B15 | `4d042f4` | `offset`·`limit`(기본 20, 최대 100). **파라미터가 없으면 기존처럼 전체 반환** → 프론트 호출부를 페이지 방식으로 바꿔야 지침을 지킵니다 |
+| B25 | `a434566` | `GET /pieces/search?q=&offset=&limit=` → `Piece` + `composerName`. 정렬은 제목 완전일치 > 접두사 > 포함·별칭 > 작품번호 > 작곡가 이름. **`comparableSectorCount`는 포함되지 않았습니다** → 검색 결과의 "비교 가능" 배지는 달지 않습니다 |
+| B26 | `b1d968a` | 아티스트·작곡가·작품 검색 관련도 정렬. `임` 검색에서 임윤찬 4위 → 1위 |
+| B21 | `137330f` | `sort=recommended`: tier → 공개 비교 보유 → 초상 → 소개 → 작품 수 → id. 모르는 sort는 400 |
+| B17 | `86f3167` | `category`는 코드 20종(`pianist` … `orchestra`, `other`)으로 응답하고 필터도 코드로 받습니다(모르는 코드 400). `rating`은 숫자 또는 null. `/concerts/areas` 정리는 제외됐습니다 |
+
+**확인된 사실과 결정**
+
+- **D2는 옛 정보입니다.** `/artists/{id}/comparison-performances`는 운영에서 정상 동작 중이었고, 당시엔 클립 자산 없는 수동 연주만 있어서 비어 있었습니다. 현재 공개 섹터 36개, 연주 108건입니다.
+- **라흐마니노프 협주곡 2·3번, 쇼팽 발라드 1번은 새 비교 API에 나오지 않습니다.** 클립 자산이 없는 수동 레거시 연주 36건이기 때문입니다. **결정: 레거시에 클립을 등록하지 않고, 새 시드 파이프라인으로 다시 수집합니다.** 발췌 경계는 레거시 연주에 사람이 잡아 둔 `startTime`/`endTime`을 같은 영상일 때만 출발점으로 쓰고 검출기로 미세 조정합니다. 권리 조건이나 primary artist 3명을 못 넘는 영상은 교체합니다. S tier 발췌 7곡은 별도 절차(기준 연주 1개 수동 + 교차 정렬)로 설계합니다. 그전까지 새 비교 화면에는 공개 섹터만 나오고, 시안의 임윤찬 라흐 3번은 실데이터로 재현되지 않습니다.
+- **배포 순서**: 프론트 분류 라벨(`lib/design/artist-category.ts`, 커밋 `447a9eb`)을 먼저 배포한 뒤 백엔드를 push합니다. 순서가 바뀌면 화면에 `pianist` 같은 코드가 그대로 보입니다.
+- 섹터 `measureStart`에 `"unknown"` 문자열이 들어간 데이터가 있습니다(섹터 37). API에서 가리지 않고 데이터를 null로 고칩니다.
+- 아직 문자열로 나가는 Decimal: `Concert.rating`, `ConcertListItem.rating`, `UserConcertRating.rating`, `BoxofficeConcert.rating`, `GET /concerts/{id}/user-rating`.
+- 바흐·헨델은 tier가 비어 추천순에서 A 뒤로 갑니다. 규칙이 아니라 데이터를 고칩니다.
 
 **원칙 재확인**: `CLAUDE.md`에 따라 위 항목 중 확정되지 않은 계약에 대해서는 프론트에서 필드를 추측하거나 임시 fallback을 만들지 않습니다. 확정 전까지 해당 UI 섹션은 렌더하지 않습니다.
 
@@ -686,7 +716,7 @@ A·B는 **추가 없이 구현 가능**합니다. `/composers/with-performances`
 리디자인 단계 1~3 (토큰·프리미티브·웹 셸)
         ↓
 [P0] 1. 즐겨찾기 연결          ← 가장 저렴하고 체감 큼, 백엔드 불필요
-[P0] 2. 작품 상세 화면          ← 커맨드 팔레트의 전제. B6 해소로 원안대로 가능
+[P0] 2. 작품 상세 화면          ← 커맨드 팔레트의 전제. B6 철회로 제목·작곡가만 보장, 나머지는 있을 때만 표시
 [P0] 3. 커맨드 팔레트 1단계     ← 웹 셸과 같은 커밋에 묶어도 됨
         ↓
 리디자인 단계 4.1 (비교 화면 재설계)

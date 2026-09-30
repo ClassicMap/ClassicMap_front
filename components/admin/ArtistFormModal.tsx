@@ -1,16 +1,25 @@
-// components/admin/ArtistFormModal.tsx
-import * as React from 'react';
-import { View, Modal, ScrollView, Alert, TextInput, TouchableOpacity, Image, Platform } from 'react-native';
-import { Text } from '@/components/ui/text';
+import {
+  FormRow,
+  FormSection,
+  TextAreaField,
+  TextField,
+  hasErrors,
+  useSubmitAttempt,
+  type FieldErrors,
+} from '@/components/admin/form-field';
+import { ImageUrlField } from '@/components/admin/form-image';
+import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Icon } from '@/components/ui/icon';
-import { XIcon, ImageIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
+import { Text } from '@/components/ui/text';
 import { AdminArtistAPI } from '@/lib/api/admin';
-import type { Artist, ArtistAward } from '@/lib/types/models';
-import { getImageUrl } from '@/lib/utils/image';
+import type { Artist } from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { Alert } from '@/lib/utils/alert';
+import { PlusIcon, TrashIcon } from 'lucide-react-native';
+import * as React from 'react';
+import { View } from 'react-native';
 
 interface ArtistFormModalProps {
   visible: boolean;
@@ -18,6 +27,18 @@ interface ArtistFormModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+// 수상 경력 관리
+interface AwardInput {
+  id?: number; // 기존 award의 경우 id 존재
+  year: string;
+  awardName: string;
+  displayOrder: number;
+  isNew?: boolean; // 새로 추가된 award인지 여부
+  isDeleted?: boolean; // 삭제될 award인지 여부
+}
+
+type ArtistField = 'name' | 'englishName' | 'category' | 'nationality';
 
 export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistFormModalProps) {
   const [name, setName] = React.useState('');
@@ -32,23 +53,16 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   const [bio, setBio] = React.useState('');
   const [style, setStyle] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
+  const { attempted, setAttempted } = useSubmitAttempt(visible);
 
   // 카운트 입력
   const [concertCount, setConcertCount] = React.useState('0');
   const [albumCount, setAlbumCount] = React.useState('0');
 
-  // 수상 경력 관리
-  interface AwardInput {
-    id?: number; // 기존 award의 경우 id 존재
-    year: string;
-    awardName: string;
-    displayOrder: number;
-    isNew?: boolean; // 새로 추가된 award인지 여부
-    isDeleted?: boolean; // 삭제될 award인지 여부
-  }
   const [awards, setAwards] = React.useState<AwardInput[]>([]);
   const [newAwardYear, setNewAwardYear] = React.useState('');
   const [newAwardName, setNewAwardName] = React.useState('');
+  const [awardAttempted, setAwardAttempted] = React.useState(false);
 
   React.useEffect(() => {
     if (artist) {
@@ -97,11 +111,23 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
     }
     setNewAwardYear('');
     setNewAwardName('');
+    setAwardAttempted(false);
   }, [artist, visible]);
+
+  const errors: FieldErrors<ArtistField> = {
+    name: name ? undefined : '이름을 입력해 주세요.',
+    englishName: englishName ? undefined : '영문 이름을 입력해 주세요.',
+    category: category ? undefined : '카테고리를 입력해 주세요.',
+    nationality: nationality ? undefined : '국적을 입력해 주세요.',
+  };
+  const shown: FieldErrors<ArtistField> = attempted ? errors : {};
+
+  const awardYearMissing = awardAttempted && !newAwardYear;
+  const awardNameMissing = awardAttempted && !newAwardName;
 
   const handleAddAward = () => {
     if (!newAwardYear || !newAwardName) {
-      Alert.alert('오류', '수상 연도와 이름을 모두 입력해주세요.');
+      setAwardAttempted(true);
       return;
     }
 
@@ -115,6 +141,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
     setAwards([...awards, newAward]);
     setNewAwardYear('');
     setNewAwardName('');
+    setAwardAttempted(false);
   };
 
   const handleDeleteAward = (index: number) => {
@@ -129,8 +156,8 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   };
 
   const handleSubmit = async () => {
-    if (!name || !englishName || !category || !nationality) {
-      Alert.alert('오류', '필수 항목을 모두 입력해주세요.');
+    if (hasErrors(errors)) {
+      setAttempted(true);
       return;
     }
 
@@ -200,235 +227,201 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
         }
       }
 
-      Alert.alert('성공', artist ? '아티스트가 수정되었습니다.' : '아티스트가 추가되었습니다.');
+      Alert.alert(artist ? '아티스트를 수정했어요' : '아티스트를 추가했어요');
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save artist:', error);
-      Alert.alert('오류', artist ? '아티스트 수정에 실패했습니다.' : '아티스트 추가에 실패했습니다.');
+      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const visibleAwards = awards
+    .map((award, index) => ({ award, index }))
+    .filter(({ award }) => !award.isDeleted);
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 bg-background">
-        {/* Header */}
-        <View className="bg-background border-b border-border">
-          <View className="flex-row items-center justify-between px-4 pt-12 pb-4">
-            <Text className="text-2xl font-bold">{artist ? '아티스트 수정' : '아티스트 추가'}</Text>
-            <TouchableOpacity onPress={onClose} className="p-2">
-              <Icon as={XIcon} size={24} className="text-foreground" />
-            </TouchableOpacity>
+    <FormModal
+      visible={visible}
+      title={artist ? '아티스트 수정' : '아티스트 추가'}
+      subtitle={artist?.name}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      submitting={submitting}
+      error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
+      <FormSection title="기본 정보">
+        <TextField
+          label="이름"
+          required
+          value={name}
+          onChangeText={setName}
+          placeholder="조성진"
+          error={shown.name}
+        />
+        <TextField
+          label="영문 이름"
+          required
+          value={englishName}
+          onChangeText={setEnglishName}
+          placeholder="Seong-Jin Cho"
+          error={shown.englishName}
+        />
+        <TextField
+          label="카테고리"
+          required
+          value={category}
+          onChangeText={setCategory}
+          placeholder="피아니스트"
+          error={shown.category}
+        />
+        <TextField
+          label="국적"
+          required
+          value={nationality}
+          onChangeText={setNationality}
+          placeholder="대한민국"
+          error={shown.nationality}
+        />
+        <FormRow>
+          <TextField
+            label="출생 연도"
+            value={birthYear}
+            onChangeText={setBirthYear}
+            placeholder="1994"
+            keyboardType="numeric"
+          />
+          <TextField
+            label="평점"
+            value={rating}
+            onChangeText={setRating}
+            placeholder="4.5"
+            keyboardType="decimal-pad"
+          />
+        </FormRow>
+      </FormSection>
+
+      <FormSection title="이미지">
+        <ImageUrlField
+          label="프로필 이미지 URL"
+          value={imageUrl}
+          onChangeText={setImageUrl}
+          placeholder="https://example.com/image.jpg"
+          shape="square"
+        />
+        <ImageUrlField
+          label="커버 이미지 URL"
+          value={coverImageUrl}
+          onChangeText={setCoverImageUrl}
+          placeholder="https://example.com/cover.jpg"
+          shape="banner"
+        />
+      </FormSection>
+
+      <FormSection title="설명">
+        <TextAreaField
+          label="소개"
+          value={bio}
+          onChangeText={setBio}
+          placeholder="어떤 아티스트인지 적어 주세요"
+        />
+        <TextField
+          label="스타일"
+          value={style}
+          onChangeText={setStyle}
+          placeholder="섬세하고 시적인 표현…"
+        />
+      </FormSection>
+
+      <FormSection
+        title="수상 경력"
+        description="추가하거나 지운 수상 경력은 저장을 눌러야 반영돼요.">
+        {visibleAwards.length > 0 ? (
+          <View className="overflow-hidden rounded-lg border border-border">
+            {visibleAwards.map(({ award, index }, position) => (
+              <View
+                key={award.id ?? `new-${index}`}
+                className={cn(
+                  'flex-row items-center gap-3 py-2 pl-3 pr-1.5',
+                  position > 0 && 'border-t border-border'
+                )}>
+                <Text variant="mono" className="w-11 text-foreground-muted">
+                  {award.year}
+                </Text>
+                <Text numberOfLines={2} className="min-w-0 flex-1 text-body-sm text-foreground">
+                  {award.awardName}
+                </Text>
+                {award.isNew ? <Badge tone="accent" label="새로 추가" className="self-center" /> : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onPress={() => handleDeleteAward(index)}
+                  accessibilityLabel={`${award.awardName} 삭제`}>
+                  <Icon as={TrashIcon} size={16} className="text-destructive" />
+                </Button>
+              </View>
+            ))}
           </View>
+        ) : (
+          <Text variant="bodySm" className="text-foreground-muted">
+            아직 등록한 수상 경력이 없어요.
+          </Text>
+        )}
+
+        <View className="gap-3 rounded-lg border border-dashed border-border-strong p-3">
+          <Text variant="label" className="text-foreground">
+            새 수상 경력
+          </Text>
+          <View className="flex-row gap-3">
+            <TextField
+              label="수상 연도"
+              value={newAwardYear}
+              onChangeText={setNewAwardYear}
+              placeholder="2015"
+              keyboardType="numeric"
+              inputClassName={awardYearMissing ? 'border-destructive' : undefined}
+              className="w-24"
+            />
+            <TextField
+              label="수상 내역"
+              value={newAwardName}
+              onChangeText={setNewAwardName}
+              placeholder="쇼팽 국제 피아노 콩쿠르 1위"
+              inputClassName={awardNameMissing ? 'border-destructive' : undefined}
+              className="min-w-0 flex-1"
+            />
+          </View>
+          {awardYearMissing || awardNameMissing ? (
+            <Text variant="caption" role="alert" className="text-destructive">
+              수상 연도와 내역을 모두 입력해 주세요.
+            </Text>
+          ) : null}
+          <Button variant="outline" size="sm" onPress={handleAddAward} className="self-start">
+            <Icon as={PlusIcon} size={14} className="text-foreground" />
+            <Text>목록에 추가</Text>
+          </Button>
         </View>
+      </FormSection>
 
-        <ScrollView className="flex-1 p-4">
-          {/* Image URLs */}
-          <Card className="p-4 mb-6">
-            <Text className="text-lg font-bold mb-4">이미지</Text>
-            <View className="gap-4">
-              {/* Profile Image Preview */}
-              {imageUrl && (
-                <View className="items-center mb-2">
-                  <Card className="overflow-hidden p-0" style={{ width: 120, height: 120 }}>
-                    <Image
-                      source={{ uri: getImageUrl(imageUrl) }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
-                  </Card>
-                  <Text className="text-xs text-muted-foreground mt-1">프로필 이미지 미리보기</Text>
-                </View>
-              )}
-
-              <View>
-                <Label>프로필 이미지 URL</Label>
-                <Input
-                  value={imageUrl}
-                  onChangeText={setImageUrl}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </View>
-
-              {/* Cover Image Preview */}
-              {coverImageUrl && (
-                <View className="mb-2">
-                  <Card className="overflow-hidden p-0">
-                    <Image
-                      source={{ uri: getImageUrl(coverImageUrl) }}
-                      className="w-full h-32"
-                      resizeMode="cover"
-                    />
-                  </Card>
-                  <Text className="text-xs text-muted-foreground mt-1">커버 이미지 미리보기</Text>
-                </View>
-              )}
-
-              <View>
-                <Label>커버 이미지 URL</Label>
-                <Input
-                  value={coverImageUrl}
-                  onChangeText={setCoverImageUrl}
-                  placeholder="https://example.com/cover.jpg"
-                />
-              </View>
-            </View>
-          </Card>
-
-          {/* Basic Info */}
-          <Card className="p-4 mb-6">
-            <Text className="text-lg font-bold mb-4">기본 정보</Text>
-            <View className="gap-4">
-              <View>
-                <Label>이름 *</Label>
-                <Input value={name} onChangeText={setName} placeholder="조성진" />
-              </View>
-
-              <View>
-                <Label>영문명 *</Label>
-                <Input value={englishName} onChangeText={setEnglishName} placeholder="Seong-Jin Cho" />
-              </View>
-
-              <View>
-                <Label>카테고리 *</Label>
-                <Input value={category} onChangeText={setCategory} placeholder="피아니스트" />
-              </View>
-
-              <View>
-                <Label>국적 *</Label>
-                <Input value={nationality} onChangeText={setNationality} placeholder="대한민국" />
-              </View>
-
-              <View>
-                <Label>출생연도</Label>
-                <Input value={birthYear} onChangeText={setBirthYear} placeholder="1994" keyboardType="numeric" />
-              </View>
-
-              <View>
-                <Label>평점</Label>
-                <Input value={rating} onChangeText={setRating} placeholder="4.5" keyboardType="decimal-pad" />
-              </View>
-
-              <View>
-                <Label>소개</Label>
-                <TextInput
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="아티스트 소개..."
-                  multiline
-                  numberOfLines={4}
-                  className="min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-base leading-5 text-foreground shadow-sm shadow-black/5 dark:bg-input/30"
-                  placeholderTextColor={Platform.select({ ios: '#999999', android: '#999999', default: undefined })}
-                  style={{ textAlignVertical: 'top' }}
-                />
-              </View>
-
-              <View>
-                <Label>스타일</Label>
-                <Input value={style} onChangeText={setStyle} placeholder="섬세하고 시적인 표현..." />
-              </View>
-            </View>
-          </Card>
-
-          {/* Awards */}
-          <Card className="p-4 mb-6">
-            <Text className="text-lg font-bold mb-3">수상 경력</Text>
-
-            {/* 기존 Awards 목록 */}
-            {awards.filter(a => !a.isDeleted).length > 0 && (
-              <View className="gap-2 mb-4">
-                {awards.map((award, index) => {
-                  if (award.isDeleted) return null;
-                  return (
-                    <View key={index} className="flex-row items-center gap-2 p-3 bg-muted rounded-md">
-                      <View className="flex-1">
-                        <Text className="font-semibold">{award.awardName}</Text>
-                        <Text className="text-sm text-muted-foreground">{award.year}</Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => handleDeleteAward(index)}
-                        className="p-2"
-                      >
-                        <Icon as={TrashIcon} size={18} className="text-destructive" />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-
-            {/* 새 Award 추가 */}
-            <View className="gap-3 p-3 border border-border rounded-md">
-              <Text className="font-semibold">새 수상 경력 추가</Text>
-              <View>
-                <Label>수상 연도</Label>
-                <Input
-                  value={newAwardYear}
-                  onChangeText={setNewAwardYear}
-                  placeholder="2015"
-                  keyboardType="numeric"
-                />
-              </View>
-              <View>
-                <Label>수상 내역</Label>
-                <Input
-                  value={newAwardName}
-                  onChangeText={setNewAwardName}
-                  placeholder="쇼팽 국제 피아노 콩쿠르 1위"
-                />
-              </View>
-              <Button
-                variant="outline"
-                onPress={handleAddAward}
-                className="flex-row items-center justify-center gap-2"
-              >
-                <Icon as={PlusIcon} size={16} />
-                <Text>추가</Text>
-              </Button>
-            </View>
-          </Card>
-
-          {/* Concerts */}
-          <Card className="p-4 mb-6">
-            <Text className="text-lg font-bold mb-3">공연 정보</Text>
-            <View>
-              <Label>공연 수</Label>
-              <Input 
-                value={concertCount}
-                onChangeText={setConcertCount}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </View>
-          </Card>
-
-          {/* Albums */}
-          <Card className="p-4 mb-6">
-            <Text className="text-lg font-bold mb-3">앨범</Text>
-            <View>
-              <Label>앨범 수</Label>
-              <Input 
-                value={albumCount}
-                onChangeText={setAlbumCount}
-                placeholder="0"
-                keyboardType="numeric"
-              />
-            </View>
-          </Card>
-
-          {/* Action Buttons */}
-          <View className="flex-row gap-3 pb-6">
-            <Button variant="outline" onPress={onClose} className="flex-1" disabled={submitting}>
-              <Text>취소</Text>
-            </Button>
-            <Button onPress={handleSubmit} className="flex-1" disabled={submitting}>
-              <Text>{submitting ? '저장 중...' : '저장'}</Text>
-            </Button>
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
+      <FormSection title="활동 수치">
+        <FormRow>
+          <TextField
+            label="공연 수"
+            value={concertCount}
+            onChangeText={setConcertCount}
+            placeholder="0"
+            keyboardType="numeric"
+          />
+          <TextField
+            label="음반 수"
+            value={albumCount}
+            onChangeText={setAlbumCount}
+            placeholder="0"
+            keyboardType="numeric"
+          />
+        </FormRow>
+      </FormSection>
+    </FormModal>
   );
 }

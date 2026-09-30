@@ -1,11 +1,11 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/components/auth/auth-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
 import { useSignIn } from '@clerk/clerk-expo';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import * as React from 'react';
 import { TextInput, View } from 'react-native';
 
@@ -13,7 +13,7 @@ export function ResetPasswordForm() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const [password, setPassword] = React.useState('');
   const [code, setCode] = React.useState('');
-  const codeInputRef = React.useRef<TextInput>(null);
+  const passwordInputRef = React.useRef<TextInput>(null);
   const [error, setError] = React.useState({ code: '', password: '' });
 
   async function onSubmit() {
@@ -28,12 +28,13 @@ export function ResetPasswordForm() {
       });
 
       if (result.status === 'complete') {
-        // Set the active session to
-        // the newly created session (user is now signed in)
-        setActive({ session: result.createdSessionId });
+        // 새 비밀번호로 로그인된 상태가 된다. 찾기·재설정 화면을 닫고 홈으로
+        await setActive({ session: result.createdSessionId });
+        if (router.canDismiss()) router.dismissAll();
+        router.replace('/home' as Href);
         return;
       }
-      // TODO: Handle other statuses
+      setError({ code: '재설정을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.', password: '' });
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 
@@ -87,59 +88,52 @@ export function ResetPasswordForm() {
     }
   }
 
-  function onPasswordSubmitEditing() {
-    codeInputRef.current?.focus();
+  // 메일에서 방금 본 코드를 먼저, 그다음 새 비밀번호
+  function onCodeSubmitEditing() {
+    passwordInputRef.current?.focus();
   }
 
   return (
-    <View className="gap-6">
-      <Card className="border-border/0 shadow-none sm:border-border sm:shadow-sm sm:shadow-black/5">
-        <CardHeader>
-          <CardTitle className="text-center text-xl sm:text-left">비밀번호 재설정</CardTitle>
-          <CardDescription className="text-center sm:text-left">
-            이메일로 받은 인증 코드를 입력하고 새 비밀번호를 설정하세요
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="gap-6">
-          <View className="gap-6">
-            <View className="gap-1.5">
-              <View className="flex-row items-center">
-                <Label htmlFor="password">새 비밀번호</Label>
-              </View>
-              <Input
-                id="password"
-                secureTextEntry
-                onChangeText={setPassword}
-                returnKeyType="next"
-                submitBehavior="submit"
-                onSubmitEditing={onPasswordSubmitEditing}
-              />
-              {error.password ? (
-                <Text className="text-sm font-medium text-destructive">{error.password}</Text>
-              ) : null}
-            </View>
-            <View className="gap-1.5">
-              <Label htmlFor="code">인증 코드</Label>
-              <Input
-                id="code"
-                autoCapitalize="none"
-                onChangeText={setCode}
-                returnKeyType="send"
-                keyboardType="numeric"
-                autoComplete="sms-otp"
-                textContentType="oneTimeCode"
-                onSubmitEditing={onSubmit}
-              />
-              {error.code ? (
-                <Text className="text-sm font-medium text-destructive">{error.code}</Text>
-              ) : null}
-            </View>
-            <Button className="w-full" onPress={onSubmit}>
-              <Text>비밀번호 변경</Text>
-            </Button>
-          </View>
-        </CardContent>
-      </Card>
+    <View>
+      <AuthHeading title="새 비밀번호 정하기" description="메일로 받은 인증 코드를 넣고 새 비밀번호를 정해 주세요." />
+      <View className="gap-4">
+        <View className="gap-1.5">
+          <Label htmlFor="code">인증 코드</Label>
+          <Input
+            id="code"
+            autoCapitalize="none"
+            aria-invalid={Boolean(error.code)}
+            className={`${AUTH_INPUT_CLASS} font-mono tracking-[0.3em]`}
+            onChangeText={setCode}
+            returnKeyType="next"
+            submitBehavior="submit"
+            keyboardType="numeric"
+            autoComplete="sms-otp"
+            textContentType="oneTimeCode"
+            onSubmitEditing={onCodeSubmitEditing}
+          />
+          <FieldError message={error.code} />
+        </View>
+        <View className="gap-1.5">
+          <Label htmlFor="password">새 비밀번호</Label>
+          <Input
+            ref={passwordInputRef}
+            id="password"
+            placeholder="8자 이상"
+            secureTextEntry
+            autoComplete="new-password"
+            aria-invalid={Boolean(error.password)}
+            className={AUTH_INPUT_CLASS}
+            onChangeText={setPassword}
+            returnKeyType="send"
+            onSubmitEditing={onSubmit}
+          />
+          <FieldError message={error.password} />
+        </View>
+        <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
+          <Text className="font-bold">비밀번호 바꾸기</Text>
+        </Button>
+      </View>
     </View>
   );
 }

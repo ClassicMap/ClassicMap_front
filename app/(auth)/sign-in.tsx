@@ -1,12 +1,10 @@
+import { AuthShell } from '@/components/auth/auth-shell';
 import { SignInForm } from '@/components/sign-in-form';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { ChevronLeftIcon } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
-import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { type Href, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import * as React from 'react';
+import { Platform } from 'react-native';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -15,28 +13,16 @@ export default function SignInScreen() {
   // 소셜 로그인 등으로 인증 상태가 변하면 자동으로 뒤로가기
   React.useEffect(() => {
     if (isSignedIn) {
-      WebBrowser.dismissBrowser().catch(() => {});
-      router.back();
+      // 웹 구현에는 dismissBrowser가 없어 undefined가 돌아온다. 닫을 인앱 브라우저도 네이티브에만 있다
+      if (Platform.OS !== 'web') WebBrowser.dismissBrowser().catch(() => {});
+      if (router.canGoBack()) router.back();
+      else router.replace('/home' as Href);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, router]);
 
   return (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      contentContainerClassName="sm:flex-1 items-center justify-center p-4 py-8 sm:py-4 sm:p-6 mt-safe ios:mt-0"
-      keyboardDismissMode="interactive">
-      <View className="w-full max-w-sm">
-        <View className="mb-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-10 rounded-full"
-            onPress={() => router.back()}>
-            <Icon as={ChevronLeftIcon} className="size-6" />
-          </Button>
-        </View>
-        <SignInForm />
-      </View>
-    </ScrollView>
+    <AuthShell onClose={() => (router.canGoBack() ? router.back() : router.replace('/home' as Href))}>
+      <SignInForm />
+    </AuthShell>
   );
 }

@@ -1,8 +1,9 @@
 // components/sector-chip.tsx
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
-import { Text } from '@/components/ui/text';
+import { Pressable } from 'react-native';
+import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
+import { Text } from '@/components/ui/text';
 import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
 import type { PerformanceSectorWithCount } from '@/lib/types/models';
 
@@ -14,51 +15,32 @@ interface SectorChipProps {
 }
 
 export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipProps) {
-  // Validate sector has required properties
   if (!sector || !sector.sectorName) {
     return null;
   }
 
-  const performanceCount = sector.performanceCount ?? 0;
-
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: isSelected }}
-      className={`flex-row items-center gap-2 rounded-full border px-4 py-2 ${
-        isSelected ? 'border-primary bg-primary' : 'border-border bg-secondary'
-      }`}
-      onPress={onPress}>
-      <Text
-        className={`text-sm font-medium ${
-          isSelected ? 'text-primary-foreground' : 'text-secondary-foreground'
-        }`}>
-        {sector.sectorName}
-      </Text>
-
-      <View
-        className={`rounded-full px-1.5 py-0.5 ${
-          isSelected ? 'bg-primary-foreground/20' : 'bg-background/70'
-        }`}>
-        <Text
-          className={`text-xs font-medium ${
-            isSelected ? 'text-primary-foreground' : 'text-muted-foreground'
-          }`}>
-          {performanceCount}
-        </Text>
-      </View>
-
-      {onEdit && isSelected && (
-        <Pressable
-          onPress={(e) => {
-            e?.stopPropagation?.();
-            onEdit();
-          }}
-          className="ml-1">
-          <Icon as={EditIcon} size={12} className="text-primary-foreground" />
-        </Pressable>
-      )}
-    </Pressable>
+    <Chip
+      label={sector.sectorName}
+      count={sector.performanceCount ?? 0}
+      selected={isSelected}
+      onPress={onPress}
+      trailing={
+        onEdit && isSelected ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${sector.sectorName} 섹터 편집`}
+            hitSlop={8}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              onEdit();
+            }}
+            className="ml-0.5">
+            <Icon as={EditIcon} size={12} className="text-primary" />
+          </Pressable>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -66,10 +48,10 @@ export function AddSectorChip({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      className="flex-row items-center gap-2 rounded-full border-2 border-dashed border-foreground/40 bg-foreground/5 px-4 py-2"
+      className="h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border border-dashed border-border-strong px-3"
       onPress={onPress}>
-      <Icon as={PlusIcon} size={14} className="text-foreground" />
-      <Text className="text-sm font-medium text-foreground">섹터</Text>
+      <Icon as={PlusIcon} size={14} className="text-foreground-muted" />
+      <Text className="text-label text-foreground-muted">섹터</Text>
     </Pressable>
   );
 }

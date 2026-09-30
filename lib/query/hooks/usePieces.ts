@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PieceAPI } from '@/lib/api/client';
 import { AdminPieceAPI } from '@/lib/api/admin';
 import type { Piece } from '@/lib/types/models';
@@ -22,6 +22,24 @@ export function usePiece(id: number | undefined) {
     queryKey: PIECE_QUERY_KEYS.detail(id!),
     queryFn: () => PieceAPI.getById(id!),
     enabled: !!id && id > 0,
+  });
+}
+
+const COMPOSER_PIECES_PAGE = 30;
+
+/**
+ * 작곡가 상세의 작품 목록. 페이지를 이어 붙인다 (프로젝트 지침: 전체를 한 번에 받지 않는다)
+ */
+export function useComposerPieces(composerId: number | undefined) {
+  return useInfiniteQuery({
+    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId ?? 0), 'pages'] as const,
+    queryFn: ({ pageParam }) =>
+      PieceAPI.getPageByComposer(composerId ?? 0, { offset: pageParam, limit: COMPOSER_PIECES_PAGE }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < COMPOSER_PIECES_PAGE ? undefined : pages.length * COMPOSER_PIECES_PAGE,
+    initialPageParam: 0,
+    enabled: (composerId ?? 0) > 0,
+    staleTime: 5 * 60_000,
   });
 }
 
