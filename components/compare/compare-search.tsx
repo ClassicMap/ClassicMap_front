@@ -9,6 +9,7 @@ import type { ComparisonPiece } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { searchMatchIndex } from '@/lib/utils/hangul-search';
 import { ChevronRightIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { useIsFocused } from '@react-navigation/native';
 import * as React from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 
@@ -69,9 +70,11 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
   // 키보드가 있는 넓은 웹에서만 '/' 단축키를 알려 준다
   const { nav } = useBreakpoint();
   const showShortcut = Platform.OS === 'web' && nav !== 'tabs';
+  // 탭을 옮겨도 비교 화면은 뒤에 살아 있어서, 보일 때만 '/'를 받는다
+  const screenFocused = useIsFocused();
 
   React.useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (Platform.OS !== 'web' || typeof document === 'undefined' || !screenFocused) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
@@ -81,7 +84,7 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [screenFocused]);
 
   return (
     <View

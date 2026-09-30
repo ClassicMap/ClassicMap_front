@@ -40,6 +40,7 @@ import {
   Undo2Icon,
   XIcon,
 } from 'lucide-react-native';
+import { useIsFocused } from '@react-navigation/native';
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -124,12 +125,15 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     });
   }, [a, b, sectors, allSectors]);
 
-  // 집중 비교가 열린 동안 셸 영상은 쉬고 미니 플레이어도 숨는다
+  // 집중 비교가 보이는 동안 셸 영상은 쉬고 미니 플레이어도 숨는다.
+  // 탭 화면은 떠나도 뒤에 살아 있으므로 마운트가 아니라 화면 포커스를 따른다
+  const screenFocused = useIsFocused();
   const wasPlaying = React.useRef(comparePlayer.getState().playing);
   React.useEffect(() => {
+    if (!screenFocused) return;
     comparePlayer.setFocus({ a: focus[0], b: focus[1] });
     return () => comparePlayer.setFocus(null);
-  }, [focus]);
+  }, [focus, screenFocused]);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -177,6 +181,7 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       b={b}
       imageOf={imageOf}
       startPlaying={wasPlaying.current}
+      screenFocused={screenFocused}
       sectors={sectors}
       activeSectorId={activeSector?.id}
       rows={rows}
@@ -199,6 +204,8 @@ interface FocusStageProps {
   b: ComparisonPerformance;
   imageOf: (performance: ComparisonPerformance) => string | null;
   startPlaying: boolean;
+  /** 이 화면이 지금 보이는지. 탭을 옮기거나 위에 다른 화면이 쌓이면 false */
+  screenFocused: boolean;
   sectors: { id: number; sectorName: string }[];
   activeSectorId: number | undefined;
   rows: SectorRow[];
@@ -241,7 +248,7 @@ function anchorBetween(a: number, b: number, from: Side): AlignAnchor | null {
 }
 
 function FocusStage(props: FocusStageProps) {
-  const { a, b, imageOf, sectors, activeSectorId, rows, onExit, onChangeSector, queue } = props;
+  const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
   const [mode, setMode] = React.useState<FocusMode>('align');
@@ -257,18 +264,42 @@ function FocusStage(props: FocusStageProps) {
   const engineRef = React.useRef(engine);
   engineRef.current = engine;
 
-  const exit = React.useCallback(() => {
-    // 두 연주의 위치를 스토어에 남기고, 듣던 연주로 비교 화면에 돌아간다
-    const positions = engine.positions();
+  // 두 연주의 위치를 스토어에 남기고, 듣던 쪽 연주를 앱 플레이어에 넘긴다
+  const handOff = React.useCallback(() => {
+    const latest = engineRef.current;
+    const positions = latest.positions();
     comparePlayer.rememberPosition(a.id, positions.a, clipDurationMs(a) / 1000);
     comparePlayer.rememberPosition(b.id, positions.b, clipDurationMs(b) / 1000);
-    comparePlayer.select(trackFromPerformance(active, imageOf(active)), {
-      play: engine.playing,
+    const current = latest.side === 'a' ? a : b;
+    comparePlayer.select(trackFromPerformance(current, imageOf(current)), {
+      play: latest.playing,
       mode: 'resume',
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
     });
+  }, [a, b, imageOf, queue]);
+
+  const exit = React.useCallback(() => {
+    handOff();
     onExit();
-  }, [engine, a, b, active, imageOf, onExit, queue]);
+  }, [handOff, onExit]);
+
+  // 탭을 옮기거나 위에 다른 화면이 쌓여도 이 화면은 살아 있다. 떠나면 듣던 쪽을 앱 플레이어에 넘겨
+  // 재생 바로 이어 듣게 하고, 돌아오면 앱 플레이어가 이어 간 자리부터 다시 이 화면이 맡는다.
+  // 네이티브는 영상이 하나라 자리만 옮기면 되므로 웹만 넘긴다
+  const focusedBefore = React.useRef(screenFocused);
+  React.useEffect(() => {
+    if (focusedBefore.current === screenFocused) return;
+    focusedBefore.current = screenFocused;
+    if (Platform.OS !== 'web') return;
+    if (screenFocused) {
+      web.resume();
+    } else {
+      handOff();
+      web.suspend();
+    }
+    // 포커스가 바뀔 때만 넘긴다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screenFocused]);
 
   // 자동 번갈아 듣기: 재생 중일 때만 간격마다 넘긴다
   React.useEffect(() => {
@@ -283,9 +314,9 @@ function FocusStage(props: FocusStageProps) {
   const exitRef = React.useRef(exit);
   exitRef.current = exit;
 
-  // 단축키: 스페이스 재생 · Tab 전환 · ⇧←→ 5초 · Esc 나가기
+  // 단축키: 스페이스 재생 · Tab 전환 · ⇧←→ 5초 · Esc 나가기. 이 화면이 보일 때만 받는다
   React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || !screenFocused) return;
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
@@ -313,7 +344,7 @@ function FocusStage(props: FocusStageProps) {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editingLoop]);
+  }, [editingLoop, screenFocused]);
 
   const toggleLoop = () => {
     if (loop || editingLoop) {
@@ -606,6 +637,33 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
     };
   }, [side, playing, progress, sideProgress, mode, a.id, b.id]);
 
+  /** 화면을 떠날 때: 두 영상을 멈춘다 (재생은 앱 플레이어가 이어 간다) */
+  const suspend = React.useCallback(() => {
+    (['a', 'b'] as const).forEach((key) => refs.current[key]?.pause());
+  }, []);
+
+  /** 돌아왔을 때: 앱 플레이어가 이어 간 연주·위치에서 다시 이 화면 영상으로 튼다 */
+  const resume = React.useCallback(() => {
+    const state = comparePlayer.getState();
+    (['a', 'b'] as const).forEach((key) => {
+      const video = refs.current[key];
+      const position = comparePlayer.positionFor(key === 'a' ? a.id : b.id);
+      if (!video || !(position > 0)) return;
+      if (!Number.isFinite(video.duration) || position < video.duration) video.currentTime = position;
+    });
+    const currentId = state.current?.performanceId;
+    const target: Side | null = currentId === a.id ? 'a' : currentId === b.id ? 'b' : null;
+    // 떠나 있는 동안 다른 연주로 넘어갔으면 소리 쪽은 그대로 두고 틀지 않는다
+    if (!target) return;
+    sideRef.current = target;
+    setSide(target);
+    (['a', 'b'] as const).forEach((key) => {
+      const video = refs.current[key];
+      if (video) video.muted = key === target ? state.muted : true;
+    });
+    if (state.playing) void refs.current[target]?.play().catch(() => setPlaying(false));
+  }, [a.id, b.id]);
+
   const renderVideo = (key: Side) => {
     const performance = key === 'a' ? a : b;
     return (
@@ -635,7 +693,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
     );
   };
 
-  return { engine, renderVideo };
+  return { engine, renderVideo, suspend, resume };
 }
 
 // ─── 네이티브: 플레이어 하나. 전환은 스토어가 위치를 잡아 준다 ──────────────────

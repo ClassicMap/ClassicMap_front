@@ -35,6 +35,7 @@ import { repertoireFirst } from '@/lib/data/library';
 import type { ComparisonPerformance } from '@/lib/types/models';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { useIsFocused } from '@react-navigation/native';
 import { type Href, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
@@ -80,6 +81,8 @@ export function ComparePieceView({
   onFocus,
 }: ComparePieceViewProps) {
   const router = useRouter();
+  // 탭을 옮겨도 이 화면은 뒤에 살아 있다. 단축키는 보일 때만 받는다
+  const screenFocused = useIsFocused();
   const { canEdit } = useAuth();
   const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
@@ -216,6 +219,7 @@ export function ComparePieceView({
   }, [activeId, staged, choose]);
 
   React.useEffect(() => {
+    if (!screenFocused) return;
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       // 슬라이더는 제 화살표를 스스로 처리하고 전파를 끊으므로 여기서는 입력 칸만 비킨다
@@ -242,7 +246,7 @@ export function ComparePieceView({
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [togglePlay, switchTake, toggleFullscreen, picking]);
+  }, [togglePlay, switchTake, toggleFullscreen, picking, screenFocused]);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
