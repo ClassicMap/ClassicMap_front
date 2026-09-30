@@ -392,7 +392,15 @@ export function ComparePieceView({
             <View className="min-w-0 flex-1">
               <View className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
                 {staged && active && staged.id === active.id ? (
-                  <PlayerSlot performanceId={active.id} fit="contain" radius={14} />
+                  <>
+                    <PlayerSlot performanceId={active.id} fit="contain" radius={14} />
+                    <Pressable
+                      onPress={() => start(active)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${primaryCredit(active)?.artistName ?? '연주'} 재생·일시정지`}
+                      className="absolute inset-0"
+                    />
+                  </>
                 ) : staged ? (
                   <Poster performance={staged} onPlay={() => start(staged)} large />
                 ) : (
@@ -608,7 +616,16 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay 
           active && 'ring-2 ring-primary'
         )}>
         {active && isPlayablePerformance(performance) ? (
-          <PlayerSlot performanceId={performance.id} fit="cover" radius={10} />
+          <>
+            <PlayerSlot performanceId={performance.id} fit="cover" radius={10} />
+            {/* 셸 영상은 누름을 통과시키므로 자리 위에서 재생·일시정지를 받는다 */}
+            <Pressable
+              onPress={onPlay}
+              accessibilityRole="button"
+              accessibilityLabel={`${credit?.artistName ?? '연주'} 재생·일시정지`}
+              className="absolute inset-0"
+            />
+          </>
         ) : (
           <Poster performance={performance} onPlay={onPlay} />
         )}
