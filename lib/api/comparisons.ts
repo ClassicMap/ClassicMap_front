@@ -192,6 +192,7 @@ function parseSector(value: unknown): ComparisonSector {
     pieceId: requireInteger(value.pieceId, 'sector.pieceId'),
     sectorName: requireString(value.sectorName, 'sector.sectorName'),
     sectorNameEn: optionalString(value.sectorNameEn),
+    sectorType: optionalString(value.sectorType),
     description: optionalString(value.description),
     displayOrder: typeof value.displayOrder === 'number' ? value.displayOrder : null,
     measureStart: optionalString(value.measureStart),

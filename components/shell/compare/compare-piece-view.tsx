@@ -1,4 +1,5 @@
 import { SectionStaff } from '@/components/compare/section-staff';
+import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { FavoriteButton } from '@/components/favorite-button';
 import { PlayerSlot } from '@/components/player/player-slot';
@@ -354,6 +355,7 @@ export function ComparePieceView({
                 key={sector.id}
                 label={sector.sectorName}
                 count={sector.primaryArtistCount}
+                trailing={<SectorTypeBadge sector={sector} />}
                 selected={sector.id === activeSector?.id}
                 onPress={() => onSelectSector(sector.id)}
               />
@@ -369,6 +371,10 @@ export function ComparePieceView({
             <Text className="text-label text-foreground">{theater ? '모아 보기' : '크게 보기'}</Text>
           </Pressable>
         </View>
+
+        {activeSector ? (
+          <SectorGuide sector={activeSector} collapsible={theater} className="mt-4 max-w-[880px]" />
+        ) : null}
 
         {picking ? (
           <View className="mt-5 flex-row items-center gap-3 rounded-lg border border-primary bg-primary-muted px-4 py-3">

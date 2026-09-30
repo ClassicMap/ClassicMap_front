@@ -45,6 +45,33 @@ export function sortComparisonSectors(sectors: readonly ComparisonSector[]): Com
   return [...sectors].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
 }
 
+/** 같은 대목의 해석이 아니라 편성이 다른 편곡을 나란히 듣는 구간 */
+export function isArrangementSector(sector: Pick<ComparisonSector, 'sectorType'>): boolean {
+  return sector.sectorType === 'ARRANGEMENTS';
+}
+
+export interface EmphasisSegment {
+  text: string;
+  strong: boolean;
+}
+
+/**
+ * 구간 안내의 `**강조**` 표시를 조각으로 나눈다. 짝이 맞지 않는 `**` 는 글자 그대로 둔다.
+ */
+export function splitEmphasis(text: string): EmphasisSegment[] {
+  const segments: EmphasisSegment[] = [];
+  const pattern = /\*\*(.+?)\*\*/g;
+  let cursor = 0;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > cursor) segments.push({ text: text.slice(cursor, index), strong: false });
+    segments.push({ text: match[1], strong: true });
+    cursor = index + match[0].length;
+  }
+  if (cursor < text.length) segments.push({ text: text.slice(cursor), strong: false });
+  return segments;
+}
+
 /**
  * 오늘의 비교: 연주자가 많은 앞쪽 작품 중에서 날짜로 하나를 고른다.
  * 같은 날에는 누구에게나 같은 작품이 나온다.

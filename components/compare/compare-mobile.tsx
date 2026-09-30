@@ -1,6 +1,7 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { ScrollShelf } from '@/components/home/shelf';
 import { SectionStaff } from '@/components/compare/section-staff';
+import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/components/shell/compare/compare-catalog';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
@@ -472,11 +473,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
                 key={sector.id}
                 label={sector.sectorName}
                 count={sector.readyPerformanceCount}
+                trailing={<SectorTypeBadge sector={sector} />}
                 selected={sector.id === activeSector?.id}
                 onPress={() => onSelectSector(sector.id)}
               />
             ))}
       </ScrollShelf>
+
+      {activeSector ? <SectorGuide sector={activeSector} collapsible className="mt-3" /> : null}
 
       {/* 영상: 고른 연주 하나만 */}
       <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">

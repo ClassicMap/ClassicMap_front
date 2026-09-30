@@ -191,6 +191,12 @@ export interface ComparisonSector {
   pieceId: number;
   sectorName: string;
   sectorNameEn: string | null;
+  /**
+   * 구간의 갈래. WHOLE_WORK · MOVEMENT · EXCERPT 는 같은 대목의 다른 해석을 견주고,
+   * ARRANGEMENTS 는 편성이 서로 다른 편곡을 나란히 듣는다.
+   */
+  sectorType: string | null;
+  /** 구간 안내. 이 대목에서 무엇을 들을지 적은 큐레이션 문장 */
   description: string | null;
   displayOrder: number | null;
   measureStart: string | null;
