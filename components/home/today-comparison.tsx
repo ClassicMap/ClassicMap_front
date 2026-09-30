@@ -102,7 +102,7 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
         {/* 데스크톱은 옆 글에 같은 제목이 있다 */}
         {!wide ? (
           <View className="absolute left-3 top-3">
-            <Badge tone="neutral" label="오늘의 비교" className="bg-black/60" />
+            <Badge tone="media" label="오늘의 비교" />
           </View>
         ) : null}
         {/* 가운데 재생: 누르면 비교 화면에서 바로 재생된다 */}

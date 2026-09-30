@@ -501,7 +501,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
             </View>
             {activeSector ? (
               <View className="absolute left-3 top-3">
-                <Badge label={activeSector.sectorName} className="bg-black/60" />
+                <Badge tone="media" label={activeSector.sectorName} />
               </View>
             ) : null}
             <Text className="absolute bottom-3 left-3 text-label font-semibold text-white">

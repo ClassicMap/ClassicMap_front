@@ -15,6 +15,8 @@ const badgeVariants = cva('shrink-0 flex-row items-center gap-1 self-start round
       danger: 'bg-destructive/15',
       info: 'bg-info/15',
       outline: 'border border-border',
+      // 영상·사진 위: 테마와 상관없이 어두운 바탕에 흰 글자 (썸네일에 박힌 글자 위에서도 읽혀야 한다)
+      media: 'bg-black/80',
     },
   },
   defaultVariants: { tone: 'neutral' },
@@ -30,6 +32,7 @@ const badgeTextVariants = cva('text-micro', {
       danger: 'text-destructive',
       info: 'text-info',
       outline: 'text-foreground-muted',
+      media: 'font-semibold text-white',
     },
   },
   defaultVariants: { tone: 'neutral' },
