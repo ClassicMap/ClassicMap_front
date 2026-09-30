@@ -8,7 +8,10 @@ interface CommandPaletteState {
 
 const CommandPaletteContext = React.createContext<CommandPaletteState | null>(null);
 
-/** ⌘K / Ctrl+K 로 팔레트를 연다. 입력 중이어도 동작해야 해서 window에 건다. */
+/**
+ * ⌘K / Ctrl+K 로 팔레트를 연다. 입력 중이어도 동작해야 해서 window의 캡처 단계에 건다
+ * (RN TextInput은 키 이벤트 전파를 끊는다).
+ */
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
   const toggle = React.useCallback(() => setOpen((value) => !value), []);
@@ -20,8 +23,8 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         setOpen((value) => !value);
       }
     }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, []);
 
   const value = React.useMemo(() => ({ open, setOpen, toggle }), [open, toggle]);

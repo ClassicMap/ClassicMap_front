@@ -149,20 +149,25 @@ export function CommandPalette() {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
+        event.stopPropagation();
         close();
       } else if (event.key === 'ArrowDown') {
         event.preventDefault();
+        event.stopPropagation();
         setActiveIndex((index) => (flat.length === 0 ? 0 : (index + 1) % flat.length));
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
+        event.stopPropagation();
         setActiveIndex((index) => (flat.length === 0 ? 0 : (index - 1 + flat.length) % flat.length));
       } else if (event.key === 'Enter' && !event.isComposing) {
         event.preventDefault();
+        event.stopPropagation();
         flat[activeIndex]?.run();
       }
     }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // 입력 칸(RN TextInput)은 키 이벤트 전파를 끊으므로 캡처 단계에서 먼저 받는다
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [open, flat, activeIndex, close]);
 
   if (!open) return null;
