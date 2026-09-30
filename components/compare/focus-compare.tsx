@@ -18,7 +18,7 @@ import {
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import { alignAcross, anchorPairKey, fineClock, type AlignAnchor } from '@/lib/player/focus-align';
+import { alignAcross, fineClock } from '@/lib/player/focus-align';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import {
@@ -33,11 +33,9 @@ import {
   AlertCircleIcon,
   ArrowLeftRightIcon,
   ChevronLeftIcon,
-  Link2Icon,
   PauseIcon,
   PlayIcon,
   RepeatIcon,
-  Undo2Icon,
   XIcon,
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
@@ -235,16 +233,6 @@ interface FocusEngine {
 interface SideProgress {
   current: number;
   duration: number;
-}
-
-/**
- * 전환할 때 기준점. 없으면 null (구간 안 비율로 옮긴다).
- * anchorFor(a, b)는 { first: A 기준점, second: B 기준점 }을 준다
- */
-function anchorBetween(a: number, b: number, from: Side): AlignAnchor | null {
-  const pair = comparePlayer.anchorFor(a, b);
-  if (!pair) return null;
-  return from === 'a' ? { from: pair.first, to: pair.second } : { from: pair.second, to: pair.first };
 }
 
 function FocusStage(props: FocusStageProps) {
@@ -499,8 +487,6 @@ function FocusStage(props: FocusStageProps) {
           })}
         </View>
 
-        <AnchorBar a={a} b={b} sideProgress={engine.sideProgress} narrow={narrow} />
-
         <LengthTable a={a} b={b} rows={rows} activeSectorId={activeSectorId} />
       </ScrollView>
 
@@ -608,7 +594,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         if (!from || !to || target === sideRef.current) return;
         const wasPlaying = !from.paused;
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
-          to.currentTime = alignAcross(from.currentTime, from.duration, to.duration, anchorBetween(a.id, b.id, sideRef.current));
+          to.currentTime = alignAcross(from.currentTime, from.duration, to.duration);
         }
         from.pause();
         from.muted = true;
@@ -635,7 +621,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
       },
     };
-  }, [side, playing, progress, sideProgress, mode, a.id, b.id]);
+  }, [side, playing, progress, sideProgress, mode]);
 
   /** 화면을 떠날 때: 두 영상을 멈춘다 (재생은 앱 플레이어가 이어 간다) */
   const suspend = React.useCallback(() => {
@@ -737,15 +723,7 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
       switchTo: (target: Side) => {
         if (target === side) return;
         const performance = target === 'a' ? a : b;
-        const track = trackFromPerformance(performance, imageOf(performance));
-        const fromLength = progress.duration || lengthOf(side);
-        const anchor = anchorBetween(a.id, b.id, side);
-        if (mode === 'align' && anchor) {
-          const startAt = alignAcross(progress.current, fromLength, lengthOf(target), anchor);
-          comparePlayer.select(track, { play: playing, startAt });
-        } else {
-          comparePlayer.select(track, { play: playing, mode });
-        }
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: playing, mode });
       },
       seekRatio: (ratio: number) => comparePlayer.seek(ratio * (progress.duration || 0)),
       seekBy: (seconds: number) => comparePlayer.seekBy(seconds),
@@ -931,69 +909,6 @@ function SideControls({
             </Text>
           </Pressable>
         ))}
-      </View>
-    </View>
-  );
-}
-
-/**
- * 맞춤 기준점. 두 영상을 같은 대목(예: 첫 타건)에 맞춰 두고 누르면, 그다음부터 '같은 지점' 전환은
- * 기준점에서 지난 시간을 두 연주의 빠르기 비율로 옮긴다.
- */
-function AnchorBar({
-  a,
-  b,
-  sideProgress,
-  narrow,
-}: {
-  a: ComparisonPerformance;
-  b: ComparisonPerformance;
-  sideProgress: Record<Side, SideProgress>;
-  narrow: boolean;
-}) {
-  const stored = useComparePlayer((state) => state.anchors[anchorPairKey(a.id, b.id)]);
-  const anchor = stored && stored[a.id] !== undefined && stored[b.id] !== undefined ? { a: stored[a.id], b: stored[b.id] } : null;
-  return (
-    <View
-      className={cn(
-        'mt-5 gap-3 rounded-xl border px-4 py-3',
-        anchor ? 'border-primary bg-primary-muted/40' : 'border-border bg-surface-1',
-        !narrow && 'flex-row items-center'
-      )}>
-      <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-body-sm font-semibold text-foreground">
-          {anchor ? `맞춤 기준점 · A ${fineClock(anchor.a)} ↔ B ${fineClock(anchor.b)}` : '맞춤 기준점이 없어요'}
-        </Text>
-        <Text variant="caption">
-          {anchor
-            ? '같은 지점으로 바꿀 때 이 대목부터 지난 시간을 두 연주의 빠르기 비율로 옮겨요.'
-            : '영상마다 위치를 조정해 같은 대목(예: 첫 음)에 맞춘 뒤 눌러 보세요. 지금은 구간 안 비율로 옮겨요.'}
-        </Text>
-        {Platform.OS === 'web' && !narrow ? (
-          <Text variant="caption" className="text-foreground-subtle">
-            소리 나는 쪽 미세 조정: , . 0.5초 · ⇧ , . 5초
-          </Text>
-        ) : null}
-      </View>
-      <View className="flex-row items-center gap-2">
-        <Pressable
-          onPress={() => comparePlayer.setAnchor(a.id, sideProgress.a.current, b.id, sideProgress.b.current)}
-          accessibilityRole="button"
-          accessibilityLabel="지금 두 위치를 같은 대목으로 맞추기"
-          className="h-9 flex-row items-center gap-1.5 rounded-full bg-primary px-3.5 active:opacity-80">
-          <Icon as={Link2Icon} size={15} className="text-primary-foreground" />
-          <Text className="text-label font-semibold text-primary-foreground">{anchor ? '다시 맞추기' : '여기로 맞추기'}</Text>
-        </Pressable>
-        {anchor ? (
-          <Pressable
-            onPress={() => comparePlayer.clearAnchor(a.id, b.id)}
-            accessibilityRole="button"
-            accessibilityLabel="맞춤 기준점 지우기"
-            className="h-9 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 active:bg-surface-2 web:hover:bg-surface-2">
-            <Icon as={Undo2Icon} size={14} className="text-foreground-muted" />
-            <Text className="text-label text-foreground">초기화</Text>
-          </Pressable>
-        ) : null}
       </View>
     </View>
   );
