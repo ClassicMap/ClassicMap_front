@@ -392,6 +392,8 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
             accessibilityLabel={`${row.title} 공개`}
             trackColor={{ false: colors.surface3, true: colors.primary }}
             thumbColor={values[row.key] ? colors.primaryForeground : colors.foregroundMuted}
+            // 웹(RNW)은 켜진 손잡이 색을 activeThumbColor로만 받는다. 없으면 기본 청록이 나온다
+            {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.primaryForeground } as object) : null)}
           />
         </View>
       ))}
