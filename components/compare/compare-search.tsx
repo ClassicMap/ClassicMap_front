@@ -98,7 +98,7 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
         value={value}
         onChangeText={onChange}
         onSubmitEditing={onSubmit}
-        placeholder="작곡가나 작품 이름 (초성도 돼요)"
+        placeholder="작곡가나 작품 찾기"
         placeholderTextColor="hsl(33 6% 46%)"
         returnKeyType="search"
         autoCorrect={false}
@@ -140,8 +140,8 @@ export function CompareSearchResults({
   if (result.composers.length === 0 && result.pieces.length === 0) {
     return (
       <View className="mt-10 items-center gap-2">
-        <Text className="text-body font-semibold text-foreground">‘{query.trim()}’에 맞는 작곡가나 작품이 없어요</Text>
-        <Text variant="caption">비교할 수 있는 작품만 찾아요. 다른 이름이나 초성으로 찾아보세요.</Text>
+        <Text className="text-body font-semibold text-foreground">‘{query.trim()}’ 검색 결과가 없어요</Text>
+        <Text variant="caption">비교할 수 있는 작품에서만 찾아요.</Text>
         <Pressable onPress={onClear} accessibilityRole="button" className="mt-2 rounded-full bg-surface-2 px-4 py-2">
           <Text className="text-body-sm font-semibold text-foreground">전체 작곡가 보기</Text>
         </Pressable>

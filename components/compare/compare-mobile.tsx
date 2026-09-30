@@ -94,7 +94,7 @@ export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMob
       refreshControl={<RefreshControl refreshing={comparable.isRefetching} onRefresh={() => comparable.refetch()} />}>
       <Text variant="title1">비교</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
-        작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
+        같은 구간을 연주자마다 비교해요.
       </Text>
       <CompareSearchField
         value={query}
@@ -128,7 +128,7 @@ export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMob
           icon={AlertCircleIcon}
           tone="error"
           title="비교할 수 있는 작곡가를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          description="잠시 뒤 다시 시도해 주세요."
           action={{ label: '다시 시도', onPress: () => comparable.refetch() }}
         />
       ) : composers.length === 0 ? (
@@ -249,7 +249,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
           icon={AlertCircleIcon}
           tone="error"
           title="작품 목록을 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          description="잠시 뒤 다시 시도해 주세요."
           action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
         />
       ) : pieces.length === 0 ? (
@@ -400,7 +400,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           icon={AlertCircleIcon}
           tone="error"
           title="비교를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          description="잠시 뒤 다시 시도해 주세요."
           action={{
             label: '다시 시도',
             onPress: () => {
@@ -515,7 +515,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           <Skeleton className="h-full w-full" />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <Text variant="caption">이 구간은 아직 재생할 수 있는 영상이 없어요</Text>
+            <Text variant="caption">이 구간은 아직 재생할 영상이 없어요</Text>
           </View>
         )}
       </View>
@@ -550,7 +550,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {picking ? (
         <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
           <Text className="text-body-sm font-semibold text-foreground">
-            {`함께 비교할 연주자를 하나 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+            {`비교할 연주자를 한 명 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
           </Text>
         </View>
       ) : null}

@@ -139,7 +139,7 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
         icon={AlertCircleIcon}
         tone="error"
         title="집중 비교를 불러오지 못했어요"
-        description="연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 비교 화면으로 돌아가 주세요."
+        description="잠시 뒤 다시 시도해 주세요."
         action={{
           label: '다시 시도',
           onPress: () => {
@@ -166,7 +166,7 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       <EmptyState
         icon={AlertCircleIcon}
         title="이 두 연주는 함께 비교할 수 없어요"
-        description="구간이 바뀌었거나 영상이 아직 준비되지 않았어요. 비교 화면에서 연주자를 다시 골라 주세요."
+        description="비교 화면에서 연주자를 다시 골라 주세요."
         action={{ label: '비교 화면으로', onPress: onExit }}
       />
     );
@@ -366,16 +366,16 @@ function FocusStage(props: FocusStageProps) {
           </View>
           <View className="flex-row flex-wrap items-center gap-2">
             <Segmented
-              label="바꿀 때"
+              label="전환"
               value={mode}
               options={[
                 { value: 'align', label: '같은 지점' },
-                { value: 'resume', label: '듣던 곳부터' },
+                { value: 'resume', label: '이어서' },
               ]}
               onChange={setMode}
             />
             <Segmented
-              label="자동 번갈아"
+              label="자동 전환"
               value={auto}
               options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? '끔' : `${value}초` }))}
               onChange={setAuto}
@@ -450,7 +450,7 @@ function FocusStage(props: FocusStageProps) {
                   ) : null}
                   <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
                     <Text className={cn('text-micro font-bold', on ? 'text-primary' : 'text-white')}>
-                      {on ? `${side.toUpperCase()} · ${engine.playing ? '재생 중' : '소리 이쪽'}` : side.toUpperCase()}
+                      {on ? `${side.toUpperCase()} · ${engine.playing ? '재생 중' : '일시정지'}` : side.toUpperCase()}
                     </Text>
                   </View>
                 </Pressable>
@@ -788,7 +788,7 @@ function NativeLoopButton({
       className={cn('h-8 flex-row items-center gap-1.5 rounded-full border px-3', active ? 'border-primary bg-primary-muted' : 'border-border-strong')}>
       <Icon as={RepeatIcon} size={14} className={active ? 'text-primary' : 'text-foreground'} />
       <Text className={cn('text-label', active ? 'text-primary' : 'text-foreground')}>
-        {loop ? '반복 해제' : start !== null ? '끝 지점에서 한 번 더' : '구간 반복'}
+        {loop ? '반복 해제' : start !== null ? '여기까지 반복' : '구간 반복'}
       </Text>
     </Pressable>
   );
@@ -932,7 +932,7 @@ function LengthTable({
     <View className="mt-8 rounded-xl border border-border bg-surface-1 p-4">
       <View className="flex-row items-baseline justify-between gap-3">
         <Text className="text-body font-bold text-foreground">구간별 길이</Text>
-        <Text variant="caption">{`차이는 ${nameA} 대비 ${nameB}가 길거나(+) 짧은(−) 정도예요`}</Text>
+        <Text variant="caption">차이: B가 A보다 길면 +, 짧으면 −</Text>
       </View>
       <View className="mt-3 flex-row border-b border-border pb-2">
         <Text variant="caption" className="flex-[1.4] font-semibold text-foreground-subtle">

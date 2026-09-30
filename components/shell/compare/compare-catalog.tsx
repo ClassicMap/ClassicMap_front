@@ -56,7 +56,7 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
         <View className="min-w-0 flex-1">
           <Text variant="display">비교</Text>
           <Text variant="bodySm" className="mt-1.5 text-foreground-muted">
-            작곡가를 고르면 같은 구간을 연주자별로 들어 볼 수 있는 작품이 나와요.
+            같은 구간을 연주자마다 비교해요.
           </Text>
         </View>
         <CompareSearchField
@@ -93,7 +93,7 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
           icon={AlertCircleIcon}
           tone="error"
           title="비교할 수 있는 작곡가를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          description="잠시 뒤 다시 시도해 주세요."
           action={{ label: '다시 시도', onPress: () => comparable.refetch() }}
         />
       ) : composers.length === 0 ? (
@@ -313,7 +313,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
           icon={AlertCircleIcon}
           tone="error"
           title="작품 목록을 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+          description="잠시 뒤 다시 시도해 주세요."
           action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
         />
       ) : pieces.length === 0 ? (

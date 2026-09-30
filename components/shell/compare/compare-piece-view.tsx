@@ -254,7 +254,7 @@ export function ComparePieceView({
         icon={AlertCircleIcon}
         tone="error"
         title="비교 구간을 불러오지 못했어요"
-        description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+        description="잠시 뒤 다시 시도해 주세요."
         action={{
           label: '다시 시도',
           onPress: () => {
@@ -373,7 +373,7 @@ export function ComparePieceView({
         {picking ? (
           <View className="mt-5 flex-row items-center gap-3 rounded-lg border border-primary bg-primary-muted px-4 py-3">
             <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
-              {`함께 비교할 연주자를 하나 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+              {`비교할 연주자를 한 명 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
             </Text>
             <Pressable onPress={() => setPicking(false)} accessibilityRole="button" className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
               <Text className="text-label text-foreground-muted">취소 (Esc)</Text>
@@ -410,7 +410,7 @@ export function ComparePieceView({
                 ) : (
                   <View className="absolute inset-0 items-center justify-center">
                     <Text variant="caption" className="text-white/70">
-                      이 구간은 아직 재생할 수 있는 영상이 없어요
+                      이 구간은 아직 재생할 영상이 없어요
                     </Text>
                   </View>
                 )}
@@ -985,9 +985,14 @@ function PlayerBar({
             </View>
           </>
         ) : (
-          <Text variant="caption" numberOfLines={2} className="text-foreground-subtle">
-            연주를 골라 재생해 보세요. 스페이스 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면
-          </Text>
+          <View className="min-w-0 gap-0.5">
+            <Text variant="caption" numberOfLines={1} className="text-foreground-muted">
+              연주를 누르면 재생돼요
+            </Text>
+            <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
+              Space 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면
+            </Text>
+          </View>
         )}
       </View>
       {/* 가운데: 재생 조작 */}
