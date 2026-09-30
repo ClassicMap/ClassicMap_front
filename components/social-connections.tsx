@@ -34,6 +34,17 @@ const SOCIAL_CONNECTION_STRATEGIES: {
   },
 ];
 
+/**
+ * 웹 소셜 로그인 팝업이 돌아올 앱 안 주소.
+ * makeRedirectUri()는 웹에서 도메인 루트(https://kang1027.com)를 줘서, /classicmap 아래에 있는 앱이 아니라
+ * 루트 사이트로 돌아간 팝업이 닫히지 않고 멈췄다. 돌아온 팝업의 경로가 이 주소와 정확히 같아야
+ * maybeCompleteAuthSession()이 결과를 넘기고 창이 닫힌다. 기본 경로는 expo-router처럼 개발 서버에서는 붙이지 않는다.
+ */
+function webRedirectUrl(): string {
+  const baseUrl = process.env.NODE_ENV !== 'development' ? (process.env.EXPO_BASE_URL ?? '') : '';
+  return new URL(`${baseUrl.replace(/\/+$/, '')}/sign-in`, window.location.origin).toString();
+}
+
 export function SocialConnections() {
   useWarmUpBrowser();
   const { colorScheme } = useColorScheme();
@@ -42,7 +53,8 @@ export function SocialConnections() {
   function onSocialLoginPress(strategy: SocialConnectionStrategy) {
     return async () => {
       try {
-        const redirectUrl = AuthSession.makeRedirectUri({ scheme: 'classicmap-front' });
+        const redirectUrl =
+          Platform.OS === 'web' ? webRedirectUrl() : AuthSession.makeRedirectUri({ scheme: 'classicmap-front' });
 
         const { createdSessionId, setActive } = await startSSOFlow({
           strategy,
