@@ -68,7 +68,8 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         ),
         headerTitle: '',
         headerShadowVisible: false,
-        headerStatusBarHeight: 52,
+        // 웹에는 상태 표시줄이 없다. 네이티브 값을 그대로 쓰면 모바일 웹 맨 위가 52px 비어 보인다
+        headerStatusBarHeight: Platform.OS === 'web' ? 0 : 52,
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.foregroundSubtle,
         // iOS 26: 탭바를 콘텐츠 위에 띄우고 뒤를 흐린다. 안드로이드·웹은 불투명 + 윗선 (설계 5.4)
