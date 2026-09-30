@@ -7,10 +7,12 @@ import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { Platform } from 'react-native';
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
 import { RootChrome } from '@/components/navigation/root-chrome';
@@ -39,6 +41,12 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
         <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
+          {/* 정적 렌더링이 빈 <title>을 넣어 브라우저 탭에 주소가 뜬다. 웹 기본 제목을 둔다 */}
+          {Platform.OS === 'web' ? (
+            <Head>
+              <title>ClassicMap</title>
+            </Head>
+          ) : null}
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
           <Routes />
           <PortalHost />
