@@ -83,34 +83,37 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
   const longest = Math.max(1, ...lines.map((line) => line.durationMs));
   const title = sector ? `${piece.pieceTitle} · ${sector.sectorName}` : piece.pieceTitle;
 
+  // 여는 버튼과 연주자 토글은 형제로 둔다. 버튼 안에 버튼을 넣으면 웹에서 <button>이 겹친다
   const media = (
-    <Pressable
-      onPress={open}
-      accessibilityRole="button"
-      accessibilityLabel={`${title} 비교 듣기`}
-      className="group aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
-      {thumbnail || piece.composerAvatarUrl ? (
-        <OptimizedImage
-          uri={thumbnail ?? piece.composerAvatarUrl}
-          resizeMode="cover"
-          style={{ width: '100%', height: '100%' }}
-        />
-      ) : null}
-      <Scrim from="bottom" opacity={0.78} extent={55} />
-      {/* 데스크톱은 옆 글에 같은 제목이 있다 */}
-      {!wide ? (
-        <View className="absolute left-3 top-3">
-          <Badge tone="neutral" label="오늘의 비교" className="bg-black/60" />
+    <View className="aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
+      <Pressable
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel={`${title} 비교 듣기`}
+        className="group absolute inset-0">
+        {thumbnail || piece.composerAvatarUrl ? (
+          <OptimizedImage
+            uri={thumbnail ?? piece.composerAvatarUrl}
+            resizeMode="cover"
+            style={{ width: '100%', height: '100%' }}
+          />
+        ) : null}
+        <Scrim from="bottom" opacity={0.78} extent={55} />
+        {/* 데스크톱은 옆 글에 같은 제목이 있다 */}
+        {!wide ? (
+          <View className="absolute left-3 top-3">
+            <Badge tone="neutral" label="오늘의 비교" className="bg-black/60" />
+          </View>
+        ) : null}
+        {/* 가운데 재생: 누르면 비교 화면에서 바로 재생된다 */}
+        <View className="absolute inset-0 items-center justify-center">
+          <View className="size-14 items-center justify-center rounded-full bg-black/45 web:transition-colors web:duration-fast web:group-hover:bg-primary">
+            <Icon as={PlayIcon} size={24} className="ml-1 fill-white text-white" />
+          </View>
         </View>
-      ) : null}
-      {/* 가운데 재생: 누르면 비교 화면에서 바로 재생된다 */}
-      <View className="absolute inset-0 items-center justify-center">
-        <View className="size-14 items-center justify-center rounded-full bg-black/45 web:transition-colors web:duration-fast web:group-hover:bg-primary">
-          <Icon as={PlayIcon} size={24} className="ml-1 fill-white text-white" />
-        </View>
-      </View>
-      {/* 연주자 토글: 고르면 썸네일과 길이가 바뀐다 */}
-      <View className="absolute bottom-3 left-3 flex-row items-center gap-1.5">
+      </Pressable>
+      {/* 연주자 토글: 고르면 썸네일과 길이가 바뀐다. 토글 밖을 누르면 아래 여는 버튼이 받는다 */}
+      <View className="absolute bottom-3 left-3 flex-row items-center gap-1.5" style={{ pointerEvents: 'box-none' }}>
         {lines.map((line, index) => (
           <Pressable
             key={line.performance.id}
@@ -124,17 +127,19 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
           </Pressable>
         ))}
         {current ? (
-          <Text numberOfLines={1} className="ml-1.5 text-label font-semibold text-white">
+          <Text numberOfLines={1} className="ml-1.5 text-label font-semibold text-white" style={{ pointerEvents: 'none' }}>
             {current.name}
           </Text>
         ) : null}
       </View>
       {current ? (
-        <Text className="absolute bottom-3.5 right-3 rounded-xs bg-black/60 px-1.5 py-0.5 font-mono text-caption text-white">
+        <Text
+          className="absolute bottom-3.5 right-3 rounded-xs bg-black/60 px-1.5 py-0.5 font-mono text-caption text-white"
+          style={{ pointerEvents: 'none' }}>
           {clipClock(current.durationMs)}
         </Text>
       ) : null}
-    </Pressable>
+    </View>
   );
 
   if (!wide) {
