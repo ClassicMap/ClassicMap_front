@@ -446,9 +446,12 @@ function FocusStage(props: FocusStageProps) {
                     <Text numberOfLines={1} className={cn('text-body font-bold', on ? 'text-primary' : 'text-foreground')}>
                       {primaryCredit(performance)?.artistName ?? '연주자 정보 없음'}
                     </Text>
-                    <Text variant="caption" numberOfLines={1}>
-                      {supportingCredits(performance) || '독주'}
-                    </Text>
+                    {/* 크레딧이 없다고 독주라는 뜻은 아니다. 없으면 적지 않는다 */}
+                    {supportingCredits(performance) ? (
+                      <Text variant="caption" numberOfLines={1}>
+                        {supportingCredits(performance)}
+                      </Text>
+                    ) : null}
                   </View>
                   <Text variant="mono" className="text-foreground-subtle">
                     {clipClock(clipDurationMs(performance))}

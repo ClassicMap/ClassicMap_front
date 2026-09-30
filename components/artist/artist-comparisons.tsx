@@ -121,7 +121,7 @@ function GroupHeader({ group }: { group: PieceGroup }) {
           {group.pieceTitle}
         </Text>
         <Text variant="caption" numberOfLines={1}>
-          {[group.composerName, group.supporting || '독주'].join(' · ')}
+          {[group.composerName, group.supporting].filter(Boolean).join(' · ')}
         </Text>
       </View>
     </View>
