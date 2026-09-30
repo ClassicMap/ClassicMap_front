@@ -49,13 +49,34 @@ export function formatShortDay(value?: string): string {
   return `${date.getMonth() + 1}.${date.getDate()} (${WEEKDAYS[date.getDay()]})`;
 }
 
-/** "롯데콘서트홀 (롯데콘서트홀)"처럼 괄호 안이 같으면 한 번만 */
+/**
+ * KOPIS 공연장 `시설 (홀)`을 `시설 홀`로 줄인다. 홀이 시설 이름과 같거나 그 안에 있으면 시설만.
+ * 괄호가 여럿·겹친 이름(`스테이지엠 (STAGE M) (구.프란츠홀) (스테이지 엠 (STAGE M) )`)은
+ * 첫 괄호 앞을 시설, 맨 뒤 괄호 안(안쪽 괄호는 뺀다)을 홀로 본다.
+ */
 export function shortVenue(name?: string): string {
   if (!name) return '';
-  const match = name.match(/^(.*?)\s*\((.*)\)\s*$/);
-  if (!match) return name;
-  const [, outer, inner] = match;
-  return outer.trim() === inner.trim() ? outer.trim() : `${outer.trim()} ${inner.trim()}`;
+  const trimmed = name.trim();
+  if (!trimmed.endsWith(')')) return trimmed;
+  // 끝에서부터 짝이 맞는 여는 괄호를 찾는다
+  let depth = 0;
+  let open = -1;
+  for (let index = trimmed.length - 1; index >= 0; index -= 1) {
+    const char = trimmed[index];
+    if (char === ')') depth += 1;
+    if (char !== '(') continue;
+    depth -= 1;
+    if (depth === 0) {
+      open = index;
+      break;
+    }
+  }
+  const outer = trimmed.slice(0, trimmed.indexOf('(')).trim();
+  if (open <= 0 || !outer) return trimmed;
+  const inner = trimmed.slice(open + 1, -1).replace(/\([^()]*\)/g, '').trim();
+  const squash = (value: string) => value.replace(/\s+/g, '');
+  if (!inner || squash(outer).includes(squash(inner))) return outer;
+  return `${outer} ${inner}`;
 }
 
 /** `화요일(19:30)` → `19:30`. 요일 외 형식이면 원문 */
