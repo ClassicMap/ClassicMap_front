@@ -74,19 +74,21 @@ interface GridProps<T> {
   items: readonly T[];
   columns: number;
   gap?: number;
+  /** 줄 간격. 기본은 카드 아래 글자를 위해 gap보다 6 넓다 */
+  rowGap?: number;
   keyOf: (item: T) => string | number;
   renderItem: (item: T, width: number) => React.ReactNode;
 }
 
 /** 모바일 n열 그리드. 칸 폭을 계산해 넘긴다. */
-export function Grid<T>({ items, columns, gap = 12, keyOf, renderItem }: GridProps<T>) {
+export function Grid<T>({ items, columns, gap = 12, rowGap, keyOf, renderItem }: GridProps<T>) {
   const [width, setWidth] = React.useState(0);
   const itemWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
   return (
     <View
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       className="flex-row flex-wrap"
-      style={{ columnGap: gap, rowGap: gap + 6 }}>
+      style={{ columnGap: gap, rowGap: rowGap ?? gap + 6 }}>
       {itemWidth > 0
         ? items.map((item) => (
             <View key={keyOf(item)} style={{ width: itemWidth }}>

@@ -192,13 +192,15 @@ export default function HomeScreen() {
       {recentPieces.length > 0 ? (
         <View className={wide ? 'mt-6' : 'mt-5'}>
           {!wide ? <ShelfHeader title="최근 본 작품" wide={false} /> : null}
-          <View className="flex-row flex-wrap" style={{ gap: wide ? 12 : 8 }}>
-            {recentPieces.slice(0, wide ? 6 : 4).map((item) => (
-              <View key={item.pieceId} style={{ width: wide ? '32%' : '48%', flexGrow: 1 }}>
-                <RecentTile item={item} onPress={() => openRecent(item)} />
-              </View>
-            ))}
-          </View>
+          {/* 칸 폭을 고정한다. 늘려 채우면 홀수 개일 때 마지막 칸만 한 줄을 다 차지한다 */}
+          <Grid
+            items={recentPieces.slice(0, wide ? 6 : 4)}
+            columns={wide ? 3 : 2}
+            gap={wide ? 12 : 8}
+            rowGap={wide ? 12 : 8}
+            keyOf={(item) => item.pieceId}
+            renderItem={(item) => <RecentTile item={item} onPress={() => openRecent(item)} />}
+          />
         </View>
       ) : null}
 
