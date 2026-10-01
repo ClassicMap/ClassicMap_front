@@ -1,4 +1,5 @@
 import { FeaturedPairNote, PerformanceNote } from '@/components/compare/listening-note';
+import { type Performer, PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { LoudnessMeasures, LoudnessOverlay } from '@/components/compare/loudness-curve';
 import { OptimizedImage } from '@/components/optimized-image';
 import { PlayerSlot } from '@/components/player/player-slot';
@@ -6,7 +7,6 @@ import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { VolumeControl } from '@/components/player/volume-control';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -435,7 +435,9 @@ function FocusStage(props: FocusStageProps) {
           <View className="mt-4">
             <FeaturedPairNote
               pair={featuredPair}
-              sideOf={(id) => (id === a.id ? 'a' : id === b.id ? 'b' : null)}
+              a={a}
+              b={b}
+              imageOf={imageOf}
               onMoment={(side, offsetMs) => engine.playAt(side, offsetMs / 1000)}
             />
           </View>
@@ -444,13 +446,14 @@ function FocusStage(props: FocusStageProps) {
         <View className={cn('mt-5 gap-4', !narrow && 'flex-row')}>
           {(['a', 'b'] as const).map((side) => {
             const performance = side === 'a' ? a : b;
+            const performer = performerOf(performance, imageOf);
             const on = engine.side === side;
             return (
               <View key={side} className="min-w-0 flex-1">
                 <Pressable
                   onPress={() => (on ? engine.togglePlay() : engine.switchTo(side))}
                   accessibilityRole="button"
-                  accessibilityLabel={on ? `${side.toUpperCase()} 재생·일시정지` : `${side.toUpperCase()}로 바꾸기`}
+                  accessibilityLabel={on ? `${performer.name} 재생·일시정지` : `${performer.name} 연주로 바꾸기`}
                   // 테두리는 늘 두고 색만 바꾼다. ring(그림자)을 켜고 끄면 NativeWind가 개발 모드에서 컴포넌트를 바꿔 끼우며 오류를 낸다
                   className={cn(
                     'relative aspect-video w-full overflow-hidden rounded-xl border-2 bg-black',
@@ -469,19 +472,15 @@ function FocusStage(props: FocusStageProps) {
                       style={{ width: '100%', height: '100%' }}
                     />
                   ) : null}
-                  <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
-                    <Text className={cn('text-micro font-bold', on ? 'text-primary' : 'text-white')}>
-                      {on ? `${side.toUpperCase()} · ${engine.playing ? '재생 중' : '일시정지'}` : side.toUpperCase()}
-                    </Text>
-                  </View>
+                  {/* 듣는 쪽에만 상태를 띄운다. 누구인지는 아래 얼굴과 이름이 말한다 */}
+                  {on ? (
+                    <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
+                      <Text className="text-micro font-bold text-primary">{engine.playing ? '재생 중' : '일시정지'}</Text>
+                    </View>
+                  ) : null}
                 </Pressable>
                 <View className="mt-3 flex-row items-center gap-3">
-                  <EntityThumb
-                    name={primaryCredit(performance)?.artistName ?? '?'}
-                    image={imageOf(performance)}
-                    shape="circle"
-                    size={40}
-                  />
+                  <PerformerMark performer={performer} tone={side} size={40} dim={!on} />
                   <View className="min-w-0 flex-1">
                     <Text numberOfLines={1} className={cn('text-body font-bold', on ? 'text-primary' : 'text-foreground')}>
                       {primaryCredit(performance)?.artistName ?? '연주자 정보 없음'}
@@ -498,7 +497,7 @@ function FocusStage(props: FocusStageProps) {
                   </Text>
                 </View>
                 <SideControls
-                  side={side}
+                  name={performer.name}
                   on={on}
                   progress={engine.sideProgress[side]}
                   onSeek={(seconds) => engine.seekSide(side, seconds)}
@@ -506,10 +505,8 @@ function FocusStage(props: FocusStageProps) {
                 {/* 추천 쌍이면 위 노트가 설명하므로 제목만, 아니면 두 연주의 노트를 나란히 */}
                 {performance.note ? (
                   featuredPair ? (
-                    <View className="mt-4 flex-row items-center gap-2 rounded-lg border border-border px-3 py-2.5">
-                      <Text className={cn('text-micro font-bold', side === 'a' ? 'text-primary' : 'text-info')}>
-                        {side.toUpperCase()}
-                      </Text>
+                    <View className="mt-4 flex-row items-center gap-2.5 rounded-lg border border-border px-3 py-2.5">
+                      <PerformerMark performer={performer} tone={side} size={22} />
                       <Text className="min-w-0 flex-1 text-body font-bold text-foreground">{performance.note.headline}</Text>
                     </View>
                   ) : (
@@ -541,17 +538,18 @@ function FocusStage(props: FocusStageProps) {
             <LoudnessMeasures
               a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}
               b={{ loudness: b.loudness, durationMs: clipDurationMs(b) }}
-              nameA={primaryCredit(a)?.artistName ?? 'A'}
-              nameB={primaryCredit(b)?.artistName ?? 'B'}
+              performerA={performerOf(a, imageOf)}
+              performerB={performerOf(b, imageOf)}
             />
           </View>
         ) : null}
 
-        <LengthTable a={a} b={b} rows={rows} activeSectorId={activeSectorId} />
+        <LengthTable a={a} b={b} imageOf={imageOf} rows={rows} activeSectorId={activeSectorId} />
       </ScrollView>
 
       <FocusBar
         engine={engine}
+        performers={{ a: performerOf(a, imageOf), b: performerOf(b, imageOf) }}
         active={active}
         loop={loop}
         editingLoop={editingLoop}
@@ -923,12 +921,13 @@ function Segmented<T extends string | number>({
  * 소리 안 나는 쪽도 멈춘 채 옮길 수 있어, 두 영상을 같은 대목에 맞춰 둘 수 있다.
  */
 function SideControls({
-  side,
+  name,
   on,
   progress,
   onSeek,
 }: {
-  side: Side;
+  /** 연주자 이름. 접근성 라벨에 쓴다 */
+  name: string;
   on: boolean;
   progress: SideProgress;
   onSeek: (seconds: number) => void;
@@ -938,7 +937,6 @@ function SideControls({
   const duration = progress.duration;
   const shown = scrub !== null ? scrub * duration : progress.current;
   const ratio = duration > 0 ? Math.min(1, Math.max(0, progress.current / duration)) : 0;
-  const name = side.toUpperCase();
   return (
     <View className="mt-3 gap-2">
       <View className="flex-row items-center gap-2.5">
@@ -1004,32 +1002,30 @@ function SideControls({
 function LengthTable({
   a,
   b,
+  imageOf,
   rows,
   activeSectorId,
 }: {
   a: ComparisonPerformance;
   b: ComparisonPerformance;
+  imageOf: (performance: ComparisonPerformance) => string | null;
   rows: SectorRow[];
   activeSectorId: number | undefined;
 }) {
-  const nameA = primaryCredit(a)?.artistName ?? 'A';
-  const nameB = primaryCredit(b)?.artistName ?? 'B';
+  const performerA = performerOf(a, imageOf);
+  const performerB = performerOf(b, imageOf);
   return (
     <View className="mt-8 rounded-xl border border-border bg-surface-1 p-4">
       <View className="flex-row items-baseline justify-between gap-3">
         <Text className="text-body font-bold text-foreground">구간별 길이</Text>
-        <Text variant="caption">차이: B가 A보다 길면 +, 짧으면 −</Text>
+        <Text variant="caption">{`차이: ${performerB.name} 연주가 길면 +, 짧으면 −`}</Text>
       </View>
       <View className="mt-3 flex-row border-b border-border pb-2">
         <Text variant="caption" className="flex-[1.4] font-semibold text-foreground-subtle">
           구간
         </Text>
-        <Text variant="caption" numberOfLines={1} className="flex-1 text-right font-semibold text-foreground-subtle">
-          {`A · ${nameA}`}
-        </Text>
-        <Text variant="caption" numberOfLines={1} className="flex-1 text-right font-semibold text-foreground-subtle">
-          {`B · ${nameB}`}
-        </Text>
+        <LengthHead performer={performerA} tone="a" />
+        <LengthHead performer={performerB} tone="b" />
         <Text variant="caption" className="w-16 text-right font-semibold text-foreground-subtle">
           차이
         </Text>
@@ -1037,7 +1033,7 @@ function LengthTable({
       {rows.map((row) => {
         const da = row.a ? clipDurationMs(row.a) : null;
         const db = row.b ? clipDurationMs(row.b) : null;
-        const diff = da && db ? Math.round(((db - da) / da) * 100) : null;
+        const diff = da && db ? Math.round((db - da) / 1000) : null;
         const current = row.sector.id === activeSectorId;
         return (
           <View key={row.sector.id} className={cn('flex-row items-center border-b border-border py-2.5', current && 'bg-primary-muted/40')}>
@@ -1053,7 +1049,7 @@ function LengthTable({
             <Text
               variant="mono"
               className={cn('w-16 text-right', diff === null ? 'text-foreground-subtle' : diff > 0 ? 'text-primary' : 'text-foreground')}>
-              {diff === null ? '—' : `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}%`}
+              {diff === null ? '—' : `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}초`}
             </Text>
           </View>
         );
@@ -1062,8 +1058,21 @@ function LengthTable({
   );
 }
 
+/** 길이 표 머리: 얼굴과 이름 */
+function LengthHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  return (
+    <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
+      <PerformerMark performer={performer} tone={tone} size={16} />
+      <Text variant="caption" numberOfLines={1} className="shrink font-semibold text-foreground-subtle">
+        {performer.name}
+      </Text>
+    </View>
+  );
+}
+
 function FocusBar({
   engine,
+  performers,
   active,
   loop,
   editingLoop,
@@ -1071,6 +1080,7 @@ function FocusBar({
   onExit,
 }: {
   engine: FocusEngine;
+  performers: Record<Side, Performer>;
   active: ComparisonPerformance;
   loop: LoopRange | null;
   editingLoop: boolean;
@@ -1089,13 +1099,24 @@ function FocusBar({
       <Icon as={engine.playing ? PauseIcon : PlayIcon} size={17} className="fill-background text-background" />
     </Pressable>
   );
+  const other: Side = engine.side === 'a' ? 'b' : 'a';
+  // 두 얼굴 사이에 ⇄. 듣는 쪽 얼굴이 크고 밝다
   const swapButton = (
     <Pressable
-      onPress={() => engine.switchTo(engine.side === 'a' ? 'b' : 'a')}
-      accessibilityLabel="A와 B 바꾸기 (Tab)"
-      className="h-9 flex-row items-center gap-1.5 rounded-full border border-primary px-3.5">
-      <Icon as={ArrowLeftRightIcon} size={15} className="text-primary" />
-      <Text className="text-label font-semibold text-primary">{engine.side === 'a' ? 'A → B' : 'B → A'}</Text>
+      onPress={() => engine.switchTo(other)}
+      accessibilityLabel={`${performers[other].name} 연주로 바꾸기 (Tab)`}
+      className="h-10 flex-row items-center gap-1.5 rounded-full border border-border-strong pl-1.5 pr-2 web:hover:bg-surface-2">
+      {(['a', 'b'] as const).map((side, index) => (
+        <React.Fragment key={side}>
+          {index === 1 ? <Icon as={ArrowLeftRightIcon} size={14} className="text-foreground-subtle" /> : null}
+          <PerformerMark
+            performer={performers[side]}
+            tone={side}
+            size={engine.side === side ? 26 : 20}
+            dim={engine.side !== side}
+          />
+        </React.Fragment>
+      ))}
     </Pressable>
   );
   const exitButton = (

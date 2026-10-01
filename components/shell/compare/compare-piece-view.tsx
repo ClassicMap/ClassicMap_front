@@ -1,4 +1,5 @@
 import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
+import { PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
@@ -50,6 +51,7 @@ import {
   MinimizeIcon,
   PauseIcon,
   PlayIcon,
+  PlusIcon,
   RectangleHorizontalIcon,
   SettingsIcon,
 } from 'lucide-react-native';
@@ -410,8 +412,11 @@ export function ComparePieceView({
 
         {picking ? (
           <View className="mt-5 flex-row items-center gap-3 rounded-lg border border-primary bg-primary-muted px-4 py-3">
+            {active ? <PerformerMark performer={performerOf(active, imageOf)} tone="a" size={24} /> : null}
             <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
-              {`비교할 연주자를 한 명 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+              {active
+                ? `${performerOf(active).name} 연주와 견줄 연주자를 한 명 더 고르세요`
+                : '견줄 연주자를 두 명 고르세요'}
             </Text>
             <Pressable onPress={() => setPicking(false)} accessibilityRole="button" className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
               <Text className="text-label text-foreground-muted">취소 (Esc)</Text>
@@ -624,23 +629,17 @@ function useArtistImage(artistId: number | undefined, known: string | null): str
   return known ?? artist.data?.imageUrl ?? null;
 }
 
-/** 1:1 비교 고르기에서 이 연주의 처지: A(고정) 또는 고를 수 있는 후보 */
+/** 1:1 비교 고르기에서 이 연주의 처지: 지금 듣는 기준 연주 또는 고를 수 있는 후보 */
 type PickState = 'anchor' | 'candidate' | undefined;
 
-/** 고르기 표시: 후보는 빈 원, A는 금색 'A' */
+/** 고르기 표시: 고를 수 있는 후보에 + 원. 기준 연주는 이름 옆에 '지금 연주'로 밝힌다 */
 function PickMark({ pick }: { pick: PickState }) {
-  if (!pick) return null;
+  if (pick !== 'candidate') return null;
   return (
     <View pointerEvents="none" className="absolute left-3 top-3 z-10">
-      {pick === 'anchor' ? (
-        <View className="h-7 flex-row items-center rounded-full bg-primary px-2.5">
-          <Text className="text-micro font-bold text-primary-foreground">A · 지금 연주</Text>
-        </View>
-      ) : (
-        <View className="size-7 items-center justify-center rounded-full border-2 border-white bg-black/40">
-          <Text className="text-micro font-bold text-white">B</Text>
-        </View>
-      )}
+      <View className="size-7 items-center justify-center rounded-full border-2 border-white bg-black/40">
+        <Icon as={PlusIcon} size={14} className="text-white" />
+      </View>
     </View>
   );
 }
@@ -702,7 +701,7 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay,
         </RepertoireThumb>
         <View className="min-w-0 flex-1">
           <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-            {pick === 'anchor' ? `A · ${credit?.artistName ?? '지금 연주'}` : credit?.artistName ?? '연주자 정보 없음'}
+            {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
           </Text>
           {support ? (
             <Text variant="caption" numberOfLines={1}>
