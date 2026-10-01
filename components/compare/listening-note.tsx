@@ -1,6 +1,7 @@
+import { type Performer, PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { clipClock, primaryCredit } from '@/lib/data/comparison';
+import { clipClock } from '@/lib/data/comparison';
 import type {
   ComparisonPerformance,
   FeaturedPair,
@@ -19,14 +20,16 @@ const TONE_TEXT: Record<NoteTone, string> = { a: 'text-primary', b: 'text-info' 
 const TONE_BORDER: Record<NoteTone, string> = { a: 'border-primary', b: 'border-info' };
 const TONE_FILL: Record<NoteTone, string> = { a: 'fill-primary', b: 'fill-info' };
 
-/** 들을 곳 칩: "▶ 0:20 여기서 터져요". 누르면 그 지점부터 튼다 */
+/** 들을 곳 칩: "▶ 0:20 절정". 연주자가 둘인 자리에서는 ▶ 대신 그 연주자 얼굴을 둔다. 누르면 그 지점부터 튼다 */
 export function MomentChip({
   moment,
   tone = 'a',
+  performer,
   onPress,
 }: {
   moment: ListeningMoment;
   tone?: NoteTone;
+  performer?: Performer;
   onPress?: () => void;
 }) {
   const clock = clipClock(moment.offsetMs);
@@ -35,13 +38,17 @@ export function MomentChip({
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${clock} ${moment.label}부터 듣기`}
+      accessibilityLabel={`${performer ? `${performer.name} ` : ''}${clock} ${moment.label}부터 듣기`}
       className={cn(
         'h-7 flex-row items-center gap-1.5 self-start rounded-full border px-2.5',
         TONE_BORDER[tone],
         onPress ? 'web:hover:bg-surface-2' : 'opacity-60'
       )}>
-      <Icon as={PlayIcon} size={9} className={cn(TONE_TEXT[tone], TONE_FILL[tone])} />
+      {performer ? (
+        <PerformerMark performer={performer} tone="none" size={16} className="-ml-1.5 border-0 p-0" />
+      ) : (
+        <Icon as={PlayIcon} size={9} className={cn(TONE_TEXT[tone], TONE_FILL[tone])} />
+      )}
       <Text
         numberOfLines={1}
         className={cn('text-label font-semibold tabular-nums', TONE_TEXT[tone])}>
@@ -115,24 +122,6 @@ export function resolveFeaturedPair(
   return a && b ? [a, b] : null;
 }
 
-function SideMark({ tone }: { tone: NoteTone }) {
-  return (
-    <View
-      className={cn(
-        'size-5 items-center justify-center rounded-md',
-        tone === 'a' ? 'bg-primary' : 'bg-info'
-      )}>
-      <Text
-        className={cn(
-          'text-micro font-bold',
-          tone === 'a' ? 'text-primary-foreground' : 'text-info-foreground'
-        )}>
-        {tone.toUpperCase()}
-      </Text>
-    </View>
-  );
-}
-
 /**
  * 구간 안내 아래의 추천 비교 줄. 누르면 그 두 연주로 1:1 비교가 열린다.
  * `compact` 는 모바일: 제목을 빼고 이름과 화살표만 둔다.
@@ -150,8 +139,10 @@ export function FeaturedPairLink({
   compact?: boolean;
   onOpen: () => void;
 }) {
-  const nameA = primaryCredit(a)?.artistName ?? 'A';
-  const nameB = primaryCredit(b)?.artistName ?? 'B';
+  const performerA = performerOf(a);
+  const performerB = performerOf(b);
+  const nameA = performerA.name;
+  const nameB = performerB.name;
   return (
     <Pressable
       onPress={onOpen}
@@ -160,10 +151,10 @@ export function FeaturedPairLink({
       className="group mt-2 flex-row flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2.5">
       <Text className="text-micro text-primary">추천 비교</Text>
       <View className="flex-row items-center gap-1.5">
-        <SideMark tone="a" />
+        <PerformerMark performer={performerA} tone="a" size={20} />
         <Text className="text-body-sm font-semibold text-foreground">{nameA}</Text>
         <Text className="text-body-sm text-foreground-subtle">↔</Text>
-        <SideMark tone="b" />
+        <PerformerMark performer={performerB} tone="b" size={20} />
         <Text className="text-body-sm font-semibold text-foreground">{nameB}</Text>
       </View>
       {compact ? null : <Text className="text-body-sm text-foreground-muted">{pair.title}</Text>}
@@ -179,17 +170,23 @@ export function FeaturedPairLink({
   );
 }
 
-/** 1:1 위의 추천 비교 노트. 들을 곳을 누르면 그쪽 연주가 그 지점부터 나온다 */
+/** 1:1 위의 추천 비교 노트. 들을 곳마다 그 연주자 얼굴을 붙이고, 누르면 그쪽 연주가 그 지점부터 나온다 */
 export function FeaturedPairNote({
   pair,
-  sideOf,
+  a,
+  b,
+  imageOf,
   onMoment,
 }: {
   pair: FeaturedPair;
-  /** 연주 id 가 1:1 의 어느 쪽인지 */
-  sideOf: (performanceId: number) => NoteTone | null;
+  /** 1:1 의 첫째(금색)·둘째(파랑) 연주 */
+  a: ComparisonPerformance;
+  b: ComparisonPerformance;
+  imageOf?: (performance: ComparisonPerformance) => string | null;
   onMoment: (side: NoteTone, offsetMs: number) => void;
 }) {
+  const sideOf = (performanceId: number): NoteTone | null =>
+    performanceId === a.id ? 'a' : performanceId === b.id ? 'b' : null;
   return (
     <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
       <Text className="text-micro text-primary">추천 비교</Text>
@@ -207,6 +204,7 @@ export function FeaturedPairNote({
                 key={`${moment.performanceId}-${moment.offsetMs}`}
                 moment={moment}
                 tone={side}
+                performer={performerOf(side === 'a' ? a : b, imageOf)}
                 onPress={() => onMoment(side, moment.offsetMs)}
               />
             );

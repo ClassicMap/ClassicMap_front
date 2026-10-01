@@ -1,3 +1,4 @@
+import { type Performer, PerformerMark } from '@/components/compare/performer-mark';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
 import { THEME, withAlpha } from '@/lib/design/tokens';
@@ -322,14 +323,16 @@ function measuredCells(
 export function LoudnessMeasures({
   a,
   b,
-  nameA,
-  nameB,
+  performerA,
+  performerB,
 }: {
   a: OverlaySide;
   b: OverlaySide;
-  nameA: string;
-  nameB: string;
+  performerA: Performer;
+  performerB: Performer;
 }) {
+  const nameA = performerA.name;
+  const nameB = performerB.name;
   const cellsA = measuredCells(a);
   const cellsB = measuredCells(b);
   const flatNames = [
@@ -352,12 +355,8 @@ export function LoudnessMeasures({
         <Text variant="caption" className="w-24 font-semibold text-foreground-subtle">
           잰 값
         </Text>
-        <Text variant="caption" numberOfLines={1} className="flex-1 font-semibold text-primary">
-          {`A · ${nameA}`}
-        </Text>
-        <Text variant="caption" numberOfLines={1} className="flex-1 font-semibold text-info">
-          {`B · ${nameB}`}
-        </Text>
+        <MeasureHead performer={performerA} tone="a" />
+        <MeasureHead performer={performerB} tone="b" />
       </View>
       {rows.map((row) => (
         <View key={row.label} className="flex-row items-baseline">
@@ -376,6 +375,21 @@ export function LoudnessMeasures({
         {flatNames.length > 0
           ? `${flatNames.join('·')} 연주는 곡선 폭이 2dB보다 좁아 잰 값을 비웠어요. 녹음이 압축됐을 수 있어요.`
           : '각 연주에서 가장 센 곳을 0dB로 맞춘 값이에요. 녹음마다 크기가 달라 두 연주의 세기를 견주지는 않아요.'}
+      </Text>
+    </View>
+  );
+}
+
+/** 잰 값 표 머리: 곡선과 같은 색 테두리의 얼굴, 그 색 이름 */
+function MeasureHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  return (
+    <View className="min-w-0 flex-1 flex-row items-center gap-1.5">
+      <PerformerMark performer={performer} tone={tone} size={18} />
+      <Text
+        variant="caption"
+        numberOfLines={1}
+        className={cn('shrink font-semibold', tone === 'a' ? 'text-primary' : 'text-info')}>
+        {performer.name}
       </Text>
     </View>
   );

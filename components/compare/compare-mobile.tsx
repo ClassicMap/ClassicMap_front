@@ -587,7 +587,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {picking ? (
         <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
           <Text className="text-body-sm font-semibold text-foreground">
-            {`비교할 연주자를 한 명 더 고르세요 · A는 ${active ? primaryCredit(active)?.artistName ?? '지금 연주' : '지금 연주'}`}
+            {active
+              ? `${primaryCredit(active)?.artistName ?? '지금 연주'} 연주와 견줄 연주자를 한 명 더 고르세요`
+              : '견줄 연주자를 두 명 고르세요'}
           </Text>
         </View>
       ) : null}
