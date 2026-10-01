@@ -8,6 +8,7 @@ import type {
   FeaturedPair,
   FeaturedPairMoment,
   ListeningMoment,
+  LoudnessProfile,
   PerformanceCredit,
   PerformanceCreditRole,
   PerformanceListeningNote,
@@ -139,6 +140,34 @@ function parseNote(value: unknown): PerformanceListeningNote | null {
   };
 }
 
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** 곡선이 없거나 모양이 틀리면 null. 노트처럼 곡선 하나 때문에 화면이 깨지지 않게 한다 */
+function parseLoudness(value: unknown): LoudnessProfile | null {
+  if (!isRecord(value) || !Array.isArray(value.curveRelDb)) return null;
+  const stepMs = finiteNumber(value.stepMs);
+  const startRelDb = finiteNumber(value.startRelDb);
+  const peakMs = finiteNumber(value.peakMs);
+  const peakRatio = finiteNumber(value.peakRatio);
+  const rangeDb = finiteNumber(value.rangeDb);
+  const curveRelDb = value.curveRelDb.map(finiteNumber);
+  if (
+    stepMs === null ||
+    stepMs <= 0 ||
+    startRelDb === null ||
+    peakMs === null ||
+    peakRatio === null ||
+    rangeDb === null ||
+    curveRelDb.length < 2 ||
+    curveRelDb.some((point) => point === null)
+  ) {
+    return null;
+  }
+  return { stepMs, curveRelDb: curveRelDb as number[], startRelDb, peakMs, peakRatio, rangeDb };
+}
+
 function parseFeaturedPair(value: unknown): FeaturedPair | null {
   if (!isRecord(value) || !Array.isArray(value.performanceIds) || value.performanceIds.length !== 2) return null;
   const [a, b] = value.performanceIds;
@@ -194,6 +223,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
       .sort((left, right) => left.displayOrder - right.displayOrder),
     endMs,
     id: requireInteger(value.id, 'id'),
+    loudness: parseLoudness(value.loudness),
     note: parseNote(value.note),
     pieceId: requireInteger(value.pieceId, 'pieceId'),
     pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),

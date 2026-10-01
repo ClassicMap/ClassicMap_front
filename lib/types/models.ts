@@ -185,6 +185,24 @@ export interface ComparisonPerformance {
   credits: PerformanceCredit[];
   /** 확정된 연주 노트. 없으면 null */
   note: PerformanceListeningNote | null;
+  /** 지금 클립의 음량 곡선. 없으면 null */
+  loudness: LoudnessProfile | null;
+}
+
+/**
+ * 음량 곡선. EBU R128 단기 음량을 `stepMs` 간격으로 잰, 가장 센 곳을 0dB 로 둔 상대값이다.
+ * 녹음마다 전체 레벨이 달라 연주끼리 세기를 견주는 데는 쓰지 않는다.
+ */
+export interface LoudnessProfile {
+  stepMs: number;
+  curveRelDb: number[];
+  /** 처음 5초 평균 */
+  startRelDb: number;
+  /** 가장 센 곳의 클립 안 시점과 진행률 */
+  peakMs: number;
+  peakRatio: number;
+  /** 곡선 폭(90분위 - 10분위). 2 미만이면 평평해서 근거로 쓰지 않는다 */
+  rangeDb: number;
 }
 
 /** 들을 곳. `offsetMs` 는 클립 처음부터 잰 시점이다 */
