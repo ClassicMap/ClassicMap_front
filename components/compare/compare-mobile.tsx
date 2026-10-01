@@ -649,6 +649,8 @@ function PerformerRow({
   const credit = primaryCredit(performance);
   const ready = performance.clipStatus === 'ready';
   const duration = clipDurationMs(performance);
+  const progress = useComparePlayer((state) => (active ? state.progress : null));
+  const playingNow = useComparePlayer((state) => active && state.playing);
   const support = supportingCredits(performance);
   const note = performance.note;
   return (
@@ -684,6 +686,8 @@ function PerformerRow({
             loudness={performance.loudness}
             marks={note?.moments.map((moment) => moment.offsetMs)}
             tone={active ? 'a' : 'neutral'}
+            playhead={active ? (progress && progress.duration > 0 ? progress.current / progress.duration : 0) : undefined}
+            playing={playingNow}
             height={28}
             floorDb={curveFloor}
             className="w-16"

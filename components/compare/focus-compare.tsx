@@ -533,7 +533,12 @@ function FocusStage(props: FocusStageProps) {
             <LoudnessOverlay
               a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}
               b={{ loudness: b.loudness, durationMs: clipDurationMs(b) }}
-              playhead={engine.progress.duration > 0 ? engine.progress.current / engine.progress.duration : undefined}
+              active={engine.side}
+              playing={engine.playing}
+              positions={{
+                a: engine.sideProgress.a.duration > 0 ? engine.sideProgress.a.current / engine.sideProgress.a.duration : undefined,
+                b: engine.sideProgress.b.duration > 0 ? engine.sideProgress.b.current / engine.sideProgress.b.duration : undefined,
+              }}
             />
             <LoudnessMeasures
               a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}

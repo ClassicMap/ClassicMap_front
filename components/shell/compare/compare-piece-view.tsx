@@ -464,12 +464,25 @@ export function ComparePieceView({
               {staged?.note ? (
                 <PerformanceNote
                   note={staged.note}
-                  curve={<PerformanceCurve performance={staged} active={staged.id === activeId} floorDb={curveFloor} />}
+                  curve={
+                    <PerformanceCurve
+                      performance={staged}
+                      active={staged.id === activeId}
+                      floorDb={curveFloor}
+                      onSeek={isPlayablePerformance(staged) ? (offsetMs) => playAt(staged, { offsetMs, label: '' }) : undefined}
+                    />
+                  }
                   onMoment={(moment) => playAt(staged, moment)}
                   className="mt-3 max-w-[72ch]"
                 />
               ) : staged ? (
-                <PerformanceCurve performance={staged} active={staged.id === activeId} floorDb={curveFloor} className="mt-3 max-w-[72ch]" />
+                <PerformanceCurve
+                  performance={staged}
+                  active={staged.id === activeId}
+                  floorDb={curveFloor}
+                  onSeek={isPlayablePerformance(staged) ? (offsetMs) => playAt(staged, { offsetMs, label: '' }) : undefined}
+                  className="mt-3 max-w-[72ch]"
+                />
               ) : null}
             </View>
             <View className="w-[300px] gap-1">
@@ -499,7 +512,6 @@ export function ComparePieceView({
                 key={performance.id}
                 performance={performance}
                 image={imageOf(performance)}
-                longest={longest}
                 active={performance.id === activeId}
                 inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
                 pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
@@ -647,7 +659,6 @@ function PickMark({ pick }: { pick: PickState }) {
 interface SlotProps {
   performance: ComparisonPerformance;
   image: string | null;
-  longest: number;
   active: boolean;
   inRepertoire: boolean;
   pick?: PickState;
@@ -656,12 +667,13 @@ interface SlotProps {
   curveFloor: number;
 }
 
-function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
+function Slot({ performance, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
-  const lengthPercent = Math.max(4, (duration / longest) * 100);
   const support = supportingCredits(performance);
+  // 곡선을 눌러 옮기는 것도 재생이라 고르기 중이거나 클립이 없으면 막는다
+  const seekable = isPlayablePerformance(performance) && pick === undefined;
 
   return (
     <View className="min-w-[280px] flex-1">
@@ -687,14 +699,6 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay,
         {pick === 'candidate' ? <PickMark pick={pick} /> : null}
       </View>
 
-      {/* 길이 막대: 가장 긴 연주 대비 */}
-      <View className="mt-3 h-1 w-full overflow-hidden rounded-full bg-surface-3">
-        <View
-          className={cn('h-full rounded-full', active ? 'bg-primary' : 'bg-foreground-subtle')}
-          style={{ width: `${lengthPercent}%` }}
-        />
-      </View>
-
       <View className="mt-3 flex-row items-center gap-3">
         <RepertoireThumb active={inRepertoire} badgeSize={14}>
           <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={32} />
@@ -718,36 +722,68 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay,
       {performance.note ? (
         <PerformanceNote
           note={performance.note}
-          curve={<PerformanceCurve performance={performance} active={active} floorDb={curveFloor} />}
+          curve={
+            <PerformanceCurve
+              performance={performance}
+              active={active}
+              floorDb={curveFloor}
+              onSeek={seekable ? (offsetMs) => onMoment({ offsetMs, label: '' }) : undefined}
+            />
+          }
           onMoment={isPlayablePerformance(performance) ? onMoment : undefined}
           className="mt-3"
         />
       ) : (
-        <PerformanceCurve performance={performance} active={active} floorDb={curveFloor} className="mt-3" />
+        <PerformanceCurve
+          performance={performance}
+          active={active}
+          floorDb={curveFloor}
+          onSeek={seekable ? (offsetMs) => onMoment({ offsetMs, label: '' }) : undefined}
+          className="mt-3"
+        />
       )}
     </View>
   );
 }
 
 /** 연주의 음량 곡선. 노트의 들을 곳을 점으로 찍는다. 곡선이 없으면 그리지 않는다 */
+/**
+ * 연주의 음량 곡선이자 재생 바. 지금 듣는 연주는 들은 만큼 칠하고 점이 따라간다.
+ * 다른 연주는 이어 들을 자리를 빈 점으로 찍는다. 누르면 그 연주가 그 자리부터 나온다.
+ */
 function PerformanceCurve({
   performance,
   active,
   floorDb,
+  onSeek,
   className,
 }: {
   performance: ComparisonPerformance;
   active: boolean;
   floorDb: number;
+  /** 누른 자리(클립 안 ms)부터 튼다. 재생할 수 없는 연주는 넘기지 않는다 */
+  onSeek?: (offsetMs: number) => void;
   className?: string;
 }) {
+  const progress = useComparePlayer((state) => (active ? state.progress : null));
+  const playing = useComparePlayer((state) => active && state.playing);
+  const saved = useComparePlayer((state) => state.positions[performance.id]);
   if (!performance.loudness) return null;
+  const durationMs = clipDurationMs(performance);
+  const playhead = progress && progress.duration > 0 ? progress.current / progress.duration : active ? 0 : undefined;
+  const resumeAt = !active && saved !== undefined && durationMs > 0 ? (saved * 1000) / durationMs : undefined;
   return (
     <LoudnessSparkline
       loudness={performance.loudness}
       marks={performance.note?.moments.map((moment) => moment.offsetMs)}
       tone={active ? 'a' : 'neutral'}
       floorDb={floorDb}
+      playhead={playhead}
+      playing={playing}
+      resumeAt={resumeAt}
+      onSeek={onSeek ? (ratio) => onSeek(ratio * durationMs) : undefined}
+      label={primaryCredit(performance)?.artistName}
+      height={44}
       className={className}
     />
   );
