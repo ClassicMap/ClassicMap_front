@@ -1,3 +1,4 @@
+import { FeaturedPairNote, PerformanceNote } from '@/components/compare/listening-note';
 import { OptimizedImage } from '@/components/optimized-image';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
@@ -27,7 +28,7 @@ import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance, FeaturedPair } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import {
   AlertCircleIcon,
@@ -172,9 +173,14 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     );
   }
 
+  // 이 두 연주가 구간의 추천 비교 쌍이면 큐레이터 노트를 먼저 보인다 (A·B 순서는 상관없다)
+  const pair = activeSector?.featuredPair ?? null;
+  const featuredPair = pair && pair.performanceIds.includes(a.id) && pair.performanceIds.includes(b.id) ? pair : null;
+
   return (
     <FocusStage
       key={`${a.id}-${b.id}`}
+      featuredPair={featuredPair}
       a={a}
       b={b}
       imageOf={imageOf}
@@ -210,6 +216,8 @@ interface FocusStageProps {
   onExit: () => void;
   onChangeSector: (sectorId: number, a: number, b: number) => void;
   queue: ComparisonPerformance[];
+  /** 두 연주가 이 구간의 추천 비교 쌍일 때만 */
+  featuredPair: FeaturedPair | null;
 }
 
 /** 재생 조작 손잡이. 웹은 두 <video>, 네이티브는 스토어 미디어로 구현한다 */
@@ -228,6 +236,8 @@ interface FocusEngine {
   sideProgress: Record<Side, SideProgress>;
   /** 한쪽 영상만 옮긴다. 소리 안 나는 쪽은 멈춘 채 위치만 바뀐다 */
   seekSide: (side: Side, seconds: number) => void;
+  /** 들을 곳: 그쪽으로 바꾸고 그 지점부터 튼다 */
+  playAt: (side: Side, seconds: number) => void;
 }
 
 interface SideProgress {
@@ -236,7 +246,7 @@ interface SideProgress {
 }
 
 function FocusStage(props: FocusStageProps) {
-  const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue } = props;
+  const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue, featuredPair } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
   const [mode, setMode] = React.useState<FocusMode>('align');
@@ -420,6 +430,16 @@ function FocusStage(props: FocusStageProps) {
           })}
         </ScrollView>
 
+        {featuredPair ? (
+          <View className="mt-4">
+            <FeaturedPairNote
+              pair={featuredPair}
+              sideOf={(id) => (id === a.id ? 'a' : id === b.id ? 'b' : null)}
+              onMoment={(side, offsetMs) => engine.playAt(side, offsetMs / 1000)}
+            />
+          </View>
+        ) : null}
+
         <View className={cn('mt-5 gap-4', !narrow && 'flex-row')}>
           {(['a', 'b'] as const).map((side) => {
             const performance = side === 'a' ? a : b;
@@ -482,6 +502,24 @@ function FocusStage(props: FocusStageProps) {
                   progress={engine.sideProgress[side]}
                   onSeek={(seconds) => engine.seekSide(side, seconds)}
                 />
+                {/* 추천 쌍이면 위 노트가 설명하므로 제목만, 아니면 두 연주의 노트를 나란히 */}
+                {performance.note ? (
+                  featuredPair ? (
+                    <View className="mt-4 flex-row items-center gap-2 rounded-lg border border-border px-3 py-2.5">
+                      <Text className={cn('text-micro font-bold', side === 'a' ? 'text-primary' : 'text-info')}>
+                        {side.toUpperCase()}
+                      </Text>
+                      <Text className="min-w-0 flex-1 text-body font-bold text-foreground">{performance.note.headline}</Text>
+                    </View>
+                  ) : (
+                    <PerformanceNote
+                      note={performance.note}
+                      tone={side}
+                      onMoment={(moment) => engine.playAt(side, moment.offsetMs / 1000)}
+                      className="mt-4"
+                    />
+                  )
+                ) : null}
               </View>
             );
           })}
@@ -620,6 +658,21 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         video.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
         setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
       },
+      playAt: (target: Side, seconds: number) => {
+        const from = get(sideRef.current);
+        const to = get(target);
+        if (!to) return;
+        if (from && from !== to) {
+          from.pause();
+          from.muted = true;
+        }
+        const duration = Number.isFinite(to.duration) && to.duration > 0 ? to.duration : 0;
+        to.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
+        to.muted = comparePlayer.getState().muted;
+        sideRef.current = target;
+        setSide(target);
+        void to.play().catch(() => setPlaying(false));
+      },
     };
   }, [side, playing, progress, sideProgress, mode]);
 
@@ -739,6 +792,17 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
           comparePlayer.rememberPosition(idOf(key), target);
           bump();
         }
+      },
+      playAt: (key: Side, seconds: number) => {
+        const target = Math.max(0, Math.min(lengthOf(key) - 0.05, seconds));
+        if (key === side) {
+          comparePlayer.seek(target);
+          comparePlayer.play();
+          return;
+        }
+        const performance = key === 'a' ? a : b;
+        comparePlayer.rememberPosition(performance.id, target);
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, mode: 'resume' });
       },
     }),
     // adjusted: 소리 안 나는 쪽을 조정하면 그 위치를 다시 읽는다

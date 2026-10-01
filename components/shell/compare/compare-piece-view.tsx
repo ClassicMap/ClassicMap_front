@@ -1,3 +1,4 @@
+import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
@@ -33,7 +34,7 @@ import {
 import { comparePlayer, type ComparePlayerTrack, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { repertoireFirst } from '@/lib/data/library';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance, ListeningMoment } from '@/lib/types/models';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useIsFocused } from '@react-navigation/native';
@@ -186,6 +187,20 @@ export function ComparePieceView({
     },
     [activeId, choose, picking, onFocus]
   );
+
+  // 들을 곳: 그 연주를 그 지점부터 튼다
+  const playAt = React.useCallback(
+    (performance: ComparisonPerformance, moment: ListeningMoment) => {
+      if (!isPlayablePerformance(performance)) return;
+      setPicking(false);
+      comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
+      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
+    },
+    [imageOf, queue]
+  );
+
+  // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
+  const featured = resolveFeaturedPair(activeSector?.featuredPair ?? null, playable);
 
   const togglePlay = React.useCallback(() => {
     if (activeId !== null && comparePlayer.togglePlay()) return;
@@ -373,7 +388,21 @@ export function ComparePieceView({
         </View>
 
         {activeSector ? (
-          <SectorGuide sector={activeSector} collapsible={theater} className="mt-4 max-w-[880px]" />
+          <SectorGuide
+            sector={activeSector}
+            collapsible={theater}
+            footer={
+              featured && activeSector.featuredPair && onFocus ? (
+                <FeaturedPairLink
+                  pair={activeSector.featuredPair}
+                  a={featured[0]}
+                  b={featured[1]}
+                  onOpen={() => onFocus(featured[0].id, featured[1].id)}
+                />
+              ) : null
+            }
+            className="mt-4 max-w-[880px]"
+          />
         ) : null}
 
         {picking ? (
@@ -424,6 +453,9 @@ export function ComparePieceView({
               {staged ? (
                 <StageCaption performance={staged} image={imageOf(staged)} active={staged.id === activeId} inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)} />
               ) : null}
+              {staged?.note ? (
+                <PerformanceNote note={staged.note} onMoment={(moment) => playAt(staged, moment)} className="mt-3 max-w-[72ch]" />
+              ) : null}
             </View>
             <View className="w-[300px] gap-1">
               <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
@@ -457,6 +489,7 @@ export function ComparePieceView({
                 inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
                 pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
                 onPlay={() => start(performance)}
+                onMoment={(moment) => playAt(performance, moment)}
               />
             ))}
           </View>
@@ -609,9 +642,10 @@ interface SlotProps {
   inRepertoire: boolean;
   pick?: PickState;
   onPlay: () => void;
+  onMoment: (moment: ListeningMoment) => void;
 }
 
-function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay }: SlotProps) {
+function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay, onMoment }: SlotProps) {
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
@@ -668,6 +702,15 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay 
           {clipClock(duration)}
         </Text>
       </View>
+
+      {/* 연주 노트: 확정된 노트가 없는 연주는 이름만 둔다 */}
+      {performance.note ? (
+        <PerformanceNote
+          note={performance.note}
+          onMoment={isPlayablePerformance(performance) ? onMoment : undefined}
+          className="mt-3"
+        />
+      ) : null}
     </View>
   );
 }
