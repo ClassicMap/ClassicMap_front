@@ -1,4 +1,5 @@
 import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
+import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
@@ -146,6 +147,8 @@ export function ComparePieceView({
     current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
   const active = performances.find((performance) => performance.id === activeId);
   const longest = Math.max(1, ...performances.map(clipDurationMs));
+  // 이 구간의 곡선은 모두 같은 눈금으로 그린다
+  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances]);
   // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
   const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances]);
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
@@ -454,7 +457,14 @@ export function ComparePieceView({
                 <StageCaption performance={staged} image={imageOf(staged)} active={staged.id === activeId} inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)} />
               ) : null}
               {staged?.note ? (
-                <PerformanceNote note={staged.note} onMoment={(moment) => playAt(staged, moment)} className="mt-3 max-w-[72ch]" />
+                <PerformanceNote
+                  note={staged.note}
+                  curve={<PerformanceCurve performance={staged} active={staged.id === activeId} floorDb={curveFloor} />}
+                  onMoment={(moment) => playAt(staged, moment)}
+                  className="mt-3 max-w-[72ch]"
+                />
+              ) : staged ? (
+                <PerformanceCurve performance={staged} active={staged.id === activeId} floorDb={curveFloor} className="mt-3 max-w-[72ch]" />
               ) : null}
             </View>
             <View className="w-[300px] gap-1">
@@ -490,6 +500,7 @@ export function ComparePieceView({
                 pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
                 onPlay={() => start(performance)}
                 onMoment={(moment) => playAt(performance, moment)}
+                curveFloor={curveFloor}
               />
             ))}
           </View>
@@ -643,9 +654,10 @@ interface SlotProps {
   pick?: PickState;
   onPlay: () => void;
   onMoment: (moment: ListeningMoment) => void;
+  curveFloor: number;
 }
 
-function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay, onMoment }: SlotProps) {
+function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
@@ -703,15 +715,42 @@ function Slot({ performance, image, longest, active, inRepertoire, pick, onPlay,
         </Text>
       </View>
 
-      {/* 연주 노트: 확정된 노트가 없는 연주는 이름만 둔다 */}
+      {/* 연주 노트: 확정된 노트가 없는 연주는 이름과 곡선만 둔다 */}
       {performance.note ? (
         <PerformanceNote
           note={performance.note}
+          curve={<PerformanceCurve performance={performance} active={active} floorDb={curveFloor} />}
           onMoment={isPlayablePerformance(performance) ? onMoment : undefined}
           className="mt-3"
         />
-      ) : null}
+      ) : (
+        <PerformanceCurve performance={performance} active={active} floorDb={curveFloor} className="mt-3" />
+      )}
     </View>
+  );
+}
+
+/** 연주의 음량 곡선. 노트의 들을 곳을 점으로 찍는다. 곡선이 없으면 그리지 않는다 */
+function PerformanceCurve({
+  performance,
+  active,
+  floorDb,
+  className,
+}: {
+  performance: ComparisonPerformance;
+  active: boolean;
+  floorDb: number;
+  className?: string;
+}) {
+  if (!performance.loudness) return null;
+  return (
+    <LoudnessSparkline
+      loudness={performance.loudness}
+      marks={performance.note?.moments.map((moment) => moment.offsetMs)}
+      tone={active ? 'a' : 'neutral'}
+      floorDb={floorDb}
+      className={className}
+    />
   );
 }
 
