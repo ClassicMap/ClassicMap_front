@@ -1,6 +1,7 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { ScrollShelf } from '@/components/home/shelf';
 import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
+import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
@@ -404,6 +405,8 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const active = performances.find((performance) => performance.id === activeId);
   const preview = active ?? performances.find((performance) => performance.clipStatus === 'ready');
   const longest = Math.max(1, ...performances.map(clipDurationMs));
+  // 이 구간의 곡선은 모두 같은 눈금으로 그린다
+  const curveFloor = sharedFloorDb(performances.map((performance) => performance.loudness));
   const title = first?.pieceTitle ?? pieceInfo?.pieceTitle;
 
   if (sectorsQuery.isError || performancesQuery.isError) {
@@ -603,6 +606,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
                 inRepertoire={repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)}
                 onPress={() => choose(performance)}
                 onMoment={(moment) => playAt(performance, moment)}
+                curveFloor={curveFloor}
               />
             ))}
       </View>
@@ -629,6 +633,7 @@ function PerformerRow({
   inRepertoire,
   onPress,
   onMoment,
+  curveFloor,
 }: {
   performance: ComparisonPerformance;
   image: string | null;
@@ -637,6 +642,7 @@ function PerformerRow({
   inRepertoire: boolean;
   onPress: () => void;
   onMoment: (moment: ListeningMoment) => void;
+  curveFloor: number;
 }) {
   const credit = primaryCredit(performance);
   const ready = performance.clipStatus === 'ready';
@@ -671,6 +677,16 @@ function PerformerRow({
             />
           </View>
         </View>
+        {performance.loudness ? (
+          <LoudnessSparkline
+            loudness={performance.loudness}
+            marks={note?.moments.map((moment) => moment.offsetMs)}
+            tone={active ? 'a' : 'neutral'}
+            height={28}
+            floorDb={curveFloor}
+            className="w-16"
+          />
+        ) : null}
         {ready ? (
           <Text variant="mono" className="w-11 text-right text-foreground-muted">
             {clipClock(duration)}

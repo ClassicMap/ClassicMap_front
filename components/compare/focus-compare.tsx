@@ -1,4 +1,5 @@
 import { FeaturedPairNote, PerformanceNote } from '@/components/compare/listening-note';
+import { LoudnessMeasures, LoudnessOverlay } from '@/components/compare/loudness-curve';
 import { OptimizedImage } from '@/components/optimized-image';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
@@ -524,6 +525,27 @@ function FocusStage(props: FocusStageProps) {
             );
           })}
         </View>
+
+        {/* 음량 곡선: 두 연주를 같은 진행률 축에 겹치고 잰 값을 붙인다. 둘 다 곡선이 없으면 그리지 않는다 */}
+        {a.loudness || b.loudness ? (
+          <View className="mt-8 gap-4 rounded-xl border border-border bg-surface-1 p-4">
+            <View className="flex-row items-baseline justify-between gap-3">
+              <Text className="text-body font-bold text-foreground">음량 곡선</Text>
+              <Text variant="caption">가로는 구간 진행률이에요</Text>
+            </View>
+            <LoudnessOverlay
+              a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}
+              b={{ loudness: b.loudness, durationMs: clipDurationMs(b) }}
+              playhead={engine.progress.duration > 0 ? engine.progress.current / engine.progress.duration : undefined}
+            />
+            <LoudnessMeasures
+              a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}
+              b={{ loudness: b.loudness, durationMs: clipDurationMs(b) }}
+              nameA={primaryCredit(a)?.artistName ?? 'A'}
+              nameB={primaryCredit(b)?.artistName ?? 'B'}
+            />
+          </View>
+        ) : null}
 
         <LengthTable a={a} b={b} rows={rows} activeSectorId={activeSectorId} />
       </ScrollView>

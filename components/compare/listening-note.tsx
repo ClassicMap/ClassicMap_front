@@ -59,16 +59,19 @@ interface PerformanceNoteProps {
   /** 들을 곳을 숨긴다 (모바일 목록에서 고르지 않은 연주) */
   hideMoments?: boolean;
   onMoment?: (moment: ListeningMoment) => void;
+  /** 본문과 들을 곳 사이에 둘 음량 곡선 */
+  curve?: React.ReactNode;
   className?: string;
 }
 
-/** 연주 노트: 제목, 두세 문장, 들을 곳 */
+/** 연주 노트: 제목, 두세 문장, 음량 곡선, 들을 곳 */
 export function PerformanceNote({
   note,
   tone = 'a',
   bodyLines,
   hideMoments = false,
   onMoment,
+  curve,
   className,
 }: PerformanceNoteProps) {
   return (
@@ -84,7 +87,7 @@ export function PerformanceNote({
           {note.facts.join(' · ')}
         </Text>
       ) : null}
-      {/* 음량 곡선 자리: 곡선이 저장되면 본문과 들을 곳 사이에 둔다 */}
+      {curve}
       {!hideMoments && note.moments.length > 0 ? (
         <View className="mt-1 flex-row flex-wrap gap-2">
           {note.moments.map((moment) => (
