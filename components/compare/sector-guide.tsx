@@ -18,20 +18,22 @@ interface SectorGuideProps {
   sector: Pick<ComparisonSector, 'id' | 'sectorType' | 'description'>;
   /** 두 줄만 보여 주고 더 보기로 펼친다 (모바일, 크게 보기) */
   collapsible?: boolean;
+  /** 안내 아래에 붙는 줄 (추천 비교) */
+  footer?: React.ReactNode;
   className?: string;
 }
 
 /**
- * 고른 구간의 듣기 안내. 설명이 없는 해석 비교 구간은 아무것도 그리지 않는다.
+ * 고른 구간의 듣기 안내. 설명도 추천 비교도 없는 해석 비교 구간은 아무것도 그리지 않는다.
  * 편곡 비교 구간은 설명이 없어도 무엇을 견주는 자리인지 밝힌다.
  */
-export function SectorGuide({ sector, collapsible = false, className }: SectorGuideProps) {
+export function SectorGuide({ sector, collapsible = false, footer, className }: SectorGuideProps) {
   const [expanded, setExpanded] = React.useState(false);
   React.useEffect(() => setExpanded(false), [sector.id]);
 
   const arrangement = isArrangementSector(sector);
   const description = sector.description;
-  if (!description && !arrangement) return null;
+  if (!description && !arrangement && !footer) return null;
 
   const canCollapse = collapsible && description !== null && description.length > COLLAPSE_MIN_LENGTH;
   const collapsed = canCollapse && !expanded;
@@ -64,6 +66,7 @@ export function SectorGuide({ sector, collapsible = false, className }: SectorGu
           <Text className="text-caption font-semibold text-primary">{expanded ? '접기' : '더 보기'}</Text>
         </Pressable>
       ) : null}
+      {footer}
     </View>
   );
 }

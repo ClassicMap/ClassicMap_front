@@ -1,5 +1,6 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { ScrollShelf } from '@/components/home/shelf';
+import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
@@ -39,7 +40,7 @@ import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
+import type { ComparisonPerformance, ComparisonPiece, ListeningMoment } from '@/lib/types/models';
 import {
   CompareSearchField,
   CompareSearchResults,
@@ -373,6 +374,18 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       .map((item) => trackFromPerformance(item, imageOf(item)));
     comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue });
   };
+  // 들을 곳: 그 연주를 그 지점부터 튼다
+  const playAt = (performance: ComparisonPerformance, moment: ListeningMoment) => {
+    if (!isPlayablePerformance(performance)) return;
+    setPicking(false);
+    const queue = performances
+      .filter(isPlayablePerformance)
+      .map((item) => trackFromPerformance(item, imageOf(item)));
+    comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
+  };
+  // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
+  const featured = resolveFeaturedPair(activeSector?.featuredPair ?? null, performances.filter(isPlayablePerformance));
 
   const recordRecent = useRecordRecentPiece();
   React.useEffect(() => {
@@ -480,7 +493,24 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
             ))}
       </ScrollShelf>
 
-      {activeSector ? <SectorGuide sector={activeSector} collapsible className="mt-3" /> : null}
+      {activeSector ? (
+        <SectorGuide
+          sector={activeSector}
+          collapsible
+          footer={
+            featured && activeSector.featuredPair && onFocus ? (
+              <FeaturedPairLink
+                pair={activeSector.featuredPair}
+                a={featured[0]}
+                b={featured[1]}
+                compact
+                onOpen={() => onFocus(featured[0].id, featured[1].id)}
+              />
+            ) : null
+          }
+          className="mt-3"
+        />
+      ) : null}
 
       {/* 영상: 고른 연주 하나만 */}
       <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
@@ -572,6 +602,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
                 active={performance.id === activeId}
                 inRepertoire={repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)}
                 onPress={() => choose(performance)}
+                onMoment={(moment) => playAt(performance, moment)}
               />
             ))}
       </View>
@@ -597,6 +628,7 @@ function PerformerRow({
   active,
   inRepertoire,
   onPress,
+  onMoment,
 }: {
   performance: ComparisonPerformance;
   image: string | null;
@@ -604,45 +636,59 @@ function PerformerRow({
   active: boolean;
   inRepertoire: boolean;
   onPress: () => void;
+  onMoment: (moment: ListeningMoment) => void;
 }) {
   const credit = primaryCredit(performance);
   const ready = performance.clipStatus === 'ready';
   const duration = clipDurationMs(performance);
   const support = supportingCredits(performance);
+  const note = performance.note;
   return (
-    <Pressable
-      onPress={ready ? onPress : undefined}
-      disabled={!ready}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active, disabled: !ready }}
-      accessibilityLabel={`${credit?.artistName ?? '연주'} ${ready ? '재생' : '준비 중'}`}
-      className={cn('-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5', active && 'bg-surface-2')}>
-      <RepertoireThumb active={inRepertoire} badgeSize={16}>
-        <EntityThumb name={credit?.artistName ?? '?'} image={image} shape="circle" size={40} />
-      </RepertoireThumb>
-      <View className="min-w-0 flex-1">
-        <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-          {credit?.artistName ?? '연주자 정보 없음'}
-        </Text>
-        {support ? (
-          <Text variant="caption" numberOfLines={1}>
-            {support}
+    <View>
+      <Pressable
+        onPress={ready ? onPress : undefined}
+        disabled={!ready}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active, disabled: !ready }}
+        accessibilityLabel={`${credit?.artistName ?? '연주'} ${ready ? '재생' : '준비 중'}`}
+        className={cn('-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5', active && 'bg-surface-2')}>
+        <RepertoireThumb active={inRepertoire} badgeSize={16}>
+          <EntityThumb name={credit?.artistName ?? '?'} image={image} shape="circle" size={40} />
+        </RepertoireThumb>
+        <View className="min-w-0 flex-1">
+          <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+            {credit?.artistName ?? '연주자 정보 없음'}
           </Text>
-        ) : null}
-        <View className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-3">
-          <View
-            className={cn('h-full rounded-full', active ? 'bg-primary' : 'bg-foreground-subtle')}
-            style={{ width: `${Math.max(4, (duration / longest) * 100)}%` }}
-          />
+          {support ? (
+            <Text variant="caption" numberOfLines={1}>
+              {support}
+            </Text>
+          ) : null}
+          <View className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-surface-3">
+            <View
+              className={cn('h-full rounded-full', active ? 'bg-primary' : 'bg-foreground-subtle')}
+              style={{ width: `${Math.max(4, (duration / longest) * 100)}%` }}
+            />
+          </View>
         </View>
-      </View>
-      {ready ? (
-        <Text variant="mono" className="w-11 text-right text-foreground-muted">
-          {clipClock(duration)}
-        </Text>
-      ) : (
-        <Badge label="준비 중" />
-      )}
-    </Pressable>
+        {ready ? (
+          <Text variant="mono" className="w-11 text-right text-foreground-muted">
+            {clipClock(duration)}
+          </Text>
+        ) : (
+          <Badge label="준비 중" />
+        )}
+      </Pressable>
+      {/* 연주 노트: 제목과 첫 줄만 보이고, 이 연주를 고르면 펼쳐 들을 곳까지 보인다 */}
+      {note ? (
+        <PerformanceNote
+          note={note}
+          bodyLines={active ? undefined : 1}
+          hideMoments={!active}
+          onMoment={ready ? onMoment : undefined}
+          className="mb-1 ml-[52px] pb-1.5"
+        />
+      ) : null}
+    </View>
   );
 }

@@ -1,0 +1,215 @@
+import { Icon } from '@/components/ui/icon';
+import { Text } from '@/components/ui/text';
+import { clipClock, primaryCredit } from '@/lib/data/comparison';
+import type {
+  ComparisonPerformance,
+  FeaturedPair,
+  ListeningMoment,
+  PerformanceListeningNote,
+} from '@/lib/types/models';
+import { cn } from '@/lib/utils';
+import { ChevronRightIcon, PlayIcon } from 'lucide-react-native';
+import * as React from 'react';
+import { Pressable, View } from 'react-native';
+
+/** 1:1 의 A·B 색. A 는 브랜드 금색, B 는 파랑이다 */
+export type NoteTone = 'a' | 'b';
+
+const TONE_TEXT: Record<NoteTone, string> = { a: 'text-primary', b: 'text-info' };
+const TONE_BORDER: Record<NoteTone, string> = { a: 'border-primary', b: 'border-info' };
+const TONE_FILL: Record<NoteTone, string> = { a: 'fill-primary', b: 'fill-info' };
+
+/** 들을 곳 칩: "▶ 0:20 여기서 터져요". 누르면 그 지점부터 튼다 */
+export function MomentChip({
+  moment,
+  tone = 'a',
+  onPress,
+}: {
+  moment: ListeningMoment;
+  tone?: NoteTone;
+  onPress?: () => void;
+}) {
+  const clock = clipClock(moment.offsetMs);
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${clock} ${moment.label}부터 듣기`}
+      className={cn(
+        'h-7 flex-row items-center gap-1.5 self-start rounded-full border px-2.5',
+        TONE_BORDER[tone],
+        onPress ? 'web:hover:bg-surface-2' : 'opacity-60'
+      )}>
+      <Icon as={PlayIcon} size={9} className={cn(TONE_TEXT[tone], TONE_FILL[tone])} />
+      <Text
+        numberOfLines={1}
+        className={cn('text-label font-semibold tabular-nums', TONE_TEXT[tone])}>
+        {`${clock} ${moment.label}`}
+      </Text>
+    </Pressable>
+  );
+}
+
+interface PerformanceNoteProps {
+  note: PerformanceListeningNote;
+  tone?: NoteTone;
+  /** 노트 본문을 이 줄 수까지만 보인다 (모바일 목록) */
+  bodyLines?: number;
+  /** 들을 곳을 숨긴다 (모바일 목록에서 고르지 않은 연주) */
+  hideMoments?: boolean;
+  onMoment?: (moment: ListeningMoment) => void;
+  className?: string;
+}
+
+/** 연주 노트: 제목, 두세 문장, 들을 곳 */
+export function PerformanceNote({
+  note,
+  tone = 'a',
+  bodyLines,
+  hideMoments = false,
+  onMoment,
+  className,
+}: PerformanceNoteProps) {
+  return (
+    <View className={cn('gap-1.5', className)}>
+      <Text className="text-[16px] font-bold leading-[22px] tracking-tight text-foreground">
+        {note.headline}
+      </Text>
+      <Text numberOfLines={bodyLines} className="text-body-sm text-foreground-muted">
+        {note.body}
+      </Text>
+      {note.facts.length > 0 ? (
+        <Text variant="caption" className="text-foreground-subtle">
+          {note.facts.join(' · ')}
+        </Text>
+      ) : null}
+      {/* 음량 곡선 자리: 곡선이 저장되면 본문과 들을 곳 사이에 둔다 */}
+      {!hideMoments && note.moments.length > 0 ? (
+        <View className="mt-1 flex-row flex-wrap gap-2">
+          {note.moments.map((moment) => (
+            <MomentChip
+              key={`${moment.offsetMs}-${moment.label}`}
+              moment={moment}
+              tone={tone}
+              onPress={onMoment ? () => onMoment(moment) : undefined}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** 구간의 추천 쌍을 지금 목록의 연주로 찾는다. 둘 중 하나라도 없으면 null */
+export function resolveFeaturedPair(
+  pair: FeaturedPair | null,
+  performances: readonly ComparisonPerformance[]
+): [ComparisonPerformance, ComparisonPerformance] | null {
+  if (!pair) return null;
+  const a = performances.find((performance) => performance.id === pair.performanceIds[0]);
+  const b = performances.find((performance) => performance.id === pair.performanceIds[1]);
+  return a && b ? [a, b] : null;
+}
+
+function SideMark({ tone }: { tone: NoteTone }) {
+  return (
+    <View
+      className={cn(
+        'size-5 items-center justify-center rounded-md',
+        tone === 'a' ? 'bg-primary' : 'bg-info'
+      )}>
+      <Text
+        className={cn(
+          'text-micro font-bold',
+          tone === 'a' ? 'text-primary-foreground' : 'text-info-foreground'
+        )}>
+        {tone.toUpperCase()}
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * 구간 안내 아래의 추천 비교 줄. 누르면 그 두 연주로 1:1 비교가 열린다.
+ * `compact` 는 모바일: 제목을 빼고 이름과 화살표만 둔다.
+ */
+export function FeaturedPairLink({
+  pair,
+  a,
+  b,
+  compact = false,
+  onOpen,
+}: {
+  pair: FeaturedPair;
+  a: ComparisonPerformance;
+  b: ComparisonPerformance;
+  compact?: boolean;
+  onOpen: () => void;
+}) {
+  const nameA = primaryCredit(a)?.artistName ?? 'A';
+  const nameB = primaryCredit(b)?.artistName ?? 'B';
+  return (
+    <Pressable
+      onPress={onOpen}
+      accessibilityRole="button"
+      accessibilityLabel={`추천 비교 ${nameA}와 ${nameB}, ${pair.title}. 1:1로 듣기`}
+      className="group mt-2 flex-row flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2.5">
+      <Text className="text-micro text-primary">추천 비교</Text>
+      <View className="flex-row items-center gap-1.5">
+        <SideMark tone="a" />
+        <Text className="text-body-sm font-semibold text-foreground">{nameA}</Text>
+        <Text className="text-body-sm text-foreground-subtle">↔</Text>
+        <SideMark tone="b" />
+        <Text className="text-body-sm font-semibold text-foreground">{nameB}</Text>
+      </View>
+      {compact ? null : <Text className="text-body-sm text-foreground-muted">{pair.title}</Text>}
+      <View className="ml-auto flex-row items-center gap-0.5">
+        {compact ? null : (
+          <Text className="text-label font-semibold text-primary group-hover:underline">
+            1:1로 듣기
+          </Text>
+        )}
+        <Icon as={ChevronRightIcon} size={15} className="text-primary" />
+      </View>
+    </Pressable>
+  );
+}
+
+/** 1:1 위의 추천 비교 노트. 들을 곳을 누르면 그쪽 연주가 그 지점부터 나온다 */
+export function FeaturedPairNote({
+  pair,
+  sideOf,
+  onMoment,
+}: {
+  pair: FeaturedPair;
+  /** 연주 id 가 1:1 의 어느 쪽인지 */
+  sideOf: (performanceId: number) => NoteTone | null;
+  onMoment: (side: NoteTone, offsetMs: number) => void;
+}) {
+  return (
+    <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
+      <Text className="text-micro text-primary">추천 비교</Text>
+      <Text className="text-[18px] font-bold leading-[24px] tracking-tight text-foreground">
+        {pair.title}
+      </Text>
+      <Text className="max-w-[72ch] text-body-sm text-foreground">{pair.note}</Text>
+      {pair.moments.length > 0 ? (
+        <View className="mt-1 flex-row flex-wrap gap-2">
+          {pair.moments.map((moment) => {
+            const side = sideOf(moment.performanceId);
+            if (!side) return null;
+            return (
+              <MomentChip
+                key={`${moment.performanceId}-${moment.offsetMs}`}
+                moment={moment}
+                tone={side}
+                onPress={() => onMoment(side, moment.offsetMs)}
+              />
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
