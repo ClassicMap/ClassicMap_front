@@ -5,8 +5,12 @@ import type {
   ComparisonPerformancePage,
   ComparisonPiece,
   ComparisonSector,
+  FeaturedPair,
+  FeaturedPairMoment,
+  ListeningMoment,
   PerformanceCredit,
   PerformanceCreditRole,
+  PerformanceListeningNote,
 } from '@/lib/types/models';
 
 const CLIP_STATUSES: ReadonlySet<string> = new Set([
@@ -106,6 +110,50 @@ function parseCredit(value: unknown): PerformanceCredit {
   };
 }
 
+function parseMoment(value: unknown): ListeningMoment | null {
+  if (!isRecord(value)) return null;
+  const label = optionalString(value.label);
+  const offsetMs = value.offsetMs;
+  if (!label || typeof offsetMs !== 'number' || !Number.isFinite(offsetMs) || offsetMs < 0) return null;
+  return { offsetMs, label };
+}
+
+/**
+ * 큐레이션 글은 없거나 모양이 틀리면 null 로 둔다. 글 하나 때문에 비교 화면 전체가
+ * 깨지지 않게 하려고 한다. 들을 곳은 하나씩 걸러 맞는 것만 남긴다.
+ */
+function parseNote(value: unknown): PerformanceListeningNote | null {
+  if (!isRecord(value)) return null;
+  const headline = optionalString(value.headline);
+  const body = optionalString(value.body);
+  if (!headline || !body) return null;
+  return {
+    headline,
+    body,
+    moments: (Array.isArray(value.moments) ? value.moments : [])
+      .map(parseMoment)
+      .filter((moment): moment is ListeningMoment => moment !== null),
+    facts: (Array.isArray(value.facts) ? value.facts : []).filter(
+      (fact): fact is string => typeof fact === 'string' && fact.trim() !== ''
+    ),
+  };
+}
+
+function parseFeaturedPair(value: unknown): FeaturedPair | null {
+  if (!isRecord(value) || !Array.isArray(value.performanceIds) || value.performanceIds.length !== 2) return null;
+  const [a, b] = value.performanceIds;
+  const title = optionalString(value.title);
+  const note = optionalString(value.note);
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a === b || !title || !note) return null;
+  const ids: [number, number] = [Number(a), Number(b)];
+  const moments = (Array.isArray(value.moments) ? value.moments : []).flatMap((item): FeaturedPairMoment[] => {
+    const moment = parseMoment(item);
+    if (!moment || !isRecord(item) || !ids.includes(Number(item.performanceId))) return [];
+    return [{ ...moment, performanceId: Number(item.performanceId) }];
+  });
+  return { performanceIds: ids, title, note, moments };
+}
+
 function parseComparison(value: unknown): ComparisonPerformance {
   if (!isRecord(value)) {
     throw new Error('비교영상 응답이 객체가 아닙니다.');
@@ -146,6 +194,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
       .sort((left, right) => left.displayOrder - right.displayOrder),
     endMs,
     id: requireInteger(value.id, 'id'),
+    note: parseNote(value.note),
     pieceId: requireInteger(value.pieceId, 'pieceId'),
     pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
     sectorId: requireInteger(value.sectorId, 'sectorId'),
@@ -199,6 +248,7 @@ function parseSector(value: unknown): ComparisonSector {
     measureEnd: optionalString(value.measureEnd),
     readyPerformanceCount: requireNumber(value.readyPerformanceCount, 'sector.readyPerformanceCount'),
     primaryArtistCount: requireNumber(value.primaryArtistCount, 'sector.primaryArtistCount'),
+    featuredPair: parseFeaturedPair(value.featuredPair),
   };
 }
 

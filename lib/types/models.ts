@@ -183,6 +183,34 @@ export interface ComparisonPerformance {
   clipUrl?: string;
   videoId?: string;
   credits: PerformanceCredit[];
+  /** 확정된 연주 노트. 없으면 null */
+  note: PerformanceListeningNote | null;
+}
+
+/** 들을 곳. `offsetMs` 는 클립 처음부터 잰 시점이다 */
+export interface ListeningMoment {
+  offsetMs: number;
+  label: string;
+}
+
+/** 연주 노트: 이 연주를 부르는 제목, 두세 문장, 들을 곳, 사실 태그 */
+export interface PerformanceListeningNote {
+  headline: string;
+  body: string;
+  moments: ListeningMoment[];
+  facts: string[];
+}
+
+export interface FeaturedPairMoment extends ListeningMoment {
+  performanceId: number;
+}
+
+/** 구간의 추천 비교 한 쌍. 두 연주 모두 이 구간의 공개 연주다 */
+export interface FeaturedPair {
+  performanceIds: [number, number];
+  title: string;
+  note: string;
+  moments: FeaturedPairMoment[];
 }
 
 /** `/pieces/{id}/comparison-sectors`: 공개 기준(연주자 3명 이상)을 통과한 섹터 */
@@ -203,6 +231,8 @@ export interface ComparisonSector {
   measureEnd: string | null;
   readyPerformanceCount: number;
   primaryArtistCount: number;
+  /** 확정된 추천 비교. 없으면 null */
+  featuredPair: FeaturedPair | null;
 }
 
 export interface ComparisonPiecePerformer {
