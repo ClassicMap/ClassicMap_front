@@ -100,6 +100,15 @@
   }
 }
 
+/* 한국어 줄바꿈: 낱말 중간에서 끊지 않고 띄어쓰기에서 넘긴다.
+   띄어쓰기 없이 한 줄보다 긴 문자열(주소 등)만 아무 데서나 끊는다. 웹에만 걸린다 */
+@layer base {
+  body {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* 스켈레톤 쉬머: 배경을 화면에 고정해(background-attachment: fixed) 화면 안의 모든 스켈레톤이
    한 줄기 빛으로 같이 흐른다. 움직임 줄이기 설정이면 멈춘다. */
 @layer components {
