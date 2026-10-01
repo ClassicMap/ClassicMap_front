@@ -53,6 +53,8 @@ export interface ComparePlayerState {
   volume: number;
   muted: boolean;
   switchMode: SwitchMode;
+  /** 1:1에서 연주자를 바꿀 때 두 소리를 잠깐 겹쳐 넘긴다 (웹). 기본은 끔 */
+  crossfade: boolean;
   /** 비교 화면 크게 보기 */
   theater: boolean;
   /** 같은 구간의 재생 가능한 연주들. 미니 플레이어의 이전·다음 연주자에 쓴다 */
@@ -96,6 +98,7 @@ export interface PlayerHostHandle {
 const VOLUME_KEY = 'classicmap.player.volume';
 const MUTED_KEY = 'classicmap.player.muted';
 const SWITCH_MODE_KEY = 'classicmap.player.switch-mode';
+const CROSSFADE_KEY = 'classicmap.player.crossfade';
 const SESSION_KEY = 'classicmap.player.session.v1';
 /** 끝에서 이만큼 안쪽이면 다 들은 것으로 보고 다음에는 처음부터 */
 const END_MARGIN_SEC = 0.75;
@@ -238,6 +241,7 @@ let state: ComparePlayerState = {
   volume: initialVolume(),
   muted: readStored(MUTED_KEY) === '1',
   switchMode: readStored(SWITCH_MODE_KEY) === 'align' ? 'align' : 'resume',
+  crossfade: readStored(CROSSFADE_KEY) === 'on',
   theater: false,
   queue: [],
   restored: false,
@@ -450,6 +454,11 @@ export const comparePlayer = {
   setSwitchMode(mode: SwitchMode) {
     writeStored(SWITCH_MODE_KEY, mode);
     setState({ switchMode: mode });
+  },
+
+  setCrossfade(on: boolean) {
+    writeStored(CROSSFADE_KEY, on ? 'on' : 'off');
+    setState({ crossfade: on });
   },
 
   /** 웹은 영상이 셸에 하나뿐이라 보기 방식을 바꿔도 영상은 그대로 이어진다 */

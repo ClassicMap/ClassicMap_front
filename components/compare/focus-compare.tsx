@@ -20,6 +20,7 @@ import {
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { crossfade, type Fade, fadeSeconds, type SwitchCause } from '@/lib/player/crossfade';
 import { alignAcross, fineClock } from '@/lib/player/focus-align';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
@@ -228,7 +229,8 @@ interface FocusEngine {
   /** 지금 소리 나는 연주의 위치(초)·길이(초) */
   progress: { current: number; duration: number };
   togglePlay: () => void;
-  switchTo: (side: Side) => void;
+  /** `cause` 는 크로스페이드 길이를 정한다 (자동 전환은 간격에 맞춰 짧게) */
+  switchTo: (side: Side, cause?: SwitchCause) => void;
   seekRatio: (ratio: number) => void;
   seekBy: (seconds: number) => void;
   /** 떠날 때 두 연주의 위치 */
@@ -255,7 +257,7 @@ function FocusStage(props: FocusStageProps) {
   const [loop, setLoop] = React.useState<LoopRange | null>(null);
   const [editingLoop, setEditingLoop] = React.useState(false);
 
-  const web = useWebFocusEngine(props, mode, loop);
+  const web = useWebFocusEngine(props, mode, loop, auto);
   const native = useNativeFocusEngine(props, mode, loop);
   const engine = Platform.OS === 'web' ? web.engine : native;
   const active = engine.side === 'a' ? a : b;
@@ -305,7 +307,7 @@ function FocusStage(props: FocusStageProps) {
     if (auto === 0 || !engine.playing) return;
     const timer = setTimeout(() => {
       const latest = engineRef.current;
-      latest.switchTo(latest.side === 'a' ? 'b' : 'a');
+      latest.switchTo(latest.side === 'a' ? 'b' : 'a', 'auto');
     }, auto * 1000);
     return () => clearTimeout(timer);
   }, [auto, engine.playing, engine.side]);
@@ -391,6 +393,7 @@ function FocusStage(props: FocusStageProps) {
               options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? '끔' : `${value}초` }))}
               onChange={setAuto}
             />
+            {Platform.OS === 'web' ? <CrossfadeToggle /> : null}
             {Platform.OS !== 'web' ? (
               <NativeLoopButton loop={loop} progress={engine.progress} onChange={setLoop} />
             ) : (
@@ -570,7 +573,7 @@ function FocusStage(props: FocusStageProps) {
 
 // ─── 웹: 두 클립을 미리 불러 두고 소리 나는 쪽만 튼다 ──────────────────────
 
-function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null) {
+function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null, auto: AutoInterval) {
   const { a, b, startPlaying } = props;
   const refs = React.useRef<Record<Side, HTMLVideoElement | null>>({ a: null, b: null });
   const [side, setSide] = React.useState<Side>('a');
@@ -586,9 +589,15 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
   loopRef.current = loop;
   const volume = useComparePlayer((state) => state.volume);
   const muted = useComparePlayer((state) => state.muted);
+  // 크로스페이드 중에는 두 영상 소리를 페이드가 맡는다
+  const fadeRef = React.useRef<Fade | null>(null);
+  const autoRef = React.useRef(auto);
+  autoRef.current = auto;
+  const finishFade = () => fadeRef.current?.finish();
 
   // 소리는 지금 쪽만. 볼륨·음소거는 앱 플레이어 설정을 그대로 따른다
   React.useEffect(() => {
+    if (fadeRef.current) return;
     (['a', 'b'] as const).forEach((key) => {
       const video = refs.current[key];
       if (!video) return;
@@ -646,12 +655,14 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
       playing,
       progress,
       togglePlay: () => {
+        finishFade();
         const video = get(sideRef.current);
         if (!video) return;
         if (video.paused) void video.play().catch(() => setPlaying(false));
         else video.pause();
       },
-      switchTo: (target: Side) => {
+      switchTo: (target: Side, cause: SwitchCause = 'manual') => {
+        finishFade();
         const from = get(sideRef.current);
         const to = get(target);
         if (!from || !to || target === sideRef.current) return;
@@ -659,11 +670,24 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
           to.currentTime = alignAcross(from.currentTime, from.duration, to.duration);
         }
-        from.pause();
-        from.muted = true;
-        to.muted = comparePlayer.getState().muted;
         sideRef.current = target;
         setSide(target);
+        const player = comparePlayer.getState();
+        // 크로스페이드: 재생 중이고 소리가 날 때만 두 소리를 겹쳐 넘긴다. 못 겹치는 환경이면 바로 바꾼다
+        if (wasPlaying && player.crossfade && !player.muted && player.volume > 0) {
+          const fade = crossfade(from, to, fadeSeconds(cause, autoRef.current), player.volume, () => {
+            fadeRef.current = null;
+            from.muted = true;
+            to.muted = comparePlayer.getState().muted;
+          });
+          if (fade) {
+            fadeRef.current = fade;
+            return;
+          }
+        }
+        from.pause();
+        from.muted = true;
+        to.muted = player.muted;
         if (wasPlaying) void to.play().catch(() => setPlaying(false));
       },
       seekRatio: (ratio: number) => {
@@ -684,6 +708,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
       },
       playAt: (target: Side, seconds: number) => {
+        finishFade();
         const from = get(sideRef.current);
         const to = get(target);
         if (!to) return;
@@ -703,6 +728,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
 
   /** 화면을 떠날 때: 두 영상을 멈춘다 (재생은 앱 플레이어가 이어 간다) */
   const suspend = React.useCallback(() => {
+    fadeRef.current?.finish();
     (['a', 'b'] as const).forEach((key) => refs.current[key]?.pause());
   }, []);
 
@@ -1060,6 +1086,25 @@ function LengthTable({
         );
       })}
     </View>
+  );
+}
+
+/** 크로스페이드: 켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐 넘긴다. 켠 상태는 기억한다 (웹만) */
+function CrossfadeToggle() {
+  const on = useComparePlayer((state) => state.crossfade);
+  return (
+    <Pressable
+      onPress={() => comparePlayer.setCrossfade(!on)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel="크로스페이드"
+      accessibilityHint="켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐서 넘겨요"
+      className="h-8 flex-row items-center gap-2 rounded-full px-1.5 web:hover:bg-surface-2">
+      <View className={cn('h-5 w-9 justify-center rounded-full px-0.5', on ? 'bg-primary' : 'bg-surface-3')}>
+        <View className={cn('size-4 rounded-full', on ? 'translate-x-4 bg-primary-foreground' : 'bg-foreground-subtle')} />
+      </View>
+      <Text className={cn('text-label', on ? 'font-semibold text-foreground' : 'text-foreground-muted')}>크로스페이드</Text>
+    </Pressable>
   );
 }
 
