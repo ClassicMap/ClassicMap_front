@@ -28,6 +28,7 @@ import {
   clipClock,
   clipDurationMs,
   primaryCredit,
+  defaultComparisonSector,
   sortComparisonSectors,
   supportingCredits,
   youtubeThumbnailUrl,
@@ -92,7 +93,7 @@ export function ComparePieceView({
   const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
+  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   const first = performancesQuery.data?.[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;

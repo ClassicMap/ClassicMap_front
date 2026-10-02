@@ -28,6 +28,7 @@ import {
   clipClock,
   clipDurationMs,
   primaryCredit,
+  defaultComparisonSector,
   sortComparisonSectors,
   supportingCredits,
   youtubeThumbnailUrl,
@@ -330,7 +331,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const { canEdit } = useAuth();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
+  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   const repertoireIds = useRepertoireIds();
   // 레퍼토리에 담은 연주자를 앞으로

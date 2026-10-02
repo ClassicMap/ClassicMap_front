@@ -15,6 +15,7 @@ import {
   clipClock,
   clipDurationMs,
   primaryCredit,
+  defaultComparisonSector,
   sortComparisonSectors,
   supportingCredits,
   youtubeThumbnailUrl,
@@ -95,7 +96,7 @@ function artistKey(performance: ComparisonPerformance): number {
 export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onChangeSector }: FocusCompareProps) {
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? sectors[0];
+  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data]);
   const first = performances[0];
