@@ -81,8 +81,19 @@ export interface Artist {
   /** 관리자 API에서 입력받는 활동 국가 수. 조회 응답에는 포함되지 않는다. */
   countryCount?: number;
   topAwardId?: number;
+  /** 지금 사진의 출처. 공개된 출처 기록이 있을 때만 온다 */
+  imageCredit?: ImageCredit | null;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 사진 출처. 위키미디어 사진은 작가·라이선스, 보도용 사진은 출처 이름이다 */
+export interface ImageCredit {
+  creditLine?: string;
+  author?: string;
+  license?: string;
+  licenseUrl?: string;
+  sourceUrl: string;
 }
 
 export interface Recording {

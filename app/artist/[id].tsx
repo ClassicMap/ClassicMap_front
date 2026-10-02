@@ -19,7 +19,7 @@ import { ConcertAPI, RecordingAPI, type RecordingListItem } from '@/lib/api/clie
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useArtist } from '@/lib/query/hooks/useArtists';
-import type { Artist, Concert, Recording, TicketVendor } from '@/lib/types/models';
+import type { Artist, Concert, ImageCredit, Recording, TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useQuery } from '@tanstack/react-query';
@@ -32,7 +32,7 @@ import {
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -377,6 +377,7 @@ export default function ArtistDetailScreen() {
                 </>
               ) : null}
             </View>
+            <PhotoCredit imageUrl={artist.imageUrl} credit={artist.imageCredit} centered={!wide} />
           </View>
         </View>
 
@@ -472,5 +473,44 @@ export default function ArtistDetailScreen() {
       />
       <TicketVendorsModal visible={showVendorsModal} vendors={vendors} onClose={() => setShowVendorsModal(false)} />
     </View>
+  );
+}
+
+/**
+ * 사진 출처 한 줄. 위키미디어 사진은 저작자 표시가 라이선스 조건이라 작가·라이선스를 밝히고,
+ * 보도용 사진은 출처 이름을, 애플뮤직 사진은 그 이름을 쓴다. 누르면 출처 페이지가 열린다
+ */
+function PhotoCredit({
+  imageUrl,
+  credit,
+  centered,
+}: {
+  imageUrl?: string;
+  credit?: ImageCredit | null;
+  centered: boolean;
+}) {
+  const label = credit
+    ? credit.author && credit.license
+      ? `${credit.author} · ${credit.license}`
+      : credit.creditLine ?? credit.author ?? null
+    : imageUrl && /(^|\.)mzstatic\.com\//.test(imageUrl.replace(/^https?:\/\//, ''))
+      ? 'Apple Music'
+      : null;
+  if (!label) return null;
+  const text = (
+    <Text variant="micro" numberOfLines={1} className="text-foreground-subtle">
+      {`사진: ${label}`}
+    </Text>
+  );
+  return credit ? (
+    <Pressable
+      onPress={() => void Linking.openURL(credit.sourceUrl).catch(() => undefined)}
+      accessibilityRole="link"
+      accessibilityLabel={`사진 출처: ${label}`}
+      className={cn('mt-4 max-w-full web:hover:opacity-80', centered ? 'self-center' : 'self-start')}>
+      {text}
+    </Pressable>
+  ) : (
+    <View className={cn('mt-4 max-w-full', centered ? 'self-center' : 'self-start')}>{text}</View>
   );
 }
