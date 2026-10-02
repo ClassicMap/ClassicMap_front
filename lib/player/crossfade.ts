@@ -92,7 +92,9 @@ export function crossfade(
   to: HTMLMediaElement,
   seconds: number,
   level: number,
-  onDone: () => void
+  onDone: () => void,
+  /** 동시 재생: 두 영상이 이미 같이 돌고 있어 끝나도 `from` 을 멈추지 않는다(소리만 끈다) */
+  { keepFromPlaying = false }: { keepFromPlaying?: boolean } = {}
 ): Fade | null {
   const setLevel = levelSetter(from, to);
   if (!setLevel) return null;
@@ -105,7 +107,7 @@ export function crossfade(
     if (done) return;
     done = true;
     cancelAnimationFrame(frame);
-    from.pause();
+    if (!keepFromPlaying) from.pause();
     setLevel(from, top);
     setLevel(to, top);
     onDone();
