@@ -1,6 +1,6 @@
 import { NotationGlyph } from '@/components/ui/notation-glyph';
 import { Text } from '@/components/ui/text';
-import { primaryCredit } from '@/lib/data/comparison';
+import { isWholeWorkSector, primaryCredit } from '@/lib/data/comparison';
 import { placeSections } from '@/lib/design/section-timeline';
 import { useAllSectorPerformances } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
@@ -32,19 +32,25 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
   const queries = useAllSectorPerformances(sectors.map((sector) => sector.id));
   const referenceArtist = reference ? primaryCredit(reference)?.artistId : undefined;
 
-  // 기준 연주와 같은 원본 영상의 구간만 놓는다. 다른 영상의 시각은 같은 축에 올릴 수 없다
-  const clips = sectors
-    .map((sector, index) => {
-      const list = queries[index]?.data ?? [];
-      const match =
-        list.find((item) => reference && item.sourceId === reference.sourceId) ??
-        list.find((item) => referenceArtist !== undefined && primaryCredit(item)?.artistId === referenceArtist);
-      return match && (!reference || match.sourceId === reference.sourceId) ? { sector, clip: match } : null;
+  // 전곡은 오선 전체다. 위치를 잴 필요 없이 다른 구간 밑에 깔고, 고르면 전체를 칠한다
+  const whole = sectors.find(isWholeWorkSector);
+  const parts = sectors
+    .map((sector, index) => ({ sector, list: queries[index]?.data ?? [] }))
+    .filter(({ sector }) => !isWholeWorkSector(sector));
+
+  // 기준 연주와 같은 원본 영상의 구간만 놓는다. 다른 영상의 시각은 같은 축에 올릴 수 없다.
+  // 기준이 전곡 영상처럼 발췌와 다른 영상이면, 발췌 구간을 가장 많이 담은 영상을 기준으로 삼는다
+  const sourceId = sourceForStaff(parts, activeSectorId, reference, referenceArtist);
+  const clips = parts
+    .map(({ sector, list }) => {
+      const match = list.find((item) => item.sourceId === sourceId);
+      return match ? { sector, clip: match } : null;
     })
     .filter((item): item is { sector: ComparisonSector; clip: ComparisonPerformance } => item !== null);
 
   const placements = placeSections(clips.map((item) => item.clip));
-  if (clips.length < 2 || placements.length !== clips.length) return null;
+  if (clips.length < (whole ? 1 : 2) || placements.length !== clips.length) return null;
+  const wholeActive = whole !== undefined && whole.id === activeSectorId;
 
   return (
     <View accessibilityLabel="곡 안에서 구간 위치" className="pb-5">
@@ -54,6 +60,16 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
           <NotationGlyph glyph="gClef" lineSpacing={LINE_GAP} className="text-foreground-muted" />
         </View>
         <View className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
+        {wholeActive ? (
+          <Pressable
+            onPress={() => onSelect(whole.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: true }}
+            accessibilityLabel={whole.sectorName}
+            className="absolute bg-primary/80"
+            style={{ left: 0, right: 0, top: 1, height: STAFF_HEIGHT - 1 }}
+          />
+        ) : null}
         {clips.map(({ sector }, index) => {
           const placement = placements[index];
           const active = sector.id === activeSectorId;
@@ -64,7 +80,14 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={`${sector.sectorName} ${placement.startLabel}부터`}
-              className={cn('absolute', active ? 'bg-primary/80' : 'bg-foreground-subtle/30 web:hover:bg-foreground-subtle/50')}
+              className={cn(
+                'absolute',
+                active
+                  ? 'bg-primary/80'
+                  : wholeActive
+                    ? 'bg-black/25 web:hover:bg-black/40'
+                    : 'bg-foreground-subtle/30 web:hover:bg-foreground-subtle/50'
+              )}
               style={{
                 left: `${placement.leftPercent}%`,
                 width: `${Math.max(1.2, placement.widthPercent)}%`,
@@ -88,6 +111,11 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
         <View pointerEvents="none" className="absolute bottom-0 right-0 top-0 w-[3px] bg-foreground-faint" />
       </View>
       <View pointerEvents="none" className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
+      {wholeActive && labels === 'active' ? (
+        <Text numberOfLines={1} className="absolute text-micro text-primary" style={{ left: 0, top: STAFF_HEIGHT + 5 }}>
+          {whole.sectorName}
+        </Text>
+      ) : null}
       {clips.map(({ sector }, index) => {
         if (labels === 'active' && sector.id !== activeSectorId) return null;
         const { leftPercent, widthPercent } = placements[index];
@@ -114,4 +142,33 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
       </View>
     </View>
   );
+}
+
+/**
+ * 오선의 시간 축으로 쓸 원본 영상. 기준 연주의 영상이 발췌 구간을 둘 이상 담으면 그것을,
+ * 아니면 같은 연주자의 영상, 그것도 아니면 지금 구간을 담은 영상 중 발췌 구간을 가장 많이 담은 것을 쓴다
+ */
+function sourceForStaff(
+  parts: readonly { sector: ComparisonSector; list: readonly ComparisonPerformance[] }[],
+  activeSectorId: number | undefined,
+  reference: ComparisonPerformance | undefined,
+  referenceArtist: number | undefined
+): number | undefined {
+  const counts = new Map<number, number>();
+  for (const { list } of parts) {
+    for (const id of new Set(list.map((item) => item.sourceId))) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  const enough = (id: number | undefined) => id !== undefined && (counts.get(id) ?? 0) >= Math.min(2, parts.length);
+  if (enough(reference?.sourceId)) return reference?.sourceId;
+  const sameArtist = parts
+    .flatMap(({ list }) => list)
+    .find((item) => referenceArtist !== undefined && primaryCredit(item)?.artistId === referenceArtist && enough(item.sourceId));
+  if (sameArtist) return sameArtist.sourceId;
+  const holdsActive = new Set(
+    parts.filter(({ sector }) => sector.id === activeSectorId).flatMap(({ list }) => list.map((item) => item.sourceId))
+  );
+  const score = (id: number) => (holdsActive.has(id) ? 1000 : 0) + (counts.get(id) ?? 0);
+  let best: number | undefined;
+  for (const id of counts.keys()) if (best === undefined || score(id) > score(best)) best = id;
+  return best;
 }

@@ -40,9 +40,24 @@ export function youtubeThumbnailUrl(performance: ComparisonPerformance): string 
 /**
  * 표시 순서만 맞춘다. 같은 순서끼리는 API가 준 순서(실제 연주 시작 시각 순)를 그대로 둔다.
  * id로 다시 정렬하면 3악장 클라이맥스가 도입부보다 앞에 온다.
+ * 전곡은 다른 구간을 다 품으므로 맨 앞에 둔다. API 순서로는 서주와 제2주제 사이에 끼었다.
  */
 export function sortComparisonSectors(sectors: readonly ComparisonSector[]): ComparisonSector[] {
-  return [...sectors].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  return [...sectors].sort(
+    (a, b) => Number(isWholeWorkSector(b)) - Number(isWholeWorkSector(a)) || (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+  );
+}
+
+/** 곡 전체를 한 구간으로 비교하는 구간 */
+export function isWholeWorkSector(sector: Pick<ComparisonSector, 'sectorType'>): boolean {
+  return sector.sectorType === 'WHOLE_WORK';
+}
+
+/**
+ * 처음 열 구간. 전곡은 맨 앞에 있어도 길어서, 발췌 구간이 있으면 그 첫 구간부터 연다
+ */
+export function defaultComparisonSector(sectors: readonly ComparisonSector[]): ComparisonSector | undefined {
+  return sectors.find((sector) => !isWholeWorkSector(sector)) ?? sectors[0];
 }
 
 /** 같은 대목의 해석이 아니라 편성이 다른 편곡을 나란히 듣는 구간 */

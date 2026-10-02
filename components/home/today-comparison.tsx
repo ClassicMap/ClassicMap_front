@@ -9,6 +9,7 @@ import {
   clipClock,
   clipDurationMs,
   primaryCredit,
+  defaultComparisonSector,
   sortComparisonSectors,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
@@ -49,7 +50,7 @@ interface PerformerLine {
  */
 export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
   const sectorsQuery = usePieceComparisonSectors(piece.pieceId);
-  const sector = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? [])[0], [sectorsQuery.data]);
+  const sector = React.useMemo(() => defaultComparisonSector(sortComparisonSectors(sectorsQuery.data ?? [])), [sectorsQuery.data]);
   const performancesQuery = useSectorComparisonPerformances(sector?.id);
   const [selected, setSelected] = React.useState(0);
 
