@@ -22,7 +22,7 @@ import {
 } from '@/lib/data/comparison';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { crossfade, type Fade, fadeSeconds, type SwitchCause } from '@/lib/player/crossfade';
-import { alignAcross, fineClock } from '@/lib/player/focus-align';
+import { type AlignedClip, fineClock, followRate, sameMoment } from '@/lib/player/focus-align';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import {
@@ -629,30 +629,50 @@ function useWebFocusEngine(
   // 동시 재생에서 손으로 맞춘 어긋남(초). B가 A의 같은 지점보다 이만큼 앞에 있게 붙인다
   const offsetRef = React.useRef(0);
 
+  const performancesRef = React.useRef({ a, b });
+  performancesRef.current = { a, b };
+  /** 같은 지점을 찾을 연주: 길이는 영상이 알려 준 길이, 지도는 API 가 준 정렬 지도 */
+  const clipOf = (key: Side): AlignedClip | null => {
+    const video = refs.current[key];
+    const performance = performancesRef.current[key];
+    if (!video || !(video.duration > 0)) return null;
+    return { id: performance.id, lengthSec: video.duration, alignment: performance.alignment };
+  };
+  /** `from` 쪽 `seconds` 와 같은 마디인 `to` 쪽 시점. 정렬 지도가 없으면 비율로 */
+  const momentAcross = (from: Side, to: Side, seconds: number): number => {
+    const fromClip = clipOf(from);
+    const toClip = clipOf(to);
+    return fromClip && toClip ? sameMoment(seconds, fromClip, toClip) : 0;
+  };
+
   /** 소리 나는 쪽 위치에 맞춰 다른 쪽이 있어야 할 자리 */
-  const followTarget = (lead: HTMLVideoElement, other: HTMLVideoElement): number => {
+  const followTarget = (lead: HTMLVideoElement): number => {
     const offset = offsetRef.current;
     return sideRef.current === 'a'
-      ? alignAcross(lead.currentTime, lead.duration, other.duration) + offset
-      : alignAcross(lead.currentTime - offset, lead.duration, other.duration);
+      ? momentAcross('a', 'b', lead.currentTime) + offset
+      : momentAcross('b', 'a', lead.currentTime - offset);
   };
 
   /**
-   * 동시 재생: 소리 안 나는 쪽을 소리 나는 쪽의 같은 지점(구간 안 비율)에 붙인다.
-   * 듣는 쪽은 원래 빠르기 그대로 두고, 다른 쪽 빠르기를 길이 비만큼 바꿔 끝까지 같이 가게 한다.
+   * 동시 재생: 소리 안 나는 쪽을 소리 나는 쪽의 같은 마디(정렬 지도, 없으면 구간 안 비율)에 붙인다.
+   * 듣는 쪽은 원래 빠르기 그대로 두고, 다른 쪽 빠르기를 앞 2초의 같은 지점 변화만큼 바꿔 따라가게 한다.
    * 어긋남이 쌓이면(반복 구간·되감기 포함) 그 자리로 옮긴다
    */
   const follow = React.useCallback(() => {
-    const lead = refs.current[sideRef.current];
-    const other = refs.current[sideRef.current === 'a' ? 'b' : 'a'];
-    if (!lead || !other || !(lead.duration > 0) || !(other.duration > 0)) return;
+    const leadSide = sideRef.current;
+    const otherSide = leadSide === 'a' ? 'b' : 'a';
+    const lead = refs.current[leadSide];
+    const other = refs.current[otherSide];
+    const leadClip = clipOf(leadSide);
+    const otherClip = clipOf(otherSide);
+    if (!lead || !other || !leadClip || !otherClip) return;
     lead.playbackRate = 1;
-    const target = Math.max(0, Math.min(other.duration - 0.1, followTarget(lead, other)));
+    const target = Math.max(0, Math.min(other.duration - 0.1, followTarget(lead)));
     const drift = target - other.currentTime;
     if (Math.abs(drift) > TOGETHER_DRIFT_SEC) other.currentTime = target;
     // 작은 어긋남은 옮기지 않고 빠르기를 조금 더하거나 빼서 메운다. 옮기면 화면이 잠깐 멈춘다
     const nudge = Math.max(-0.05, Math.min(0.05, drift * 0.5));
-    other.playbackRate = Math.max(0.5, Math.min(2, (other.duration / lead.duration) * (1 + nudge)));
+    other.playbackRate = Math.max(0.5, Math.min(2, followRate(lead.currentTime, leadClip, otherClip) * (1 + nudge)));
     if (!lead.paused && other.paused && !lead.ended) void other.play().catch(() => undefined);
     else if (lead.paused && !other.paused) other.pause();
   }, []);
@@ -758,7 +778,7 @@ function useWebFocusEngine(
           return;
         }
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
-          to.currentTime = alignAcross(from.currentTime, from.duration, to.duration);
+          to.currentTime = momentAcross(sideRef.current, target, from.currentTime);
         }
         sideRef.current = target;
         setSide(target);
@@ -802,8 +822,8 @@ function useWebFocusEngine(
         if (togetherRef.current && key !== sideRef.current && a && b && a.duration > 0 && b.duration > 0) {
           offsetRef.current =
             key === 'b'
-              ? seconds - alignAcross(a.currentTime, a.duration, b.duration)
-              : b.currentTime - alignAcross(seconds, a.duration, b.duration);
+              ? seconds - momentAcross('a', 'b', a.currentTime)
+              : b.currentTime - momentAcross('a', 'b', seconds);
         }
         video.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
         setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));

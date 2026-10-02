@@ -1,5 +1,6 @@
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
+  ClipAlignment,
   ClipStatus,
   ComparisonPerformance,
   ComparisonPerformancePage,
@@ -168,6 +169,24 @@ function parseLoudness(value: unknown): LoudnessProfile | null {
   return { stepMs, curveRelDb: curveRelDb as number[], startRelDb, peakMs, peakRatio, rangeDb };
 }
 
+function parseAlignment(value: unknown): ClipAlignment | null {
+  if (!isRecord(value) || !Array.isArray(value.positionsMs)) return null;
+  const referencePerformanceId = finiteNumber(value.referencePerformanceId);
+  const stepMs = finiteNumber(value.stepMs);
+  const positionsMs = value.positionsMs.map(finiteNumber);
+  if (
+    referencePerformanceId === null ||
+    !Number.isInteger(referencePerformanceId) ||
+    stepMs === null ||
+    stepMs <= 0 ||
+    positionsMs.length < 2 ||
+    positionsMs.some((point, index) => point === null || (index > 0 && point < (positionsMs[index - 1] ?? 0)))
+  ) {
+    return null;
+  }
+  return { referencePerformanceId, stepMs, positionsMs: positionsMs as number[] };
+}
+
 function parseFeaturedPair(value: unknown): FeaturedPair | null {
   if (!isRecord(value) || !Array.isArray(value.performanceIds) || value.performanceIds.length !== 2) return null;
   const [a, b] = value.performanceIds;
@@ -213,6 +232,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
   }
 
   return {
+    alignment: parseAlignment(value.alignment),
     clipStatus: clipStatus as ClipStatus,
     clipUrl:
       typeof value.clipUrl === 'string' && value.clipUrl.trim() !== '' ? value.clipUrl : undefined,
