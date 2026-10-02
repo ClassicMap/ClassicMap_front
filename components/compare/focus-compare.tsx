@@ -391,7 +391,7 @@ function FocusStage(props: FocusStageProps) {
                 hint="켜면 두 영상이 같은 지점에서 함께 움직이고, 소리는 고른 쪽만 나요"
               />
             ) : null}
-            {/* 동시 재생 중에는 늘 같은 지점이고 바로 넘어가므로 전환 방식·크로스페이드를 쓰지 않는다 */}
+            {/* 동시 재생 중에는 늘 같은 지점이라 전환 방식(같은 지점·이어서)을 쓰지 않는다. 크로스페이드는 소리만 겹쳐 넘긴다 */}
             <View pointerEvents={together ? 'none' : 'auto'} className={cn('flex-row items-center gap-2', together && 'opacity-40')}>
               <Segmented
                 label="전환"
@@ -410,9 +410,7 @@ function FocusStage(props: FocusStageProps) {
               onChange={setAuto}
             />
             {Platform.OS === 'web' ? (
-              <View pointerEvents={together ? 'none' : 'auto'} className={cn(together && 'opacity-40')}>
-                <CrossfadeToggle />
-              </View>
+              <CrossfadeToggle />
             ) : null}
             {Platform.OS !== 'web' ? (
               <NativeLoopButton loop={loop} progress={engine.progress} onChange={setLoop} />
@@ -768,13 +766,32 @@ function useWebFocusEngine(
         const to = get(target);
         if (!from || !to || target === sideRef.current) return;
         const wasPlaying = !from.paused;
-        // 동시 재생: 둘 다 이미 같은 지점에 있으니 소리만 넘긴다
+        // 동시 재생: 둘 다 이미 같은 지점에 있으니 소리만 넘긴다. 크로스페이드를 켰으면 소리만 겹쳐 넘긴다
         if (togetherRef.current) {
           sideRef.current = target;
           setSide(target);
-          from.muted = true;
-          to.muted = comparePlayer.getState().muted;
           follow();
+          const player = comparePlayer.getState();
+          if (wasPlaying && player.crossfade && !player.muted && player.volume > 0) {
+            const fade = crossfade(
+              from,
+              to,
+              fadeSeconds(cause, autoRef.current),
+              player.volume,
+              () => {
+                fadeRef.current = null;
+                from.muted = true;
+                to.muted = comparePlayer.getState().muted;
+              },
+              { keepFromPlaying: true }
+            );
+            if (fade) {
+              fadeRef.current = fade;
+              return;
+            }
+          }
+          from.muted = true;
+          to.muted = player.muted;
           return;
         }
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
