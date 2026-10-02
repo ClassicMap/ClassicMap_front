@@ -36,6 +36,7 @@ import type {
   ConcertImage,
   TicketVendor,
   BoxofficeRanking,
+  ImageCredit,
 } from '../types/models';
 
 // API 응답 타입 정의
@@ -103,6 +104,13 @@ interface APIArtist {
   concertCount: number;
   countryCount: number;
   albumCount: number;
+  imageCredit?: {
+    creditLine?: string | null;
+    author?: string | null;
+    license?: string | null;
+    licenseUrl?: string | null;
+    sourceUrl?: string | null;
+  } | null;
 }
 
 interface APIConcertArtist {
@@ -270,7 +278,22 @@ const mapArtist = (api: APIArtist): Artist => ({
   concertCount: api.concertCount,
   countryCount: api.countryCount,
   albumCount: api.albumCount,
+  imageCredit: mapImageCredit(api.imageCredit),
 });
+
+/** 출처 주소가 없으면 밝힐 것이 없으므로 버린다. 빈 문자열은 없는 값으로 본다 */
+function mapImageCredit(credit: APIArtist['imageCredit']): ImageCredit | null {
+  const text = (value: string | null | undefined) => (value && value.trim() ? value.trim() : undefined);
+  const sourceUrl = text(credit?.sourceUrl);
+  if (!credit || !sourceUrl || !/^https?:\/\//.test(sourceUrl)) return null;
+  return {
+    creditLine: text(credit.creditLine),
+    author: text(credit.author),
+    license: text(credit.license),
+    licenseUrl: text(credit.licenseUrl),
+    sourceUrl,
+  };
+}
 
 const mapConcert = (api: APIConcert): Concert => ({
   id: api.id,
