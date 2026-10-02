@@ -49,6 +49,8 @@ import { Platform, Pressable, ScrollView, View } from 'react-native';
 type Side = 'a' | 'b';
 /** 전환할 때 어디서 이어 들을지. 집중 비교는 같은 대목을 번갈아 듣는 게 핵심이라 '같은 지점'이 기본이다 */
 type FocusMode = 'align' | 'resume';
+/** 동시 재생에서 이만큼 어긋나면 소리 안 나는 쪽을 그 자리로 옮긴다 */
+const TOGETHER_DRIFT_SEC = 0.25;
 /** 자동 번갈아 듣기 간격(초). 0은 끔 */
 type AutoInterval = 0 | 2 | 4 | 8;
 /** 반복 구간. 구간 안 상대 위치(0~1)라 '같은 지점'에서는 두 연주에 같은 대목으로 걸린다 */
@@ -257,8 +259,10 @@ function FocusStage(props: FocusStageProps) {
   const [auto, setAuto] = React.useState<AutoInterval>(0);
   const [loop, setLoop] = React.useState<LoopRange | null>(null);
   const [editingLoop, setEditingLoop] = React.useState(false);
+  // 동시 재생(웹만): 두 영상을 같은 지점에서 함께 틀고 소리는 한쪽만 낸다
+  const [together, setTogether] = React.useState(false);
 
-  const web = useWebFocusEngine(props, mode, loop, auto);
+  const web = useWebFocusEngine(props, mode, loop, auto, together);
   const native = useNativeFocusEngine(props, mode, loop);
   const engine = Platform.OS === 'web' ? web.engine : native;
   const active = engine.side === 'a' ? a : b;
@@ -379,22 +383,37 @@ function FocusStage(props: FocusStageProps) {
             </Text>
           </View>
           <View className="flex-row flex-wrap items-center gap-2">
-            <Segmented
-              label="전환"
-              value={mode}
-              options={[
-                { value: 'align', label: '같은 지점' },
-                { value: 'resume', label: '이어서' },
-              ]}
-              onChange={setMode}
-            />
+            {Platform.OS === 'web' ? (
+              <SwitchToggle
+                on={together}
+                onChange={setTogether}
+                label="동시 재생"
+                hint="켜면 두 영상이 같은 지점에서 함께 움직이고, 소리는 고른 쪽만 나요"
+              />
+            ) : null}
+            {/* 동시 재생 중에는 늘 같은 지점이고 바로 넘어가므로 전환 방식·크로스페이드를 쓰지 않는다 */}
+            <View pointerEvents={together ? 'none' : 'auto'} className={cn('flex-row items-center gap-2', together && 'opacity-40')}>
+              <Segmented
+                label="전환"
+                value={mode}
+                options={[
+                  { value: 'align', label: '같은 지점' },
+                  { value: 'resume', label: '이어서' },
+                ]}
+                onChange={setMode}
+              />
+            </View>
             <Segmented
               label="자동 전환"
               value={auto}
               options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? '끔' : `${value}초` }))}
               onChange={setAuto}
             />
-            {Platform.OS === 'web' ? <CrossfadeToggle /> : null}
+            {Platform.OS === 'web' ? (
+              <View pointerEvents={together ? 'none' : 'auto'} className={cn(together && 'opacity-40')}>
+                <CrossfadeToggle />
+              </View>
+            ) : null}
             {Platform.OS !== 'web' ? (
               <NativeLoopButton loop={loop} progress={engine.progress} onChange={setLoop} />
             ) : (
@@ -480,6 +499,10 @@ function FocusStage(props: FocusStageProps) {
                   {on ? (
                     <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
                       <Text className="text-micro font-bold text-primary">{engine.playing ? '재생 중' : '일시정지'}</Text>
+                    </View>
+                  ) : together ? (
+                    <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
+                      <Text className="text-micro font-bold text-white/80">소리 끔 · 같은 지점</Text>
                     </View>
                   ) : null}
                 </Pressable>
@@ -574,7 +597,13 @@ function FocusStage(props: FocusStageProps) {
 
 // ─── 웹: 두 클립을 미리 불러 두고 소리 나는 쪽만 튼다 ──────────────────────
 
-function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null, auto: AutoInterval) {
+function useWebFocusEngine(
+  props: FocusStageProps,
+  mode: FocusMode,
+  loop: LoopRange | null,
+  auto: AutoInterval,
+  together: boolean
+) {
   const { a, b, startPlaying } = props;
   const refs = React.useRef<Record<Side, HTMLVideoElement | null>>({ a: null, b: null });
   const [side, setSide] = React.useState<Side>('a');
@@ -595,6 +624,53 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
   const autoRef = React.useRef(auto);
   autoRef.current = auto;
   const finishFade = () => fadeRef.current?.finish();
+  const togetherRef = React.useRef(together);
+  togetherRef.current = together;
+  // 동시 재생에서 손으로 맞춘 어긋남(초). B가 A의 같은 지점보다 이만큼 앞에 있게 붙인다
+  const offsetRef = React.useRef(0);
+
+  /** 소리 나는 쪽 위치에 맞춰 다른 쪽이 있어야 할 자리 */
+  const followTarget = (lead: HTMLVideoElement, other: HTMLVideoElement): number => {
+    const offset = offsetRef.current;
+    return sideRef.current === 'a'
+      ? alignAcross(lead.currentTime, lead.duration, other.duration) + offset
+      : alignAcross(lead.currentTime - offset, lead.duration, other.duration);
+  };
+
+  /**
+   * 동시 재생: 소리 안 나는 쪽을 소리 나는 쪽의 같은 지점(구간 안 비율)에 붙인다.
+   * 듣는 쪽은 원래 빠르기 그대로 두고, 다른 쪽 빠르기를 길이 비만큼 바꿔 끝까지 같이 가게 한다.
+   * 어긋남이 쌓이면(반복 구간·되감기 포함) 그 자리로 옮긴다
+   */
+  const follow = React.useCallback(() => {
+    const lead = refs.current[sideRef.current];
+    const other = refs.current[sideRef.current === 'a' ? 'b' : 'a'];
+    if (!lead || !other || !(lead.duration > 0) || !(other.duration > 0)) return;
+    lead.playbackRate = 1;
+    const target = Math.max(0, Math.min(other.duration - 0.1, followTarget(lead, other)));
+    const drift = target - other.currentTime;
+    if (Math.abs(drift) > TOGETHER_DRIFT_SEC) other.currentTime = target;
+    // 작은 어긋남은 옮기지 않고 빠르기를 조금 더하거나 빼서 메운다. 옮기면 화면이 잠깐 멈춘다
+    const nudge = Math.max(-0.05, Math.min(0.05, drift * 0.5));
+    other.playbackRate = Math.max(0.5, Math.min(2, (other.duration / lead.duration) * (1 + nudge)));
+    if (!lead.paused && other.paused && !lead.ended) void other.play().catch(() => undefined);
+    else if (lead.paused && !other.paused) other.pause();
+  }, []);
+
+  // 동시 재생을 켜면 바로 붙이고, 끄면 다른 쪽을 멈추고 빠르기를 되돌린다
+  React.useEffect(() => {
+    offsetRef.current = 0;
+    if (together) {
+      follow();
+      return;
+    }
+    (['a', 'b'] as const).forEach((key) => {
+      const video = refs.current[key];
+      if (!video) return;
+      video.playbackRate = 1;
+      if (key !== sideRef.current) video.pause();
+    });
+  }, [together, follow]);
 
   // 소리는 지금 쪽만. 볼륨·음소거는 앱 플레이어 설정을 그대로 따른다
   React.useEffect(() => {
@@ -623,6 +699,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
       }
       if (time - last > 100) {
         last = time;
+        if (togetherRef.current) follow();
         // 소리 안 나는 쪽도 조정하면 위치가 바뀌니 둘 다 적는다
         const read = (key: Side, fallback: SideProgress): SideProgress => {
           const element = refs.current[key];
@@ -647,7 +724,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [follow]);
 
   const engine = React.useMemo<FocusEngine>(() => {
     const get = (key: Side) => refs.current[key];
@@ -659,8 +736,11 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         finishFade();
         const video = get(sideRef.current);
         if (!video) return;
-        if (video.paused) void video.play().catch(() => setPlaying(false));
-        else video.pause();
+        if (video.paused) void video.play().then(() => togetherRef.current && follow()).catch(() => setPlaying(false));
+        else {
+          video.pause();
+          if (togetherRef.current) follow();
+        }
       },
       switchTo: (target: Side, cause: SwitchCause = 'manual') => {
         finishFade();
@@ -668,6 +748,15 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         const to = get(target);
         if (!from || !to || target === sideRef.current) return;
         const wasPlaying = !from.paused;
+        // 동시 재생: 둘 다 이미 같은 지점에 있으니 소리만 넘긴다
+        if (togetherRef.current) {
+          sideRef.current = target;
+          setSide(target);
+          from.muted = true;
+          to.muted = comparePlayer.getState().muted;
+          follow();
+          return;
+        }
         if (mode === 'align' && from.duration > 0 && to.duration > 0) {
           to.currentTime = alignAcross(from.currentTime, from.duration, to.duration);
         }
@@ -694,10 +783,12 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
       seekRatio: (ratio: number) => {
         const video = get(sideRef.current);
         if (video && video.duration > 0) video.currentTime = Math.max(0, Math.min(1, ratio)) * video.duration;
+        if (togetherRef.current) follow();
       },
       seekBy: (seconds: number) => {
         const video = get(sideRef.current);
         if (video) video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+        if (togetherRef.current) follow();
       },
       positions: () => ({ a: get('a')?.currentTime ?? 0, b: get('b')?.currentTime ?? 0 }),
       sideProgress,
@@ -705,6 +796,15 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         const video = get(key);
         if (!video) return;
         const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+        // 동시 재생에서 소리 안 나는 쪽을 옮기면 두 연주 사이 어긋남으로 기억해 그대로 붙여 간다
+        const a = get('a');
+        const b = get('b');
+        if (togetherRef.current && key !== sideRef.current && a && b && a.duration > 0 && b.duration > 0) {
+          offsetRef.current =
+            key === 'b'
+              ? seconds - alignAcross(a.currentTime, a.duration, b.duration)
+              : b.currentTime - alignAcross(seconds, a.duration, b.duration);
+        }
         video.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
         setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
       },
@@ -714,7 +814,7 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         const to = get(target);
         if (!to) return;
         if (from && from !== to) {
-          from.pause();
+          if (!togetherRef.current) from.pause();
           from.muted = true;
         }
         const duration = Number.isFinite(to.duration) && to.duration > 0 ? to.duration : 0;
@@ -722,10 +822,13 @@ function useWebFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRa
         to.muted = comparePlayer.getState().muted;
         sideRef.current = target;
         setSide(target);
-        void to.play().catch(() => setPlaying(false));
+        void to
+          .play()
+          .then(() => togetherRef.current && follow())
+          .catch(() => setPlaying(false));
       },
     };
-  }, [side, playing, progress, sideProgress, mode]);
+  }, [side, playing, progress, sideProgress, mode, follow]);
 
   /** 화면을 떠날 때: 두 영상을 멈춘다 (재생은 앱 플레이어가 이어 간다) */
   const suspend = React.useCallback(() => {
@@ -1094,17 +1197,28 @@ function LengthTable({
 function CrossfadeToggle() {
   const on = useComparePlayer((state) => state.crossfade);
   return (
+    <SwitchToggle
+      on={on}
+      onChange={(next) => comparePlayer.setCrossfade(next)}
+      label="크로스페이드"
+      hint="켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐서 넘겨요"
+    />
+  );
+}
+
+function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (on: boolean) => void; label: string; hint: string }) {
+  return (
     <Pressable
-      onPress={() => comparePlayer.setCrossfade(!on)}
+      onPress={() => onChange(!on)}
       accessibilityRole="switch"
       accessibilityState={{ checked: on }}
-      accessibilityLabel="크로스페이드"
-      accessibilityHint="켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐서 넘겨요"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
       className="h-8 flex-row items-center gap-2 rounded-full px-1.5 web:hover:bg-surface-2">
       <View className={cn('h-5 w-9 justify-center rounded-full px-0.5', on ? 'bg-primary' : 'bg-surface-3')}>
         <View className={cn('size-4 rounded-full', on ? 'translate-x-4 bg-primary-foreground' : 'bg-foreground-subtle')} />
       </View>
-      <Text className={cn('text-label', on ? 'font-semibold text-foreground' : 'text-foreground-muted')}>크로스페이드</Text>
+      <Text className={cn('text-label', on ? 'font-semibold text-foreground' : 'text-foreground-muted')}>{label}</Text>
     </Pressable>
   );
 }
