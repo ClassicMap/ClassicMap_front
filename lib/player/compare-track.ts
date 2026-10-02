@@ -25,5 +25,6 @@ export function trackFromPerformance(performance: ComparisonPerformance, imageUr
     videoId: performance.videoId,
     startMs: performance.startMs,
     endMs: performance.endMs,
+    alignment: performance.alignment,
   };
 }

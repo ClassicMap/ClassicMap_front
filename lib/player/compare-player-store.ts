@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { sameMoment } from '@/lib/player/focus-align';
+import type { ClipAlignment } from '@/lib/types/models';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
 
@@ -29,12 +31,14 @@ export interface ComparePlayerTrack {
   videoId?: string;
   startMs: number;
   endMs: number;
+  /** 같은 구간 기준 연주에 맞춘 정렬 지도. 있으면 같은 지점 전환이 같은 마디로 간다 */
+  alignment?: ClipAlignment | null;
 }
 
 /**
  * 연주자를 바꿀 때 어디서 이어 들을지.
  * - resume: 연주자마다 듣던 자리에서 이어 듣는다 (기본)
- * - align: 방금 듣던 지점과 같은 비율 지점으로 맞춰 듣는다 (같은 대목을 번갈아 비교)
+ * - align: 방금 듣던 지점과 같은 마디로 맞춰 듣는다 (정렬 지도, 없으면 같은 비율 지점)
  */
 export type SwitchMode = 'resume' | 'align';
 
@@ -298,7 +302,10 @@ function clampPosition(seconds: number, duration: number): number {
 }
 
 /** 이 연주를 고르면 어디서부터 틀지 (초). 스토어의 전환 방식을 따른다 */
-function startPositionFor(track: Pick<ComparePlayerTrack, 'performanceId' | 'durationSec'>, mode: SwitchMode): number {
+function startPositionFor(
+  track: Pick<ComparePlayerTrack, 'performanceId' | 'durationSec' | 'alignment'>,
+  mode: SwitchMode
+): number {
   const { current, progress, positions } = state;
   if (
     mode === 'align' &&
@@ -307,7 +314,12 @@ function startPositionFor(track: Pick<ComparePlayerTrack, 'performanceId' | 'dur
     progress.duration > 0 &&
     track.durationSec > 0
   ) {
-    return clampPosition((progress.current / progress.duration) * track.durationSec, track.durationSec);
+    const target = sameMoment(
+      progress.current,
+      { id: current.performanceId, lengthSec: progress.duration, alignment: current.alignment ?? null },
+      { id: track.performanceId, lengthSec: track.durationSec, alignment: track.alignment ?? null }
+    );
+    return clampPosition(target, track.durationSec);
   }
   return clampPosition(positions[track.performanceId] ?? 0, track.durationSec);
 }

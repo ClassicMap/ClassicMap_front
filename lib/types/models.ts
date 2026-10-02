@@ -187,6 +187,18 @@ export interface ComparisonPerformance {
   note: PerformanceListeningNote | null;
   /** 지금 클립의 음량 곡선. 없으면 null */
   loudness: LoudnessProfile | null;
+  /** 같은 구간 기준 연주에 맞춘 정렬 지도. 없거나 덜 맞으면 null(같은 지점은 비율로 맞춘다) */
+  alignment: ClipAlignment | null;
+}
+
+/**
+ * 정렬 지도. 기준 연주의 `stepMs` 마다 이 연주의 같은 지점(클립 안 ms)이다.
+ * 두 연주가 같은 기준을 가리키면 기준을 거쳐 서로의 같은 마디를 찾는다.
+ */
+export interface ClipAlignment {
+  referencePerformanceId: number;
+  stepMs: number;
+  positionsMs: number[];
 }
 
 /**
