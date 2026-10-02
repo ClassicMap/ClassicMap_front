@@ -1,4 +1,4 @@
-import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
+import { FeaturedPairLink, MomentChip, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
 import { PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
@@ -506,10 +506,11 @@ export function ComparePieceView({
           </View>
         ) : (
           // 슬롯: 연주자 한 명 = 한 열
-          <View className="mt-6 flex-row flex-wrap gap-5">
-            {performances.map((performance) => (
+          <SlotGrid count={performances.length}>
+            {(width) => performances.map((performance) => (
               <Slot
                 key={performance.id}
+                width={width}
                 performance={performance}
                 image={imageOf(performance)}
                 active={performance.id === activeId}
@@ -520,7 +521,7 @@ export function ComparePieceView({
                 curveFloor={curveFloor}
               />
             ))}
-          </View>
+          </SlotGrid>
         )}
       </ScrollView>
 
@@ -656,8 +657,38 @@ function PickMark({ pick }: { pick: PickState }) {
   );
 }
 
+const SLOT_MIN_WIDTH = 280;
+const SLOT_GAP = 20;
+
+/**
+ * 한 줄에 놓을 슬롯 수. 들어가는 만큼 놓되 줄마다 개수를 고르게 나눈다.
+ * 다섯이 한 줄에 넷까지 들어가면 4+1 대신 3+2 로 놓는다
+ */
+function slotColumns(count: number, width: number): number {
+  const fit = Math.max(1, Math.floor((width + SLOT_GAP) / (SLOT_MIN_WIDTH + SLOT_GAP)));
+  const rows = Math.ceil(count / Math.min(fit, count));
+  return Math.ceil(count / rows);
+}
+
+/**
+ * 슬롯을 같은 너비로 줄 세운다. flex-1 로 늘리면 마지막 줄에 혼자 남은 슬롯이 한 줄을
+ * 다 차지해 영상이 몇 배로 커진다. 너비를 재기 전에는 flex 로 둔다
+ */
+function SlotGrid({ count, children }: { count: number; children: (width: number | undefined) => React.ReactNode }) {
+  const [width, setWidth] = React.useState(0);
+  const columns = width > 0 ? slotColumns(count, width) : 0;
+  const slotWidth = columns > 0 ? Math.floor((width - SLOT_GAP * (columns - 1)) / columns) : undefined;
+  return (
+    <View className="mt-6 flex-row flex-wrap gap-5" onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {children(slotWidth)}
+    </View>
+  );
+}
+
 interface SlotProps {
   performance: ComparisonPerformance;
+  /** 줄에 맞춘 너비. 없으면 남은 폭을 나눠 쓴다 */
+  width?: number;
   image: string | null;
   active: boolean;
   inRepertoire: boolean;
@@ -667,7 +698,7 @@ interface SlotProps {
   curveFloor: number;
 }
 
-function Slot({ performance, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
+function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
@@ -676,7 +707,7 @@ function Slot({ performance, image, active, inRepertoire, pick, onPlay, onMoment
   const seekable = isPlayablePerformance(performance) && pick === undefined;
 
   return (
-    <View className="min-w-[280px] flex-1">
+    <View className={cn('flex-col', width === undefined && 'min-w-[280px] flex-1')} style={width === undefined ? undefined : { width }}>
       <View
         className={cn(
           'relative aspect-video w-full overflow-hidden rounded-lg bg-surface-3',
@@ -719,29 +750,26 @@ function Slot({ performance, image, active, inRepertoire, pick, onPlay, onMoment
       </View>
 
       {/* 연주 노트: 확정된 노트가 없는 연주는 이름과 곡선만 둔다 */}
-      {performance.note ? (
-        <PerformanceNote
-          note={performance.note}
-          curve={
-            <PerformanceCurve
-              performance={performance}
-              active={active}
-              floorDb={curveFloor}
-              onSeek={seekable ? (offsetMs) => onMoment({ offsetMs, label: '' }) : undefined}
-            />
-          }
-          onMoment={isPlayablePerformance(performance) ? onMoment : undefined}
-          className="mt-3"
-        />
-      ) : (
+      {performance.note ? <PerformanceNote note={performance.note} hideMoments className="mt-3" /> : null}
+
+      {/* 곡선과 들을 곳은 슬롯 바닥에 붙여, 노트 길이가 달라도 한 줄의 곡선끼리 같은 높이에 둔다 */}
+      <View className="mt-auto gap-1.5 pt-3">
         <PerformanceCurve
           performance={performance}
           active={active}
           floorDb={curveFloor}
           onSeek={seekable ? (offsetMs) => onMoment({ offsetMs, label: '' }) : undefined}
-          className="mt-3"
         />
-      )}
+        <View className="mt-1 min-h-7 flex-row flex-wrap gap-2">
+          {performance.note?.moments.map((moment) => (
+            <MomentChip
+              key={`${moment.offsetMs}-${moment.label}`}
+              moment={moment}
+              onPress={isPlayablePerformance(performance) ? () => onMoment(moment) : undefined}
+            />
+          ))}
+        </View>
+      </View>
     </View>
   );
 }
