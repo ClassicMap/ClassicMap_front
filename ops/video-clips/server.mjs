@@ -425,6 +425,13 @@ function runFfprobe(inputPath) {
   });
 }
 
+/** 오디오가 영상보다 이만큼 넘게 짧으면 끝이 끊긴 클립으로 본다 */
+const AUDIO_GAP_TOLERANCE_MS = 1500;
+
+function probedDurationMsOf(seconds) {
+  return Math.round(seconds * 1000);
+}
+
 export function parseProbeOutput(stdout, expectedDurationMs) {
   let probe;
   try {
@@ -444,6 +451,17 @@ export function parseProbeOutput(stdout, expectedDurationMs) {
 
   if (!videoStream || typeof videoStream.codec_name !== 'string') {
     throw new Error('검증된 비디오 스트림이 없습니다.');
+  }
+  // 2026-09 에 yt-dlp 구간 받기로 만든 긴 클립 14개의 오디오가 영상보다 수십 초 짧게 끊겨 있었다.
+  // 컨테이너 길이는 영상 기준이라 위 길이 검사로는 걸리지 않는다. 오디오 길이를 따로 본다
+  const audioDurationMs = Math.round(Number(audioStream?.duration) * 1000);
+  const videoDurationMs = probedDurationMsOf(durationSeconds);
+  if (
+    Number.isFinite(audioDurationMs) &&
+    audioDurationMs > 0 &&
+    videoDurationMs - audioDurationMs > AUDIO_GAP_TOLERANCE_MS
+  ) {
+    throw new Error(`오디오가 영상보다 짧습니다. (영상 ${videoDurationMs}ms, 오디오 ${audioDurationMs}ms)`);
   }
   if (!Number.isFinite(probedDurationMs) || probedDurationMs <= 0) {
     throw new Error('클립 재생시간을 확인하지 못했습니다.');

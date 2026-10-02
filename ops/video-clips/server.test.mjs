@@ -91,6 +91,19 @@ test('비디오 스트림이 없거나 길이가 다르면 검증을 실패한�
   );
 });
 
+test('오디오가 영상보다 짧게 끊긴 클립은 검증을 실패한다', () => {
+  const probe = (audioDuration) =>
+    JSON.stringify({
+      format: { duration: '291.120' },
+      streams: [
+        { codec_name: 'h264', codec_type: 'video', duration: '291.120' },
+        { codec_name: 'aac', codec_type: 'audio', duration: audioDuration },
+      ],
+    });
+  assert.throws(() => parseProbeOutput(probe('219.608'), 291_000), /오디오가 영상보다 짧습니다/);
+  assert.equal(parseProbeOutput(probe('291.010'), 291_000).audioCodec, 'aac');
+});
+
 test('자산 메타데이터에 해시와 파일 크기를 기록하고 경로는 노출하지 않는다', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'classicmap-clip-test-'));
   const clipPath = join(directory, 'private-path.mp4');
