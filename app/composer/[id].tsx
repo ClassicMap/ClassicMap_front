@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -84,7 +85,6 @@ export default function ComposerDetailScreen() {
   const [editVisible, setEditVisible] = React.useState(false);
   const [pieceFormVisible, setPieceFormVisible] = React.useState(false);
   const [editingPiece, setEditingPiece] = React.useState<Piece | undefined>();
-  const [bioExpanded, setBioExpanded] = React.useState(false);
 
   const composerQuery = useComposer(Number.isFinite(composerId) ? composerId : undefined);
   const composer = composerQuery.data;
@@ -203,16 +203,7 @@ export default function ComposerDetailScreen() {
             <Text variant="headline" className="mb-2.5">
               소개
             </Text>
-            <Text variant="body" numberOfLines={bioExpanded ? undefined : 5} className="text-foreground">
-              {composer.bio}
-            </Text>
-            {composer.bio.length > 180 ? (
-              <Pressable onPress={() => setBioExpanded((value) => !value)} className="mt-2 self-start" hitSlop={8}>
-                <Text variant="label" className="text-foreground-muted">
-                  {bioExpanded ? '접기' : '더 보기'}
-                </Text>
-              </Pressable>
-            ) : null}
+            <ExpandableText text={composer.bio} lines={5} variant="body" className="text-foreground" />
           </View>
         ) : null}
         {styleKeywords.length > 0 ? (
