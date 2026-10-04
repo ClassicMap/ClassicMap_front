@@ -99,6 +99,20 @@ export interface PlayerHostHandle {
   requestFullscreen: () => Promise<void>;
 }
 
+/**
+ * 들은 기록 신호. 끝까지(90% 이상) 들었는지, 몇 초 안에 넘겼는지만 알린다.
+ * 추천을 사용자에 맞게 고치는 데 쓰고, 보낼지는 듣는 쪽(listening-events)이 정한다
+ */
+export interface ListeningSignal {
+  kind: 'finish' | 'skip';
+  track: ComparePlayerTrack;
+}
+
+/** 이만큼 들으면 끝까지 들은 것으로 본다 */
+const FINISH_RATIO = 0.9;
+/** 재생을 시작하고 이보다 짧게 듣고 다른 연주로 넘기면 넘긴 것으로 본다 */
+const SKIP_SEC = 10;
+
 const VOLUME_KEY = 'classicmap.player.volume';
 const MUTED_KEY = 'classicmap.player.muted';
 const SWITCH_MODE_KEY = 'classicmap.player.switch-mode';
@@ -260,6 +274,22 @@ let state: ComparePlayerState = {
 let media: ComparePlayerMedia | null = null;
 const listeners = new Set<() => void>();
 
+const listeningListeners = new Set<(signal: ListeningSignal) => void>();
+/** 지금 연주를 고른 뒤 재생했는지·어디서 시작했는지·끝까지 들었다고 이미 알렸는지 */
+let listening = { performanceId: 0, started: false, startSec: 0, finished: false };
+
+function emitListening(kind: ListeningSignal['kind'], track: ComparePlayerTrack) {
+  for (const listener of listeningListeners) listener({ kind, track });
+}
+
+/** 떠나는 연주를 짧게 듣고 넘겼으면 알린다 */
+function noteLeaving(current: ComparePlayerTrack | null, heardSec: number) {
+  if (!current || listening.performanceId !== current.performanceId) return;
+  if (listening.started && !listening.finished && heardSec - listening.startSec < SKIP_SEC) {
+    emitListening('skip', current);
+  }
+}
+
 function setState(patch: Partial<ComparePlayerState>) {
   state = { ...state, ...patch };
   listeners.forEach((listener) => listener());
@@ -364,7 +394,11 @@ export const comparePlayer = {
     if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
       savePosition(current.performanceId, progress.current, progress.duration);
     }
+    if (current?.performanceId !== track.performanceId) noteLeaving(current, progress.current);
     const start = startPositionFor(track, options.mode ?? state.switchMode);
+    if (listening.performanceId !== track.performanceId) {
+      listening = { performanceId: track.performanceId, started: false, startSec: start, finished: false };
+    }
     savePosition(track.performanceId, start);
     // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
     const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
@@ -380,6 +414,14 @@ export const comparePlayer = {
       if (options.play) media.play();
     }
     flushSession();
+  },
+
+  /** 들은 기록 신호를 받는다. 떼는 함수를 돌려준다 */
+  onListening(listener: (signal: ListeningSignal) => void) {
+    listeningListeners.add(listener);
+    return () => {
+      listeningListeners.delete(listener);
+    };
   },
 
   /** 미니 플레이어의 이전·다음 연주자 (같은 구간 안에서 돈다) */
@@ -491,16 +533,34 @@ export const comparePlayer = {
   /** 미디어가 보고하는 상태 */
   reportPlaying(performanceId: number, playing: boolean) {
     if (state.current?.performanceId !== performanceId) return;
+    if (playing && listening.performanceId === performanceId) listening.started = true;
     if (state.playing !== playing) setState({ playing, ...(playing ? { restored: false } : null) });
   },
 
   reportProgress(performanceId: number, current: number, duration: number) {
-    if (state.current?.performanceId !== performanceId) return;
+    const track = state.current;
+    if (track?.performanceId !== performanceId) return;
+    const total = duration || track.durationSec;
+    if (
+      listening.performanceId === performanceId &&
+      listening.started &&
+      !listening.finished &&
+      total > 0 &&
+      current >= total * FINISH_RATIO
+    ) {
+      listening.finished = true;
+      emitListening('finish', track);
+    }
     savePosition(performanceId, current);
-    setState({ progress: { current, duration: duration || state.current.durationSec } });
+    setState({ progress: { current, duration: total } });
   },
 
   reportEnded(performanceId: number) {
+    const track = state.current;
+    if (track?.performanceId === performanceId && listening.performanceId === performanceId && !listening.finished) {
+      listening.finished = true;
+      emitListening('finish', track);
+    }
     savePosition(performanceId, 0);
     if (state.current?.performanceId === performanceId) setState({ playing: false });
   },

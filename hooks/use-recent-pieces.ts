@@ -1,3 +1,4 @@
+import { recordListeningEvent } from '@/lib/data/listening-events';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
@@ -19,6 +20,8 @@ export interface RecentPiece {
 
 const STORAGE_KEY = 'classicmap.recent-pieces.v1';
 const MAX_ITEMS = 12;
+/** 같은 작품을 이만큼 지나 다시 열면 새로 연 것으로 센다 */
+const REOPEN_AFTER_MS = 30 * 60_000;
 const QUERY_KEY = ['recent-pieces'] as const;
 
 function isRecentPiece(value: unknown): value is RecentPiece {
@@ -58,6 +61,11 @@ export function useRecordRecentPiece() {
   return React.useCallback(
     async (piece: Omit<RecentPiece, 'viewedAt'>) => {
       const current = await readRecentPieces();
+      // 들은 기록의 '열기'는 작품을 새로 열었을 때만 남긴다. 구간만 바꾼 것은 세지 않는다
+      const previous = current[0];
+      if (!previous || previous.pieceId !== piece.pieceId || Date.now() - previous.viewedAt > REOPEN_AFTER_MS) {
+        recordListeningEvent({ pieceId: piece.pieceId, sectorId: piece.sectorId, kind: 'open' });
+      }
       const next = [
         { ...piece, viewedAt: Date.now() },
         ...current.filter((item) => item.pieceId !== piece.pieceId),

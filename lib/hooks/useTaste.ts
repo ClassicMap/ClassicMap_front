@@ -2,6 +2,7 @@
 // 사용자 취향. 로그인하면 서버(/me/taste), 아니면 이 기기에 둔다.
 
 import { MyPageAPI } from '@/lib/api/client';
+import { setListeningHistoryEnabled } from '@/lib/data/listening-events';
 import * as LegacyProfile from '@/lib/api/mock-db';
 import {
   EMPTY_TASTE_ANSWERS,
@@ -212,6 +213,12 @@ export function useTasteSync(): void {
       setSyncedUser(null);
     }
   }, [isLoaded, signedIn]);
+
+  // 들은 기록은 로그인했고 설정에서 켠 사람만 보낸다
+  const historyEnabled = signedIn && mine.data?.historyEnabled === true;
+  React.useEffect(() => {
+    setListeningHistoryEnabled(historyEnabled);
+  }, [historyEnabled]);
 
   React.useEffect(() => {
     const profile = mine.data;
