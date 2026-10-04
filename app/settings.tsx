@@ -420,10 +420,27 @@ function TastePreferences() {
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
   if (taste.failed) return <RetryLine label="취향을" onRetry={taste.retry} />;
-  if (!taste.ready) return <Skeleton className="h-40 w-full rounded-lg" />;
+  if (!taste.loaded) return <Skeleton className="h-40 w-full rounded-lg" />;
+
+  const answered = taste.onboardingStatus === 'completed';
 
   return (
     <View className="gap-5">
+      {/* 취향 묻기를 끝내지 않았으면(건너뛴 사람 포함) 여기서 바로 시작하게 한다 */}
+      {!answered ? (
+        <View className="gap-3 rounded-xl border border-border bg-surface-2 p-4">
+          <View className="gap-1">
+            <Text className="text-body-sm font-semibold text-foreground">아직 취향을 알려 주지 않았어요</Text>
+            <Text variant="caption">
+              질문 네 개, 30초면 끝나요. 아는 곡과 좋아하는 연주자까지 고르면 홈 추천이 그쪽으로 맞춰져요.
+            </Text>
+          </View>
+          <Button size="sm" className="self-start" onPress={() => router.push('/onboarding' as Href)}>
+            <Text>취향 알려 주기</Text>
+          </Button>
+        </View>
+      ) : null}
+
       <View className="gap-2.5">
         <Text variant="label" className="text-foreground-muted">
           클래식을 얼마나 들어요
@@ -496,11 +513,13 @@ function TastePreferences() {
         </View>
       </View>
 
-      <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
-        <Text variant="label" className="text-primary">
-          아는 곡부터 다시 고르기
-        </Text>
-      </Pressable>
+      {answered ? (
+        <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
+          <Text variant="label" className="text-primary">
+            아는 곡부터 다시 고르기
+          </Text>
+        </Pressable>
+      ) : null}
 
       <ListeningHistory />
     </View>
