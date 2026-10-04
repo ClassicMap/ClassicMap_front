@@ -1,4 +1,3 @@
-import { PREFERENCE_ERAS } from '@/components/home/era-preference-card';
 import { ProfileAvatar } from '@/components/profile/profile-parts';
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
@@ -9,10 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { ProfileVisibility, UpdateProfileVisibilityInput } from '@/lib/api/client';
+import { INSTRUMENT_OPTIONS, LEVEL_OPTIONS, PREFERENCE_ERAS, SOUND_OPTIONS } from '@/lib/data/taste-labels';
 import { getEraForeground } from '@/lib/design/era-palette';
+import type { TasteAnswers } from '@/lib/types/models';
 import { THEME } from '@/lib/theme';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useUserProfile } from '@/lib/hooks/useUserProfile';
+import { useTaste } from '@/lib/hooks/useTaste';
 import { useProfileVisibility, useUpdateProfileVisibility } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -163,8 +164,8 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('taste')}>
-              <Group title="취향" description="홈의 작곡가 셸프와 오늘의 비교가 고른 시대 쪽으로 기울어요.">
-                <EraPreferences />
+              <Group title="취향" description="홈의 오늘의 비교와 추천 셸프가 고른 답 쪽으로 기울어요.">
+                <TastePreferences />
               </Group>
             </View>
 
@@ -401,36 +402,102 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
   );
 }
 
-function EraPreferences() {
-  const { profile, updatePreferences } = useUserProfile();
+function TastePreferences() {
+  const router = useRouter();
+  const taste = useTaste();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const selected = profile?.preferences?.favoritePeriods ?? [];
+  const { answers } = taste;
 
-  const toggle = (era: string) => {
-    const next = selected.includes(era) ? selected.filter((item) => item !== era) : [...selected, era];
-    void updatePreferences({ favoritePeriods: next });
+  const save = (next: TasteAnswers) => {
+    taste.save(next).catch(() => {
+      Alert.alert('취향을 저장하지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 골라 주세요.');
+    });
   };
+  const toggle = <T extends string>(list: readonly T[], value: T): T[] =>
+    list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+
+  if (!taste.ready) return <Skeleton className="h-40 w-full rounded-lg" />;
 
   return (
-    <View className="gap-2.5">
-      <View className="flex-row flex-wrap gap-2">
-        {PREFERENCE_ERAS.map((era) => {
-          const color = getEraForeground(era, scheme);
-          return (
+    <View className="gap-5">
+      <View className="gap-2.5">
+        <Text variant="label" className="text-foreground-muted">
+          클래식을 얼마나 들어요
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {LEVEL_OPTIONS.map((option) => (
             <Chip
-              key={era}
-              label={era}
-              selected={selected.includes(era)}
-              onPress={() => toggle(era)}
-              leading={color ? <ChipDot color={color} /> : undefined}
+              key={option.key}
+              label={option.short}
+              selected={answers.listeningLevel === option.key}
+              onPress={() =>
+                save({
+                  ...answers,
+                  listeningLevel: answers.listeningLevel === option.key ? null : option.key,
+                  instrument: option.key === 'player' ? answers.instrument : null,
+                })
+              }
             />
-          );
-        })}
+          ))}
+        </View>
+        {answers.listeningLevel === 'player' ? (
+          <View className="flex-row flex-wrap gap-2">
+            {INSTRUMENT_OPTIONS.map((option) => (
+              <Chip
+                key={option.key}
+                label={option.label}
+                selected={answers.instrument === option.key}
+                onPress={() =>
+                  save({ ...answers, instrument: answers.instrument === option.key ? null : option.key })
+                }
+              />
+            ))}
+          </View>
+        ) : null}
       </View>
-      <Text variant="caption" className="text-foreground-subtle">
-        이 기기에만 저장돼요.
-      </Text>
+
+      <View className="gap-2.5">
+        <Text variant="label" className="text-foreground-muted">
+          끌리는 소리
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {SOUND_OPTIONS.map((option) => (
+            <Chip
+              key={option.key}
+              label={option.label}
+              selected={answers.sounds.includes(option.key)}
+              onPress={() => save({ ...answers, sounds: toggle(answers.sounds, option.key) })}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View className="gap-2.5">
+        <Text variant="label" className="text-foreground-muted">
+          좋아하는 시대
+        </Text>
+        <View className="flex-row flex-wrap gap-2">
+          {PREFERENCE_ERAS.map((era) => {
+            const color = getEraForeground(era, scheme);
+            return (
+              <Chip
+                key={era}
+                label={era}
+                selected={answers.favoritePeriods.includes(era)}
+                onPress={() => save({ ...answers, favoritePeriods: toggle(answers.favoritePeriods, era) })}
+                leading={color ? <ChipDot color={color} /> : undefined}
+              />
+            );
+          })}
+        </View>
+      </View>
+
+      <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
+        <Text variant="label" className="text-primary">
+          아는 곡부터 다시 고르기
+        </Text>
+      </Pressable>
     </View>
   );
 }
