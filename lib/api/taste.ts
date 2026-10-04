@@ -35,6 +35,9 @@ export const PLAYER_INSTRUMENTS: readonly PlayerInstrument[] = [
 export const ONBOARDING_VERSION = 1;
 
 const SHELF_KEYS: readonly RecommendationShelfKey[] = ['taste', 'known', 'starter'];
+/** 백엔드 한도: 들은 기록은 요청당 50개, 게스트 추천 요청의 id 목록은 200개까지 */
+const MAX_EVENTS_PER_REQUEST = 50;
+export const MAX_GUEST_IDS = 200;
 
 export const EMPTY_TASTE_ANSWERS: TasteAnswers = {
   listeningLevel: null,
@@ -194,10 +197,10 @@ export const TasteAPI = {
   async getGuestHome(signals: GuestSignals): Promise<HomeRecommendations> {
     const body = {
       taste: answersBody(signals.answers),
-      favoriteComposerIds: signals.favoriteComposerIds,
-      favoriteArtistIds: signals.favoriteArtistIds,
-      recentPieceIds: signals.recentPieceIds,
-      notInterestedPieceIds: signals.notInterestedPieceIds,
+      favoriteComposerIds: signals.favoriteComposerIds.slice(-MAX_GUEST_IDS),
+      favoriteArtistIds: signals.favoriteArtistIds.slice(-MAX_GUEST_IDS),
+      recentPieceIds: signals.recentPieceIds.slice(-MAX_GUEST_IDS),
+      notInterestedPieceIds: signals.notInterestedPieceIds.slice(-MAX_GUEST_IDS),
     };
     const response = await send(
       '/recommendations/home',
@@ -207,13 +210,16 @@ export const TasteAPI = {
     return parseRecommendations(await response.json());
   },
 
+  /** 서버는 한 번에 50개까지 받는다. 넘으면 나눠 보낸다 */
   async sendEvents(events: ListeningEvent[]): Promise<void> {
-    if (events.length === 0) return;
-    await send(
-      '/me/listening-events',
-      { method: 'POST', body: JSON.stringify({ events }) },
-      '들은 기록을 보내지 못했습니다.'
-    );
+    for (let start = 0; start < events.length; start += MAX_EVENTS_PER_REQUEST) {
+      const chunk = events.slice(start, start + MAX_EVENTS_PER_REQUEST);
+      await send(
+        '/me/listening-events',
+        { method: 'POST', body: JSON.stringify({ events: chunk }) },
+        '들은 기록을 보내지 못했습니다.'
+      );
+    }
   },
 
   /** 작품과 종류를 주면 그것만, 안 주면 들은 기록을 모두 지운다 */
