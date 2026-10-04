@@ -302,7 +302,7 @@ function parseSector(value: unknown): ComparisonSector {
   };
 }
 
-function parsePiece(value: unknown): ComparisonPiece {
+export function parsePiece(value: unknown): ComparisonPiece {
   if (!isRecord(value)) {
     throw new Error('비교 작품 응답이 객체가 아닙니다.');
   }

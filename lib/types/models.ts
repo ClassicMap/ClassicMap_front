@@ -499,3 +499,69 @@ export interface Concert {
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+// ============================================
+// 취향과 홈 추천 (백엔드 /me/taste, /recommendations)
+// ============================================
+
+/** 클래식을 얼마나 듣는지. player 는 직접 연주한다 */
+export type ListeningLevel = 'new' | 'some' | 'often' | 'player';
+/** 온보딩 '어떤 소리에 끌려요' 답 */
+export type TasteSound = 'piano' | 'orchestra' | 'strings' | 'voice' | 'ensemble';
+/** 직접 연주하는 악기 */
+export type PlayerInstrument = 'piano' | 'strings' | 'winds' | 'voice' | 'other';
+export type OnboardingStatus = 'completed' | 'skipped';
+
+/** 온보딩·설정에서 고르는 답 */
+export interface TasteAnswers {
+  listeningLevel: ListeningLevel | null;
+  sounds: TasteSound[];
+  instrument: PlayerInstrument | null;
+  favoritePeriods: string[];
+  seedPieceIds: number[];
+}
+
+export interface TasteProfile extends TasteAnswers {
+  onboarding: { status: OnboardingStatus | null; version: number | null };
+  historyEnabled: boolean;
+}
+
+/** 온보딩 '아는 곡' 카드 */
+export interface OnboardingPiece {
+  pieceId: number;
+  pieceTitle: string;
+  composerId: number;
+  composerName: string;
+  composerAvatarUrl: string | null;
+  leadSound: string;
+}
+
+/** 추천 작품 한 장. 비교 카탈로그 카드에 처음 열 구간과 추천 이유를 더했다 */
+export interface RecommendedPiece extends ComparisonPiece {
+  sectorId: number | null;
+  sectorName: string | null;
+  reasons: string[];
+}
+
+export type RecommendationShelfKey = 'taste' | 'known' | 'starter';
+
+export interface RecommendationShelf {
+  key: RecommendationShelfKey;
+  items: RecommendedPiece[];
+}
+
+export interface HomeRecommendations {
+  /** 답·담아 둔 것·기록 중 하나라도 있으면 true */
+  personalized: boolean;
+  today: RecommendedPiece | null;
+  shelves: RecommendationShelf[];
+}
+
+export type ListeningEventKind = 'open' | 'finish' | 'skip' | 'not_interested';
+
+export interface ListeningEvent {
+  pieceId: number;
+  sectorId?: number | null;
+  performanceId?: number | null;
+  kind: ListeningEventKind;
+}

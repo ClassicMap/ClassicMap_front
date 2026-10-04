@@ -6,7 +6,7 @@ import { usePathname } from 'expo-router';
 import * as React from 'react';
 
 /** 로그인·가입 흐름은 셸 없이 단독 화면으로 둔다. */
-const BARE_PATHS = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password'];
+const BARE_PATHS = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password', '/onboarding'];
 
 /**
  * 데스크톱 웹 셸을 루트에서 씌운다 (설계 문서 6.0).

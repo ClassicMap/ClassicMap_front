@@ -1,5 +1,5 @@
 import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/components/home/cards';
-import { EraPreferenceCard, PREFERENCE_ERAS } from '@/components/home/era-preference-card';
+import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -11,21 +11,22 @@ import { daysLeft } from '@/components/concert/concert-parts';
 import { pickDailyPiece } from '@/lib/data/comparison';
 import { PERIODS } from '@/lib/data/periods';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import type { ColorScheme } from '@/lib/design/tokens';
-import { useUserProfile } from '@/lib/hooks/useUserProfile';
+import { PREFERENCE_ERAS } from '@/lib/data/taste-labels';
+import { useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
 import { useConcerts } from '@/lib/query/hooks/useConcerts';
 import type { Artist, Composer, Concert } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { useUser } from '@clerk/clerk-expo';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+
+/** 이번 실행에서 취향 묻기를 이미 열었는지. 뒤로 나가도 같은 실행 안에서는 다시 열지 않는다 */
+let onboardingOpened = false;
 
 const SHELF_ARTISTS = 12;
 const SHELF_COMPOSERS = 12;
@@ -68,14 +69,15 @@ export default function HomeScreen() {
   const router = useRouter();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
-  const { colorScheme } = useColorScheme();
-  const scheme: ColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const { user } = useUser();
-  const { profile, isFirstLogin, completeOnboarding, updatePreferences } = useUserProfile();
-  const favoritePeriods = React.useMemo(
-    () => profile?.preferences?.favoritePeriods ?? [],
-    [profile?.preferences?.favoritePeriods]
-  );
+  const taste = useTaste();
+  const favoritePeriods = taste.answers.favoritePeriods;
+
+  // 가입하고 처음 들어온 사람에게 취향 묻기를 한 번 연다. 닫거나 끝내면 다시 열지 않는다
+  React.useEffect(() => {
+    if (!taste.ready || !taste.signedIn || taste.onboardingStatus !== null || onboardingOpened) return;
+    onboardingOpened = true;
+    router.push('/onboarding' as Href);
+  }, [router, taste.onboardingStatus, taste.ready, taste.signedIn]);
 
   const catalog = useComparisonPieces();
   const composersQuery = useRecommendedComposers();
@@ -135,14 +137,10 @@ export default function HomeScreen() {
   const gap = wide ? 20 : 12;
 
   const onboarding =
-    user && isFirstLogin ? (
-      <EraPreferenceCard
-        scheme={scheme}
-        onSave={async (periods) => {
-          await updatePreferences({ favoritePeriods: periods });
-          await completeOnboarding();
-        }}
-        onSkip={completeOnboarding}
+    taste.ready && taste.onboardingStatus === null ? (
+      <TasteInviteCard
+        onStart={() => router.push('/onboarding' as Href)}
+        onDismiss={() => taste.save(taste.answers, { onboarding: 'skipped' }).catch(() => undefined)}
       />
     ) : null;
 
