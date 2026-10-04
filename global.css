@@ -7,6 +7,8 @@
 
 @layer base {
   :root {
+    /* 웹 기본 스크롤바·폼 컨트롤이 테마를 따르게 한다 */
+    color-scheme: light;
     /* 표면 — 3단계 */
     --background: 40 24% 98%;
     --surface-1: 0 0% 100%;
@@ -56,6 +58,7 @@
   }
 
   .dark:root {
+    color-scheme: dark;
     --background: 30 8% 4%;
     --surface-1: 30 7% 7%;
     --surface-2: 30 7% 10%;
@@ -106,6 +109,14 @@
   body {
     word-break: keep-all;
     overflow-wrap: anywhere;
+  }
+}
+
+/* 클래식 스크롤바 환경(+html.tsx가 표시를 붙인다)에서는 맥 오버레이처럼 트랙 없이 얇은 막대만 보인다 */
+@layer base {
+  .classic-scrollbar * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
   }
 }
 
