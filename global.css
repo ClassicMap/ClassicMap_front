@@ -7,6 +7,8 @@
 
 @layer base {
   :root {
+    /* 웹 기본 스크롤바·폼 컨트롤이 테마를 따르게 한다 */
+    color-scheme: light;
     /* 표면 — 3단계 */
     --background: 40 24% 98%;
     --surface-1: 0 0% 100%;
@@ -56,6 +58,7 @@
   }
 
   .dark:root {
+    color-scheme: dark;
     --background: 30 8% 4%;
     --surface-1: 30 7% 7%;
     --surface-2: 30 7% 10%;
