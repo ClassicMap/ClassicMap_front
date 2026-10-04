@@ -18,6 +18,7 @@ import { queryClient } from '@/lib/query/client';
 import { RootChrome } from '@/components/navigation/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
+import { useTasteSync } from '@/lib/hooks/useTaste';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -68,6 +69,8 @@ function Routes() {
   setTokenProvider(tokenProvider);
   setAdminTokenProvider(tokenProvider);
   const previousUser = React.useRef<string | null | undefined>(undefined);
+  // 로그인하면 이 기기에 둔 취향을 서버로 옮긴다
+  useTasteSync();
 
   // 로그아웃하거나 계정이 바뀌면 이전 사람의 내 정보(평가·레퍼토리·공개 설정) 캐시를 지운다
   React.useEffect(() => {
@@ -107,6 +110,7 @@ function Routes() {
         <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="delete-account" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="compare-admin" options={{ title: '구간·연주 관리' }} />
 
         {/* Screens accessible to everyone */}
