@@ -9,9 +9,10 @@ import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { PlayIcon } from 'lucide-react-native';
+import { Alert } from '@/lib/utils/alert';
+import { PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 /** 비교할 수 있는 작품. 작품은 콘텐츠라 사각이고, 음반 연결이 없어 작곡가 초상을 쓴다 */
 export function PieceCard({
@@ -19,21 +20,45 @@ export function PieceCard({
   width,
   onPress,
   reason,
+  onDismiss,
 }: {
   piece: ComparisonPiece;
   width: number;
   onPress: () => void;
   /** 추천 이유. 있으면 연주자 수 대신 보인다 */
   reason?: string;
+  /** 추천에서 뺀다(관심 없음). 웹은 호버하면 버튼이 뜨고, 앱은 길게 누른다 */
+  onDismiss?: () => void;
 }) {
+  const confirmDismiss = onDismiss
+    ? () =>
+        Alert.alert('이 곡을 추천에서 뺄까요?', '설정에서 들은 기록을 지우면 다시 보여요.', [
+          { text: '취소', style: 'cancel' },
+          { text: '관심 없음', style: 'destructive', onPress: onDismiss },
+        ])
+    : undefined;
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={Platform.OS === 'web' ? undefined : confirmDismiss}
       accessibilityRole="link"
       accessibilityLabel={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
+      accessibilityActions={onDismiss ? [{ name: 'dismiss', label: '관심 없음' }] : undefined}
+      onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
       className="group">
       <View>
         <EntityThumb name={piece.pieceTitle} image={piece.composerAvatarUrl} shape="square" size={width} />
+        {onDismiss && Platform.OS === 'web' ? (
+          <Pressable
+            onPress={onDismiss}
+            accessibilityRole="button"
+            accessibilityLabel={`${piece.pieceTitle} 관심 없음`}
+            hitSlop={6}
+            className="absolute right-2 top-2 h-7 flex-row items-center gap-1 rounded-full bg-black/60 px-2 opacity-0 web:transition-opacity web:duration-fast web:focus-visible:opacity-100 web:group-hover:opacity-100">
+            <Icon as={XIcon} size={12} className="text-white" />
+            <Text className="text-micro font-semibold text-white">관심 없음</Text>
+          </Pressable>
+        ) : null}
         {/* 데스크톱 호버에서만 드러나는 재생 버튼 (1차 시안 .pbtn) */}
         <View className="absolute bottom-2 right-2 size-10 items-center justify-center rounded-full bg-primary opacity-0 web:transition-opacity web:duration-fast web:group-hover:opacity-100">
           <Icon as={PlayIcon} size={16} className="ml-0.5 fill-primary-foreground text-primary-foreground" />
