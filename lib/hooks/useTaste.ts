@@ -82,6 +82,8 @@ function refreshRecommendations(queryClient: QueryClient) {
 export interface TasteState {
   /** 로그인 여부와 저장된 답을 다 알았는지. 서버에서 못 읽었거나 기기 답을 옮기는 중이면 false 다 */
   ready: boolean;
+  /** 저장된 답을 읽었는지. 기기 답을 옮기는 중이어도 true 라 설정처럼 지금 값을 보여 주기만 하는 곳에 쓴다 */
+  loaded: boolean;
   /** 로그인했는데 서버 취향을 못 읽었다(가입 직후 사용자 행이 아직 없을 때 등) */
   failed: boolean;
   retry: () => void;
@@ -166,6 +168,7 @@ export function useTaste(): TasteState {
   const guestTaste = guest.data ?? EMPTY_GUEST_TASTE;
   return {
     ready: isLoaded && (signedIn ? mine.isSuccess && synced === userId : guest.isSuccess),
+    loaded: isLoaded && (signedIn ? mine.isSuccess : guest.isSuccess),
     failed: signedIn && mine.isError,
     retry: () => void mine.refetch(),
     signedIn,
