@@ -11,13 +11,15 @@ import { daysLeft } from '@/components/concert/concert-parts';
 import { pickDailyPiece } from '@/lib/data/comparison';
 import { PERIODS } from '@/lib/data/periods';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { PREFERENCE_ERAS } from '@/lib/data/taste-labels';
+import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/data/taste-labels';
 import { useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
 import { useConcerts } from '@/lib/query/hooks/useConcerts';
-import type { Artist, Composer, Concert } from '@/lib/types/models';
+import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
+import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import type { Artist, Composer, Concert, RecommendationShelfKey, TasteSound } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
@@ -27,6 +29,12 @@ import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 /** 이번 실행에서 취향 묻기를 이미 열었는지. 뒤로 나가도 같은 실행 안에서는 다시 열지 않는다 */
 let onboardingOpened = false;
+
+const SHELF_TITLES: Record<RecommendationShelfKey, string> = {
+  taste: '취향에 맞춘 비교',
+  known: '아는 곡, 다르게 듣기',
+  starter: '처음 듣기 좋은 비교',
+};
 
 const SHELF_ARTISTS = 12;
 const SHELF_COMPOSERS = 12;
@@ -40,21 +48,44 @@ function greeting(now: Date): string {
   return '편안한 밤이에요';
 }
 
-/** 홈은 큐레이션 존: 이미지가 있는 S·A급만 올린다. 모자라면 이미지 있는 쪽으로 채운다 (1차 시안 메모) */
-function curateArtists(artists: readonly Artist[]): Artist[] {
+/**
+ * 홈은 큐레이션 존: 이미지가 있는 연주자만 올린다 (1차 시안 메모).
+ * 담아 둔 연주자 → 고른 소리의 S·A급 → 나머지 S·A급 → 이미지 있는 나머지 순
+ */
+function curateArtists(
+  artists: readonly Artist[],
+  favoriteIds: ReadonlySet<number>,
+  sounds: readonly TasteSound[]
+): Artist[] {
   const withImage = artists.filter((artist) => Boolean(artist.imageUrl));
-  const top = withImage.filter((artist) => artist.tier === 'S' || artist.tier === 'A');
-  const rest = withImage.filter((artist) => !top.includes(artist));
-  return [...top, ...rest].slice(0, SHELF_ARTISTS);
+  const rank = (artist: Artist): number => {
+    if (favoriteIds.has(Number(artist.id))) return 0;
+    const top = artist.tier === 'S' || artist.tier === 'A';
+    const sound = soundOfArtistCategory(artist.category);
+    if (top && sound && sounds.includes(sound)) return 1;
+    return top ? 2 : 3;
+  };
+  return withImage
+    .map((artist, index) => ({ artist, index }))
+    .sort((a, b) => rank(a.artist) - rank(b.artist) || a.index - b.index)
+    .map(({ artist }) => artist)
+    .slice(0, SHELF_ARTISTS);
 }
 
-/** 좋아하는 시대를 골랐으면 그 시대 작곡가가 앞에 온다. 나머지 순서는 추천 순 그대로 */
-function curateComposers(composers: readonly Composer[], favoritePeriods: readonly string[]): Composer[] {
+/** 고른 곡·담아 둔 작곡가 → 좋아하는 시대 작곡가 → 나머지(추천 순 그대로) */
+function curateComposers(
+  composers: readonly Composer[],
+  favoritePeriods: readonly string[],
+  preferredIds: ReadonlySet<number>
+): Composer[] {
   const withImage = composers.filter((composer) => Boolean(composer.avatarUrl));
-  if (favoritePeriods.length === 0) return withImage.slice(0, SHELF_COMPOSERS);
-  const preferred = withImage.filter((composer) => favoritePeriods.includes(composer.period));
-  const rest = withImage.filter((composer) => !favoritePeriods.includes(composer.period));
-  return [...preferred, ...rest].slice(0, SHELF_COMPOSERS);
+  const rank = (composer: Composer): number =>
+    preferredIds.has(composer.id) ? 0 : favoritePeriods.includes(composer.period) ? 1 : 2;
+  return withImage
+    .map((composer, index) => ({ composer, index }))
+    .sort((a, b) => rank(a.composer) - rank(b.composer) || a.index - b.index)
+    .map(({ composer }) => composer)
+    .slice(0, SHELF_COMPOSERS);
 }
 
 /** 이번 주 공연. 이번 주에 없으면 가장 가까운 공연으로 채운다 */
@@ -85,6 +116,11 @@ export default function HomeScreen() {
   const concertsQuery = useConcerts();
   const recentPieces = useRecentPieces().data ?? [];
 
+  const reco = useHomeRecommendations();
+  const recoToday = reco.data?.today ?? null;
+  const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
+  const favorites = useMyFavorites(taste.signedIn);
+
   const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data]);
   const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data]);
 
@@ -97,15 +133,40 @@ export default function HomeScreen() {
     return pickDailyPiece(preferred.length > 0 ? preferred : pieces, new Date());
   }, [composers, favoritePeriods, pieces]);
 
+  // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
+  const todayPiece = recoToday ?? today;
   const shelfPieces = React.useMemo(
-    () => pieces.filter((piece) => piece.pieceId !== today?.pieceId),
-    [pieces, today?.pieceId]
+    () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
+    [pieces, todayPiece?.pieceId]
   );
-  const artists = React.useMemo(() => curateArtists(artistsQuery.data?.pages[0] ?? []), [artistsQuery.data]);
+
+  const favoriteArtistIds = React.useMemo(
+    () =>
+      new Set(
+        taste.signedIn ? (favorites.data?.artists ?? []).map((item) => item.artistId) : taste.guest.favoriteArtistIds
+      ),
+    [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn]
+  );
+  const preferredComposerIds = React.useMemo(() => {
+    const favoriteComposers = taste.signedIn
+      ? (favorites.data?.composers ?? []).map((item) => item.composerId)
+      : taste.guest.favoriteComposerIds;
+    const known = recoShelves.find((shelf) => shelf.key === 'known')?.items.map((item) => item.composerId) ?? [];
+    return new Set([...favoriteComposers, ...known]);
+  }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn]);
+
+  const artists = React.useMemo(
+    () => curateArtists(artistsQuery.data?.pages[0] ?? [], favoriteArtistIds, taste.answers.sounds),
+    [artistsQuery.data, favoriteArtistIds, taste.answers.sounds]
+  );
   const featuredComposers = React.useMemo(
-    () => curateComposers(composers, favoritePeriods),
-    [composers, favoritePeriods]
+    () => curateComposers(composers, favoritePeriods, preferredComposerIds),
+    [composers, favoritePeriods, preferredComposerIds]
   );
+  const soundMeta = taste.answers.sounds
+    .map((sound) => SOUND_OPTIONS.find((option) => option.key === sound)?.label)
+    .filter(Boolean)
+    .join(' · ');
   const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data]);
   const eras = React.useMemo(
     () =>
@@ -118,9 +179,14 @@ export default function HomeScreen() {
   );
 
   const refreshing =
-    catalog.isRefetching || composersQuery.isRefetching || artistsQuery.isRefetching || concertsQuery.isRefetching;
+    catalog.isRefetching ||
+    reco.isRefetching ||
+    composersQuery.isRefetching ||
+    artistsQuery.isRefetching ||
+    concertsQuery.isRefetching;
   const refresh = () => {
     void catalog.refetch();
+    void reco.refetch();
     void composersQuery.refetch();
     void artistsQuery.refetch();
     void concertsQuery.refetch();
@@ -144,7 +210,7 @@ export default function HomeScreen() {
       />
     ) : null;
 
-  const todaySection = catalog.isLoading ? (
+  const todaySection = catalog.isLoading || reco.isLoading ? (
     <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
   ) : catalog.isError ? (
     <View className="rounded-xl border border-border">
@@ -157,8 +223,14 @@ export default function HomeScreen() {
         action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
       />
     </View>
-  ) : today ? (
-    <TodayComparison piece={today} wide={wide} onOpen={openToday} />
+  ) : todayPiece ? (
+    <TodayComparison
+      piece={todayPiece}
+      wide={wide}
+      onOpen={openToday}
+      sectorId={recoToday?.sectorId}
+      reasons={recoToday?.reasons}
+    />
   ) : null;
 
   const eraGrid = (
@@ -212,6 +284,36 @@ export default function HomeScreen() {
           </View>
         ) : null}
       </View>
+
+      {recoShelves.map((shelf) => (
+        <Section
+          key={shelf.key}
+          wide={wide}
+          title={SHELF_TITLES[shelf.key]}
+          meta={shelf.key === 'taste' && soundMeta ? soundMeta : undefined}>
+          {wide ? (
+            <ShelfRow
+              items={shelf.items}
+              minItemWidth={168}
+              gap={gap}
+              keyOf={(piece) => piece.pieceId}
+              renderItem={(piece, width) => (
+                <PieceCard piece={piece} width={width} reason={piece.reasons[0]} onPress={() => openPiece(piece)} />
+              )}
+            />
+          ) : (
+            <Grid
+              items={shelf.items.slice(0, 6)}
+              columns={3}
+              gap={gap}
+              keyOf={(piece) => piece.pieceId}
+              renderItem={(piece, width) => (
+                <PieceCard piece={piece} width={width} reason={piece.reasons[0]} onPress={() => openPiece(piece)} />
+              )}
+            />
+          )}
+        </Section>
+      ))}
 
       <Section wide={wide} title="비교할 수 있는 작품" onAction={() => router.push('/compare' as Href)}>
         {catalog.isLoading ? (

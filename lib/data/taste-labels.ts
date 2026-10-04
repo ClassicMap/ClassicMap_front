@@ -49,3 +49,29 @@ export function shortPieceTitle(title: string): string {
   const key = space > 0 ? head.slice(space + 1) : '';
   return key.endsWith('장조') || key.endsWith('단조') ? head.slice(0, space).trim() : head;
 }
+
+/** 연주자 분류 코드가 어느 소리에 드는지. 홈 연주자 셸프에서 고른 소리의 연주자를 앞에 둔다 */
+export function soundOfArtistCategory(category: string): TasteSound | null {
+  switch (category) {
+    case 'pianist':
+      return 'piano';
+    case 'violinist':
+    case 'violist':
+    case 'cellist':
+    case 'double_bassist':
+    case 'guitarist':
+    case 'harpist':
+    case 'gambist':
+      return 'strings';
+    case 'conductor':
+    case 'orchestra':
+      return 'orchestra';
+    case 'vocalist':
+    case 'choir':
+      return 'voice';
+    case 'ensemble':
+      return 'ensemble';
+    default:
+      return null;
+  }
+}

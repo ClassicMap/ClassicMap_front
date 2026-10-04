@@ -1,6 +1,7 @@
 import {
   EMPTY_TASTE_ANSWERS,
   LISTENING_LEVELS,
+  MAX_GUEST_IDS,
   PLAYER_INSTRUMENTS,
   TASTE_SOUNDS,
 } from '@/lib/api/taste';
@@ -76,9 +77,19 @@ export async function readGuestTaste(): Promise<GuestTaste> {
   }
 }
 
+/** 목록은 최근 것만 남긴다. 서버가 한 요청에 받는 id 수를 넘지 않게 */
+function trim(taste: GuestTaste): GuestTaste {
+  return {
+    ...taste,
+    favoriteComposerIds: taste.favoriteComposerIds.slice(-MAX_GUEST_IDS),
+    favoriteArtistIds: taste.favoriteArtistIds.slice(-MAX_GUEST_IDS),
+    notInterestedPieceIds: taste.notInterestedPieceIds.slice(-MAX_GUEST_IDS),
+  };
+}
+
 export async function writeGuestTaste(taste: GuestTaste): Promise<void> {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(taste));
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(trim(taste)));
   } catch {
     // 저장소를 못 쓰면 이번 방문 동안만 화면 상태로 둔다
   }

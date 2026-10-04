@@ -35,6 +35,10 @@ interface TodayComparisonProps {
   piece: ComparisonPiece;
   wide: boolean;
   onOpen: (target: TodayComparisonTarget) => void;
+  /** 추천이 정한 처음 열 구간. 없거나 공개 구간이 아니면 기본 구간을 쓴다 */
+  sectorId?: number | null;
+  /** 추천 이유. 제목 아래 한 줄로 보인다 */
+  reasons?: string[];
 }
 
 interface PerformerLine {
@@ -48,9 +52,13 @@ interface PerformerLine {
  * 홈 히어로: 같은 구간을 연주자별로 한 장에 보여 준다 (설계 문서 7.1).
  * 홈에서는 영상을 불러오지 않고 썸네일만 둔다. 누르면 비교 화면에서 바로 재생된다.
  */
-export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
+export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }: TodayComparisonProps) {
   const sectorsQuery = usePieceComparisonSectors(piece.pieceId);
-  const sector = React.useMemo(() => defaultComparisonSector(sortComparisonSectors(sectorsQuery.data ?? [])), [sectorsQuery.data]);
+  const sector = React.useMemo(() => {
+    const sectors = sortComparisonSectors(sectorsQuery.data ?? []);
+    return sectors.find((item) => item.id === sectorId) ?? defaultComparisonSector(sectors);
+  }, [sectorId, sectorsQuery.data]);
+  const reasonLine = reasons.join(' · ');
   const performancesQuery = useSectorComparisonPerformances(sector?.id);
   const [selected, setSelected] = React.useState(0);
 
@@ -151,6 +159,11 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
           <Text numberOfLines={2} className="text-headline font-bold text-foreground">
             {title}
           </Text>
+          {reasonLine ? (
+            <Text numberOfLines={1} className="mt-1 text-caption font-semibold text-primary">
+              {reasonLine}
+            </Text>
+          ) : null}
           <Text variant="caption" numberOfLines={1} className="mt-1">
             {lines.map((line) => `${line.name} ${clipClock(line.durationMs)}`).join(' · ') || piece.composerName}
           </Text>
@@ -173,6 +186,11 @@ export function TodayComparison({ piece, wide, onOpen }: TodayComparisonProps) {
           <Text variant="bodySm" numberOfLines={1} className="mt-1 text-foreground-muted">
             {[piece.composerName, sector?.sectorName].filter(Boolean).join(' · ')}
           </Text>
+          {reasonLine ? (
+            <Text numberOfLines={1} className="mt-2 text-label font-semibold text-primary">
+              {reasonLine}
+            </Text>
+          ) : null}
         </View>
 
         {/* 연주자별 길이: 같은 구간인데 길이가 다르다는 게 이 제품의 이야기다 */}

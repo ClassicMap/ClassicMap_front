@@ -14,7 +14,18 @@ import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
 /** 비교할 수 있는 작품. 작품은 콘텐츠라 사각이고, 음반 연결이 없어 작곡가 초상을 쓴다 */
-export function PieceCard({ piece, width, onPress }: { piece: ComparisonPiece; width: number; onPress: () => void }) {
+export function PieceCard({
+  piece,
+  width,
+  onPress,
+  reason,
+}: {
+  piece: ComparisonPiece;
+  width: number;
+  onPress: () => void;
+  /** 추천 이유. 있으면 연주자 수 대신 보인다 */
+  reason?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -32,8 +43,13 @@ export function PieceCard({ piece, width, onPress }: { piece: ComparisonPiece; w
         {piece.pieceTitle}
       </Text>
       <Text variant="caption" numberOfLines={1} className="mt-0.5">
-        {`${piece.composerName} · 연주자 ${piece.performerCount}`}
+        {reason ? piece.composerName : `${piece.composerName} · 연주자 ${piece.performerCount}`}
       </Text>
+      {reason ? (
+        <Text numberOfLines={1} className="mt-0.5 text-caption font-semibold text-primary">
+          {reason}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
