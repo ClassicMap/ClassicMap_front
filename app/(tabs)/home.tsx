@@ -12,14 +12,24 @@ import { pickDailyPiece } from '@/lib/data/comparison';
 import { PERIODS } from '@/lib/data/periods';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/data/taste-labels';
-import { useTaste } from '@/lib/hooks/useTaste';
+import { TasteAPI } from '@/lib/api/taste';
+import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
 import { useConcerts } from '@/lib/query/hooks/useConcerts';
 import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
-import type { Artist, Composer, Concert, RecommendationShelfKey, TasteSound } from '@/lib/types/models';
+import type {
+  Artist,
+  Composer,
+  Concert,
+  HomeRecommendations,
+  RecommendationShelfKey,
+  TasteSound,
+} from '@/lib/types/models';
+import { Alert } from '@/lib/utils/alert';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
@@ -101,6 +111,7 @@ export default function HomeScreen() {
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const taste = useTaste();
+  const queryClient = useQueryClient();
   const favoritePeriods = taste.answers.favoritePeriods;
 
   // 가입하고 처음 들어온 사람에게 취향 묻기를 한 번 연다. 닫거나 끝내면 다시 열지 않는다
@@ -198,6 +209,33 @@ export default function HomeScreen() {
     router.push(`/compare?${params.toString()}` as Href);
   };
   const openToday = (target: TodayComparisonTarget) => openPiece(target);
+
+  // 관심 없음: 화면에서 바로 빼고, 로그인했으면 서버에, 아니면 이 기기에 남긴다
+  const dismissPiece = (pieceId: number) => {
+    const without = (data: HomeRecommendations | undefined) =>
+      data && {
+        ...data,
+        shelves: data.shelves.map((shelf) => ({
+          ...shelf,
+          items: shelf.items.filter((item) => item.pieceId !== pieceId),
+        })),
+      };
+    queryClient.setQueriesData<HomeRecommendations>({ queryKey: TASTE_QUERY_KEYS.myRecommendations }, without);
+    queryClient.setQueriesData<HomeRecommendations>({ queryKey: TASTE_QUERY_KEYS.guestRecommendations }, without);
+    if (taste.signedIn) {
+      TasteAPI.sendEvents([{ pieceId, kind: 'not_interested' }])
+        .then(() => queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations }))
+        .catch(() => {
+          void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
+          Alert.alert('추천에서 빼지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.');
+        });
+    } else {
+      void taste.updateGuest((current) => ({
+        ...current,
+        notInterestedPieceIds: [...new Set([...current.notInterestedPieceIds, pieceId])],
+      }));
+    }
+  };
   const openRecent = (item: RecentPiece) => openPiece(item);
 
   const gap = wide ? 20 : 12;
@@ -298,7 +336,13 @@ export default function HomeScreen() {
               gap={gap}
               keyOf={(piece) => piece.pieceId}
               renderItem={(piece, width) => (
-                <PieceCard piece={piece} width={width} reason={piece.reasons[0]} onPress={() => openPiece(piece)} />
+                <PieceCard
+                  piece={piece}
+                  width={width}
+                  reason={piece.reasons[0]}
+                  onPress={() => openPiece(piece)}
+                  onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
+                />
               )}
             />
           ) : (
@@ -308,7 +352,13 @@ export default function HomeScreen() {
               gap={gap}
               keyOf={(piece) => piece.pieceId}
               renderItem={(piece, width) => (
-                <PieceCard piece={piece} width={width} reason={piece.reasons[0]} onPress={() => openPiece(piece)} />
+                <PieceCard
+                  piece={piece}
+                  width={width}
+                  reason={piece.reasons[0]}
+                  onPress={() => openPiece(piece)}
+                  onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
+                />
               )}
             />
           )}

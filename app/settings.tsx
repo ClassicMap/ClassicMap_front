@@ -13,11 +13,13 @@ import { getEraForeground } from '@/lib/design/era-palette';
 import type { TasteAnswers } from '@/lib/types/models';
 import { THEME } from '@/lib/theme';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { useTaste } from '@/lib/hooks/useTaste';
+import { TasteAPI } from '@/lib/api/taste';
+import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useProfileVisibility, useUpdateProfileVisibility } from '@/lib/query/hooks/useMyPage';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
+import { useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { type Href, Redirect, useRouter } from 'expo-router';
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
@@ -497,6 +499,67 @@ function TastePreferences() {
       <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
         <Text variant="label" className="text-primary">
           아는 곡부터 다시 고르기
+        </Text>
+      </Pressable>
+
+      <ListeningHistory />
+    </View>
+  );
+}
+
+/** 들은 기록: 추천을 고치는 데 쓸지 켜고 끄고, 모아 둔 것을 지운다 */
+function ListeningHistory() {
+  const taste = useTaste();
+  const queryClient = useQueryClient();
+  const { colorScheme } = useColorScheme();
+  const colors = THEME[colorScheme === 'dark' ? 'dark' : 'light'];
+  const [clearing, setClearing] = React.useState(false);
+
+  const toggle = (next: boolean) => {
+    taste.save(taste.answers, { historyEnabled: next }).catch(() => {
+      Alert.alert('기록 설정을 바꾸지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.');
+    });
+  };
+  const clear = () =>
+    Alert.alert('들은 기록을 지울까요?', '열어 본 곡, 끝까지 들은 곡, 관심 없음으로 뺀 곡이 모두 지워져요.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '지우기',
+        style: 'destructive',
+        onPress: () => {
+          setClearing(true);
+          TasteAPI.deleteEvents()
+            .then(() => {
+              void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
+              Alert.alert('들은 기록을 지웠어요', '홈 추천이 고른 답만으로 다시 골라져요.');
+            })
+            .catch(() => Alert.alert('기록을 지우지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.'))
+            .finally(() => setClearing(false));
+        },
+      },
+    ]);
+
+  return (
+    <View className="gap-1 border-t border-border pt-4">
+      <View className="flex-row items-center gap-4">
+        <View className="min-w-0 flex-1">
+          <Text className="text-body-sm font-semibold text-foreground">들은 기록으로 추천 고치기</Text>
+          <Text variant="caption" className="mt-0.5">
+            열어 본 곡, 끝까지 들은 곡, 금방 넘긴 곡을 추천에 써요. 끄면 관심 없음만 기억해요.
+          </Text>
+        </View>
+        <Switch
+          value={taste.historyEnabled}
+          onValueChange={toggle}
+          accessibilityLabel="들은 기록으로 추천 고치기"
+          trackColor={{ false: colors.surface3, true: colors.primary }}
+          thumbColor={taste.historyEnabled ? colors.primaryForeground : colors.foregroundMuted}
+          {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.primaryForeground } as object) : null)}
+        />
+      </View>
+      <Pressable onPress={clear} disabled={clearing} accessibilityRole="button" className="mt-2 self-start" hitSlop={6}>
+        <Text variant="label" className="text-destructive">
+          {clearing ? '지우는 중…' : '들은 기록 지우기'}
         </Text>
       </Pressable>
     </View>

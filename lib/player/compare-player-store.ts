@@ -99,6 +99,24 @@ export interface PlayerHostHandle {
   requestFullscreen: () => Promise<void>;
 }
 
+/**
+ * 들은 기록 신호. 끝까지(90% 이상) 들었는지, 몇 초 안에 넘겼는지만 알린다.
+ * 추천을 사용자에 맞게 고치는 데 쓰고, 보낼지는 듣는 쪽(listening-events)이 정한다
+ */
+export interface ListeningSignal {
+  kind: 'finish' | 'skip';
+  track: ComparePlayerTrack;
+}
+
+/** 이 지점까지 가면 끝까지 들은 것으로 본다 */
+const FINISH_RATIO = 0.9;
+/** 그러려면 이만큼은 실제로 재생했어야 한다 */
+const FINISH_PLAYED_RATIO = 0.5;
+/** 작품을 떠날 때 이보다 적게 재생했으면 넘긴 것으로 본다 */
+const SKIP_SEC = 10;
+/** 재생 위치가 한 번에 이보다 많이 움직이면 탐색으로 보고 재생 시간에 넣지 않는다 */
+const MAX_TICK_SEC = 2;
+
 const VOLUME_KEY = 'classicmap.player.volume';
 const MUTED_KEY = 'classicmap.player.muted';
 const SWITCH_MODE_KEY = 'classicmap.player.switch-mode';
@@ -260,6 +278,68 @@ let state: ComparePlayerState = {
 let media: ComparePlayerMedia | null = null;
 const listeners = new Set<() => void>();
 
+const listeningListeners = new Set<(signal: ListeningSignal) => void>();
+
+/** 지금 듣는 작품. 연주자를 바꿔도 같은 작품이면 이어진다 */
+interface PieceVisit {
+  pieceId: number;
+  /** 이 작품에서 실제로 재생한 초 */
+  playedSec: number;
+  started: boolean;
+  /** 1:1 집중 비교를 열었다. 집중 비교는 스토어 밖에서 재생해 시간을 못 세니 넘김으로 보지 않는다 */
+  engaged: boolean;
+  lastTrack: ComparePlayerTrack;
+  /** 이번 방문에서 끝까지 들었다고 알린 연주. A→B→A 로 돌아와도 다시 알리지 않는다 */
+  finished: Set<number>;
+}
+
+let visit: PieceVisit | null = null;
+/** 지금 연주에서 실제로 재생한 초와 마지막으로 본 위치 */
+let listen: { performanceId: number; playedSec: number; lastSec: number | null } = {
+  performanceId: 0,
+  playedSec: 0,
+  lastSec: null,
+};
+
+function emitListening(kind: ListeningSignal['kind'], track: ComparePlayerTrack) {
+  for (const listener of listeningListeners) listener({ kind, track });
+}
+
+/** 이 연주를 듣기 시작한다. 다른 작품으로 넘어가면 떠나는 작품을 짧게 들었는지 본다 */
+function beginListening(track: ComparePlayerTrack) {
+  if (visit && visit.pieceId !== track.pieceId) {
+    if (visit.started && !visit.engaged && visit.playedSec < SKIP_SEC) emitListening('skip', visit.lastTrack);
+    visit = null;
+  }
+  if (!visit) {
+    visit = { pieceId: track.pieceId, playedSec: 0, started: false, engaged: false, lastTrack: track, finished: new Set() };
+  }
+  visit.lastTrack = track;
+  if (listen.performanceId !== track.performanceId) {
+    listen = { performanceId: track.performanceId, playedSec: 0, lastSec: null };
+  }
+}
+
+/** 재생 위치가 조금씩 나아간 만큼만 재생 시간으로 센다 */
+function countPlayback(track: ComparePlayerTrack, current: number, total: number) {
+  if (!visit || visit.pieceId !== track.pieceId || listen.performanceId !== track.performanceId) beginListening(track);
+  const delta = listen.lastSec === null ? 0 : current - listen.lastSec;
+  listen.lastSec = current;
+  if (visit && delta > 0 && delta <= MAX_TICK_SEC) {
+    listen.playedSec += delta;
+    visit.playedSec += delta;
+  }
+  noteFinished(track, current, total);
+}
+
+function noteFinished(track: ComparePlayerTrack, current: number, total: number) {
+  if (!visit || total <= 0 || visit.finished.has(track.performanceId)) return;
+  if (current >= total * FINISH_RATIO && listen.playedSec >= total * FINISH_PLAYED_RATIO) {
+    visit.finished.add(track.performanceId);
+    emitListening('finish', track);
+  }
+}
+
 function setState(patch: Partial<ComparePlayerState>) {
   state = { ...state, ...patch };
   listeners.forEach((listener) => listener());
@@ -364,7 +444,9 @@ export const comparePlayer = {
     if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
       savePosition(current.performanceId, progress.current, progress.duration);
     }
+    beginListening(track);
     const start = startPositionFor(track, options.mode ?? state.switchMode);
+    listen.lastSec = start;
     savePosition(track.performanceId, start);
     // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
     const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
@@ -380,6 +462,14 @@ export const comparePlayer = {
       if (options.play) media.play();
     }
     flushSession();
+  },
+
+  /** 들은 기록 신호를 받는다. 떼는 함수를 돌려준다 */
+  onListening(listener: (signal: ListeningSignal) => void) {
+    listeningListeners.add(listener);
+    return () => {
+      listeningListeners.delete(listener);
+    };
   },
 
   /** 미니 플레이어의 이전·다음 연주자 (같은 구간 안에서 돈다) */
@@ -427,6 +517,7 @@ export const comparePlayer = {
     const duration = state.progress.duration || current.durationSec;
     const target = Math.max(0, Math.min(seconds, duration));
     savePosition(current.performanceId, target);
+    if (listen.performanceId === current.performanceId) listen.lastSec = target;
     setState({ progress: { current: target, duration } });
     media?.seek(target);
   },
@@ -484,6 +575,7 @@ export const comparePlayer = {
    * 네이티브는 루트의 영상 하나가 집중 비교 자리로 옮겨 가 그대로 이어진다
    */
   setFocus(focus: { a: number; b: number } | null) {
+    if (focus && visit) visit.engaged = true;
     if (focus && state.playing && Platform.OS === 'web') media?.pause();
     setState({ focus });
   },
@@ -491,16 +583,29 @@ export const comparePlayer = {
   /** 미디어가 보고하는 상태 */
   reportPlaying(performanceId: number, playing: boolean) {
     if (state.current?.performanceId !== performanceId) return;
+    if (playing && state.current) {
+      if (!visit || listen.performanceId !== performanceId) beginListening(state.current);
+      if (visit) visit.started = true;
+    }
     if (state.playing !== playing) setState({ playing, ...(playing ? { restored: false } : null) });
   },
 
   reportProgress(performanceId: number, current: number, duration: number) {
-    if (state.current?.performanceId !== performanceId) return;
+    const track = state.current;
+    if (track?.performanceId !== performanceId) return;
+    const total = duration || track.durationSec;
+    if (state.playing) countPlayback(track, current, total);
+    else listen.lastSec = current;
     savePosition(performanceId, current);
-    setState({ progress: { current, duration: duration || state.current.durationSec } });
+    setState({ progress: { current, duration: total } });
   },
 
   reportEnded(performanceId: number) {
+    const track = state.current;
+    if (track?.performanceId === performanceId && listen.performanceId === performanceId) {
+      const total = state.progress.duration || track.durationSec;
+      noteFinished(track, total, total);
+    }
     savePosition(performanceId, 0);
     if (state.current?.performanceId === performanceId) setState({ playing: false });
   },
