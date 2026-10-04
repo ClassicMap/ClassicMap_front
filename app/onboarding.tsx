@@ -1,4 +1,5 @@
 import { type OnboardingResult, TasteOnboarding } from '@/components/onboarding/taste-onboarding';
+import { EmptyState } from '@/components/ui/empty-state';
 import { MyPageAPI } from '@/lib/api/client';
 import { useTaste } from '@/lib/hooks/useTaste';
 import { MY_PAGE_QUERY_KEYS } from '@/lib/query/hooks/useMyPage';
@@ -6,6 +7,7 @@ import type { OnboardingStatus } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
+import { AlertCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View } from 'react-native';
 
@@ -56,6 +58,19 @@ export default function OnboardingScreen() {
     }
   };
 
+  if (taste.failed) {
+    return (
+      <View className="flex-1 justify-center bg-background">
+        <EmptyState
+          icon={AlertCircleIcon}
+          tone="error"
+          title="취향을 불러오지 못했어요"
+          description="연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 나중에 설정에서 골라 주세요."
+          action={{ label: '다시 시도', onPress: taste.retry }}
+        />
+      </View>
+    );
+  }
   if (!taste.ready) return <View className="flex-1 bg-background" />;
 
   return (

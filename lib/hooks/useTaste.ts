@@ -26,8 +26,11 @@ export const TASTE_QUERY_KEYS = {
 };
 
 export interface TasteState {
-  /** 로그인 여부와 저장된 답을 다 알았는지 */
+  /** 로그인 여부와 저장된 답을 다 알았는지. 서버에서 못 읽었으면 false 다 */
   ready: boolean;
+  /** 로그인했는데 서버 취향을 못 읽었다(가입 직후 사용자 행이 아직 없을 때 등) */
+  failed: boolean;
+  retry: () => void;
   signedIn: boolean;
   answers: TasteAnswers;
   onboardingStatus: OnboardingStatus | null;
@@ -91,7 +94,9 @@ export function useTaste(): TasteState {
   const profile = mine.data;
   const guestTaste = guest.data ?? EMPTY_GUEST_TASTE;
   return {
-    ready: isLoaded && (signedIn ? mine.isSuccess || mine.isError : guest.isSuccess),
+    ready: isLoaded && (signedIn ? mine.isSuccess : guest.isSuccess),
+    failed: signedIn && mine.isError,
+    retry: () => void mine.refetch(),
     signedIn,
     answers: signedIn ? (profile ?? EMPTY_TASTE_ANSWERS) : guestTaste.answers,
     onboardingStatus: signedIn ? (profile?.onboarding.status ?? null) : guestTaste.onboarding,

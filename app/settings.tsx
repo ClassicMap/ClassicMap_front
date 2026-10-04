@@ -417,6 +417,7 @@ function TastePreferences() {
   const toggle = <T extends string>(list: readonly T[], value: T): T[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
+  if (taste.failed) return <RetryLine label="취향을" onRetry={taste.retry} />;
   if (!taste.ready) return <Skeleton className="h-40 w-full rounded-lg" />;
 
   return (
