@@ -112,6 +112,14 @@
   }
 }
 
+/* 클래식 스크롤바 환경(+html.tsx가 표시를 붙인다)에서는 맥 오버레이처럼 트랙 없이 얇은 막대만 보인다 */
+@layer base {
+  .classic-scrollbar * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
+  }
+}
+
 /* 스켈레톤 쉬머: 배경을 화면에 고정해(background-attachment: fixed) 화면 안의 모든 스켈레톤이
    한 줄기 빛으로 같이 흐른다. 움직임 줄이기 설정이면 멈춘다. */
 @layer components {
