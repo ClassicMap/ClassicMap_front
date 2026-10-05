@@ -120,7 +120,7 @@ export function CommandPalette() {
         meta: titleMeta(title.kind, title.releaseYear),
         image: tmdbImageUrl(title.posterPath, 'w185'),
         shape: 'square',
-        run: () => go(`/films/${title.id}`),
+        run: () => go(`/film/${title.id}`),
       }));
       for (const [kind, items] of [
         ['composer', composers],

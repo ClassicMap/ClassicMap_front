@@ -49,7 +49,7 @@ export function PieceScreenStrip({
         {items.map(({ cue, sameSector }) => (
           <Pressable
             key={cue.titleId}
-            onPress={() => router.push(`/films/${cue.titleId}` as Href)}
+            onPress={() => router.push(`/film/${cue.titleId}` as Href)}
             accessibilityRole="link"
             accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}`}
             style={{ width: CARD_WIDTH }}
