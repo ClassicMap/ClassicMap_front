@@ -586,8 +586,10 @@ export interface ScreenTitleSummary {
   posterPath: string | null;
   backdropPath: string | null;
   cueCount: number;
-  /** 포스터·스틸이 없을 때 쓰는 대표 장면. 권리자 공식 YouTube 클립 id */
+  /** 포스터·스틸이 없을 때 쓰는 대표 그림. 권리자 공식 YouTube 예고편·클립 id */
   coverVideoId: string | null;
+  /** 대표 그림 클립을 올린 채널(출처 표시) */
+  coverChannel: string | null;
 }
 
 export interface ScreenTitlePage {

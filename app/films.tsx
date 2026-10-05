@@ -162,7 +162,10 @@ export default function FilmsScreen() {
         ) : null}
       </View>
 
-      <TmdbAttribution className="mt-12" />
+      <View className="mt-12 gap-3">
+        <Text variant="micro">포스터 자리 그림은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 썸네일이에요.</Text>
+        {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
+      </View>
     </ScrollView>
   );
 }

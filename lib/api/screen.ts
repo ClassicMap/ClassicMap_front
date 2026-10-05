@@ -52,6 +52,7 @@ function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
     backdropPath: optionalText(item.backdropPath),
     cueCount: Number(item.cueCount ?? 0),
     coverVideoId: optionalText(item.coverVideoId),
+    coverChannel: optionalText(item.coverChannel),
   };
 }
 

@@ -12,7 +12,8 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useScreenTitle } from '@/lib/query/hooks/useScreen';
 import { cn } from '@/lib/utils';
-import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
+import { YoutubeThumb } from '@/components/screen/youtube-thumb';
+import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -81,11 +82,16 @@ export default function FilmTitleScreen() {
 
   // TMDB 스틸이 없으면 권리자 공식 클립의 장면을 깐다. 누르면 그 클립이 열리고 출처를 적는다
   const tmdbBackdrop = tmdbImageUrl(title.backdropPath, wide ? 'w1280' : 'w780');
-  const coverClip = tmdbBackdrop
-    ? null
-    : title.cues.map((cue) => cue.officialClip).find((clip) => clip && clip.videoId === title.coverVideoId) ?? null;
-  const coverScene = coverClip ? youtubeClipThumbnail(coverClip.videoId) : null;
-  const backdrop = tmdbBackdrop ?? coverScene?.uri ?? null;
+  const cueClip = title.cues.map((cue) => cue.officialClip).find((clip) => clip?.videoId === title.coverVideoId);
+  const coverClip =
+    tmdbBackdrop || !title.coverVideoId
+      ? null
+      : {
+          videoId: title.coverVideoId,
+          startSec: cueClip?.startSec ?? 0,
+          channel: title.coverChannel ?? cueClip?.channel ?? 'YouTube',
+        };
+  const backdrop = tmdbBackdrop ?? coverClip?.videoId ?? null;
   const usesKmdb = title.cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = title.cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
 
@@ -99,13 +105,16 @@ export default function FilmTitleScreen() {
         {/* 스틸이 없으면 띠를 두지 않고 포스터부터 보인다 */}
         {backdrop ? (
           <View className="w-full bg-surface-3" style={{ aspectRatio: wide ? 21 / 8 : 16 / 9 }}>
-            <OptimizedImage
-              uri={backdrop}
-              fallbackUri={coverScene?.fallback}
-              resizeMode="cover"
-              accessibilityLabel={coverClip ? `${title.titleKo} 공식 클립 장면` : `${title.titleKo} 스틸`}
-              style={{ width: '100%', height: '100%' }}
-            />
+            {tmdbBackdrop ? (
+              <OptimizedImage
+                uri={tmdbBackdrop}
+                resizeMode="cover"
+                accessibilityLabel={`${title.titleKo} 스틸`}
+                style={{ width: '100%', height: '100%' }}
+              />
+            ) : coverClip ? (
+              <YoutubeThumb videoId={coverClip.videoId} accessibilityLabel={`${title.titleKo} 공식 클립 장면`} />
+            ) : null}
             <Scrim from="bottom" color="#000" opacity={0.55} extent={60} />
             {coverClip ? (
               <Pressable
@@ -161,8 +170,13 @@ export default function FilmTitleScreen() {
               <Text variant="micro">비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.</Text>
             ) : null}
             {usesKmdb ? <Text variant="micro">곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.</Text> : null}
+            {title.coverVideoId || title.cues.some((cue) => cue.officialClip) ? (
+              <Text variant="micro">장면 그림은 권리자 공식 YouTube 영상의 썸네일이에요. 누르면 그 영상이 열려요.</Text>
+            ) : null}
           </View>
-          <TmdbAttribution className="mt-6" />
+          {title.posterPath || title.backdropPath || title.cues.some((cue) => cue.stillPath) ? (
+            <TmdbAttribution className="mt-6" />
+          ) : null}
         </View>
       </ScrollView>
     </View>
