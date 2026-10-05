@@ -40,7 +40,7 @@ export function SignUpForm() {
 
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
-      router.push(`/(auth)/sign-up/verify-email?email=${email}`);
+      router.push(`/(auth)/sign-up/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       if (err?.errors && Array.isArray(err.errors)) {
         const newErrors: SignUpErrors = {};
