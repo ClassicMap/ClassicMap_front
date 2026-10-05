@@ -4,7 +4,7 @@ export default {
   expo: {
     name: '클래식맵',
     slug: 'ClassicMap_front',
-    version: '1.1.2',
+    version: '1.2.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'classicmap-front',
