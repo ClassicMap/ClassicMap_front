@@ -14,10 +14,12 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
 import { Kbd } from './kbd';
+import { titleMeta } from '@/components/screen/labels';
+import { tmdbImageUrl } from '@/lib/utils/tmdb';
 
 const GROUP_LIMIT = 5;
 
-type ResultKind = 'composer' | 'piece' | 'artist' | 'concert' | 'action';
+type ResultKind = 'composer' | 'piece' | 'artist' | 'concert' | 'screen' | 'action';
 
 interface PaletteItem {
   key: string;
@@ -43,6 +45,7 @@ const GROUP_LABELS: Record<Exclude<ResultKind, 'action'>, string> = {
   piece: '작품',
   artist: '아티스트',
   concert: '공연',
+  screen: '영화·드라마',
 };
 
 export function CommandPalette() {
@@ -110,11 +113,21 @@ export function CommandPalette() {
         shape: 'square',
         run: () => go(`/concert/${concert.id}`),
       }));
+      const screenTitles: PaletteItem[] = result.screenTitles.map((title) => ({
+        key: `screen-${title.id}`,
+        kind: 'screen',
+        title: title.titleKo,
+        meta: titleMeta(title.kind, title.releaseYear),
+        image: tmdbImageUrl(title.posterPath, 'w185'),
+        shape: 'square',
+        run: () => go(`/films/${title.id}`),
+      }));
       for (const [kind, items] of [
         ['composer', composers],
         ['piece', pieces],
         ['artist', artists],
         ['concert', concerts],
+        ['screen', screenTitles],
       ] as const) {
         if (items.length > 0) list.push({ label: GROUP_LABELS[kind], items });
       }
@@ -136,7 +149,17 @@ export function CommandPalette() {
       ],
     });
     return list;
-  }, [debounced, result.composers, result.pieces, result.artists, result.concerts, go, toggleColorScheme, close]);
+  }, [
+    debounced,
+    result.composers,
+    result.pieces,
+    result.artists,
+    result.concerts,
+    result.screenTitles,
+    go,
+    toggleColorScheme,
+    close,
+  ]);
 
   const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups]);
 

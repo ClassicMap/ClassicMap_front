@@ -12,16 +12,18 @@ import { getEraForeground } from '@/lib/design/era-palette';
 import { PERIODS } from '@/lib/data/periods';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
-import type { Artist, Composer, Concert, PieceSearchResult } from '@/lib/types/models';
+import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/lib/types/models';
+import { titleMeta } from '@/components/screen/labels';
+import { ScreenPoster } from '@/components/screen/screen-poster';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { AlertCircleIcon, ClapperboardIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
 
-type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert';
+type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert' | 'screen';
 
 const TYPE_CHIPS: { key: ResultType; label: string }[] = [
   { key: 'all', label: '전체' },
@@ -29,6 +31,7 @@ const TYPE_CHIPS: { key: ResultType; label: string }[] = [
   { key: 'piece', label: '작품' },
   { key: 'artist', label: '연주자' },
   { key: 'concert', label: '공연' },
+  { key: 'screen', label: '영화·드라마' },
 ];
 
 /** 한 종류만 볼 때는 더 많이 가져온다. */
@@ -75,6 +78,12 @@ const MORE_TILES: BrowseTile[] = [
     description: '같은 구간을 연주자별로 들어 봐요',
     href: '/compare',
     renderIcon: (className) => <CompareIcon size={22} className={className} />,
+  },
+  {
+    label: '영화 속 클래식',
+    description: '영화·드라마·애니에서 들은 그 곡',
+    href: '/films' as Href,
+    renderIcon: (className) => <Icon as={ClapperboardIcon} size={22} className={className} />,
   },
 ];
 
@@ -147,7 +156,11 @@ export default function SearchScreen() {
     (item) => !(topHit?.kind === 'artist' && topHit.item.id === item.id)
   );
   const total =
-    result.composers.length + result.pieces.length + result.artists.length + result.concerts.length;
+    result.composers.length +
+    result.pieces.length +
+    result.artists.length +
+    result.concerts.length +
+    result.screenTitles.length;
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: headerInset }}>
@@ -157,7 +170,7 @@ export default function SearchScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="작곡가, 작품, 연주자, 공연"
+            placeholder="작곡가, 작품, 연주자, 공연, 영화"
             placeholderTextColor="hsl(33 6% 46%)"
             returnKeyType="search"
             autoCorrect={false}
@@ -276,6 +289,20 @@ export default function SearchScreen() {
                     subtitle={getArtistCategoryLabel(artist.category)}
                     thumb={<EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={44} />}
                     onPress={() => router.push(`/artist/${artist.id}`)}
+                  />
+                ))}
+              </ResultGroup>
+            ) : null}
+
+            {show('screen') && result.screenTitles.length > 0 ? (
+              <ResultGroup title="영화·드라마">
+                {result.screenTitles.map((title: ScreenTitleSummary) => (
+                  <ResultRow
+                    key={title.id}
+                    title={title.titleKo}
+                    subtitle={`${titleMeta(title.kind, title.releaseYear)} · 클래식 ${title.cueCount}곡`}
+                    thumb={<ScreenPoster title={title.titleKo} posterPath={title.posterPath} width={30} />}
+                    onPress={() => router.push(`/films/${title.id}` as Href)}
                   />
                 ))}
               </ResultGroup>
