@@ -10,7 +10,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { useFeaturedScreenCues, useScreenTitles, useScreenTitleSearch } from '@/lib/query/hooks/useScreen';
+import {
+  useFeaturedScreenCues,
+  usePrefetchScreenTitle,
+  useScreenTitles,
+  useScreenTitleSearch,
+} from '@/lib/query/hooks/useScreen';
 import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
@@ -99,6 +104,27 @@ export default function FilmsScreen() {
         ))}
       </ScrollView>
 
+      {!searching && kind === 'all' && featured.isLoading ? (
+        <View className="mt-7 gap-3">
+          <View className="gap-1.5">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-3 w-56" />
+          </View>
+          <View className="flex-row gap-3 overflow-hidden">
+            {Array.from({ length: 4 }, (_, index) => (
+              <View key={index} className="w-[248px] flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
+                <Skeleton style={{ width: 48, height: 72 }} />
+                <View className="flex-1 justify-center gap-2">
+                  <Skeleton className="h-3.5 w-4/5" />
+                  <Skeleton className="h-3 w-3/5" />
+                  <Skeleton className="h-3 w-2/5" />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {!searching && kind === 'all' && (featured.data?.length ?? 0) > 0 ? (
         <View className="mt-7 gap-3">
           <View>
@@ -120,9 +146,13 @@ export default function FilmsScreen() {
           {searching ? `“${debounced}” 검색 결과` : '작품'}
         </Text>
         {loading ? (
-          <View className="flex-row flex-wrap" style={{ gap: GRID_GAP }}>
+          <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
             {Array.from({ length: columns * 2 }, (_, index) => (
-              <Skeleton key={index} style={{ width: posterWidth, height: posterWidth * 1.5 }} className="rounded-md" />
+              <View key={index} style={{ width: posterWidth }} className="gap-1.5">
+                <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * 1.5) }} />
+                <Skeleton className="mt-0.5 h-3.5 w-4/5" />
+                <Skeleton className="h-3 w-1/2" />
+              </View>
             ))}
           </View>
         ) : failed ? (
@@ -172,8 +202,11 @@ export default function FilmsScreen() {
 
 function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number }) {
   const router = useRouter();
+  const prefetch = usePrefetchScreenTitle();
   return (
     <Pressable
+      onHoverIn={() => prefetch(item.id)}
+      onPressIn={() => prefetch(item.id)}
       onPress={() => router.push(`/film/${item.id}` as Href)}
       accessibilityRole="link"
       accessibilityLabel={`${item.titleKo}, ${titleMeta(item.kind, item.releaseYear)}, 클래식 ${item.cueCount}곡`}
