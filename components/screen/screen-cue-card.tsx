@@ -12,7 +12,7 @@ import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useS
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
-import { tmdbImageUrl } from '@/lib/utils/tmdb';
+import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
 import { ChevronDownIcon, ExternalLinkIcon, ImageIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -45,7 +45,12 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   const [picking, setPicking] = React.useState(false);
   const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)].filter(Boolean).join(' · ');
   // 스포일러 장면은 설명을 펼치기 전까지 스틸도 숨긴다
-  const still = cue.spoiler && !showSpoiler ? null : tmdbImageUrl(cue.stillPath, 'w780');
+  const hidden = cue.spoiler && !showSpoiler;
+  const still = hidden ? null : tmdbImageUrl(cue.stillPath, 'w780');
+  // TMDB 스틸이 없으면 권리자 공식 클립의 썸네일을 장면 그림으로 쓴다
+  const clip = cue.officialClip;
+  const clipScene = still || hidden || !clip ? null : youtubeClipThumbnail(clip.videoId);
+  const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
     const params = new URLSearchParams({ composerId: String(cue.composerId), pieceId: String(cue.pieceId) });
@@ -62,6 +67,28 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
           accessibilityLabel={`${cue.workTitle} 장면 스틸`}
           style={{ width: '100%', aspectRatio: 16 / 9 }}
         />
+      ) : clipScene && clip ? (
+        <Pressable
+          onPress={openClip}
+          accessibilityRole="link"
+          accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
+          style={{ width: '100%', aspectRatio: 16 / 9 }}
+          className="bg-surface-3">
+          <OptimizedImage
+            uri={clipScene.uri}
+            fallbackUri={clipScene.fallback}
+            resizeMode="cover"
+            style={{ width: '100%', height: '100%' }}
+          />
+          <View className="absolute inset-0 items-center justify-center">
+            <View className="size-12 items-center justify-center rounded-full bg-black/55">
+              <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
+            </View>
+          </View>
+          <View className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5">
+            <Text className="text-[11px] font-semibold text-white">YouTube · {clip.channel}</Text>
+          </View>
+        </Pressable>
       ) : null}
       <View className="gap-3 p-4">
         <View className="flex-row flex-wrap items-center gap-1.5">
@@ -106,11 +133,9 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 
         <ListenAction cue={cue} onOpenCompare={openCompare} />
 
-        {cue.officialClip ? (
+        {clip && !clipScene ? (
           <Pressable
-            onPress={() =>
-              cue.officialClip && openExternal(youtubeClipUrl(cue.officialClip.videoId, cue.officialClip.startSec))
-            }
+            onPress={openClip}
             accessibilityRole="link"
             className="flex-row items-center gap-2 rounded-full border border-border-strong px-3.5 py-2 active:bg-surface-2 web:hover:bg-surface-2">
             <Icon as={PlayIcon} size={14} className="text-foreground" />
@@ -118,7 +143,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
               공식 클립으로 장면 보기
             </Text>
             <Text variant="micro" numberOfLines={1}>
-              YouTube · {cue.officialClip.channel}
+              YouTube · {clip.channel}
             </Text>
           </Pressable>
         ) : null}

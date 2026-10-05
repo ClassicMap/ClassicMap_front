@@ -15,7 +15,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useCommandPalette } from './command-palette-context';
 import { Kbd } from './kbd';
 import { titleMeta } from '@/components/screen/labels';
-import { tmdbImageUrl } from '@/lib/utils/tmdb';
+import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 
 const GROUP_LIMIT = 5;
 
@@ -118,7 +118,7 @@ export function CommandPalette() {
         kind: 'screen',
         title: title.titleKo,
         meta: titleMeta(title.kind, title.releaseYear),
-        image: tmdbImageUrl(title.posterPath, 'w185'),
+        image: tmdbImageUrl(title.posterPath, 'w185') ?? youtubeClipThumbnail(title.coverVideoId)?.fallback ?? null,
         shape: 'square',
         run: () => go(`/film/${title.id}`),
       }));

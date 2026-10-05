@@ -586,6 +586,8 @@ export interface ScreenTitleSummary {
   posterPath: string | null;
   backdropPath: string | null;
   cueCount: number;
+  /** 포스터·스틸이 없을 때 쓰는 대표 장면. 권리자 공식 YouTube 클립 id */
+  coverVideoId: string | null;
 }
 
 export interface ScreenTitlePage {
@@ -660,6 +662,7 @@ export interface PieceScreenCue {
   /** 영화에 나온 대목과 같은 비교 구간. 다른 대목이면 null */
   sectorId: number | null;
   usage: ScreenCueUsage;
+  coverVideoId: string | null;
 }
 
 /** '그 대목 바로 듣기' 한 칸 */
@@ -675,6 +678,7 @@ export interface FeaturedScreenCue {
   workTitle: string;
   partLabel: string | null;
   sectorId: number;
+  coverVideoId: string | null;
 }
 
 export interface ScreenCueStill {
