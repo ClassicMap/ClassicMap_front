@@ -2,7 +2,7 @@ import { ScrollShelf } from '@/components/home/shelf';
 import { episodeText, SCREEN_KIND_LABELS } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
 import { Text } from '@/components/ui/text';
-import { usePieceScreenCues } from '@/lib/query/hooks/useScreen';
+import { usePieceScreenCues, usePrefetchScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { PieceScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
@@ -33,6 +33,7 @@ export function PieceScreenStrip({
   className?: string;
 }) {
   const router = useRouter();
+  const prefetch = usePrefetchScreenTitle();
   const { data } = usePieceScreenCues(pieceId);
   const items = React.useMemo(() => groupByTitle(data ?? [], activeSectorId), [data, activeSectorId]);
   if (items.length === 0) return null;
@@ -49,6 +50,8 @@ export function PieceScreenStrip({
         {items.map(({ cue, sameSector }) => (
           <Pressable
             key={cue.titleId}
+            onHoverIn={() => prefetch(cue.titleId)}
+            onPressIn={() => prefetch(cue.titleId)}
             onPress={() => router.push(`/film/${cue.titleId}` as Href)}
             accessibilityRole="link"
             accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}`}

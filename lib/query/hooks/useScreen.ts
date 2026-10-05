@@ -1,7 +1,8 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as React from 'react';
 
 import { ScreenAPI } from '@/lib/api/screen';
-import type { ScreenTitleKind } from '@/lib/types/models';
+import type { ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
 
 const PAGE_SIZE = 24;
 const STALE_MS = 5 * 60_000;
@@ -48,6 +49,48 @@ export function useScreenTitle(titleId: number | undefined) {
     enabled: (titleId ?? 0) > 0,
     staleTime: STALE_MS,
   });
+}
+
+/** 목록 칸을 누르거나(앱) 올려 두면(웹) 작품 페이지를 미리 받는다 */
+export function usePrefetchScreenTitle() {
+  const queryClient = useQueryClient();
+  return React.useCallback(
+    (titleId: number) =>
+      void queryClient.prefetchQuery({
+        queryKey: SCREEN_QUERY_KEYS.title(titleId),
+        queryFn: () => ScreenAPI.getTitle(titleId),
+        staleTime: STALE_MS,
+      }),
+    [queryClient]
+  );
+}
+
+function summariesIn(data: unknown): ScreenTitleSummary[] {
+  // 통합 검색은 작품 배열, 모아 보는 화면 목록·검색은 페이지를 이어 붙인 무한 쿼리다
+  if (Array.isArray(data)) return data as ScreenTitleSummary[];
+  if (typeof data === 'object' && data !== null && 'pages' in data && Array.isArray(data.pages)) {
+    return (data.pages as { items?: ScreenTitleSummary[] }[]).flatMap((page) => page.items ?? []);
+  }
+  return [];
+}
+
+function findCachedSummary(queryClient: QueryClient, titleId: number): ScreenTitleSummary | undefined {
+  for (const queryKey of [['screen-titles'], ['search', 'screen-titles']]) {
+    for (const [, data] of queryClient.getQueriesData<unknown>({ queryKey })) {
+      const found = summariesIn(data).find((item) => item.id === titleId);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/** 목록에서 이미 받은 작품 요약. 상세를 받는 동안 머리 부분을 먼저 그린다 */
+export function useCachedScreenTitleSummary(titleId: number | undefined): ScreenTitleSummary | undefined {
+  const queryClient = useQueryClient();
+  return React.useMemo(
+    () => (titleId && titleId > 0 ? findCachedSummary(queryClient, titleId) : undefined),
+    [queryClient, titleId]
+  );
 }
 
 export function usePieceScreenCues(pieceId: number | undefined) {

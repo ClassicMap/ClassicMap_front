@@ -31,6 +31,8 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* 본문 서체: Pretendard 가변 폰트 동적 서브셋 (쓰는 글자 범위만 받는다) */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        {/* 비교 연주·영화 속 클래식 썸네일 */}
+        <link rel="preconnect" href="https://i.ytimg.com" />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"

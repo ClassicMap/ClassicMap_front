@@ -131,10 +131,19 @@ function parseCue(item: Record<string, unknown>): ScreenCue {
   };
 }
 
+/** 연결이 멈추면 끝없이 기다리지 않고 '다시 시도'를 보인다 */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function get(path: string, failure: string): Promise<unknown> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  if (!response.ok) throw new Error(`${failure} (${response.status})`);
-  return response.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`${failure} (${response.status})`);
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const ScreenAPI = {
