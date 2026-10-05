@@ -145,8 +145,9 @@ export const ScreenAPI = {
     return parsePage(await get(`/screen-titles${suffix}`, '영화 목록을 불러오지 못했습니다.'));
   },
 
-  async search(params: { q: string; offset?: number; limit?: number }): Promise<ScreenTitlePage> {
+  async search(params: { q: string; kind?: ScreenTitleKind; offset?: number; limit?: number }): Promise<ScreenTitlePage> {
     const query = new URLSearchParams({ q: params.q });
+    if (params.kind) query.append('kind', params.kind);
     if (params.offset) query.append('offset', String(params.offset));
     if (params.limit) query.append('limit', String(params.limit));
     return parsePage(await get(`/screen-titles/search?${query.toString()}`, '영화를 찾지 못했습니다.'));

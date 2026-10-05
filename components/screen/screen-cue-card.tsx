@@ -44,7 +44,8 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   const [showEvidence, setShowEvidence] = React.useState(false);
   const [picking, setPicking] = React.useState(false);
   const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)].filter(Boolean).join(' · ');
-  const still = tmdbImageUrl(cue.stillPath, 'w780');
+  // 스포일러 장면은 설명을 펼치기 전까지 스틸도 숨긴다
+  const still = cue.spoiler && !showSpoiler ? null : tmdbImageUrl(cue.stillPath, 'w780');
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
     const params = new URLSearchParams({ composerId: String(cue.composerId), pieceId: String(cue.pieceId) });
@@ -175,7 +176,7 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
     return (
       <Button className="h-11 rounded-full" onPress={() => onOpenCompare(listen.sectorId)}>
         <Text className="font-bold text-primary-foreground">
-          그 대목 비교해 듣기 · {listen.readyPerformanceCount}명
+          그 대목 비교해 듣기 · 연주 {listen.readyPerformanceCount}개
         </Text>
       </Button>
     );

@@ -8,7 +8,7 @@ const STALE_MS = 5 * 60_000;
 
 export const SCREEN_QUERY_KEYS = {
   titles: (kind: ScreenTitleKind | 'all') => ['screen-titles', kind] as const,
-  search: (q: string) => ['screen-titles', 'search', q] as const,
+  search: (q: string, kind: ScreenTitleKind | 'all') => ['screen-titles', 'search', q, kind] as const,
   title: (titleId: number) => ['screen-titles', 'detail', titleId] as const,
   pieceCues: (pieceId: number) => ['pieces', pieceId, 'screen-cues'] as const,
   featured: ['screen-cues', 'featured'] as const,
@@ -27,11 +27,15 @@ export function useScreenTitles(kind: ScreenTitleKind | 'all') {
   });
 }
 
-export function useScreenTitleSearch(q: string, limit = PAGE_SIZE) {
+/** 영화 속 클래식 화면 검색. 종류는 서버에서 거르고 offset 페이지를 이어 붙인다 */
+export function useScreenTitleSearch(q: string, kind: ScreenTitleKind | 'all') {
   const query = q.trim();
-  return useQuery({
-    queryKey: [...SCREEN_QUERY_KEYS.search(query), limit] as const,
-    queryFn: () => ScreenAPI.search({ q: query, limit }),
+  return useInfiniteQuery({
+    queryKey: SCREEN_QUERY_KEYS.search(query, kind),
+    queryFn: ({ pageParam }) =>
+      ScreenAPI.search({ q: query, kind: kind === 'all' ? undefined : kind, offset: pageParam, limit: PAGE_SIZE }),
+    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length * PAGE_SIZE : undefined),
+    initialPageParam: 0,
     enabled: query.length > 0,
     staleTime: 60_000,
   });

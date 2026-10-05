@@ -45,13 +45,14 @@ export default function FilmsScreen() {
   const [kind, setKind] = React.useState<KindFilter>('all');
   const debounced = useDebounce(query, 300).trim();
   const titles = useScreenTitles(kind);
-  const search = useScreenTitleSearch(debounced);
+  const search = useScreenTitleSearch(debounced, kind);
   const featured = useFeaturedScreenCues();
 
   const searching = debounced.length > 0;
   const listed = titles.data?.pages.flatMap((page) => page.items) ?? [];
-  const found = (search.data?.items ?? []).filter((item) => kind === 'all' || item.kind === kind);
+  const found = search.data?.pages.flatMap((page) => page.items) ?? [];
   const items = searching ? found : listed;
+  const paging = searching ? search : titles;
   const loading = searching ? search.isLoading : titles.isLoading;
   const failed = searching ? search.isError : titles.isError;
 
@@ -150,13 +151,13 @@ export default function FilmsScreen() {
             ))}
           </View>
         )}
-        {!searching && titles.hasNextPage ? (
+        {paging.hasNextPage ? (
           <Button
             variant="outline"
             className="mt-6 h-11 self-center rounded-full px-6"
-            disabled={titles.isFetchingNextPage}
-            onPress={() => void titles.fetchNextPage()}>
-            <Text className="font-semibold text-foreground">{titles.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
+            disabled={paging.isFetchingNextPage}
+            onPress={() => void paging.fetchNextPage()}>
+            <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
           </Button>
         ) : null}
       </View>
