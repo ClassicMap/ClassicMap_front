@@ -31,6 +31,7 @@ const ERROR_TRANSLATIONS: Record<string, string> = {
   'enter last name': '성을 입력해 주세요.',
 
   // 인증 관련
+  'enter code': '메일로 받은 인증 코드를 입력해 주세요.',
   'incorrect code': '인증 코드가 맞지 않아요. 메일을 다시 확인해 주세요.',
   'verification code is incorrect': '인증 코드가 맞지 않아요. 메일을 다시 확인해 주세요.',
   'verification code has expired': '인증 코드가 만료됐어요. 새 코드를 받아 주세요.',
