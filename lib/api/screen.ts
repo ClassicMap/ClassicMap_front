@@ -53,6 +53,15 @@ function parseThumbs(jpg: unknown, webp: unknown): ScreenThumbs {
   return { jpg: jpgQuality, webp: jpgQuality ? thumbQuality(webp) : null };
 }
 
+/** 포스터는 KMDb 파일 서버의 https 주소이고 출처가 같이 올 때만 쓴다 */
+function parsePoster(item: Record<string, unknown>): { posterUrl: string | null; posterCredit: string | null } {
+  const url = optionalText(item.posterUrl);
+  const credit = optionalText(item.posterCredit);
+  return url && credit && url.startsWith('https://file.koreafilm.or.kr/')
+    ? { posterUrl: url, posterCredit: credit }
+    : { posterUrl: null, posterCredit: null };
+}
+
 function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
   return {
     id: Number(item.id),
@@ -65,6 +74,7 @@ function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
     creditLine: optionalText(item.creditLine),
     posterPath: optionalText(item.posterPath),
     backdropPath: optionalText(item.backdropPath),
+    ...parsePoster(item),
     cueCount: Number(item.cueCount ?? 0),
     coverVideoId: optionalText(item.coverVideoId),
     coverChannel: optionalText(item.coverChannel),
@@ -203,6 +213,7 @@ export const ScreenAPI = {
       kind: oneOf(item.kind, SCREEN_TITLE_KINDS, 'MOVIE'),
       releaseYear: optionalNumber(item.releaseYear),
       posterPath: optionalText(item.posterPath),
+      ...parsePoster(item),
       partLabel: optionalText(item.partLabel),
       episodeLabel: optionalText(item.episodeLabel),
       sectorId: optionalNumber(item.sectorId),
@@ -221,6 +232,7 @@ export const ScreenAPI = {
       titleKo: text(item.titleKo),
       kind: oneOf(item.kind, SCREEN_TITLE_KINDS, 'MOVIE'),
       posterPath: optionalText(item.posterPath),
+      ...parsePoster(item),
       composerId: Number(item.composerId),
       composerName: text(item.composerName),
       pieceId: Number(item.pieceId),

@@ -1,6 +1,6 @@
 import { ScrollShelf } from '@/components/home/shelf';
 import { SCREEN_KIND_LABELS, titleMeta } from '@/components/screen/labels';
-import { ScreenPoster } from '@/components/screen/screen-poster';
+import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
@@ -113,7 +113,7 @@ export default function FilmsScreen() {
           <View className="flex-row gap-3 overflow-hidden">
             {Array.from({ length: 4 }, (_, index) => (
               <View key={index} className="w-[248px] flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
-                <Skeleton style={{ width: 48, height: 72 }} />
+                <Skeleton style={{ width: 48, height: Math.round(48 * POSTER_ASPECT) }} />
                 <View className="flex-1 justify-center gap-2">
                   <Skeleton className="h-3.5 w-4/5" />
                   <Skeleton className="h-3 w-3/5" />
@@ -149,7 +149,7 @@ export default function FilmsScreen() {
           <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
             {Array.from({ length: columns * 2 }, (_, index) => (
               <View key={index} style={{ width: posterWidth }} className="gap-1.5">
-                <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * 1.5) }} />
+                <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
                 <Skeleton className="mt-0.5 h-3.5 w-4/5" />
                 <Skeleton className="h-3 w-1/2" />
               </View>
@@ -193,7 +193,12 @@ export default function FilmsScreen() {
       </View>
 
       <View className="mt-12 gap-3">
-        <Text variant="micro">포스터 자리 그림은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 썸네일이에요.</Text>
+        {items.some((item) => item.posterUrl) ? (
+          <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
+        ) : null}
+        <Text variant="micro">
+          포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.
+        </Text>
         {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
       </View>
     </ScrollView>
@@ -215,6 +220,7 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
       <ScreenPoster
         title={item.titleKo}
         posterPath={item.posterPath}
+        posterUrl={item.posterUrl}
         coverVideoId={item.coverVideoId}
         coverThumbs={item.coverThumbs}
         width={width}
@@ -248,6 +254,7 @@ function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
       <ScreenPoster
         title={cue.titleKo}
         posterPath={cue.posterPath}
+        posterUrl={cue.posterUrl}
         coverVideoId={cue.coverVideoId}
         coverThumbs={cue.coverThumbs}
         width={48}

@@ -1,7 +1,7 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { titleMeta, youtubeClipUrl } from '@/components/screen/labels';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';
-import { ScreenPoster } from '@/components/screen/screen-poster';
+import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -143,6 +143,7 @@ export default function FilmTitleScreen() {
               <ScreenPoster
                 title={head.titleKo}
                 posterPath={head.posterPath}
+                posterUrl={head.posterUrl}
                 coverVideoId={head.coverVideoId}
                 coverThumbs={head.coverThumbs}
                 width={wide ? 132 : 104}
@@ -183,6 +184,9 @@ export default function FilmTitleScreen() {
             {hasComparison ? (
               <Text variant="micro">비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.</Text>
             ) : null}
+            {head.posterUrl ? (
+              <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
+            ) : null}
             {usesKmdb ? <Text variant="micro">곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.</Text> : null}
             {head.coverVideoId || cues.some((cue) => cue.officialClip) ? (
               <Text variant="micro">장면 그림은 권리자 공식 YouTube 영상의 썸네일이에요. 누르면 그 영상이 열려요.</Text>
@@ -206,7 +210,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
       <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
         <View className="-mt-16 flex-row items-end gap-4">
           <View className="rounded-md bg-background p-1">
-            <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * 1.5) }} />
+            <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
           </View>
           <View className="flex-1 gap-2.5 pb-1">
             <Skeleton className="h-3 w-24" />
