@@ -75,7 +75,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
           accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
           style={{ width: '100%', aspectRatio: 16 / 9 }}
           className="bg-surface-3">
-          <YoutubeThumb videoId={clip.videoId} />
+          <YoutubeThumb videoId={clip.videoId} thumbs={clip.thumbs} />
           <View className="absolute inset-0 items-center justify-center">
             <View className="size-12 items-center justify-center rounded-full bg-black/55">
               <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />

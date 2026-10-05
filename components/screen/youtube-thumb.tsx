@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import type { ScreenThumbQuality, ScreenThumbs } from '@/lib/types/models';
 import * as React from 'react';
 import { Animated, Image, type LayoutChangeEvent, PixelRatio, Platform, View } from 'react-native';
 
@@ -6,13 +7,13 @@ import { Animated, Image, type LayoutChangeEvent, PixelRatio, Platform, View } f
  * YouTube 썸네일 화질. 값은 그림 안 16:9 장면의 높이(px)다.
  * sd·hq 는 4:3 그림 위아래에 검은 띠가 있고, mq·maxres 는 16:9 그대로다.
  */
-const SCENE_HEIGHT = {
+type Quality = ScreenThumbQuality;
+const SCENE_HEIGHT: Record<Quality, number> = {
   mqdefault: 180,
   hqdefault: 270,
   sddefault: 360,
   maxresdefault: 720,
-} as const;
-type Quality = keyof typeof SCENE_HEIGHT;
+};
 const LADDER: readonly Quality[] = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'];
 /** 화면 밀도가 높아도 1.5배까지만 맞춘다. 2배로 맞추면 포스터 자리마다 maxres(최대 190KB)를 받는다 */
 const MAX_DENSITY = 1.5;
@@ -91,6 +92,21 @@ function pickThumb(videoId: string, target: Quality): Promise<Pick | null> {
   return task;
 }
 
+/**
+ * 서버가 재어 둔 화질이 있으면 재지 않고 바로 고른다. 같은 화질이면 webp 를 쓰고,
+ * 목표 화질이 없으면 한 단계씩 내려간다. 없는 화질은 YouTube 가 404 를 1~2초 늦게 줘서 요청하지 않는다.
+ */
+function knownPick(videoId: string, target: Quality, thumbs: ScreenThumbs | undefined): Pick | null {
+  if (!thumbs?.jpg) return null;
+  const has = (best: Quality | null, quality: Quality) =>
+    best !== null && LADDER.indexOf(quality) >= LADDER.indexOf(best);
+  for (const quality of LADDER.slice(LADDER.indexOf(target))) {
+    if (has(thumbs.webp, quality)) return { uri: webpUrl(videoId, quality), quality };
+    if (has(thumbs.jpg, quality)) return { uri: jpgUrl(videoId, quality), quality };
+  }
+  return null;
+}
+
 /** 이미 받아 둔 다른 화질. 큰 그림을 받는 동안 흐린 미리보기로 깐다 */
 function settledPreview(videoId: string, except: Quality): Pick | null {
   for (const quality of LADDER) {
@@ -119,6 +135,8 @@ function coverStyle(box: { width: number; height: number }, quality: Quality) {
 
 interface YoutubeThumbProps {
   videoId: string;
+  /** 서버가 잰 화질. 없으면 화질을 재 가며 고른다 */
+  thumbs?: ScreenThumbs;
   accessibilityLabel?: string;
   /** 쓸 만한 썸네일이 없을 때 대신 그릴 것 */
   fallback?: React.ReactNode;
@@ -128,15 +146,22 @@ interface YoutubeThumbProps {
  * 권리자 공식 클립의 썸네일로 부모 상자를 채운다(부모가 크기를 정한다).
  * 상자 크기에 맞는 화질만 받고, 받는 동안 쉬머를 보이다가 그림이 오면 서서히 드러낸다.
  */
-export function YoutubeThumb({ videoId, accessibilityLabel, fallback }: YoutubeThumbProps) {
+export function YoutubeThumb({ videoId, thumbs, accessibilityLabel, fallback }: YoutubeThumbProps) {
   const [box, setBox] = React.useState<{ width: number; height: number } | null>(null);
   const target = box ? targetQuality(box.width, box.height) : null;
   const key = target ? `${videoId}:${target}` : null;
   // 고른 그림을 어느 영상·화질 것인지와 같이 둔다. 영상이 바뀐 첫 그림에 앞 영상 그림이 남지 않게
   const [picked, setPicked] = React.useState<{ key: string; pick: Pick | null } | null>(null);
+  const known = target ? knownPick(videoId, target, thumbs) : null;
+  const knownUri = known?.uri;
 
   React.useEffect(() => {
     if (!target || !key || settled.has(key)) return;
+    if (known) {
+      // 재지 않아도 미리보기로 다시 쓸 수 있게 남긴다
+      settled.set(key, known);
+      return;
+    }
     let alive = true;
     void pickThumb(videoId, target).then((pick) => {
       if (alive) setPicked({ key, pick });
@@ -144,7 +169,8 @@ export function YoutubeThumb({ videoId, accessibilityLabel, fallback }: YoutubeT
     return () => {
       alive = false;
     };
-  }, [videoId, target, key]);
+    // known 은 그릴 때마다 새로 만들어서 주소로 비교한다
+  }, [videoId, target, key, knownUri]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -152,7 +178,7 @@ export function YoutubeThumb({ videoId, accessibilityLabel, fallback }: YoutubeT
   };
 
   const [revealed, setRevealed] = React.useState<string | null>(null);
-  const current = !key ? undefined : picked?.key === key ? picked.pick : settled.get(key);
+  const current = !key ? undefined : (known ?? (picked?.key === key ? picked.pick : settled.get(key)));
   if (current === null) return <View className="flex-1">{fallback ?? null}</View>;
   // 그림이 다 드러나기 전까지 아래에 쉬머(이미 받아 둔 낮은 화질이 있으면 그 그림)를 깐다
   const covered = Boolean(current && (revealed === current.uri || shown.has(current.uri)));

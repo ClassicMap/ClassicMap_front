@@ -212,7 +212,13 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
       accessibilityLabel={`${item.titleKo}, ${titleMeta(item.kind, item.releaseYear)}, 클래식 ${item.cueCount}곡`}
       style={{ width }}
       className="gap-1.5">
-      <ScreenPoster title={item.titleKo} posterPath={item.posterPath} coverVideoId={item.coverVideoId} width={width} />
+      <ScreenPoster
+        title={item.titleKo}
+        posterPath={item.posterPath}
+        coverVideoId={item.coverVideoId}
+        coverThumbs={item.coverThumbs}
+        width={width}
+      />
       <Text numberOfLines={1} className="text-label font-semibold text-foreground">
         {item.titleKo}
       </Text>
@@ -239,7 +245,13 @@ function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
       accessibilityRole="button"
       accessibilityLabel={`${cue.titleKo}에 나온 ${cue.composerName} ${cue.workTitle} 비교해 듣기`}
       className="w-[248px] flex-row gap-3 rounded-lg bg-surface-2 p-2.5 active:bg-surface-3 web:hover:bg-surface-3">
-      <ScreenPoster title={cue.titleKo} posterPath={cue.posterPath} coverVideoId={cue.coverVideoId} width={48} />
+      <ScreenPoster
+        title={cue.titleKo}
+        posterPath={cue.posterPath}
+        coverVideoId={cue.coverVideoId}
+        coverThumbs={cue.coverThumbs}
+        width={48}
+      />
       <View className="min-w-0 flex-1 justify-center">
         <Text numberOfLines={1} className="text-label font-semibold text-foreground">
           {cue.partLabel ?? cue.workTitle}
