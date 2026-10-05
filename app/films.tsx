@@ -171,7 +171,7 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
   const router = useRouter();
   return (
     <Pressable
-      onPress={() => router.push(`/films/${item.id}` as Href)}
+      onPress={() => router.push(`/film/${item.id}` as Href)}
       accessibilityRole="link"
       accessibilityLabel={`${item.titleKo}, ${titleMeta(item.kind, item.releaseYear)}, 클래식 ${item.cueCount}곡`}
       style={{ width }}

@@ -104,8 +104,9 @@ function Routes() {
         <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="films/index" options={{ headerShown: false }} />
-        <Stack.Screen name="films/[id]" options={{ headerShown: false }} />
+        {/* 모아 보기와 상세는 폴더를 나눈다. 정적 export 에 films/ 폴더가 생기면 nginx 가 /classicmap/films 를 접두사 없는 /films/ 로 돌려보낸다 */}
+        <Stack.Screen name="films" options={{ headerShown: false }} />
+        <Stack.Screen name="film/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="my-page" options={{ headerShown: false }} />
         <Stack.Screen name="users/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />

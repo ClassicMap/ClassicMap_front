@@ -302,7 +302,7 @@ export default function SearchScreen() {
                     title={title.titleKo}
                     subtitle={`${titleMeta(title.kind, title.releaseYear)} · 클래식 ${title.cueCount}곡`}
                     thumb={<ScreenPoster title={title.titleKo} posterPath={title.posterPath} width={30} />}
-                    onPress={() => router.push(`/films/${title.id}` as Href)}
+                    onPress={() => router.push(`/film/${title.id}` as Href)}
                   />
                 ))}
               </ResultGroup>
