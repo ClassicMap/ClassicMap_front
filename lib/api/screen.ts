@@ -51,6 +51,7 @@ function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
     posterPath: optionalText(item.posterPath),
     backdropPath: optionalText(item.backdropPath),
     cueCount: Number(item.cueCount ?? 0),
+    coverVideoId: optionalText(item.coverVideoId),
   };
 }
 
@@ -179,6 +180,7 @@ export const ScreenAPI = {
       episodeLabel: optionalText(item.episodeLabel),
       sectorId: optionalNumber(item.sectorId),
       usage: oneOf(item.usage, USAGES, 'SCORE'),
+      coverVideoId: optionalText(item.coverVideoId),
     }));
   },
 
@@ -197,6 +199,7 @@ export const ScreenAPI = {
       workTitle: text(item.workTitle),
       partLabel: optionalText(item.partLabel),
       sectorId: Number(item.sectorId),
+      coverVideoId: optionalText(item.coverVideoId),
     }));
   },
 

@@ -54,7 +54,7 @@ export function PieceScreenStrip({
             accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}`}
             style={{ width: CARD_WIDTH }}
             className="gap-1.5">
-            <ScreenPoster title={cue.titleKo} posterPath={cue.posterPath} width={CARD_WIDTH} />
+            <ScreenPoster title={cue.titleKo} posterPath={cue.posterPath} coverVideoId={cue.coverVideoId} width={CARD_WIDTH} />
             <Text numberOfLines={1} className="text-label font-semibold text-foreground">
               {cue.titleKo}
             </Text>

@@ -8,3 +8,15 @@ export function tmdbImageUrl(path: string | null | undefined, size: TmdbImageSiz
   if (!path || !path.startsWith('/')) return null;
   return `https://image.tmdb.org/t/p/${size}${path}`;
 }
+
+/**
+ * 권리자 공식 YouTube 클립의 썸네일. TMDB 이미지가 없을 때 장면 그림으로 쓴다.
+ * maxresdefault 는 없는 영상도 있어 mqdefault(16:9, 위아래 띠 없음)를 대신 쓴다.
+ */
+export function youtubeClipThumbnail(videoId: string | null | undefined): { uri: string; fallback: string } | null {
+  if (!videoId || !/^[A-Za-z0-9_-]{11}$/.test(videoId)) return null;
+  return {
+    uri: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+    fallback: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+  };
+}

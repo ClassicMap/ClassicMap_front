@@ -1,5 +1,5 @@
 import { OptimizedImage } from '@/components/optimized-image';
-import { titleMeta } from '@/components/screen/labels';
+import { titleMeta, youtubeClipUrl } from '@/components/screen/labels';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';
 import { ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
@@ -12,11 +12,11 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useScreenTitle } from '@/lib/query/hooks/useScreen';
 import { cn } from '@/lib/utils';
-import { tmdbImageUrl } from '@/lib/utils/tmdb';
+import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon } from 'lucide-react-native';
+import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FilmTitleScreen() {
@@ -79,7 +79,13 @@ export default function FilmTitleScreen() {
     );
   }
 
-  const backdrop = tmdbImageUrl(title.backdropPath, wide ? 'w1280' : 'w780');
+  // TMDB 스틸이 없으면 권리자 공식 클립의 장면을 깐다. 누르면 그 클립이 열리고 출처를 적는다
+  const tmdbBackdrop = tmdbImageUrl(title.backdropPath, wide ? 'w1280' : 'w780');
+  const coverClip = tmdbBackdrop
+    ? null
+    : title.cues.map((cue) => cue.officialClip).find((clip) => clip && clip.videoId === title.coverVideoId) ?? null;
+  const coverScene = coverClip ? youtubeClipThumbnail(coverClip.videoId) : null;
+  const backdrop = tmdbBackdrop ?? coverScene?.uri ?? null;
   const usesKmdb = title.cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = title.cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
 
@@ -95,11 +101,24 @@ export default function FilmTitleScreen() {
           <View className="w-full bg-surface-3" style={{ aspectRatio: wide ? 21 / 8 : 16 / 9 }}>
             <OptimizedImage
               uri={backdrop}
+              fallbackUri={coverScene?.fallback}
               resizeMode="cover"
-              accessibilityLabel={`${title.titleKo} 스틸`}
+              accessibilityLabel={coverClip ? `${title.titleKo} 공식 클립 장면` : `${title.titleKo} 스틸`}
               style={{ width: '100%', height: '100%' }}
             />
             <Scrim from="bottom" color="#000" opacity={0.55} extent={60} />
+            {coverClip ? (
+              <Pressable
+                onPress={() =>
+                  Linking.openURL(youtubeClipUrl(coverClip.videoId, coverClip.startSec)).catch(() => undefined)
+                }
+                accessibilityRole="link"
+                accessibilityLabel={`YouTube ${coverClip.channel}에서 장면 보기`}
+                className="absolute bottom-2 right-3 flex-row items-center gap-1 rounded-full bg-black/55 px-2.5 py-1">
+                <Icon as={PlayIcon} size={10} className="fill-white text-white" />
+                <Text className="text-[11px] font-semibold text-white">YouTube · {coverClip.channel}</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : (
           <View style={{ height: insets.top + 60 }} />
@@ -108,7 +127,7 @@ export default function FilmTitleScreen() {
         <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
           <View className={cn('flex-row items-end gap-4', backdrop && '-mt-16')}>
             <View className="rounded-md bg-background p-1">
-              <ScreenPoster title={title.titleKo} posterPath={title.posterPath} width={wide ? 132 : 104} />
+              <ScreenPoster title={title.titleKo} posterPath={title.posterPath} coverVideoId={title.coverVideoId} width={wide ? 132 : 104} />
             </View>
             <View className="min-w-0 flex-1 pb-1">
               <Text variant="caption">{titleMeta(title.kind, title.releaseYear)}</Text>
