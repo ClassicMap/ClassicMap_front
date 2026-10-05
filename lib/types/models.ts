@@ -594,6 +594,9 @@ export interface ScreenTitleSummary {
   /** TMDB 파일 경로. 주소는 tmdbImageUrl 로 만든다 */
   posterPath: string | null;
   backdropPath: string | null;
+  /** 실제 극장 포스터 주소(KMDb). 출처(posterCredit)를 같이 적는다 */
+  posterUrl: string | null;
+  posterCredit: string | null;
   cueCount: number;
   /** 포스터·스틸이 없을 때 쓰는 대표 그림. 권리자 공식 YouTube 예고편·클립 id */
   coverVideoId: string | null;
@@ -670,6 +673,8 @@ export interface PieceScreenCue {
   kind: ScreenTitleKind;
   releaseYear: number | null;
   posterPath: string | null;
+  posterUrl: string | null;
+  posterCredit: string | null;
   partLabel: string | null;
   episodeLabel: string | null;
   /** 영화에 나온 대목과 같은 비교 구간. 다른 대목이면 null */
@@ -686,6 +691,8 @@ export interface FeaturedScreenCue {
   titleKo: string;
   kind: ScreenTitleKind;
   posterPath: string | null;
+  posterUrl: string | null;
+  posterCredit: string | null;
   composerId: number;
   composerName: string;
   pieceId: number;

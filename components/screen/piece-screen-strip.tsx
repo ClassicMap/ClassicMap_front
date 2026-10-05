@@ -60,6 +60,7 @@ export function PieceScreenStrip({
             <ScreenPoster
               title={cue.titleKo}
               posterPath={cue.posterPath}
+              posterUrl={cue.posterUrl}
               coverVideoId={cue.coverVideoId}
               coverThumbs={cue.coverThumbs}
               width={CARD_WIDTH}
@@ -75,6 +76,7 @@ export function PieceScreenStrip({
           </Pressable>
         ))}
       </ScrollShelf>
+      {items.some(({ cue }) => cue.posterUrl) ? <Text variant="micro">포스터: 한국영상자료원 KMDb</Text> : null}
     </View>
   );
 }

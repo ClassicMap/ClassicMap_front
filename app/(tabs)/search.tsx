@@ -305,6 +305,7 @@ export default function SearchScreen() {
                       <ScreenPoster
                         title={title.titleKo}
                         posterPath={title.posterPath}
+                        posterUrl={title.posterUrl}
                         coverVideoId={title.coverVideoId}
                         coverThumbs={title.coverThumbs}
                         width={30}
