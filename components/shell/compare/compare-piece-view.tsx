@@ -3,6 +3,7 @@ import { PerformerMark, performerOf } from '@/components/compare/performer-mark'
 import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
+import { PieceScreenStrip } from '@/components/screen/piece-screen-strip';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { FavoriteButton } from '@/components/favorite-button';
 import { PlayerSlot } from '@/components/player/player-slot';
@@ -524,6 +525,8 @@ export function ComparePieceView({
             ))}
           </SlotGrid>
         )}
+
+        <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-12 max-w-[880px]" />
       </ScrollView>
 
       {overlay && fullscreen ? (
