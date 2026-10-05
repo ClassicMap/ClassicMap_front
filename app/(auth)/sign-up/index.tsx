@@ -12,8 +12,8 @@ export default function SignUpScreen() {
 
   React.useEffect(() => {
     if (isSignedIn) {
-      // 웹 구현에는 dismissBrowser가 없어 undefined가 돌아온다. 닫을 인앱 브라우저도 네이티브에만 있다
-      if (Platform.OS !== 'web') WebBrowser.dismissBrowser().catch(() => {});
+      // 웹·안드로이드 구현은 dismissBrowser가 undefined를 돌려준다. 닫을 인앱 브라우저는 iOS에만 남는다
+      if (Platform.OS !== 'web') Promise.resolve(WebBrowser.dismissBrowser()).catch(() => {});
       if (router.canGoBack()) router.back();
       else router.replace('/home' as Href);
     }

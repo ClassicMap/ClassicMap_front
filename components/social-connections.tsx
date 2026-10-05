@@ -53,8 +53,12 @@ export function SocialConnections() {
   function onSocialLoginPress(strategy: SocialConnectionStrategy) {
     return async () => {
       try {
+        // 앱은 경로를 붙인다. classicmap-front:// 만 주면 Clerk 가 classicmap-front:?… 로 돌려보내
+        // 안드로이드 expo-web-browser 가 로그인 링크로 못 알아보고 닫힘으로 끝낸다. 라우터는 app/+native-intent 가 막는다
         const redirectUrl =
-          Platform.OS === 'web' ? webRedirectUrl() : AuthSession.makeRedirectUri({ scheme: 'classicmap-front' });
+          Platform.OS === 'web'
+            ? webRedirectUrl()
+            : AuthSession.makeRedirectUri({ scheme: 'classicmap-front', path: 'sso-callback' });
 
         const { createdSessionId, setActive } = await startSSOFlow({
           strategy,
