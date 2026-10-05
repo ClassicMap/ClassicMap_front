@@ -552,6 +552,10 @@ export const emptyFavoriteGroups = (): FavoriteGroups => ({
 });
 
 export const MyPageAPI = {
+  /** 계정 삭제 전에 서버의 내 데이터(평가·담기·공개 프로필·취향·들은 기록)를 지운다 */
+  async deleteMyData(): Promise<void> {
+    return requestEmpty('/me', { method: 'DELETE' });
+  },
   async getRatings(): Promise<RatedConcertListItem[]> {
     return requestJson<RatedConcertListItem[]>('/me/ratings');
   },
