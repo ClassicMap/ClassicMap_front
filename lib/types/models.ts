@@ -573,6 +573,15 @@ export type ScreenTitleKind = 'MOVIE' | 'SERIES' | 'ANIME';
 /** SCORE 배경음악 · SOURCE 화면 속 음악 · PERFORMED 인물이 연주 · TITLES 오프닝·엔딩 */
 export type ScreenCueUsage = 'SCORE' | 'SOURCE' | 'PERFORMED' | 'TITLES';
 
+/** YouTube 썸네일 화질. 높은 것부터 maxres(1280) · sd(640) · hq(480) · mq(320) */
+export type ScreenThumbQuality = 'maxresdefault' | 'sddefault' | 'hqdefault' | 'mqdefault';
+
+/** 영상에 있는 가장 높은 썸네일 화질. 그 아래 화질은 다 있다. 모르면 null */
+export interface ScreenThumbs {
+  jpg: ScreenThumbQuality | null;
+  webp: ScreenThumbQuality | null;
+}
+
 export interface ScreenTitleSummary {
   id: number;
   slug: string;
@@ -590,6 +599,7 @@ export interface ScreenTitleSummary {
   coverVideoId: string | null;
   /** 대표 그림 클립을 올린 채널(출처 표시) */
   coverChannel: string | null;
+  coverThumbs: ScreenThumbs;
 }
 
 export interface ScreenTitlePage {
@@ -602,6 +612,7 @@ export interface ScreenOfficialClip {
   startSec: number;
   channel: string;
   title: string;
+  thumbs: ScreenThumbs;
 }
 
 export interface ScreenCueEvidence {
@@ -665,6 +676,7 @@ export interface PieceScreenCue {
   sectorId: number | null;
   usage: ScreenCueUsage;
   coverVideoId: string | null;
+  coverThumbs: ScreenThumbs;
 }
 
 /** '그 대목 바로 듣기' 한 칸 */
@@ -681,6 +693,7 @@ export interface FeaturedScreenCue {
   partLabel: string | null;
   sectorId: number;
   coverVideoId: string | null;
+  coverThumbs: ScreenThumbs;
 }
 
 export interface ScreenCueStill {

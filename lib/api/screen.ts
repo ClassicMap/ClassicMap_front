@@ -9,6 +9,8 @@ import type {
   ScreenOfficialClip,
   ScreenStillCandidates,
   ScreenStreamingLinks,
+  ScreenThumbQuality,
+  ScreenThumbs,
   ScreenTitleDetail,
   ScreenTitleKind,
   ScreenTitlePage,
@@ -17,6 +19,7 @@ import type {
 
 export const SCREEN_TITLE_KINDS: readonly ScreenTitleKind[] = ['MOVIE', 'SERIES', 'ANIME'];
 const USAGES: readonly ScreenCueUsage[] = ['SCORE', 'SOURCE', 'PERFORMED', 'TITLES'];
+const THUMB_QUALITIES: readonly ScreenThumbQuality[] = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -38,6 +41,18 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback
   return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
 }
 
+function thumbQuality(value: unknown): ScreenThumbQuality | null {
+  return typeof value === 'string' && (THUMB_QUALITIES as readonly string[]).includes(value)
+    ? (value as ScreenThumbQuality)
+    : null;
+}
+
+/** webp 화질만 있고 jpg 화질이 없으면 믿지 않는다(서버는 둘을 같이 적는다) */
+function parseThumbs(jpg: unknown, webp: unknown): ScreenThumbs {
+  const jpgQuality = thumbQuality(jpg);
+  return { jpg: jpgQuality, webp: jpgQuality ? thumbQuality(webp) : null };
+}
+
 function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
   return {
     id: Number(item.id),
@@ -53,6 +68,7 @@ function parseSummary(item: Record<string, unknown>): ScreenTitleSummary {
     cueCount: Number(item.cueCount ?? 0),
     coverVideoId: optionalText(item.coverVideoId),
     coverChannel: optionalText(item.coverChannel),
+    coverThumbs: parseThumbs(item.coverThumbJpg, item.coverThumbWebp),
   };
 }
 
@@ -73,6 +89,7 @@ function parseClip(value: unknown): ScreenOfficialClip | null {
     startSec: Number(value.startSec ?? 0),
     channel: text(value.channel),
     title: text(value.title),
+    thumbs: parseThumbs(value.thumbJpg, value.thumbWebp),
   };
 }
 
@@ -191,6 +208,7 @@ export const ScreenAPI = {
       sectorId: optionalNumber(item.sectorId),
       usage: oneOf(item.usage, USAGES, 'SCORE'),
       coverVideoId: optionalText(item.coverVideoId),
+      coverThumbs: parseThumbs(item.coverThumbJpg, item.coverThumbWebp),
     }));
   },
 
@@ -210,6 +228,7 @@ export const ScreenAPI = {
       partLabel: optionalText(item.partLabel),
       sectorId: Number(item.sectorId),
       coverVideoId: optionalText(item.coverVideoId),
+      coverThumbs: parseThumbs(item.coverThumbJpg, item.coverThumbWebp),
     }));
   },
 

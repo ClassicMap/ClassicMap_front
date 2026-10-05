@@ -301,7 +301,15 @@ export default function SearchScreen() {
                     key={title.id}
                     title={title.titleKo}
                     subtitle={`${titleMeta(title.kind, title.releaseYear)} · 클래식 ${title.cueCount}곡`}
-                    thumb={<ScreenPoster title={title.titleKo} posterPath={title.posterPath} coverVideoId={title.coverVideoId} width={30} />}
+                    thumb={
+                      <ScreenPoster
+                        title={title.titleKo}
+                        posterPath={title.posterPath}
+                        coverVideoId={title.coverVideoId}
+                        coverThumbs={title.coverThumbs}
+                        width={30}
+                      />
+                    }
                     onPress={() => router.push(`/film/${title.id}` as Href)}
                   />
                 ))}

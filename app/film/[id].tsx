@@ -113,7 +113,11 @@ export default function FilmTitleScreen() {
                 style={{ width: '100%', height: '100%' }}
               />
             ) : coverClip ? (
-              <YoutubeThumb videoId={coverClip.videoId} accessibilityLabel={`${head.titleKo} 공식 클립 장면`} />
+              <YoutubeThumb
+                videoId={coverClip.videoId}
+                thumbs={head.coverThumbs}
+                accessibilityLabel={`${head.titleKo} 공식 클립 장면`}
+              />
             ) : null}
             <Scrim from="bottom" color="#000" opacity={0.55} extent={60} />
             {coverClip ? (
@@ -136,7 +140,13 @@ export default function FilmTitleScreen() {
         <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
           <View className={cn('flex-row items-end gap-4', backdrop && '-mt-16')}>
             <View className="rounded-md bg-background p-1">
-              <ScreenPoster title={head.titleKo} posterPath={head.posterPath} coverVideoId={head.coverVideoId} width={wide ? 132 : 104} />
+              <ScreenPoster
+                title={head.titleKo}
+                posterPath={head.posterPath}
+                coverVideoId={head.coverVideoId}
+                coverThumbs={head.coverThumbs}
+                width={wide ? 132 : 104}
+              />
             </View>
             <View className="min-w-0 flex-1 pb-1">
               <Text variant="caption">{titleMeta(head.kind, head.releaseYear)}</Text>
