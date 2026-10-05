@@ -12,7 +12,8 @@ import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useS
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
-import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
+import { YoutubeThumb } from '@/components/screen/youtube-thumb';
+import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
 import { ChevronDownIcon, ExternalLinkIcon, ImageIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -49,7 +50,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   const still = hidden ? null : tmdbImageUrl(cue.stillPath, 'w780');
   // TMDB 스틸이 없으면 권리자 공식 클립의 썸네일을 장면 그림으로 쓴다
   const clip = cue.officialClip;
-  const clipScene = still || hidden || !clip ? null : youtubeClipThumbnail(clip.videoId);
+  const clipScene = Boolean(clip) && !still && !hidden;
   const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
@@ -74,12 +75,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
           accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
           style={{ width: '100%', aspectRatio: 16 / 9 }}
           className="bg-surface-3">
-          <OptimizedImage
-            uri={clipScene.uri}
-            fallbackUri={clipScene.fallback}
-            resizeMode="cover"
-            style={{ width: '100%', height: '100%' }}
-          />
+          <YoutubeThumb videoId={clip.videoId} />
           <View className="absolute inset-0 items-center justify-center">
             <View className="size-12 items-center justify-center rounded-full bg-black/55">
               <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
