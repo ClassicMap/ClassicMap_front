@@ -104,6 +104,8 @@ function Routes() {
         <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="films/index" options={{ headerShown: false }} />
+        <Stack.Screen name="films/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="my-page" options={{ headerShown: false }} />
         <Stack.Screen name="users/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />

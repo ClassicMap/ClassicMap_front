@@ -4,6 +4,7 @@ import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/compon
 import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
 import { SectionStaff } from '@/components/compare/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/components/compare/sector-guide';
+import { PieceScreenStrip } from '@/components/screen/piece-screen-strip';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/components/shell/compare/compare-catalog';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
@@ -613,6 +614,8 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
               />
             ))}
       </View>
+
+      <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-10" />
     </ScrollView>
   );
 }

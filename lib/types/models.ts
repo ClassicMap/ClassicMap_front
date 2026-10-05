@@ -565,3 +565,128 @@ export interface ListeningEvent {
   performanceId?: number | null;
   kind: ListeningEventKind;
 }
+
+// 영화 속 클래식 -----------------------------------------------------------
+
+/** MOVIE 실사 영화 · SERIES 드라마·실사 시리즈 · ANIME 애니 영화·시리즈·단편 */
+export type ScreenTitleKind = 'MOVIE' | 'SERIES' | 'ANIME';
+/** SCORE 배경음악 · SOURCE 화면 속 음악 · PERFORMED 인물이 연주 · TITLES 오프닝·엔딩 */
+export type ScreenCueUsage = 'SCORE' | 'SOURCE' | 'PERFORMED' | 'TITLES';
+
+export interface ScreenTitleSummary {
+  id: number;
+  slug: string;
+  kind: ScreenTitleKind;
+  titleKo: string;
+  titleOriginal: string | null;
+  releaseYear: number | null;
+  countryCode: string | null;
+  creditLine: string | null;
+  /** TMDB 파일 경로. 주소는 tmdbImageUrl 로 만든다 */
+  posterPath: string | null;
+  backdropPath: string | null;
+  cueCount: number;
+}
+
+export interface ScreenTitlePage {
+  items: ScreenTitleSummary[];
+  hasMore: boolean;
+}
+
+export interface ScreenOfficialClip {
+  videoId: string;
+  startSec: number;
+  channel: string;
+  title: string;
+}
+
+export interface ScreenCueEvidence {
+  grade: '1' | '2';
+  kind: string;
+  url: string;
+  note: string;
+}
+
+export interface ScreenStreamingLinks {
+  appleMusicUrl: string | null;
+  spotifyUrl: string | null;
+  youtubeMusicUrl: string | null;
+}
+
+/**
+ * 큐의 곡을 들을 길. sector 는 영화에 나온 대목과 같은 비교 구간, piece 는 같은 곡의 다른 구간,
+ * external 은 스트리밍 링크만, none 은 들을 곳이 없다.
+ */
+export type ScreenCueListen =
+  | { kind: 'sector'; sectorId: number; readyPerformanceCount: number }
+  | { kind: 'piece' }
+  | { kind: 'external'; links: ScreenStreamingLinks }
+  | { kind: 'none' };
+
+export interface ScreenCue {
+  id: number;
+  order: number;
+  episodeLabel: string | null;
+  composerId: number | null;
+  composerName: string;
+  pieceId: number | null;
+  workTitle: string;
+  partLabel: string | null;
+  usage: ScreenCueUsage;
+  arranged: boolean;
+  approxAtSec: number | null;
+  sceneNote: string;
+  spoiler: boolean;
+  officialClip: ScreenOfficialClip | null;
+  evidence: ScreenCueEvidence[];
+  stillPath: string | null;
+  listen: ScreenCueListen;
+}
+
+export interface ScreenTitleDetail extends ScreenTitleSummary {
+  cues: ScreenCue[];
+}
+
+/** 비교 화면 '이 곡이 나온 작품' 띠 한 칸 */
+export interface PieceScreenCue {
+  cueId: number;
+  titleId: number;
+  titleKo: string;
+  kind: ScreenTitleKind;
+  releaseYear: number | null;
+  posterPath: string | null;
+  partLabel: string | null;
+  episodeLabel: string | null;
+  /** 영화에 나온 대목과 같은 비교 구간. 다른 대목이면 null */
+  sectorId: number | null;
+  usage: ScreenCueUsage;
+}
+
+/** '그 대목 바로 듣기' 한 칸 */
+export interface FeaturedScreenCue {
+  cueId: number;
+  titleId: number;
+  titleKo: string;
+  kind: ScreenTitleKind;
+  posterPath: string | null;
+  composerId: number;
+  composerName: string;
+  pieceId: number;
+  workTitle: string;
+  partLabel: string | null;
+  sectorId: number;
+}
+
+export interface ScreenCueStill {
+  id: number;
+  workTitle: string;
+  partLabel: string | null;
+  stillPath: string | null;
+}
+
+export interface ScreenStillCandidates {
+  titleId: number;
+  backdropPath: string | null;
+  stillPaths: string[];
+  cues: ScreenCueStill[];
+}
