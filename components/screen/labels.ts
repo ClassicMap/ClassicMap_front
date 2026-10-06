@@ -6,6 +6,13 @@ export const SCREEN_KIND_LABELS: Record<ScreenTitleKind, string> = {
   ANIME: '애니',
 };
 
+/** 좁은 칸(포스터 아래, 띠)에 쓰는 짧은 이름 */
+export const SCREEN_KIND_SHORT_LABELS: Record<ScreenTitleKind, string> = {
+  MOVIE: '영화',
+  SERIES: '드라마',
+  ANIME: '애니',
+};
+
 export const SCREEN_USAGE_LABELS: Record<ScreenCueUsage, string> = {
   SCORE: '배경음악',
   SOURCE: '화면 속 음악',
@@ -37,6 +44,11 @@ export function approxTimeText(seconds: number | null): string | null {
 
 export function titleMeta(kind: ScreenTitleKind, year: number | null): string {
   return [SCREEN_KIND_LABELS[kind], year ? String(year) : null].filter(Boolean).join(' · ');
+}
+
+/** 포스터 아래 한 줄: "드라마 · 2021" */
+export function shortTitleMeta(kind: ScreenTitleKind, year: number | null): string {
+  return [SCREEN_KIND_SHORT_LABELS[kind], year ? String(year) : null].filter(Boolean).join(' · ');
 }
 
 export function youtubeClipUrl(videoId: string, startSec: number): string {

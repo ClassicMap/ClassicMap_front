@@ -1,11 +1,13 @@
 import { ScrollShelf } from '@/components/home/shelf';
-import { episodeText, SCREEN_KIND_LABELS } from '@/components/screen/labels';
+import { SCREEN_KIND_LABELS, shortTitleMeta } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
+import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { usePieceScreenCues, usePrefetchScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { PieceScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
+import { ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -22,7 +24,7 @@ function groupByTitle(cues: PieceScreenCue[], activeSectorId: number | undefined
   return [...titles.values()].sort((a, b) => Number(b.sameSector) - Number(a.sameSector));
 }
 
-/** 비교 화면 아래 '이 곡이 나온 작품'. 나온 작품이 없으면 그리지 않는다 */
+/** 비교 화면 아래 '영화 속 클래식' 띠. 이 곡이 나온 작품이 없으면 그리지 않는다 */
 export function PieceScreenStrip({
   pieceId,
   activeSectorId,
@@ -40,10 +42,16 @@ export function PieceScreenStrip({
 
   return (
     <View className={cn('gap-2.5', className)}>
-      <View className="flex-row items-baseline justify-between">
-        <Text variant="headline">이 곡이 나온 작품</Text>
-        <Pressable onPress={() => router.push('/films' as Href)} accessibilityRole="link" hitSlop={8}>
-          <Text variant="caption">영화 속 클래식</Text>
+      <View className="flex-row items-center justify-between">
+        <Text variant="headline">영화 속 클래식</Text>
+        <Pressable
+          onPress={() => router.push('/films' as Href)}
+          accessibilityRole="link"
+          accessibilityLabel="영화 속 클래식 모두 보기"
+          hitSlop={8}
+          className="flex-row items-center gap-0.5 rounded-full px-2 py-1 active:bg-surface-2 web:hover:bg-surface-2">
+          <Text className="text-label font-semibold text-foreground-muted">모두 보기</Text>
+          <Icon as={ChevronRightIcon} size={14} className="text-foreground-muted" />
         </Pressable>
       </View>
       <ScrollShelf gap={12}>
@@ -54,24 +62,29 @@ export function PieceScreenStrip({
             onPressIn={() => prefetch(cue.titleId)}
             onPress={() => router.push(`/film/${cue.titleId}` as Href)}
             accessibilityRole="link"
-            accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}`}
+            accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}${sameSector ? ', 지금 구간이 나와요' : ''}`}
             style={{ width: CARD_WIDTH }}
             className="gap-1.5">
-            <ScreenPoster
-              title={cue.titleKo}
-              posterPath={cue.posterPath}
-              posterUrl={cue.posterUrl}
-              coverVideoId={cue.coverVideoId}
-              coverThumbs={cue.coverThumbs}
-              width={CARD_WIDTH}
-            />
+            <View>
+              <ScreenPoster
+                title={cue.titleKo}
+                posterPath={cue.posterPath}
+                posterUrl={cue.posterUrl}
+                coverVideoId={cue.coverVideoId}
+                coverThumbs={cue.coverThumbs}
+                width={CARD_WIDTH}
+              />
+              {sameSector ? (
+                <View className="absolute bottom-1.5 left-1.5 rounded-full bg-primary px-2 py-0.5">
+                  <Text className="text-[10px] font-bold text-primary-foreground">이 구간</Text>
+                </View>
+              ) : null}
+            </View>
             <Text numberOfLines={1} className="text-label font-semibold text-foreground">
               {cue.titleKo}
             </Text>
             <Text variant="micro" numberOfLines={1}>
-              {sameSector
-                ? '이 구간이 나와요'
-                : [cue.releaseYear, cue.partLabel ?? episodeText(cue.episodeLabel)].filter(Boolean).join(' · ')}
+              {shortTitleMeta(cue.kind, cue.releaseYear)}
             </Text>
           </Pressable>
         ))}
