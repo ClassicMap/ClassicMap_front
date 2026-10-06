@@ -684,6 +684,28 @@ export interface PieceScreenCue {
   coverThumbs: ScreenThumbs;
 }
 
+/** '곡으로 찾기' 한 줄. 영화에 나온 곡과 그 곡이 나온 작품들 */
+export interface ScreenWork {
+  composerId: number | null;
+  composerName: string;
+  /** 카탈로그 작품이면 비교로 바로 간다. 카탈로그 밖 곡이면 null */
+  pieceId: number | null;
+  workTitle: string;
+  titles: ScreenWorkTitle[];
+}
+
+export interface ScreenWorkTitle {
+  titleId: number;
+  titleKo: string;
+  kind: ScreenTitleKind;
+  releaseYear: number | null;
+}
+
+export interface ScreenWorkPage {
+  items: ScreenWork[];
+  hasMore: boolean;
+}
+
 /** '그 대목 바로 듣기' 한 칸 */
 export interface FeaturedScreenCue {
   cueId: number;

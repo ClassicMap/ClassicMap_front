@@ -1,11 +1,9 @@
 import { OptimizedImage } from '@/components/optimized-image';
-import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import type { ScreenThumbs } from '@/lib/types/models';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
-import { PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Animated, Platform, View } from 'react-native';
 
@@ -53,7 +51,7 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
     );
   }
   if (!coverVideoId) return slate;
-  const small = width < 70;
+  // 출처는 화면 아래 문구로 적고, 칸마다 배지를 달지 않는다
   return (
     <View style={{ width, height, borderRadius: radius, overflow: 'hidden' }} className="bg-surface-3">
       <YoutubeThumb
@@ -62,12 +60,6 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
         accessibilityLabel={`${title} 공식 클립 장면`}
         fallback={slate}
       />
-      <View
-        className="absolute flex-row items-center gap-1 rounded-full bg-black/60"
-        style={{ left: small ? 3 : 6, top: small ? 3 : 6, paddingHorizontal: small ? 3 : 6, paddingVertical: small ? 2 : 3 }}>
-        <Icon as={PlayIcon} size={small ? 8 : 10} className="fill-white text-white" />
-        {small ? null : <Text className="text-[10px] font-semibold text-white">공식 클립</Text>}
-      </View>
     </View>
   );
 }
