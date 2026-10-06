@@ -83,15 +83,16 @@ export default function FilmTitleScreen() {
   const cues: ScreenCue[] = title?.cues ?? [];
   const tmdbBackdrop = tmdbImageUrl(head.backdropPath, wide ? 'w1280' : 'w780');
   const cueClip = cues.map((cue) => cue.officialClip).find((clip) => clip?.videoId === head.coverVideoId);
-  const coverClip =
-    tmdbBackdrop || !head.coverVideoId
-      ? null
-      : {
-          videoId: head.coverVideoId,
-          startSec: cueClip?.startSec ?? 0,
-          channel: head.coverChannel ?? cueClip?.channel ?? 'YouTube',
-        };
-  const backdrop = tmdbBackdrop ?? coverClip?.videoId ?? null;
+  const coverClip = head.coverVideoId
+    ? {
+        videoId: head.coverVideoId,
+        startSec: cueClip?.startSec ?? 0,
+        channel: head.coverChannel ?? cueClip?.channel ?? 'YouTube',
+      }
+    : null;
+  // 대표 영상이 곡 카드에 이미 나오면 따로 두지 않는다. 곡 카드를 받기 전에는 판단하지 않는다
+  const showCoverClip = Boolean(title && coverClip && !cueClip);
+  const posterWidth = wide ? 152 : 112;
   const usesKmdb = cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
 
@@ -102,51 +103,31 @@ export default function FilmTitleScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={isRefetching && !isLoading} onRefresh={() => void refetch()} />}
         contentContainerClassName="pb-24">
-        {/* 스틸이 없으면 띠를 두지 않고 포스터부터 보인다 */}
-        {backdrop ? (
+        {/* TMDB 스틸이 있을 때만 위에 넓게 깐다. YouTube 썸네일은 글자가 박혀 있어 넓게 자르면 지저분해서 아래에 온전히 둔다 */}
+        {tmdbBackdrop ? (
           <View className="w-full bg-surface-3" style={{ aspectRatio: wide ? 21 / 8 : 16 / 9 }}>
-            {tmdbBackdrop ? (
-              <OptimizedImage
-                uri={tmdbBackdrop}
-                resizeMode="cover"
-                accessibilityLabel={`${head.titleKo} 스틸`}
-                style={{ width: '100%', height: '100%' }}
-              />
-            ) : coverClip ? (
-              <YoutubeThumb
-                videoId={coverClip.videoId}
-                thumbs={head.coverThumbs}
-                accessibilityLabel={`${head.titleKo} 공식 클립 장면`}
-              />
-            ) : null}
+            <OptimizedImage
+              uri={tmdbBackdrop}
+              resizeMode="cover"
+              accessibilityLabel={`${head.titleKo} 스틸`}
+              style={{ width: '100%', height: '100%' }}
+            />
             <Scrim from="bottom" color="#000" opacity={0.55} extent={60} />
-            {coverClip ? (
-              <Pressable
-                onPress={() =>
-                  Linking.openURL(youtubeClipUrl(coverClip.videoId, coverClip.startSec)).catch(() => undefined)
-                }
-                accessibilityRole="link"
-                accessibilityLabel={`YouTube ${coverClip.channel}에서 장면 보기`}
-                className="absolute bottom-2 right-3 flex-row items-center gap-1 rounded-full bg-black/55 px-2.5 py-1">
-                <Icon as={PlayIcon} size={10} className="fill-white text-white" />
-                <Text className="text-[11px] font-semibold text-white">YouTube · {coverClip.channel}</Text>
-              </Pressable>
-            ) : null}
           </View>
         ) : (
           <View style={{ height: insets.top + 60 }} />
         )}
 
         <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
-          <View className={cn('flex-row items-end gap-4', backdrop && '-mt-16')}>
-            <View className="rounded-md bg-background p-1">
+          <View className={cn('flex-row items-end gap-4', tmdbBackdrop && '-mt-16')}>
+            <View className={cn('rounded-md', tmdbBackdrop && 'bg-background p-1')}>
               <ScreenPoster
                 title={head.titleKo}
                 posterPath={head.posterPath}
                 posterUrl={head.posterUrl}
                 coverVideoId={head.coverVideoId}
                 coverThumbs={head.coverThumbs}
-                width={wide ? 132 : 104}
+                width={posterWidth}
               />
             </View>
             <View className="min-w-0 flex-1 pb-1">
@@ -180,6 +161,33 @@ export default function FilmTitleScreen() {
             <CueCardsSkeleton wide={wide} count={Math.min(head.cueCount, 4)} />
           )}
 
+          {showCoverClip && coverClip ? (
+            <View className="mt-10">
+              <Text variant="headline" className="mb-3">
+                공식 영상
+              </Text>
+              <Pressable
+                onPress={() =>
+                  Linking.openURL(youtubeClipUrl(coverClip.videoId, coverClip.startSec)).catch(() => undefined)
+                }
+                accessibilityRole="link"
+                accessibilityLabel={`YouTube ${coverClip.channel}에서 ${head.titleKo} 공식 영상 보기`}
+                className={cn('gap-2', wide && 'w-[calc(50%-6px)]')}>
+                <View className="w-full overflow-hidden rounded-xl bg-surface-3" style={{ aspectRatio: 16 / 9 }}>
+                  <YoutubeThumb videoId={coverClip.videoId} thumbs={head.coverThumbs} />
+                  <View className="absolute inset-0 items-center justify-center">
+                    <View className="size-12 items-center justify-center rounded-full bg-black/55">
+                      <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
+                    </View>
+                  </View>
+                </View>
+                <Text variant="micro" numberOfLines={1}>
+                  YouTube · {coverClip.channel}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <View className="mt-10 gap-2">
             {hasComparison ? (
               <Text variant="micro">비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.</Text>
@@ -201,17 +209,16 @@ export default function FilmTitleScreen() {
   );
 }
 
-/** 작품 페이지 모양 그대로의 자리. 장면 띠 → 포스터와 제목 → 곡 카드 */
+/** 작품 페이지 모양 그대로의 자리. 포스터와 제목 → 곡 카드 */
 function FilmTitleSkeleton({ wide }: { wide: boolean }) {
-  const posterWidth = wide ? 132 : 104;
+  const insets = useSafeAreaInsets();
+  const posterWidth = wide ? 152 : 112;
   return (
     <View className="flex-1">
-      <Skeleton className="w-full rounded-none" style={{ aspectRatio: wide ? 21 / 8 : 16 / 9 }} />
+      <View style={{ height: insets.top + 60 }} />
       <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
-        <View className="-mt-16 flex-row items-end gap-4">
-          <View className="rounded-md bg-background p-1">
-            <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
-          </View>
+        <View className="flex-row items-end gap-4">
+          <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
           <View className="flex-1 gap-2.5 pb-1">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-7 w-3/5" />
@@ -225,7 +232,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
   );
 }
 
-/** 곡 카드 자리. 장면 그림 → 쓰임 배지 → 곡 이름 → 설명 → 듣기 버튼 */
+/** 곡 카드 자리. 쓰임 줄·곡 이름(오른쪽 장면 그림) → 설명 → 듣기 버튼 → 근거 */
 function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
   return (
     <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
@@ -233,12 +240,18 @@ function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
         <View
           key={index}
           className={cn('overflow-hidden rounded-xl border border-border bg-surface-1', wide && 'w-[calc(50%-6px)]')}>
-          <Skeleton className="w-full rounded-none" style={{ aspectRatio: 16 / 9 }} />
           <View className="gap-3 p-4">
-            <Skeleton className="h-4 w-14 rounded-full" />
-            <Skeleton className="h-4 w-4/5" />
+            <View className="flex-row gap-3">
+              <View className="flex-1 gap-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-3 w-2/5" />
+              </View>
+              <Skeleton style={{ width: 116, aspectRatio: 16 / 9 }} />
+            </View>
             <SkeletonText lines={2} />
-            <Skeleton className="h-10 w-full rounded-full" />
+            <Skeleton className="h-11 w-full rounded-full" />
+            <Skeleton className="h-3 w-16" />
           </View>
         </View>
       ))}
