@@ -188,7 +188,8 @@ export function FeaturedPairNote({
   const sideOf = (performanceId: number): NoteTone | null =>
     performanceId === a.id ? 'a' : performanceId === b.id ? 'b' : null;
   return (
-    <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
+    // 본문은 72자에서 줄을 바꾸니 상자도 내용만큼만 둔다. 넓은 화면에서 오른쪽이 빈 띠로 남지 않게
+    <View className="max-w-full gap-2 self-start rounded-lg bg-surface-2 px-4 py-3.5">
       <Text className="text-micro text-primary">추천 비교</Text>
       <Text className="text-[18px] font-bold leading-[24px] tracking-tight text-foreground">
         {pair.title}
