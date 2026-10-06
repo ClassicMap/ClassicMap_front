@@ -92,8 +92,9 @@ export default function FilmTitleScreen() {
         channel: head.coverChannel ?? cueClip?.channel ?? 'YouTube',
       }
     : null;
-  // 대표 영상이 곡 카드에 이미 나오면 따로 두지 않는다. 곡 카드를 받기 전에는 판단하지 않는다
-  const showCoverClip = Boolean(title && coverClip && !cueClip);
+  // 대표 영상은 대개 예고편이다. 곡 카드에 장면 클립이 하나라도 있으면 그 장면들로 충분해 두지 않는다.
+  // 곡 카드를 받기 전에는 판단하지 않는다
+  const showCoverClip = Boolean(title && coverClip && !cues.some((cue) => cue.officialClip));
   const posterWidth = wide ? 152 : 112;
   const usesKmdb = cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
@@ -166,7 +167,7 @@ export default function FilmTitleScreen() {
           {showCoverClip && coverClip ? (
             <View className="mt-10">
               <Text variant="headline" className="mb-3">
-                공식 영상
+                예고편
               </Text>
               <View className={cn(wide && 'w-[calc(50%-6px)]')}>
                 <CoverClipCard clip={coverClip} thumbs={head.coverThumbs} titleKo={head.titleKo} />
@@ -195,7 +196,7 @@ export default function FilmTitleScreen() {
   );
 }
 
-/** 작품 대표 영상(예고편 등). 누르면 그 자리에서 틀고, 앱 안에서 못 틀면 YouTube로 연다 */
+/** 작품 예고편. 누르면 그 자리에서 틀고, 앱 안에서 못 틀면 YouTube로 연다 */
 function CoverClipCard({
   clip,
   thumbs,
@@ -215,7 +216,7 @@ function CoverClipCard({
         <ScreenClipPlayer
           videoId={clip.videoId}
           startSec={clip.startSec}
-          title={`${titleKo} 공식 영상`}
+          title={`${titleKo} 예고편`}
           onError={() => {
             setFailed(true);
             inline.close();
@@ -225,7 +226,7 @@ function CoverClipCard({
         <Pressable
           onPress={failed ? openExternal : inline.open}
           accessibilityRole="button"
-          accessibilityLabel={`${titleKo} 공식 영상 재생`}
+          accessibilityLabel={`${titleKo} 예고편 재생`}
           className="w-full overflow-hidden rounded-xl bg-surface-3"
           style={{ aspectRatio: 16 / 9 }}>
           <YoutubeThumb videoId={clip.videoId} thumbs={thumbs} />
@@ -239,7 +240,7 @@ function CoverClipCard({
       <View className="flex-row items-center justify-between gap-3">
         <Pressable onPress={openExternal} accessibilityRole="link" className="min-w-0 shrink py-1">
           <Text variant="micro" numberOfLines={1}>
-            YouTube · {clip.channel}
+            예고편 · YouTube · {clip.channel}
           </Text>
         </Pressable>
         {inline.active ? (
