@@ -195,7 +195,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
   );
 }
 
-/** 곡 카드 자리. 쓰임 줄·곡 이름(오른쪽 장면 그림) → 설명 → 듣기 버튼 → 근거 */
+/** 곡 카드 자리. 장면 사진 → 쓰임 줄·곡 이름 → 설명 → 듣기 버튼 → 근거 */
 function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
   return (
     <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
@@ -203,14 +203,12 @@ function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
         <View
           key={index}
           className={cn('overflow-hidden rounded-xl border border-border bg-surface-1', wide && 'w-[calc(50%-6px)]')}>
+          <Skeleton className="w-full rounded-none" style={{ aspectRatio: 16 / 9 }} />
           <View className="gap-3 p-4">
-            <View className="flex-row gap-3">
-              <View className="flex-1 gap-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-3 w-2/5" />
-              </View>
-              <Skeleton style={{ width: 116, aspectRatio: 16 / 9 }} />
+            <View className="gap-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-3 w-2/5" />
             </View>
             <SkeletonText lines={2} />
             <Skeleton className="h-11 w-full rounded-full" />
