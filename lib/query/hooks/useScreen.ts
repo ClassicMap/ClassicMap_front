@@ -6,6 +6,7 @@ import type { ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
 
 const PAGE_SIZE = 24;
 const STALE_MS = 5 * 60_000;
+const WORKS_PAGE_SIZE = 40;
 
 export const SCREEN_QUERY_KEYS = {
   titles: (kind: ScreenTitleKind | 'all') => ['screen-titles', kind] as const,
@@ -13,6 +14,7 @@ export const SCREEN_QUERY_KEYS = {
   title: (titleId: number) => ['screen-titles', 'detail', titleId] as const,
   pieceCues: (pieceId: number) => ['pieces', pieceId, 'screen-cues'] as const,
   featured: ['screen-cues', 'featured'] as const,
+  works: ['screen-works'] as const,
   stills: (titleId: number) => ['screen-titles', titleId, 'stills'] as const,
 };
 
@@ -98,6 +100,18 @@ export function usePieceScreenCues(pieceId: number | undefined) {
     queryKey: SCREEN_QUERY_KEYS.pieceCues(pieceId ?? 0),
     queryFn: () => ScreenAPI.getPieceCues(pieceId ?? 0),
     enabled: (pieceId ?? 0) > 0,
+    staleTime: STALE_MS,
+  });
+}
+
+/** 곡으로 찾기. 고를 때만 부르고 offset 페이지를 이어 붙인다 */
+export function useScreenWorks(enabled: boolean) {
+  return useInfiniteQuery({
+    queryKey: SCREEN_QUERY_KEYS.works,
+    queryFn: ({ pageParam }) => ScreenAPI.getWorks({ offset: pageParam, limit: WORKS_PAGE_SIZE }),
+    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length * WORKS_PAGE_SIZE : undefined),
+    initialPageParam: 0,
+    enabled,
     staleTime: STALE_MS,
   });
 }

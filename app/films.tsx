@@ -1,7 +1,9 @@
 import { ScrollShelf } from '@/components/home/shelf';
 import { SCREEN_KIND_LABELS, shortTitleMeta, titleMeta } from '@/components/screen/labels';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
+import { ScreenWorksList } from '@/components/screen/screen-works-list';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
+import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -25,6 +27,13 @@ import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type KindFilter = ScreenTitleKind | 'all';
+/** 작품에서 찾기(포스터 목록) · 곡에서 찾기(작곡가별 곡 목록) */
+type BrowseView = 'titles' | 'works';
+
+const VIEW_OPTIONS: { value: BrowseView; label: string }[] = [
+  { value: 'titles', label: '작품' },
+  { value: 'works', label: '곡' },
+];
 
 const KIND_CHIPS: { key: KindFilter; label: string }[] = [
   { key: 'all', label: '전체' },
@@ -51,12 +60,15 @@ export default function FilmsScreen() {
 
   const [query, setQuery] = React.useState('');
   const [kind, setKind] = React.useState<KindFilter>('all');
+  const [view, setView] = React.useState<BrowseView>('titles');
   const debounced = useDebounce(query, 300).trim();
   const titles = useScreenTitles(kind);
   const search = useScreenTitleSearch(debounced, kind);
   const featured = useFeaturedScreenCues();
 
   const searching = debounced.length > 0;
+  // 검색 결과는 늘 작품이다(곡·작곡가 이름으로도 찾는다)
+  const showWorks = view === 'works' && !searching;
   const listed = titles.data?.pages.flatMap((page) => page.items) ?? [];
   const found = search.data?.pages.flatMap((page) => page.items) ?? [];
   const items = searching ? found : listed;
@@ -101,13 +113,30 @@ export default function FilmsScreen() {
         ) : null}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3" contentContainerClassName="gap-2">
-        {KIND_CHIPS.map((chip) => (
-          <Chip key={chip.key} label={chip.label} selected={kind === chip.key} onPress={() => setKind(chip.key)} />
-        ))}
-      </ScrollView>
+      {searching ? null : (
+        <View className="mt-3 flex-row items-center gap-3">
+          <ViewToggle value={view} onChange={setView} />
+          {showWorks ? (
+            <Text variant="caption" className="min-w-0 flex-1">
+              작곡가별로 영화에 나온 곡을 모았어요.
+            </Text>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="gap-2">
+              {KIND_CHIPS.map((chip) => (
+                <Chip key={chip.key} label={chip.label} selected={kind === chip.key} onPress={() => setKind(chip.key)} />
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
 
-      {!searching && kind === 'all' && featured.isLoading ? (
+      {showWorks ? (
+        <View className="mt-7">
+          <ScreenWorksList />
+        </View>
+      ) : null}
+
+      {!showWorks && !searching && kind === 'all' && featured.isLoading ? (
         <View className="mt-7 gap-3">
           <View className="gap-1.5">
             <Skeleton className="h-5 w-36" />
@@ -128,7 +157,7 @@ export default function FilmsScreen() {
         </View>
       ) : null}
 
-      {!searching && kind === 'all' && (featured.data?.length ?? 0) > 0 ? (
+      {!showWorks && !searching && kind === 'all' && (featured.data?.length ?? 0) > 0 ? (
         <View className="mt-7 gap-3">
           <View>
             <Text variant="headline">그 대목 바로 듣기</Text>
@@ -144,67 +173,95 @@ export default function FilmsScreen() {
         </View>
       ) : null}
 
-      <View className="mt-7">
-        <Text variant="headline" className="mb-3">
-          {searching ? `“${debounced}” 검색 결과` : '작품'}
-        </Text>
-        {loading ? (
-          <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
-            {Array.from({ length: columns * 2 }, (_, index) => (
-              <View key={index} style={{ width: posterWidth }} className="gap-1.5">
-                <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
-                <Skeleton className="mt-0.5 h-3.5 w-4/5" />
-                <Skeleton className="h-3 w-1/2" />
-              </View>
-            ))}
-          </View>
-        ) : failed ? (
-          <EmptyState
-            icon={AlertCircleIcon}
-            tone="error"
-            compact
-            title="작품을 불러오지 못했어요"
-            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-            action={{
-              label: '다시 시도',
-              onPress: () => void (searching ? search.refetch() : titles.refetch()),
-            }}
-          />
-        ) : items.length === 0 ? (
-          <EmptyState
-            icon={ClapperboardIcon}
-            compact
-            title={searching ? `“${debounced}”가 나온 작품을 아직 못 찾았어요` : '아직 정리한 작품이 없어요'}
-            description={searching ? '다른 제목이나 곡 이름으로 찾아보세요.' : '근거를 확인한 작품부터 하나씩 채우고 있어요.'}
-          />
-        ) : (
-          <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
-            {items.map((item) => (
-              <TitleTile key={item.id} item={item} width={posterWidth} />
-            ))}
-          </View>
-        )}
-        {paging.hasNextPage ? (
-          <Button
-            variant="outline"
-            className="mt-6 h-11 self-center rounded-full px-6"
-            disabled={paging.isFetchingNextPage}
-            onPress={() => void paging.fetchNextPage()}>
-            <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
-          </Button>
-        ) : null}
-      </View>
+      {showWorks ? null : (
+        <View className="mt-7">
+          <Text variant="headline" className="mb-3">
+            {searching ? `“${debounced}” 검색 결과` : '작품'}
+          </Text>
+          {loading ? (
+            <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
+              {Array.from({ length: columns * 2 }, (_, index) => (
+                <View key={index} style={{ width: posterWidth }} className="gap-1.5">
+                  <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
+                  <Skeleton className="mt-0.5 h-3.5 w-4/5" />
+                  <Skeleton className="h-3 w-1/2" />
+                </View>
+              ))}
+            </View>
+          ) : failed ? (
+            <EmptyState
+              icon={AlertCircleIcon}
+              tone="error"
+              compact
+              title="작품을 불러오지 못했어요"
+              description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+              action={{
+                label: '다시 시도',
+                onPress: () => void (searching ? search.refetch() : titles.refetch()),
+              }}
+            />
+          ) : items.length === 0 ? (
+            <EmptyState
+              icon={ClapperboardIcon}
+              compact
+              title={searching ? `“${debounced}”가 나온 작품을 아직 못 찾았어요` : '아직 정리한 작품이 없어요'}
+              description={searching ? '다른 제목이나 곡 이름으로 찾아보세요.' : '근거를 확인한 작품부터 하나씩 채우고 있어요.'}
+            />
+          ) : (
+            <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
+              {items.map((item) => (
+                <TitleTile key={item.id} item={item} width={posterWidth} />
+              ))}
+            </View>
+          )}
+          {paging.hasNextPage ? (
+            <Button
+              variant="outline"
+              className="mt-6 h-11 self-center rounded-full px-6"
+              disabled={paging.isFetchingNextPage}
+              onPress={() => void paging.fetchNextPage()}>
+              <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
+            </Button>
+          ) : null}
+        </View>
+      )}
 
-      <View className="mt-12 gap-3">
-        {items.some((item) => item.posterUrl) ? (
-          <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
-        ) : null}
-        <Text variant="micro">
-          포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.
-        </Text>
-        {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
-      </View>
+      {/* 그림 출처. 곡 목록에는 그림이 없다 */}
+      {showWorks ? null : (
+        <View className="mt-12 gap-3">
+          {items.some((item) => item.posterUrl) ? (
+            <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
+          ) : null}
+          <Text variant="micro">
+            포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.
+          </Text>
+          {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
+        </View>
+      )}
     </ScrollView>
+  );
+}
+
+function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: BrowseView) => void }) {
+  return (
+    <View accessibilityRole="radiogroup" accessibilityLabel="찾는 방법" className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
+      {VIEW_OPTIONS.map((option) => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            onPress={() => onChange(option.value)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            style={selected ? SELECTED_SHADOW : undefined}
+            className={cn('h-8 items-center justify-center rounded-full px-4', selected && 'bg-surface-1')}>
+            <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 

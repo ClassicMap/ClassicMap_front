@@ -15,6 +15,8 @@ import type {
   ScreenTitleKind,
   ScreenTitlePage,
   ScreenTitleSummary,
+  ScreenWork,
+  ScreenWorkPage,
 } from '@/lib/types/models';
 
 export const SCREEN_TITLE_KINDS: readonly ScreenTitleKind[] = ['MOVIE', 'SERIES', 'ANIME'];
@@ -221,6 +223,29 @@ export const ScreenAPI = {
       coverVideoId: optionalText(item.coverVideoId),
       coverThumbs: parseThumbs(item.coverThumbJpg, item.coverThumbWebp),
     }));
+  },
+
+  async getWorks(params: { offset?: number; limit?: number } = {}): Promise<ScreenWorkPage> {
+    const query = new URLSearchParams();
+    if (params.offset) query.append('offset', String(params.offset));
+    if (params.limit) query.append('limit', String(params.limit));
+    const payload = await get(`/screen-works?${query.toString()}`, '영화에 나온 곡을 불러오지 못했습니다.');
+    if (!isRecord(payload) || !Array.isArray(payload.items)) {
+      throw new Error('영화에 나온 곡 응답 형식이 올바르지 않습니다.');
+    }
+    const items: ScreenWork[] = payload.items.filter(isRecord).map((item) => ({
+      composerId: optionalNumber(item.composerId),
+      composerName: text(item.composerName),
+      pieceId: optionalNumber(item.pieceId),
+      workTitle: text(item.workTitle),
+      titles: (Array.isArray(item.titles) ? item.titles : []).filter(isRecord).map((title) => ({
+        titleId: Number(title.titleId),
+        titleKo: text(title.titleKo),
+        kind: oneOf(title.kind, SCREEN_TITLE_KINDS, 'MOVIE'),
+        releaseYear: optionalNumber(title.releaseYear),
+      })),
+    }));
+    return { items, hasMore: payload.hasMore === true };
   },
 
   async getFeaturedCues(limit = 12): Promise<FeaturedScreenCue[]> {
