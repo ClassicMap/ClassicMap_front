@@ -13,10 +13,11 @@ import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useS
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
+import { useLeadPerformance } from '@/components/screen/use-lead-performance';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
-import { ChevronDownIcon, ExternalLinkIcon, ImageIcon, PlayIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -183,26 +184,8 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 
 function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (sectorId?: number) => void }) {
   const listen = cue.listen;
-  if (listen.kind === 'sector') {
-    return (
-      <Button className="h-11 rounded-full" onPress={() => onOpenCompare(listen.sectorId)}>
-        <Text className="font-bold text-primary-foreground">
-          그 대목 비교해 듣기 · 연주 {listen.readyPerformanceCount}개
-        </Text>
-      </Button>
-    );
-  }
-  if (listen.kind === 'piece') {
-    return (
-      <View className="gap-1.5">
-        <Button variant="outline" className="h-11 rounded-full" onPress={() => onOpenCompare()}>
-          <Text className="font-semibold text-foreground">이 곡 비교해 듣기</Text>
-        </Button>
-        <Text variant="micro" className="text-center">
-          영화에 나온 대목은 아직 비교 구간이 없어요.
-        </Text>
-      </View>
-    );
+  if (listen.kind === 'sector' || listen.kind === 'piece') {
+    return <QuickListen cue={cue} sectorId={listen.kind === 'sector' ? listen.sectorId : undefined} onOpenCompare={onOpenCompare} />;
   }
   if (listen.kind === 'external') {
     const links = PLATFORM_LINKS.flatMap((platform) => {
@@ -225,6 +208,55 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
     );
   }
   return <Text variant="micro">아직 ClassicMap에 없는 곡이에요.</Text>;
+}
+
+/**
+ * 대표 연주를 아래 재생바에서 바로 튼다. 듣다가 '다른 연주와 비교'로 넘어가면 같은 연주가 그대로 이어진다.
+ * 영화에 나온 대목과 같은 구간이 없으면 같은 곡의 다른 구간 대표 연주를 들려준다
+ */
+function QuickListen({
+  cue,
+  sectorId,
+  onOpenCompare,
+}: {
+  cue: ScreenCue;
+  sectorId?: number;
+  onOpenCompare: (sectorId?: number) => void;
+}) {
+  const sameSector = sectorId !== undefined;
+  const lead = useLeadPerformance(cue.pieceId, sectorId);
+  const playLabel = lead.loading
+    ? '연주 불러오는 중…'
+    : !lead.lead
+      ? '지금 바로 들을 연주가 없어요'
+      : `${lead.playing ? '일시정지' : '바로 듣기'} · ${lead.artistName ?? '대표 연주'}`;
+  return (
+    <View className="gap-2">
+      <Button
+        className="h-11 flex-row gap-2 rounded-full"
+        disabled={!lead.lead}
+        onPress={lead.toggle}
+        accessibilityLabel={lead.lead ? `${cue.workTitle} ${lead.artistName ?? '대표'} 연주 ${lead.playing ? '일시정지' : '바로 듣기'}` : undefined}>
+        {lead.lead ? (
+          <Icon as={lead.playing ? PauseIcon : PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
+        ) : null}
+        <Text className="font-bold text-primary-foreground" numberOfLines={1}>
+          {playLabel}
+        </Text>
+      </Button>
+      <Button variant="outline" className="h-10 flex-row gap-1 rounded-full" onPress={() => onOpenCompare(lead.sectorId ?? sectorId)}>
+        <Text className="font-semibold text-foreground">
+          {sameSector && lead.performanceCount > 1 ? `다른 연주와 비교 · ${lead.performanceCount}개` : '다른 연주와 비교'}
+        </Text>
+        <Icon as={ChevronRightIcon} size={16} className="text-foreground" />
+      </Button>
+      {sameSector ? null : (
+        <Text variant="micro" className="text-center">
+          영화에 나온 대목은 아직 비교 구간이 없어 같은 곡의 다른 구간을 들려줘요.
+        </Text>
+      )}
+    </View>
+  );
 }
 
 /** 관리자 장면 스틸 고르기. 후보는 TMDB 에서 받은 작품·회차 스틸뿐이다 */
