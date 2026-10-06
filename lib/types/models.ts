@@ -610,12 +610,17 @@ export interface ScreenTitlePage {
   hasMore: boolean;
 }
 
+/** 그 곡이 나오는 장면을 보여 주는 썸네일. default 는 대표 썸네일, 1·2·3 은 영상 25·50·75% 지점 자동 그림 */
+export type ScreenSceneFrame = 'default' | '1' | '2' | '3';
+
 export interface ScreenOfficialClip {
   videoId: string;
   startSec: number;
   channel: string;
   title: string;
   thumbs: ScreenThumbs;
+  /** 사람이 확인한 장면 그림. 없으면 장면 그림을 두지 않는다 */
+  sceneFrame: ScreenSceneFrame | null;
 }
 
 export interface ScreenCueEvidence {

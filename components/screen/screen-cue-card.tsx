@@ -13,10 +13,11 @@ import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useS
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
+import { useLeadPerformance } from '@/components/screen/use-lead-performance';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
-import { ChevronDownIcon, ExternalLinkIcon, ImageIcon, PlayIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -25,9 +26,6 @@ function openExternal(url: string) {
     Alert.alert('링크를 열지 못했어요', '잠시 뒤 다시 시도해 주세요.');
   });
 }
-
-/** 곡 이름 옆 장면 그림 너비. 카드를 길게 만들지 않게 작게 둔다 */
-const SCENE_THUMB_WIDTH = 116;
 
 const PLATFORM_LINKS: { key: keyof ScreenStreamingLinks; label: string }[] = [
   { key: 'appleMusicUrl', label: 'Apple Music' },
@@ -52,9 +50,10 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   // 스포일러 장면은 설명을 펼치기 전까지 스틸도 숨긴다
   const hidden = cue.spoiler && !showSpoiler;
   const still = hidden ? null : tmdbImageUrl(cue.stillPath, 'w780');
-  // TMDB 스틸이 없으면 권리자 공식 클립의 썸네일을 장면 그림으로 쓴다
+  // 장면 그림은 사람이 확인한 공식 클립에만 사진으로 둔다(sceneFrame). 영상은 아래 'YouTube · 채널'로 연다
   const clip = cue.officialClip;
-  const clipScene = Boolean(clip) && !still && !hidden;
+  const sceneFrame = clip?.sceneFrame ?? null;
+  const clipScene = Boolean(clip && sceneFrame) && !still && !hidden;
   const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
@@ -69,45 +68,42 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 
   return (
     <View className="overflow-hidden rounded-xl border border-border bg-surface-1">
-      <View className="gap-3 p-4">
-        {/* 무슨 곡인지가 먼저다. 장면 그림은 오른쪽에 작게 둔다 */}
-        <View className="flex-row gap-3">
-          <View className="min-w-0 flex-1">
-            <Text variant="micro" numberOfLines={1} className="font-semibold text-primary">
-              {meta}
-            </Text>
-            <Text className="mt-1 text-body font-bold text-foreground">
-              {cue.composerName} · {cue.workTitle}
-            </Text>
-            {cue.partLabel ? (
-              <Text variant="caption" className="mt-0.5">
-                {cue.partLabel}
-              </Text>
-            ) : null}
+      {/* 장면 사진을 카드 위에 크게 두고, 그 아래에 곡과 장면 설명을 둔다 */}
+      {still ? (
+        <OptimizedImage
+          uri={still}
+          resizeMode="cover"
+          accessibilityLabel={`${cue.workTitle} 장면 스틸`}
+          style={{ width: '100%', aspectRatio: 16 / 9 }}
+        />
+      ) : clipScene && clip ? (
+        <View
+          accessibilityLabel={`${cue.workTitle}이 나오는 장면`}
+          style={{ width: '100%', aspectRatio: 16 / 9 }}
+          className="bg-surface-3">
+          <YoutubeThumb
+            videoId={clip.videoId}
+            thumbs={clip.thumbs}
+            frame={sceneFrame === 'default' || sceneFrame === null ? undefined : sceneFrame}
+          />
+          {/* 채널 로고가 대개 왼쪽 아래나 오른쪽 위에 있어 왼쪽 위에 둔다 */}
+          <View className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5">
+            <Text className="text-[11px] font-semibold text-white">이 장면에서 나와요</Text>
           </View>
-          {still ? (
-            <View style={{ width: SCENE_THUMB_WIDTH, aspectRatio: 16 / 9 }} className="overflow-hidden rounded-md bg-surface-3">
-              <OptimizedImage
-                uri={still}
-                resizeMode="cover"
-                accessibilityLabel={`${cue.workTitle} 장면 스틸`}
-                style={{ width: '100%', height: '100%' }}
-              />
-            </View>
-          ) : clipScene && clip ? (
-            <Pressable
-              onPress={openClip}
-              accessibilityRole="link"
-              accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
-              style={{ width: SCENE_THUMB_WIDTH, aspectRatio: 16 / 9 }}
-              className="overflow-hidden rounded-md bg-surface-3">
-              <YoutubeThumb videoId={clip.videoId} thumbs={clip.thumbs} />
-              <View className="absolute inset-0 items-center justify-center">
-                <View className="size-8 items-center justify-center rounded-full bg-black/55">
-                  <Icon as={PlayIcon} size={13} className="ml-0.5 fill-white text-white" />
-                </View>
-              </View>
-            </Pressable>
+        </View>
+      ) : null}
+      <View className="gap-3 p-4">
+        <View>
+          <Text variant="micro" numberOfLines={1} className="font-semibold text-primary">
+            {meta}
+          </Text>
+          <Text className="mt-1 text-body font-bold text-foreground">
+            {cue.composerName} · {cue.workTitle}
+          </Text>
+          {cue.partLabel ? (
+            <Text variant="caption" className="mt-0.5">
+              {cue.partLabel}
+            </Text>
           ) : null}
         </View>
 
@@ -188,26 +184,8 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 
 function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (sectorId?: number) => void }) {
   const listen = cue.listen;
-  if (listen.kind === 'sector') {
-    return (
-      <Button className="h-11 rounded-full" onPress={() => onOpenCompare(listen.sectorId)}>
-        <Text className="font-bold text-primary-foreground">
-          그 대목 비교해 듣기 · 연주 {listen.readyPerformanceCount}개
-        </Text>
-      </Button>
-    );
-  }
-  if (listen.kind === 'piece') {
-    return (
-      <View className="gap-1.5">
-        <Button variant="outline" className="h-11 rounded-full" onPress={() => onOpenCompare()}>
-          <Text className="font-semibold text-foreground">이 곡 비교해 듣기</Text>
-        </Button>
-        <Text variant="micro" className="text-center">
-          영화에 나온 대목은 아직 비교 구간이 없어요.
-        </Text>
-      </View>
-    );
+  if (listen.kind === 'sector' || listen.kind === 'piece') {
+    return <QuickListen cue={cue} sectorId={listen.kind === 'sector' ? listen.sectorId : undefined} onOpenCompare={onOpenCompare} />;
   }
   if (listen.kind === 'external') {
     const links = PLATFORM_LINKS.flatMap((platform) => {
@@ -230,6 +208,55 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
     );
   }
   return <Text variant="micro">아직 ClassicMap에 없는 곡이에요.</Text>;
+}
+
+/**
+ * 대표 연주를 아래 재생바에서 바로 튼다. 듣다가 '다른 연주와 비교'로 넘어가면 같은 연주가 그대로 이어진다.
+ * 영화에 나온 대목과 같은 구간이 없으면 같은 곡의 다른 구간 대표 연주를 들려준다
+ */
+function QuickListen({
+  cue,
+  sectorId,
+  onOpenCompare,
+}: {
+  cue: ScreenCue;
+  sectorId?: number;
+  onOpenCompare: (sectorId?: number) => void;
+}) {
+  const sameSector = sectorId !== undefined;
+  const lead = useLeadPerformance(cue.pieceId, sectorId);
+  const playLabel = lead.loading
+    ? '연주 불러오는 중…'
+    : !lead.lead
+      ? '지금 바로 들을 연주가 없어요'
+      : `${lead.playing ? '일시정지' : '바로 듣기'} · ${lead.artistName ?? '대표 연주'}`;
+  return (
+    <View className="gap-2">
+      <Button
+        className="h-11 flex-row gap-2 rounded-full"
+        disabled={!lead.lead}
+        onPress={lead.toggle}
+        accessibilityLabel={lead.lead ? `${cue.workTitle} ${lead.artistName ?? '대표'} 연주 ${lead.playing ? '일시정지' : '바로 듣기'}` : undefined}>
+        {lead.lead ? (
+          <Icon as={lead.playing ? PauseIcon : PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
+        ) : null}
+        <Text className="font-bold text-primary-foreground" numberOfLines={1}>
+          {playLabel}
+        </Text>
+      </Button>
+      <Button variant="outline" className="h-10 flex-row gap-1 rounded-full" onPress={() => onOpenCompare(lead.sectorId ?? sectorId)}>
+        <Text className="font-semibold text-foreground">
+          {sameSector && lead.performanceCount > 1 ? `다른 연주와 비교 · ${lead.performanceCount}개` : '다른 연주와 비교'}
+        </Text>
+        <Icon as={ChevronRightIcon} size={16} className="text-foreground" />
+      </Button>
+      {sameSector ? null : (
+        <Text variant="micro" className="text-center">
+          영화에 나온 대목은 아직 비교 구간이 없어 같은 곡의 다른 구간을 들려줘요.
+        </Text>
+      )}
+    </View>
+  );
 }
 
 /** 관리자 장면 스틸 고르기. 후보는 TMDB 에서 받은 작품·회차 스틸뿐이다 */

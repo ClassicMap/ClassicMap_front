@@ -7,6 +7,7 @@ import type {
   ScreenCueListen,
   ScreenCueUsage,
   ScreenOfficialClip,
+  ScreenSceneFrame,
   ScreenStillCandidates,
   ScreenStreamingLinks,
   ScreenThumbQuality,
@@ -22,6 +23,7 @@ import type {
 export const SCREEN_TITLE_KINDS: readonly ScreenTitleKind[] = ['MOVIE', 'SERIES', 'ANIME'];
 const USAGES: readonly ScreenCueUsage[] = ['SCORE', 'SOURCE', 'PERFORMED', 'TITLES'];
 const THUMB_QUALITIES: readonly ScreenThumbQuality[] = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'];
+const SCENE_FRAMES: readonly ScreenSceneFrame[] = ['default', '1', '2', '3'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -102,6 +104,10 @@ function parseClip(value: unknown): ScreenOfficialClip | null {
     channel: text(value.channel),
     title: text(value.title),
     thumbs: parseThumbs(value.thumbJpg, value.thumbWebp),
+    sceneFrame:
+      typeof value.sceneFrame === 'string' && (SCENE_FRAMES as readonly string[]).includes(value.sceneFrame)
+        ? (value.sceneFrame as ScreenSceneFrame)
+        : null,
   };
 }
 

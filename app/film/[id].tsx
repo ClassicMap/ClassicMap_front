@@ -1,5 +1,5 @@
 import { OptimizedImage } from '@/components/optimized-image';
-import { titleMeta, youtubeClipUrl } from '@/components/screen/labels';
+import { titleMeta } from '@/components/screen/labels';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
@@ -13,12 +13,11 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useCachedScreenTitleSummary, useScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { ScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, PlayIcon } from 'lucide-react-native';
+import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FilmTitleScreen() {
@@ -82,16 +81,6 @@ export default function FilmTitleScreen() {
   // TMDB 스틸이 없으면 권리자 공식 클립의 장면을 깐다. 누르면 그 클립이 열리고 출처를 적는다
   const cues: ScreenCue[] = title?.cues ?? [];
   const tmdbBackdrop = tmdbImageUrl(head.backdropPath, wide ? 'w1280' : 'w780');
-  const cueClip = cues.map((cue) => cue.officialClip).find((clip) => clip?.videoId === head.coverVideoId);
-  const coverClip = head.coverVideoId
-    ? {
-        videoId: head.coverVideoId,
-        startSec: cueClip?.startSec ?? 0,
-        channel: head.coverChannel ?? cueClip?.channel ?? 'YouTube',
-      }
-    : null;
-  // 대표 영상이 곡 카드에 이미 나오면 따로 두지 않는다. 곡 카드를 받기 전에는 판단하지 않는다
-  const showCoverClip = Boolean(title && coverClip && !cueClip);
   const posterWidth = wide ? 152 : 112;
   const usesKmdb = cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
@@ -161,32 +150,6 @@ export default function FilmTitleScreen() {
             <CueCardsSkeleton wide={wide} count={Math.min(head.cueCount, 4)} />
           )}
 
-          {showCoverClip && coverClip ? (
-            <View className="mt-10">
-              <Text variant="headline" className="mb-3">
-                공식 영상
-              </Text>
-              <Pressable
-                onPress={() =>
-                  Linking.openURL(youtubeClipUrl(coverClip.videoId, coverClip.startSec)).catch(() => undefined)
-                }
-                accessibilityRole="link"
-                accessibilityLabel={`YouTube ${coverClip.channel}에서 ${head.titleKo} 공식 영상 보기`}
-                className={cn('gap-2', wide && 'w-[calc(50%-6px)]')}>
-                <View className="w-full overflow-hidden rounded-xl bg-surface-3" style={{ aspectRatio: 16 / 9 }}>
-                  <YoutubeThumb videoId={coverClip.videoId} thumbs={head.coverThumbs} />
-                  <View className="absolute inset-0 items-center justify-center">
-                    <View className="size-12 items-center justify-center rounded-full bg-black/55">
-                      <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
-                    </View>
-                  </View>
-                </View>
-                <Text variant="micro" numberOfLines={1}>
-                  YouTube · {coverClip.channel}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
 
           <View className="mt-10 gap-2">
             {hasComparison ? (
@@ -197,7 +160,7 @@ export default function FilmTitleScreen() {
             ) : null}
             {usesKmdb ? <Text variant="micro">곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.</Text> : null}
             {head.coverVideoId || cues.some((cue) => cue.officialClip) ? (
-              <Text variant="micro">장면 그림은 권리자 공식 YouTube 영상의 썸네일이에요. 누르면 그 영상이 열려요.</Text>
+              <Text variant="micro">장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.</Text>
             ) : null}
           </View>
           {head.posterPath || head.backdropPath || cues.some((cue) => cue.stillPath) ? (
@@ -232,7 +195,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
   );
 }
 
-/** 곡 카드 자리. 쓰임 줄·곡 이름(오른쪽 장면 그림) → 설명 → 듣기 버튼 → 근거 */
+/** 곡 카드 자리. 장면 사진 → 쓰임 줄·곡 이름 → 설명 → 듣기 버튼 → 근거 */
 function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
   return (
     <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
@@ -240,14 +203,12 @@ function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
         <View
           key={index}
           className={cn('overflow-hidden rounded-xl border border-border bg-surface-1', wide && 'w-[calc(50%-6px)]')}>
+          <Skeleton className="w-full rounded-none" style={{ aspectRatio: 16 / 9 }} />
           <View className="gap-3 p-4">
-            <View className="flex-row gap-3">
-              <View className="flex-1 gap-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-3 w-2/5" />
-              </View>
-              <Skeleton style={{ width: 116, aspectRatio: 16 / 9 }} />
+            <View className="gap-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-3 w-2/5" />
             </View>
             <SkeletonText lines={2} />
             <Skeleton className="h-11 w-full rounded-full" />

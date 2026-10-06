@@ -27,8 +27,21 @@ interface Pick {
   quality: Quality;
 }
 
-const webpUrl = (videoId: string, quality: Quality) => `https://i.ytimg.com/vi_webp/${videoId}/${quality}.webp`;
-const jpgUrl = (videoId: string, quality: Quality) => `https://i.ytimg.com/vi/${videoId}/${quality}.jpg`;
+/** YouTube 가 영상 25·50·75% 지점에서 자동으로 뜬 그림. 화질별 이름은 maxres1·sd1·hq1·mq1 처럼 붙는다 */
+export type AutoFrame = '1' | '2' | '3';
+const FRAME_PREFIX: Record<Quality, string> = {
+  maxresdefault: 'maxres',
+  sddefault: 'sd',
+  hqdefault: 'hq',
+  mqdefault: 'mq',
+};
+const fileName = (quality: Quality, frame: AutoFrame | undefined) => (frame ? `${FRAME_PREFIX[quality]}${frame}` : quality);
+const webpUrl = (videoId: string, quality: Quality, frame?: AutoFrame) =>
+  `https://i.ytimg.com/vi_webp/${videoId}/${fileName(quality, frame)}.webp`;
+const jpgUrl = (videoId: string, quality: Quality, frame?: AutoFrame) =>
+  `https://i.ytimg.com/vi/${videoId}/${fileName(quality, frame)}.jpg`;
+/** 영상·그림·화질마다 하나. 대표 썸네일은 'd' */
+const cacheKey = (videoId: string, frame: AutoFrame | undefined, quality: Quality) => `${videoId}:${frame ?? 'd'}:${quality}`;
 
 /** 상자를 덮는 데 필요한 가장 낮은 화질 */
 function targetQuality(width: number, height: number): Quality {
@@ -73,13 +86,13 @@ const shown = new Set<string>();
  * webp 가 없는 영상이 있고(10편 중 2편꼴), maxres·sd 가 없는 영상도 있다.
  * 없는 화질은 YouTube 가 404 와 함께 120×90 회색 그림을 주는데 브라우저는 그걸 정상으로 그려서, 크기로 가린다.
  */
-function pickThumb(videoId: string, target: Quality): Promise<Pick | null> {
-  const key = `${videoId}:${target}`;
+function pickThumb(videoId: string, frame: AutoFrame | undefined, target: Quality): Promise<Pick | null> {
+  const key = cacheKey(videoId, frame, target);
   const known = pending.get(key);
   if (known) return known;
   const task = withProbeSlot(async () => {
     for (const quality of LADDER.slice(LADDER.indexOf(target))) {
-      for (const uri of [webpUrl(videoId, quality), jpgUrl(videoId, quality)]) {
+      for (const uri of [webpUrl(videoId, quality, frame), jpgUrl(videoId, quality, frame)]) {
         if ((await measure(uri)) > PLACEHOLDER_MAX_WIDTH) return { uri, quality };
       }
     }
@@ -96,22 +109,28 @@ function pickThumb(videoId: string, target: Quality): Promise<Pick | null> {
  * 서버가 재어 둔 화질이 있으면 재지 않고 바로 고른다. 같은 화질이면 webp 를 쓰고,
  * 목표 화질이 없으면 한 단계씩 내려간다. 없는 화질은 YouTube 가 404 를 1~2초 늦게 줘서 요청하지 않는다.
  */
-function knownPick(videoId: string, target: Quality, thumbs: ScreenThumbs | undefined): Pick | null {
+function knownPick(
+  videoId: string,
+  frame: AutoFrame | undefined,
+  target: Quality,
+  thumbs: ScreenThumbs | undefined
+): Pick | null {
   if (!thumbs?.jpg) return null;
   const has = (best: Quality | null, quality: Quality) =>
     best !== null && LADDER.indexOf(quality) >= LADDER.indexOf(best);
   for (const quality of LADDER.slice(LADDER.indexOf(target))) {
-    if (has(thumbs.webp, quality)) return { uri: webpUrl(videoId, quality), quality };
-    if (has(thumbs.jpg, quality)) return { uri: jpgUrl(videoId, quality), quality };
+    // 자동 그림도 대표 썸네일과 같은 화질까지만 있다
+    if (has(thumbs.webp, quality)) return { uri: webpUrl(videoId, quality, frame), quality };
+    if (has(thumbs.jpg, quality)) return { uri: jpgUrl(videoId, quality, frame), quality };
   }
   return null;
 }
 
 /** 이미 받아 둔 다른 화질. 큰 그림을 받는 동안 흐린 미리보기로 깐다 */
-function settledPreview(videoId: string, except: Quality): Pick | null {
+function settledPreview(videoId: string, frame: AutoFrame | undefined, except: Quality): Pick | null {
   for (const quality of LADDER) {
     if (quality === except) continue;
-    const pick = settled.get(`${videoId}:${quality}`);
+    const pick = settled.get(cacheKey(videoId, frame, quality));
     if (pick && shown.has(pick.uri)) return pick;
   }
   return null;
@@ -137,6 +156,8 @@ interface YoutubeThumbProps {
   videoId: string;
   /** 서버가 잰 화질. 없으면 화질을 재 가며 고른다 */
   thumbs?: ScreenThumbs;
+  /** 대표 썸네일 대신 쓸 자동 그림(그 곡이 나오는 장면) */
+  frame?: AutoFrame;
   accessibilityLabel?: string;
   /** 쓸 만한 썸네일이 없을 때 대신 그릴 것 */
   fallback?: React.ReactNode;
@@ -146,13 +167,13 @@ interface YoutubeThumbProps {
  * 권리자 공식 클립의 썸네일로 부모 상자를 채운다(부모가 크기를 정한다).
  * 상자 크기에 맞는 화질만 받고, 받는 동안 쉬머를 보이다가 그림이 오면 서서히 드러낸다.
  */
-export function YoutubeThumb({ videoId, thumbs, accessibilityLabel, fallback }: YoutubeThumbProps) {
+export function YoutubeThumb({ videoId, thumbs, frame, accessibilityLabel, fallback }: YoutubeThumbProps) {
   const [box, setBox] = React.useState<{ width: number; height: number } | null>(null);
   const target = box ? targetQuality(box.width, box.height) : null;
-  const key = target ? `${videoId}:${target}` : null;
+  const key = target ? cacheKey(videoId, frame, target) : null;
   // 고른 그림을 어느 영상·화질 것인지와 같이 둔다. 영상이 바뀐 첫 그림에 앞 영상 그림이 남지 않게
   const [picked, setPicked] = React.useState<{ key: string; pick: Pick | null } | null>(null);
-  const known = target ? knownPick(videoId, target, thumbs) : null;
+  const known = target ? knownPick(videoId, frame, target, thumbs) : null;
   const knownUri = known?.uri;
 
   React.useEffect(() => {
@@ -163,14 +184,14 @@ export function YoutubeThumb({ videoId, thumbs, accessibilityLabel, fallback }: 
       return;
     }
     let alive = true;
-    void pickThumb(videoId, target).then((pick) => {
+    void pickThumb(videoId, frame, target).then((pick) => {
       if (alive) setPicked({ key, pick });
     });
     return () => {
       alive = false;
     };
     // known 은 그릴 때마다 새로 만들어서 주소로 비교한다
-  }, [videoId, target, key, knownUri]);
+  }, [videoId, frame, target, key, knownUri]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -182,7 +203,7 @@ export function YoutubeThumb({ videoId, thumbs, accessibilityLabel, fallback }: 
   if (current === null) return <View className="flex-1">{fallback ?? null}</View>;
   // 그림이 다 드러나기 전까지 아래에 쉬머(이미 받아 둔 낮은 화질이 있으면 그 그림)를 깐다
   const covered = Boolean(current && (revealed === current.uri || shown.has(current.uri)));
-  const preview = target && !covered ? settledPreview(videoId, target) : null;
+  const preview = target && !covered ? settledPreview(videoId, frame, target) : null;
 
   return (
     <View className="flex-1 overflow-hidden" onLayout={onLayout}>
