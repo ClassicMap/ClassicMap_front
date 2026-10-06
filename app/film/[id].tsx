@@ -1,5 +1,5 @@
 import { OptimizedImage } from '@/components/optimized-image';
-import { titleMeta, youtubeClipUrl } from '@/components/screen/labels';
+import { titleMeta } from '@/components/screen/labels';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
@@ -11,16 +11,13 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useCachedScreenTitleSummary, useScreenTitle } from '@/lib/query/hooks/useScreen';
-import type { ScreenCue, ScreenThumbs } from '@/lib/types/models';
+import type { ScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
-import { useActiveClip } from '@/components/screen/active-clip';
-import { ScreenClipPlayer } from '@/components/screen/screen-clip-player';
-import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, PlayIcon } from 'lucide-react-native';
+import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FilmTitleScreen() {
@@ -84,17 +81,6 @@ export default function FilmTitleScreen() {
   // TMDB 스틸이 없으면 권리자 공식 클립의 장면을 깐다. 누르면 그 클립이 열리고 출처를 적는다
   const cues: ScreenCue[] = title?.cues ?? [];
   const tmdbBackdrop = tmdbImageUrl(head.backdropPath, wide ? 'w1280' : 'w780');
-  const cueClip = cues.map((cue) => cue.officialClip).find((clip) => clip?.videoId === head.coverVideoId);
-  const coverClip = head.coverVideoId
-    ? {
-        videoId: head.coverVideoId,
-        startSec: cueClip?.startSec ?? 0,
-        channel: head.coverChannel ?? cueClip?.channel ?? 'YouTube',
-      }
-    : null;
-  // 대표 영상은 대개 예고편이다. 곡 카드에 장면 클립이 하나라도 있으면 그 장면들로 충분해 두지 않는다.
-  // 곡 카드를 받기 전에는 판단하지 않는다
-  const showCoverClip = Boolean(title && coverClip && !cues.some((cue) => cue.officialClip));
   const posterWidth = wide ? 152 : 112;
   const usesKmdb = cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
   const hasComparison = cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
@@ -164,16 +150,6 @@ export default function FilmTitleScreen() {
             <CueCardsSkeleton wide={wide} count={Math.min(head.cueCount, 4)} />
           )}
 
-          {showCoverClip && coverClip ? (
-            <View className="mt-10">
-              <Text variant="headline" className="mb-3">
-                예고편
-              </Text>
-              <View className={cn(wide && 'w-[calc(50%-6px)]')}>
-                <CoverClipCard clip={coverClip} thumbs={head.coverThumbs} titleKo={head.titleKo} />
-              </View>
-            </View>
-          ) : null}
 
           <View className="mt-10 gap-2">
             {hasComparison ? (
@@ -184,7 +160,7 @@ export default function FilmTitleScreen() {
             ) : null}
             {usesKmdb ? <Text variant="micro">곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.</Text> : null}
             {head.coverVideoId || cues.some((cue) => cue.officialClip) ? (
-              <Text variant="micro">장면 그림과 영상은 권리자가 YouTube에 올린 공식 영상이에요. 누르면 이 화면에서 재생돼요.</Text>
+              <Text variant="micro">장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.</Text>
             ) : null}
           </View>
           {head.posterPath || head.backdropPath || cues.some((cue) => cue.stillPath) ? (
@@ -192,66 +168,6 @@ export default function FilmTitleScreen() {
           ) : null}
         </View>
       </ScrollView>
-    </View>
-  );
-}
-
-/** 작품 예고편. 누르면 그 자리에서 틀고, 앱 안에서 못 틀면 YouTube로 연다 */
-function CoverClipCard({
-  clip,
-  thumbs,
-  titleKo,
-}: {
-  clip: { videoId: string; startSec: number; channel: string };
-  thumbs: ScreenThumbs;
-  titleKo: string;
-}) {
-  const inline = useActiveClip(`cover-${clip.videoId}`);
-  const [failed, setFailed] = React.useState(false);
-  const openExternal = () =>
-    Linking.openURL(youtubeClipUrl(clip.videoId, clip.startSec)).catch(() => undefined);
-  return (
-    <View className="gap-2">
-      {inline.active ? (
-        <ScreenClipPlayer
-          videoId={clip.videoId}
-          startSec={clip.startSec}
-          title={`${titleKo} 예고편`}
-          onError={() => {
-            setFailed(true);
-            inline.close();
-          }}
-        />
-      ) : (
-        <Pressable
-          onPress={failed ? openExternal : inline.open}
-          accessibilityRole="button"
-          accessibilityLabel={`${titleKo} 예고편 재생`}
-          className="w-full overflow-hidden rounded-xl bg-surface-3"
-          style={{ aspectRatio: 16 / 9 }}>
-          <YoutubeThumb videoId={clip.videoId} thumbs={thumbs} />
-          <View className="absolute inset-0 items-center justify-center">
-            <View className="size-12 items-center justify-center rounded-full bg-black/55">
-              <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
-            </View>
-          </View>
-        </Pressable>
-      )}
-      <View className="flex-row items-center justify-between gap-3">
-        <Pressable onPress={openExternal} accessibilityRole="link" className="min-w-0 shrink py-1">
-          <Text variant="micro" numberOfLines={1}>
-            예고편 · YouTube · {clip.channel}
-          </Text>
-        </Pressable>
-        {inline.active ? (
-          <Pressable onPress={inline.close} accessibilityRole="button" hitSlop={8} className="py-1">
-            <Text variant="micro" className="font-semibold text-foreground">
-              닫기
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-      {failed ? <Text variant="micro">앱 안에서 재생할 수 없는 영상이라 누르면 YouTube로 열려요.</Text> : null}
     </View>
   );
 }

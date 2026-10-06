@@ -13,8 +13,6 @@ import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useS
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
-import { useActiveClip } from '@/components/screen/active-clip';
-import { ScreenClipPlayer } from '@/components/screen/screen-clip-player';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
@@ -54,14 +52,11 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   // 스포일러 장면은 설명을 펼치기 전까지 스틸도 숨긴다
   const hidden = cue.spoiler && !showSpoiler;
   const still = hidden ? null : tmdbImageUrl(cue.stillPath, 'w780');
-  // 장면 그림은 사람이 확인한 공식 클립에만 둔다(sceneFrame). 누르면 그 자리에서 클립을 튼다
+  // 장면 그림은 사람이 확인한 공식 클립에만 사진으로 둔다(sceneFrame). 영상은 아래 'YouTube · 채널'로 연다
   const clip = cue.officialClip;
   const sceneFrame = clip?.sceneFrame ?? null;
   const clipScene = Boolean(clip && sceneFrame) && !still && !hidden;
   const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
-  const inline = useActiveClip(`cue-${cue.id}`);
-  const [playFailed, setPlayFailed] = React.useState(false);
-  const playScene = () => (playFailed ? openClip() : inline.open());
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
     const params = new URLSearchParams({ composerId: String(cue.composerId), pieceId: String(cue.pieceId) });
@@ -100,11 +95,9 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
                 style={{ width: '100%', height: '100%' }}
               />
             </View>
-          ) : clipScene && clip && !inline.active ? (
-            <Pressable
-              onPress={playScene}
-              accessibilityRole="button"
-              accessibilityLabel={`${cue.workTitle}이 나오는 장면 공식 클립 재생`}
+          ) : clipScene && clip ? (
+            <View
+              accessibilityLabel={`${cue.workTitle}이 나오는 장면`}
               style={{ width: SCENE_THUMB_WIDTH, aspectRatio: 16 / 9 }}
               className="overflow-hidden rounded-md bg-surface-3">
               <YoutubeThumb
@@ -112,44 +105,12 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
                 thumbs={clip.thumbs}
                 frame={sceneFrame === 'default' || sceneFrame === null ? undefined : sceneFrame}
               />
-              <View className="absolute inset-0 items-center justify-center">
-                <View className="size-8 items-center justify-center rounded-full bg-black/55">
-                  <Icon as={PlayIcon} size={13} className="ml-0.5 fill-white text-white" />
-                </View>
-              </View>
               <View className="absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-px">
                 <Text className="text-[10px] font-semibold text-white">이 장면</Text>
               </View>
-            </Pressable>
+            </View>
           ) : null}
         </View>
-
-        {clipScene && clip && inline.active ? (
-          <View className="gap-1.5">
-            <ScreenClipPlayer
-              videoId={clip.videoId}
-              startSec={clip.startSec}
-              title={`${cue.workTitle}이 나오는 장면`}
-              onError={() => {
-                setPlayFailed(true);
-                inline.close();
-              }}
-            />
-            <View className="flex-row items-center justify-between gap-3">
-              <Text variant="micro" numberOfLines={1} className="min-w-0 shrink">
-                이 장면에서 나와요 · YouTube · {clip.channel}
-              </Text>
-              <Pressable onPress={inline.close} accessibilityRole="button" hitSlop={8} className="py-1">
-                <Text variant="micro" className="font-semibold text-foreground">
-                  닫기
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
-        {clipScene && playFailed ? (
-          <Text variant="micro">앱 안에서 재생할 수 없는 영상이라 그림을 누르면 YouTube로 열려요.</Text>
-        ) : null}
 
         {cue.spoiler && !showSpoiler ? (
           <Pressable

@@ -24,8 +24,8 @@ interface YoutubeClipPlayerProps {
   videoId: string;
   /** 처음 틀 위치(영상 전체 기준 초) */
   start: number;
-  /** 구간 끝(영상 전체 기준 초). 여기서 멈춘다. 없으면 영상 끝까지 */
-  end?: number;
+  /** 구간 끝(영상 전체 기준 초). 여기서 멈춘다 */
+  end: number;
   height: number;
   onReady?: () => void;
   onState?: (state: number) => void;
@@ -34,10 +34,10 @@ interface YoutubeClipPlayerProps {
   onError?: (code: number) => void;
 }
 
-function playerHtml(videoId: string, start: number, end: number | undefined): string {
+function playerHtml(videoId: string, start: number, end: number): string {
   const vars = JSON.stringify({
     start: Math.max(0, Math.floor(start)),
-    ...(end !== undefined && end > start ? { end: Math.ceil(end) } : {}),
+    end: Math.ceil(end),
     playsinline: 1,
     controls: 1,
     rel: 0,
