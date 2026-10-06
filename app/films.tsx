@@ -1,5 +1,5 @@
 import { ScrollShelf } from '@/components/home/shelf';
-import { SCREEN_KIND_LABELS, titleMeta } from '@/components/screen/labels';
+import { SCREEN_KIND_LABELS, shortTitleMeta, titleMeta } from '@/components/screen/labels';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,9 @@ const KIND_CHIPS: { key: KindFilter; label: string }[] = [
 ];
 
 const MAX_CONTENT_WIDTH = 880;
+/** '그 대목 바로 듣기' 카드. 곡 이름이 두 줄까지 들어가게 넓게 둔다 */
+const FEATURED_WIDTH = 296;
+const FEATURED_POSTER = 64;
 const GRID_GAP = 12;
 
 export default function FilmsScreen() {
@@ -112,8 +115,8 @@ export default function FilmsScreen() {
           </View>
           <View className="flex-row gap-3 overflow-hidden">
             {Array.from({ length: 4 }, (_, index) => (
-              <View key={index} className="w-[248px] flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
-                <Skeleton style={{ width: 48, height: Math.round(48 * POSTER_ASPECT) }} />
+              <View key={index} style={{ width: FEATURED_WIDTH }} className="flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
+                <Skeleton style={{ width: FEATURED_POSTER, height: Math.round(FEATURED_POSTER * POSTER_ASPECT) }} />
                 <View className="flex-1 justify-center gap-2">
                   <Skeleton className="h-3.5 w-4/5" />
                   <Skeleton className="h-3 w-3/5" />
@@ -229,7 +232,7 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
         {item.titleKo}
       </Text>
       <Text variant="micro" numberOfLines={1}>
-        {titleMeta(item.kind, item.releaseYear)} · {item.cueCount}곡
+        {shortTitleMeta(item.kind, item.releaseYear)} · {item.cueCount}곡
       </Text>
     </Pressable>
   );
@@ -250,24 +253,25 @@ function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
       onPress={open}
       accessibilityRole="button"
       accessibilityLabel={`${cue.titleKo}에 나온 ${cue.composerName} ${cue.workTitle} 비교해 듣기`}
-      className="w-[248px] flex-row gap-3 rounded-lg bg-surface-2 p-2.5 active:bg-surface-3 web:hover:bg-surface-3">
+      style={{ width: FEATURED_WIDTH }}
+      className="flex-row items-center gap-3 rounded-lg bg-surface-2 p-2.5 active:bg-surface-3 web:hover:bg-surface-3">
       <ScreenPoster
         title={cue.titleKo}
         posterPath={cue.posterPath}
         posterUrl={cue.posterUrl}
         coverVideoId={cue.coverVideoId}
         coverThumbs={cue.coverThumbs}
-        width={48}
+        width={FEATURED_POSTER}
       />
-      <View className="min-w-0 flex-1 justify-center">
-        <Text numberOfLines={1} className="text-label font-semibold text-foreground">
+      <View className="min-w-0 flex-1 gap-1">
+        <Text variant="micro" numberOfLines={1} className="font-semibold text-primary">
+          {cue.titleKo}
+        </Text>
+        <Text numberOfLines={2} className="text-label font-semibold text-foreground">
           {cue.partLabel ?? cue.workTitle}
         </Text>
-        <Text variant="micro" numberOfLines={1} className="mt-0.5">
-          {cue.composerName} · {cue.workTitle}
-        </Text>
-        <Text variant="micro" numberOfLines={1} className="mt-1 text-primary">
-          {cue.titleKo}
+        <Text variant="micro" numberOfLines={1}>
+          {cue.partLabel ? `${cue.composerName} · ${cue.workTitle}` : cue.composerName}
         </Text>
       </View>
     </Pressable>
