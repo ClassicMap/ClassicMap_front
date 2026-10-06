@@ -1,5 +1,6 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
+import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import {
@@ -24,6 +25,9 @@ function openExternal(url: string) {
     Alert.alert('링크를 열지 못했어요', '잠시 뒤 다시 시도해 주세요.');
   });
 }
+
+/** 곡 이름 옆 장면 그림 너비. 카드를 길게 만들지 않게 작게 둔다 */
+const SCENE_THUMB_WIDTH = 116;
 
 const PLATFORM_LINKS: { key: keyof ScreenStreamingLinks; label: string }[] = [
   { key: 'appleMusicUrl', label: 'Apple Music' },
@@ -59,58 +63,51 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
     router.push(`/compare?${params.toString()}` as Href);
   };
 
+  const meta = [SCREEN_USAGE_LABELS[cue.usage], cue.arranged ? '편곡' : null, when || null]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <View className="overflow-hidden rounded-xl border border-border bg-surface-1">
-      {still ? (
-        <OptimizedImage
-          uri={still}
-          resizeMode="cover"
-          accessibilityLabel={`${cue.workTitle} 장면 스틸`}
-          style={{ width: '100%', aspectRatio: 16 / 9 }}
-        />
-      ) : clipScene && clip ? (
-        <Pressable
-          onPress={openClip}
-          accessibilityRole="link"
-          accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
-          style={{ width: '100%', aspectRatio: 16 / 9 }}
-          className="bg-surface-3">
-          <YoutubeThumb videoId={clip.videoId} thumbs={clip.thumbs} />
-          <View className="absolute inset-0 items-center justify-center">
-            <View className="size-12 items-center justify-center rounded-full bg-black/55">
-              <Icon as={PlayIcon} size={20} className="ml-0.5 fill-white text-white" />
-            </View>
-          </View>
-          <View className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5">
-            <Text className="text-[11px] font-semibold text-white">YouTube · {clip.channel}</Text>
-          </View>
-        </Pressable>
-      ) : null}
       <View className="gap-3 p-4">
-        <View className="flex-row flex-wrap items-center gap-1.5">
-          <View className="rounded-full bg-primary-muted px-2 py-0.5">
-            <Text className="text-micro font-semibold text-primary">{SCREEN_USAGE_LABELS[cue.usage]}</Text>
+        {/* 무슨 곡인지가 먼저다. 장면 그림은 오른쪽에 작게 둔다 */}
+        <View className="flex-row gap-3">
+          <View className="min-w-0 flex-1">
+            <Text variant="micro" numberOfLines={1} className="font-semibold text-primary">
+              {meta}
+            </Text>
+            <Text className="mt-1 text-body font-bold text-foreground">
+              {cue.composerName} · {cue.workTitle}
+            </Text>
+            {cue.partLabel ? (
+              <Text variant="caption" className="mt-0.5">
+                {cue.partLabel}
+              </Text>
+            ) : null}
           </View>
-          {cue.arranged ? (
-            <View className="rounded-full bg-surface-3 px-2 py-0.5">
-              <Text className="text-micro font-semibold text-foreground-muted">편곡</Text>
+          {still ? (
+            <View style={{ width: SCENE_THUMB_WIDTH, aspectRatio: 16 / 9 }} className="overflow-hidden rounded-md bg-surface-3">
+              <OptimizedImage
+                uri={still}
+                resizeMode="cover"
+                accessibilityLabel={`${cue.workTitle} 장면 스틸`}
+                style={{ width: '100%', height: '100%' }}
+              />
             </View>
-          ) : null}
-          {when ? (
-            <Text variant="caption" className="ml-auto">
-              {when}
-            </Text>
-          ) : null}
-        </View>
-
-        <View>
-          <Text className="text-body font-bold text-foreground">
-            {cue.composerName} · {cue.workTitle}
-          </Text>
-          {cue.partLabel ? (
-            <Text variant="caption" className="mt-0.5">
-              {cue.partLabel}
-            </Text>
+          ) : clipScene && clip ? (
+            <Pressable
+              onPress={openClip}
+              accessibilityRole="link"
+              accessibilityLabel={`YouTube ${clip.channel}에서 ${cue.workTitle} 장면 보기`}
+              style={{ width: SCENE_THUMB_WIDTH, aspectRatio: 16 / 9 }}
+              className="overflow-hidden rounded-md bg-surface-3">
+              <YoutubeThumb videoId={clip.videoId} thumbs={clip.thumbs} />
+              <View className="absolute inset-0 items-center justify-center">
+                <View className="size-8 items-center justify-center rounded-full bg-black/55">
+                  <Icon as={PlayIcon} size={13} className="ml-0.5 fill-white text-white" />
+                </View>
+              </View>
+            </Pressable>
           ) : null}
         </View>
 
@@ -122,29 +119,12 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
             <Text variant="caption">장면 설명에 결말이 드러나요. 눌러서 펼쳐요.</Text>
           </Pressable>
         ) : (
-          <Text variant="bodySm" className="text-foreground-muted">
-            {cue.sceneNote}
-          </Text>
+          <ExpandableText text={cue.sceneNote} lines={2} variant="bodySm" className="text-foreground-muted" />
         )}
 
         <ListenAction cue={cue} onOpenCompare={openCompare} />
 
-        {clip && !clipScene ? (
-          <Pressable
-            onPress={openClip}
-            accessibilityRole="link"
-            className="flex-row items-center gap-2 rounded-full border border-border-strong px-3.5 py-2 active:bg-surface-2 web:hover:bg-surface-2">
-            <Icon as={PlayIcon} size={14} className="text-foreground" />
-            <Text className="flex-1 text-label font-semibold text-foreground" numberOfLines={1}>
-              공식 클립으로 장면 보기
-            </Text>
-            <Text variant="micro" numberOfLines={1}>
-              YouTube · {clip.channel}
-            </Text>
-          </Pressable>
-        ) : null}
-
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center justify-between gap-3">
           <Pressable
             onPress={() => setShowEvidence((value) => !value)}
             accessibilityRole="button"
@@ -157,12 +137,27 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
               className={cn('text-foreground-subtle', showEvidence && 'rotate-180')}
             />
           </Pressable>
-          {canPickStill ? (
-            <Pressable onPress={() => setPicking(true)} accessibilityRole="button" className="flex-row items-center gap-1 py-1">
-              <Icon as={ImageIcon} size={12} className="text-foreground-subtle" />
-              <Text variant="micro">스틸 고르기</Text>
-            </Pressable>
-          ) : null}
+          <View className="min-w-0 flex-row items-center gap-3">
+            {canPickStill ? (
+              <Pressable onPress={() => setPicking(true)} accessibilityRole="button" className="flex-row items-center gap-1 py-1">
+                <Icon as={ImageIcon} size={12} className="text-foreground-subtle" />
+                <Text variant="micro">스틸 고르기</Text>
+              </Pressable>
+            ) : null}
+            {/* 공식 클립 출처. 장면이 스포일러로 가려져 있어도 링크는 남긴다 */}
+            {clip ? (
+              <Pressable
+                onPress={openClip}
+                accessibilityRole="link"
+                accessibilityLabel={`YouTube ${clip.channel}에서 장면 보기`}
+                className="min-w-0 flex-row items-center gap-1 py-1">
+                <Icon as={PlayIcon} size={11} className="text-foreground-subtle" />
+                <Text variant="micro" numberOfLines={1} className="shrink">
+                  YouTube · {clip.channel}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         {showEvidence ? (
           <View className="gap-2">
