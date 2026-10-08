@@ -43,7 +43,7 @@ export function AuthShell({ children, onClose }: AuthShellProps) {
       className="flex-1 bg-background"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerClassName={wide ? 'min-h-full items-center justify-center px-12 py-12' : 'px-6 pb-10 pt-4 mt-safe'}>
+      contentContainerClassName={wide ? 'min-h-full items-center justify-center px-12 py-12' : 'px-6 pt-safe-offset-4 pb-safe-offset-10'}>
       {form}
     </ScrollView>
   );
