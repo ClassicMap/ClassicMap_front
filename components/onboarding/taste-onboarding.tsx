@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CheckIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface PersonPick {
   kind: 'artist' | 'composer';
@@ -54,6 +55,7 @@ const SUGGESTED_ARTISTS = 10;
 export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingProps) {
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
+  const insets = useSafeAreaInsets();
   const [step, setStep] = React.useState(0);
   const [answers, setAnswers] = React.useState<TasteAnswers>(initial);
   const [people, setPeople] = React.useState<PersonPick[]>([]);
@@ -76,66 +78,80 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
   const last = step === STEPS - 1;
   const next = () => (last ? run(() => onFinish(result())) : go(step + 1));
 
-  return (
-    <ScrollView
-      ref={scrollRef}
-      className="flex-1 bg-background"
-      keyboardShouldPersistTaps="handled"
-      contentContainerClassName={
-        wide ? 'min-h-full items-center px-12 py-14' : 'px-5 pb-10 pt-4 mt-safe'
-      }>
-      <View className="w-full max-w-[560px]">
-        <View className="flex-row items-center gap-3">
-          <View
-            className="flex-1 flex-row gap-1.5"
-            accessibilityLabel={`${STEPS}단계 중 ${step + 1}단계`}>
-            {Array.from({ length: STEPS }, (_, index) => (
-              <View
-                key={index}
-                className={cn(
-                  'h-1 flex-1 rounded-full',
-                  index <= step ? 'bg-primary' : 'bg-border'
-                )}
-              />
-            ))}
-          </View>
-          <Pressable
-            onPress={() => run(() => onClose(result()))}
-            disabled={busy}
-            accessibilityRole="button"
-            accessibilityLabel="나중에 할게요"
-            hitSlop={8}
-            className="size-10 items-center justify-center rounded-full bg-surface-2">
-            <Icon as={XIcon} size={18} className="text-foreground" />
-          </Pressable>
-        </View>
-
-        <View className="mt-8">
-          {step === 0 ? <LevelStep answers={answers} onChange={setAnswers} /> : null}
-          {step === 1 ? <SoundStep answers={answers} onChange={setAnswers} /> : null}
-          {step === 2 ? <PieceStep answers={answers} onChange={setAnswers} /> : null}
-          {step === 3 ? <PeopleStep people={people} onChange={setPeople} /> : null}
-        </View>
-
-        <View className="mt-10 flex-row items-center justify-between gap-3">
-          {step > 0 ? (
-            <Button variant="ghost" disabled={busy} onPress={() => go(step - 1)}>
-              <Text className="text-foreground-muted">이전</Text>
-            </Button>
-          ) : (
-            <View />
-          )}
-          <View className="flex-row items-center gap-2">
-            <Button variant="ghost" disabled={busy} onPress={next}>
-              <Text className="text-foreground-muted">건너뛰기</Text>
-            </Button>
-            <Button disabled={busy} onPress={next} className="rounded-full px-6">
-              <Text>{busy ? '저장 중…' : last ? '시작하기' : '다음'}</Text>
-            </Button>
-          </View>
-        </View>
+  const footer = (
+    <View className="flex-row items-center justify-between gap-3">
+      {step > 0 ? (
+        <Button variant="ghost" disabled={busy} onPress={() => go(step - 1)}>
+          <Text className="text-foreground-muted">이전</Text>
+        </Button>
+      ) : (
+        <View />
+      )}
+      <View className="flex-row items-center gap-2">
+        <Button variant="ghost" disabled={busy} onPress={next}>
+          <Text className="text-foreground-muted">건너뛰기</Text>
+        </Button>
+        <Button disabled={busy} onPress={next} className="rounded-full px-6">
+          <Text>{busy ? '저장 중…' : last ? '시작하기' : '다음'}</Text>
+        </Button>
       </View>
-    </ScrollView>
+    </View>
+  );
+
+  return (
+    <View className="flex-1 bg-background">
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName={
+          wide ? 'min-h-full items-center px-12 py-14' : 'px-5 pb-8 pt-safe-offset-4'
+        }>
+        <View className="w-full max-w-[560px]">
+          <View className="flex-row items-center gap-3">
+            <View
+              className="flex-1 flex-row gap-1.5"
+              accessibilityLabel={`${STEPS}단계 중 ${step + 1}단계`}>
+              {Array.from({ length: STEPS }, (_, index) => (
+                <View
+                  key={index}
+                  className={cn(
+                    'h-1 flex-1 rounded-full',
+                    index <= step ? 'bg-primary' : 'bg-border'
+                  )}
+                />
+              ))}
+            </View>
+            <Pressable
+              onPress={() => run(() => onClose(result()))}
+              disabled={busy}
+              accessibilityRole="button"
+              accessibilityLabel="나중에 할게요"
+              hitSlop={8}
+              className="size-10 items-center justify-center rounded-full bg-surface-2">
+              <Icon as={XIcon} size={18} className="text-foreground" />
+            </Pressable>
+          </View>
+
+          <View className="mt-8">
+            {step === 0 ? <LevelStep answers={answers} onChange={setAnswers} /> : null}
+            {step === 1 ? <SoundStep answers={answers} onChange={setAnswers} /> : null}
+            {step === 2 ? <PieceStep answers={answers} onChange={setAnswers} /> : null}
+            {step === 3 ? <PeopleStep people={people} onChange={setPeople} /> : null}
+          </View>
+
+          {wide ? <View className="mt-10">{footer}</View> : null}
+        </View>
+      </ScrollView>
+      {/* 모바일: 안드로이드 내비게이션 바에 가리지 않게 화면 아래에 고정 */}
+      {wide ? null : (
+        <View
+          className="border-t border-border bg-background px-5 pt-3"
+          style={{ paddingBottom: insets.bottom + 12 }}>
+          {footer}
+        </View>
+      )}
+    </View>
   );
 }
 
