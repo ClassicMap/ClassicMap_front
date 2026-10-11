@@ -38,9 +38,13 @@ export interface Piece {
   youtubeMusicUrl?: string;
   /** 묶음 안 곡 수. 0이면 낱곡이다 */
   partCount?: number;
+  /** 묶음 안 곡의 단위. movement 면 악장, work·null 이면 곡으로 센다 */
+  partKind?: PiecePartKind | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
+
+export type PiecePartKind = 'movement' | 'work';
 
 /** 묶음 곡이 가리키는 낱곡 작품. 그 작품으로 비교 듣기·스트리밍을 연다 */
 export interface PiecePartLinkedPiece {

@@ -19,7 +19,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
 import { useComposerPieces, usePieceParts } from '@/lib/query/hooks/usePieces';
-import type { ComparisonPiece, Piece, PiecePart } from '@/lib/types/models';
+import type { ComparisonPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -83,6 +83,11 @@ function listenLinks(urls: ListenUrls): ListenLink[] {
     urls.spotifyUrl ? { label: 'Spotify', url: urls.spotifyUrl } : null,
     urls.youtubeMusicUrl ? { label: 'YouTube Music', url: urls.youtubeMusicUrl } : null,
   ].filter((link): link is ListenLink => link !== null);
+}
+
+/** 묶음 안 곡을 세는 단위. 악장으로 나뉜 작품만 악장이고 나머지는 곡이다 */
+function partUnit(kind: PiecePartKind | null | undefined): string {
+  return kind === 'movement' ? '악장' : '곡';
 }
 
 interface OrderedPart {
@@ -621,6 +626,7 @@ function PieceRow({
 }) {
   const [expanded, setExpanded] = React.useState(false);
   const partCount = piece.partCount ?? 0;
+  const unit = partUnit(piece.partKind);
   const partsQuery = usePieceParts(piece.id, expanded);
   const links = listenLinks(piece);
   const detail = [piece.opusNumber, piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean).join(' · ');
@@ -637,11 +643,11 @@ function PieceRow({
                 onPress={() => setExpanded((value) => !value)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded }}
-                accessibilityLabel={`${piece.title} 안의 곡 ${partCount}개 ${expanded ? '접기' : '펼치기'}`}
+                accessibilityLabel={`${piece.title} 안의 ${unit} ${partCount}개 ${expanded ? '접기' : '펼치기'}`}
                 hitSlop={8}
                 className="shrink-0 flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
                 <Text variant="caption" className="tabular-nums">
-                  {`${partCount}곡`}
+                  {`${partCount}${unit}`}
                 </Text>
                 <Icon
                   as={ChevronDownIcon}
@@ -674,7 +680,7 @@ function PieceRow({
         ) : null}
       </View>
       {expanded ? (
-        <PiecePartList query={partsQuery} partCount={partCount} onCompare={onComparePart} />
+        <PiecePartList query={partsQuery} partCount={partCount} partKind={piece.partKind} onCompare={onComparePart} />
       ) : null}
     </View>
   );
@@ -702,12 +708,15 @@ function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
 function PiecePartList({
   query,
   partCount,
+  partKind,
   onCompare,
 }: {
   query: UseQueryResult<PiecePart[]>;
   partCount: number;
+  partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  const unit = partUnit(partKind);
   const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data]);
 
   if (query.isLoading) {
@@ -724,7 +733,7 @@ function PiecePartList({
     return (
       <View className="mb-3 flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
         <Text variant="bodySm" className="flex-1 text-foreground-muted">
-          안의 곡을 불러오지 못했어요.
+          {`안의 ${unit}을 불러오지 못했어요.`}
         </Text>
         <Pressable onPress={() => query.refetch()} disabled={query.isFetching} hitSlop={8}>
           <Text variant="label" className="text-primary">
@@ -738,7 +747,7 @@ function PiecePartList({
   if (ordered.length === 0) {
     return (
       <View className="mb-3 ml-1 border-l border-border py-1 pl-3">
-        <Text variant="caption">안의 곡 정보가 아직 없어요.</Text>
+        <Text variant="caption">{`안의 ${unit} 정보가 아직 없어요.`}</Text>
       </View>
     );
   }
@@ -746,7 +755,7 @@ function PiecePartList({
   return (
     <View className="mb-3 ml-1 border-l border-border pl-3">
       {ordered.map(({ part, depth }) => (
-        <PiecePartRow key={part.id} part={part} depth={depth} onCompare={onCompare} />
+        <PiecePartRow key={part.id} part={part} depth={depth} partKind={partKind} onCompare={onCompare} />
       ))}
     </View>
   );
@@ -755,18 +764,21 @@ function PiecePartList({
 function PiecePartRow({
   part,
   depth,
+  partKind,
   onCompare,
 }: {
   part: PiecePart;
   depth: number;
+  partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  const movement = partKind === 'movement';
   const linked = part.linkedPiece;
   const links = linked && !linked.comparable ? listenLinks(linked) : [];
   return (
     <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
-      <Text variant="mono" className="min-w-6 text-center text-foreground-subtle">
-        {part.movementNumber ?? String(part.sequenceNumber)}
+      <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
+        {movement ? `${part.sequenceNumber}악장` : `${part.sequenceNumber}.`}
       </Text>
       <View className="min-w-0 flex-1">
         <Text numberOfLines={2} className="text-body-sm text-foreground">

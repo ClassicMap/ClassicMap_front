@@ -21,6 +21,7 @@ import type {
   Composer,
   Piece,
   PiecePart,
+  PiecePartKind,
   Artist,
   Performance,
   PerformanceSector,
@@ -74,6 +75,7 @@ interface APIPiece {
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
   partCount?: number;
+  partKind?: PiecePartKind | null;
 }
 
 interface APIPiecePart {
@@ -273,6 +275,7 @@ const mapPiece = (api: APIPiece): Piece => ({
   appleMusicUrl: api.appleMusicUrl,
   youtubeMusicUrl: api.youtubeMusicUrl,
   partCount: api.partCount,
+  partKind: api.partKind,
 });
 
 const mapPiecePart = (api: APIPiecePart): PiecePart => ({
