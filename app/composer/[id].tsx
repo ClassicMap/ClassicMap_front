@@ -769,7 +769,8 @@ function PiecePartRow({
   partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
-  const movement = partKind === 'movement';
+  // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
+  const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
   const linked = part.linkedPiece;
   const links = linked && !linked.comparable ? listenLinks(linked) : [];
   return (
