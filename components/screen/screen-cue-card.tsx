@@ -17,7 +17,7 @@ import { useLeadPerformance } from '@/components/screen/use-lead-performance';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
 import { type Href, useRouter } from 'expo-router';
-import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -127,11 +127,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
             accessibilityState={{ expanded: showEvidence }}
             className="flex-row items-center gap-1 py-1">
             <Text variant="micro">근거 {cue.evidence.length}개</Text>
-            <Icon
-              as={ChevronDownIcon}
-              size={12}
-              className={cn('text-foreground-subtle', showEvidence && 'rotate-180')}
-            />
+            <Icon as={showEvidence ? ChevronUpIcon : ChevronDownIcon} size={12} className="text-foreground-subtle" />
           </Pressable>
           <View className="min-w-0 flex-row items-center gap-3">
             {canPickStill ? (
