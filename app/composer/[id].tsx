@@ -90,25 +90,36 @@ interface OrderedPart {
   depth: number;
 }
 
-/** 안의 곡을 순서대로 펴고, 하위 곡은 부모 바로 아래에 한 단계 들여 놓는다. 목록에 없는 부모를 가리키면 맨 위로 올린다 */
+/**
+ * 안의 곡을 순서대로 펴고, 하위 곡은 부모 바로 아래에 한 단계 들여 놓는다.
+ * 목록에 없는 부모를 가리키면 맨 위로 올리고, 맨 위에 닿지 않는 곡(부모끼리 고리)도 버리지 않고 뒤에 붙인다
+ */
 function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
   const ids = new Set(parts.map((part) => part.id));
   const childrenOf = new Map<number | null, PiecePart[]>();
   for (const part of parts) {
-    const parentId = part.parentPartId !== null && ids.has(part.parentPartId) ? part.parentPartId : null;
+    const parentId =
+      part.parentPartId !== null && part.parentPartId !== part.id && ids.has(part.parentPartId)
+        ? part.parentPartId
+        : null;
     const siblings = childrenOf.get(parentId) ?? [];
     siblings.push(part);
     childrenOf.set(parentId, siblings);
   }
+  const bySequence = (a: PiecePart, b: PiecePart) => a.sequenceNumber - b.sequenceNumber || a.id - b.id;
   const ordered: OrderedPart[] = [];
+  const placed = new Set<number>();
   const visit = (parentId: number | null, depth: number) => {
-    const siblings = [...(childrenOf.get(parentId) ?? [])].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
-    for (const part of siblings) {
+    for (const part of (childrenOf.get(parentId) ?? []).sort(bySequence)) {
       ordered.push({ part, depth });
+      placed.add(part.id);
       visit(part.id, depth + 1);
     }
   };
   visit(null, 0);
+  for (const part of parts.filter((item) => !placed.has(item.id)).sort(bySequence)) {
+    ordered.push({ part, depth: 0 });
+  }
   return ordered;
 }
 
