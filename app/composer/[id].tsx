@@ -18,14 +18,16 @@ import { getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
-import { useComposerPieces } from '@/lib/query/hooks/usePieces';
-import type { ComparisonPiece, Piece } from '@/lib/types/models';
+import { useComposerPieces, usePieceParts } from '@/lib/query/hooks/usePieces';
+import type { ComparisonPiece, Piece, PiecePart } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
   ArrowLeftIcon,
+  ChevronDownIcon,
   ChevronRightIcon,
   EditIcon,
   ExternalLinkIcon,
@@ -64,12 +66,50 @@ function collectPerformers(pieces: readonly ComparisonPiece[]): PerformerSummary
   );
 }
 
-function listenLinks(piece: Piece): { label: string; url: string }[] {
+interface ListenLink {
+  label: string;
+  url: string;
+}
+
+interface ListenUrls {
+  appleMusicUrl?: string | null;
+  spotifyUrl?: string | null;
+  youtubeMusicUrl?: string | null;
+}
+
+function listenLinks(urls: ListenUrls): ListenLink[] {
   return [
-    piece.appleMusicUrl ? { label: 'Apple Music', url: piece.appleMusicUrl } : null,
-    piece.spotifyUrl ? { label: 'Spotify', url: piece.spotifyUrl } : null,
-    piece.youtubeMusicUrl ? { label: 'YouTube Music', url: piece.youtubeMusicUrl } : null,
-  ].filter((link): link is { label: string; url: string } => link !== null);
+    urls.appleMusicUrl ? { label: 'Apple Music', url: urls.appleMusicUrl } : null,
+    urls.spotifyUrl ? { label: 'Spotify', url: urls.spotifyUrl } : null,
+    urls.youtubeMusicUrl ? { label: 'YouTube Music', url: urls.youtubeMusicUrl } : null,
+  ].filter((link): link is ListenLink => link !== null);
+}
+
+interface OrderedPart {
+  part: PiecePart;
+  depth: number;
+}
+
+/** 안의 곡을 순서대로 펴고, 하위 곡은 부모 바로 아래에 한 단계 들여 놓는다. 목록에 없는 부모를 가리키면 맨 위로 올린다 */
+function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
+  const ids = new Set(parts.map((part) => part.id));
+  const childrenOf = new Map<number | null, PiecePart[]>();
+  for (const part of parts) {
+    const parentId = part.parentPartId !== null && ids.has(part.parentPartId) ? part.parentPartId : null;
+    const siblings = childrenOf.get(parentId) ?? [];
+    siblings.push(part);
+    childrenOf.set(parentId, siblings);
+  }
+  const ordered: OrderedPart[] = [];
+  const visit = (parentId: number | null, depth: number) => {
+    const siblings = [...(childrenOf.get(parentId) ?? [])].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+    for (const part of siblings) {
+      ordered.push({ part, depth });
+      visit(part.id, depth + 1);
+    }
+  };
+  visit(null, 0);
+  return ordered;
 }
 
 export default function ComposerDetailScreen() {
@@ -419,6 +459,7 @@ export default function ComposerDetailScreen() {
                       comparable={comparableIds.has(piece.id)}
                       canEdit={canEdit}
                       onCompare={() => openCompare(piece.id)}
+                      onComparePart={openCompare}
                       onEdit={() => handleEditPiece(piece)}
                       onDelete={() => handleDeletePiece(piece)}
                     />
@@ -555,6 +596,7 @@ function PieceRow({
   comparable,
   canEdit,
   onCompare,
+  onComparePart,
   onEdit,
   onDelete,
 }: {
@@ -562,54 +604,172 @@ function PieceRow({
   comparable: boolean;
   canEdit: boolean;
   onCompare: () => void;
+  onComparePart: (pieceId: number) => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const partCount = piece.partCount ?? 0;
+  const partsQuery = usePieceParts(piece.id, expanded);
   const links = listenLinks(piece);
   const detail = [piece.opusNumber, piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean).join(' · ');
   return (
-    <View className="flex-row items-center gap-3 border-b border-border py-3">
-      <View className="min-w-0 flex-1">
-        <View className="flex-row items-center gap-2">
-          <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
-            {piece.title}
-          </Text>
-        </View>
-        {detail || piece.titleEn ? (
-          <Text variant="caption" numberOfLines={1} className="mt-0.5">
-            {[detail, piece.titleEn].filter(Boolean).join(' · ')}
-          </Text>
-        ) : null}
-        {links.length > 0 ? (
-          <View className="mt-1.5 flex-row flex-wrap gap-3">
-            {links.map((link) => (
+    <View className="border-b border-border">
+      <View className="flex-row items-center gap-3 py-3">
+        <View className="min-w-0 flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+              {piece.title}
+            </Text>
+            {partCount > 0 ? (
               <Pressable
-                key={link.label}
-                onPress={() => Linking.openURL(link.url)}
-                accessibilityRole="link"
-                accessibilityLabel={`${piece.title} ${link.label}에서 듣기`}
-                hitSlop={6}
-                className="flex-row items-center gap-1">
-                <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
-                <Text className="text-micro text-foreground-subtle">{link.label}</Text>
+                onPress={() => setExpanded((value) => !value)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded }}
+                accessibilityLabel={`${piece.title} 안의 곡 ${partCount}개 ${expanded ? '접기' : '펼치기'}`}
+                hitSlop={8}
+                className="shrink-0 flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
+                <Text variant="caption" className="tabular-nums">
+                  {`${partCount}곡`}
+                </Text>
+                <Icon
+                  as={ChevronDownIcon}
+                  size={14}
+                  className={cn('text-foreground-subtle', expanded && 'rotate-180')}
+                />
               </Pressable>
-            ))}
+            ) : null}
+          </View>
+          {detail || piece.titleEn ? (
+            <Text variant="caption" numberOfLines={1} className="mt-0.5">
+              {[detail, piece.titleEn].filter(Boolean).join(' · ')}
+            </Text>
+          ) : null}
+          {links.length > 0 ? <ListenLinks name={piece.title} links={links} /> : null}
+        </View>
+        {comparable ? (
+          <Chip size="sm" label="비교 듣기" onPress={onCompare} accessibilityLabel={`${piece.title} 비교 듣기`} />
+        ) : null}
+        <FavoriteButton kind="pieces" id={piece.id} name={piece.title} />
+        {canEdit ? (
+          <View className="flex-row">
+            <Pressable onPress={onEdit} accessibilityLabel={`${piece.title} 수정`} hitSlop={6} className="size-8 items-center justify-center">
+              <Icon as={EditIcon} size={15} className="text-foreground-muted" />
+            </Pressable>
+            <Pressable onPress={onDelete} accessibilityLabel={`${piece.title} 삭제`} hitSlop={6} className="size-8 items-center justify-center">
+              <Icon as={TrashIcon} size={15} className="text-destructive" />
+            </Pressable>
           </View>
         ) : null}
       </View>
-      {comparable ? (
-        <Chip size="sm" label="비교 듣기" onPress={onCompare} accessibilityLabel={`${piece.title} 비교 듣기`} />
+      {expanded ? (
+        <PiecePartList query={partsQuery} partCount={partCount} onCompare={onComparePart} />
       ) : null}
-      <FavoriteButton kind="pieces" id={piece.id} name={piece.title} />
-      {canEdit ? (
-        <View className="flex-row">
-          <Pressable onPress={onEdit} accessibilityLabel={`${piece.title} 수정`} hitSlop={6} className="size-8 items-center justify-center">
-            <Icon as={EditIcon} size={15} className="text-foreground-muted" />
-          </Pressable>
-          <Pressable onPress={onDelete} accessibilityLabel={`${piece.title} 삭제`} hitSlop={6} className="size-8 items-center justify-center">
-            <Icon as={TrashIcon} size={15} className="text-destructive" />
-          </Pressable>
-        </View>
+    </View>
+  );
+}
+
+function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
+  return (
+    <View className="mt-1.5 flex-row flex-wrap gap-3">
+      {links.map((link) => (
+        <Pressable
+          key={link.label}
+          onPress={() => Linking.openURL(link.url)}
+          accessibilityRole="link"
+          accessibilityLabel={`${name} ${link.label}에서 듣기`}
+          hitSlop={6}
+          className="flex-row items-center gap-1">
+          <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
+          <Text className="text-micro text-foreground-subtle">{link.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function PiecePartList({
+  query,
+  partCount,
+  onCompare,
+}: {
+  query: UseQueryResult<PiecePart[]>;
+  partCount: number;
+  onCompare: (pieceId: number) => void;
+}) {
+  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data]);
+
+  if (query.isLoading) {
+    return (
+      <View className="mb-3 ml-1 gap-2 border-l border-border pl-3">
+        {Array.from({ length: Math.min(partCount, 3) }, (_, index) => (
+          <Skeleton key={index} className="h-8 w-full rounded-md" />
+        ))}
+      </View>
+    );
+  }
+
+  if (query.isError) {
+    return (
+      <View className="mb-3 flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
+        <Text variant="bodySm" className="flex-1 text-foreground-muted">
+          안의 곡을 불러오지 못했어요.
+        </Text>
+        <Pressable onPress={() => query.refetch()} disabled={query.isFetching} hitSlop={8}>
+          <Text variant="label" className="text-primary">
+            {query.isFetching ? '불러오는 중…' : '다시 시도'}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (ordered.length === 0) {
+    return (
+      <View className="mb-3 ml-1 border-l border-border py-1 pl-3">
+        <Text variant="caption">안의 곡 정보가 아직 없어요.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className="mb-3 ml-1 border-l border-border pl-3">
+      {ordered.map(({ part, depth }) => (
+        <PiecePartRow key={part.id} part={part} depth={depth} onCompare={onCompare} />
+      ))}
+    </View>
+  );
+}
+
+function PiecePartRow({
+  part,
+  depth,
+  onCompare,
+}: {
+  part: PiecePart;
+  depth: number;
+  onCompare: (pieceId: number) => void;
+}) {
+  const linked = part.linkedPiece;
+  const links = linked && !linked.comparable ? listenLinks(linked) : [];
+  return (
+    <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
+      <Text variant="mono" className="min-w-6 text-center text-foreground-subtle">
+        {part.movementNumber ?? String(part.sequenceNumber)}
+      </Text>
+      <View className="min-w-0 flex-1">
+        <Text numberOfLines={2} className="text-body-sm text-foreground">
+          {part.name}
+        </Text>
+        {links.length > 0 ? <ListenLinks name={part.name} links={links} /> : null}
+      </View>
+      {linked?.comparable ? (
+        <Chip
+          size="sm"
+          label="비교 듣기"
+          onPress={() => onCompare(linked.id)}
+          accessibilityLabel={`${part.name} 비교 듣기`}
+        />
       ) : null}
     </View>
   );
