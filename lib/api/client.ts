@@ -20,6 +20,8 @@ import {
 import type {
   Composer,
   Piece,
+  PiecePart,
+  PiecePartKind,
   Artist,
   Performance,
   PerformanceSector,
@@ -72,6 +74,25 @@ interface APIPiece {
   spotifyUrl?: string;
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
+  partCount?: number;
+  partKind?: PiecePartKind | null;
+}
+
+interface APIPiecePart {
+  id: number;
+  parentPartId: number | null;
+  sequenceNumber: number;
+  movementNumber: string | null;
+  name: string;
+  nameKo: string | null;
+  nameEn: string | null;
+  linkedPiece: {
+    id: number;
+    title: string;
+    comparable: boolean;
+    spotifyUrl: string | null;
+    appleMusicUrl: string | null;
+  } | null;
 }
 
 interface APIPieceSearchResult extends APIPiece {
@@ -253,6 +274,27 @@ const mapPiece = (api: APIPiece): Piece => ({
   spotifyUrl: api.spotifyUrl,
   appleMusicUrl: api.appleMusicUrl,
   youtubeMusicUrl: api.youtubeMusicUrl,
+  partCount: api.partCount,
+  partKind: api.partKind,
+});
+
+const mapPiecePart = (api: APIPiecePart): PiecePart => ({
+  id: api.id,
+  parentPartId: api.parentPartId,
+  sequenceNumber: api.sequenceNumber,
+  movementNumber: api.movementNumber,
+  name: api.name,
+  nameKo: api.nameKo,
+  nameEn: api.nameEn,
+  linkedPiece: api.linkedPiece
+    ? {
+        id: api.linkedPiece.id,
+        title: api.linkedPiece.title,
+        comparable: api.linkedPiece.comparable,
+        spotifyUrl: api.linkedPiece.spotifyUrl,
+        appleMusicUrl: api.linkedPiece.appleMusicUrl,
+      }
+    : null,
 });
 
 const mapArtist = (api: APIArtist): Artist => ({
@@ -884,6 +926,14 @@ export const PieceAPI = {
     return Promise.resolve(
       PIECES.filter((p) => p.composerId === composerId).slice(params.offset, params.offset + params.limit)
     );
+  },
+
+  /**
+   * 묶음 작품 안의 곡 (연습곡집의 12곡 등). 펼칠 때만 부른다
+   */
+  async getParts(pieceId: number): Promise<PiecePart[]> {
+    const data = await requestJson<APIPiecePart[]>(`/pieces/${pieceId}/parts`);
+    return data.map(mapPiecePart);
   },
 
   /**
