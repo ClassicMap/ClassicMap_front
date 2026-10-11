@@ -36,8 +36,31 @@ export interface Piece {
   spotifyUrl?: string;
   appleMusicUrl?: string;
   youtubeMusicUrl?: string;
+  /** 묶음 안 곡 수. 0이면 낱곡이다 */
+  partCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 묶음 곡이 가리키는 낱곡 작품. 그 작품으로 비교 듣기·스트리밍을 연다 */
+export interface PiecePartLinkedPiece {
+  id: number;
+  title: string;
+  comparable: boolean;
+  spotifyUrl: string | null;
+  appleMusicUrl: string | null;
+}
+
+/** 묶음 작품 안의 곡. parentPartId 로 한 단계 아래 곡을 묶는다 */
+export interface PiecePart {
+  id: number;
+  parentPartId: number | null;
+  sequenceNumber: number;
+  movementNumber: string | null;
+  name: string;
+  nameKo: string | null;
+  nameEn: string | null;
+  linkedPiece: PiecePartLinkedPiece | null;
 }
 
 export interface ComposerMajorPiece {

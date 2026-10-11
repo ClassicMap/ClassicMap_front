@@ -10,6 +10,7 @@ export const PIECE_QUERY_KEYS = {
   all: ['pieces'] as const,
   detail: (id: number) => ['pieces', id] as const,
   byComposer: (composerId: number) => ['pieces', 'composer', composerId] as const,
+  parts: (id: number) => ['pieces', id, 'parts'] as const,
 };
 
 /**
@@ -39,6 +40,18 @@ export function useComposerPieces(composerId: number | undefined) {
       lastPage.length < COMPOSER_PIECES_PAGE ? undefined : pages.length * COMPOSER_PIECES_PAGE,
     initialPageParam: 0,
     enabled: (composerId ?? 0) > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * 묶음 작품 안의 곡. 목록 행마다 붙으므로 펼쳤을 때만(enabled) 받는다
+ */
+export function usePieceParts(pieceId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: PIECE_QUERY_KEYS.parts(pieceId),
+    queryFn: () => PieceAPI.getParts(pieceId),
+    enabled: enabled && pieceId > 0,
     staleTime: 5 * 60_000,
   });
 }
