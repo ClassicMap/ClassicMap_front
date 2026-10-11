@@ -29,6 +29,7 @@ import {
   ArrowLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
   EditIcon,
   ExternalLinkIcon,
   PlayIcon,
@@ -649,11 +650,7 @@ function PieceRow({
                 <Text variant="caption" className="tabular-nums">
                   {`${partCount}${unit}`}
                 </Text>
-                <Icon
-                  as={ChevronDownIcon}
-                  size={14}
-                  className={cn('text-foreground-subtle', expanded && 'rotate-180')}
-                />
+                <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
               </Pressable>
             ) : null}
           </View>
