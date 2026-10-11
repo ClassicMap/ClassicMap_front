@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import Constants from 'expo-constants';
 import { type Href, useRouter } from 'expo-router';
-import { ChevronDownIcon, ChevronRightIcon, MailIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, MailIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, View } from 'react-native';
 
@@ -68,11 +68,7 @@ export default function HelpScreen() {
                 accessibilityState={{ expanded }}
                 className="min-h-12 flex-row items-center gap-3 py-3">
                 <Text className="flex-1 text-body-sm font-semibold text-foreground">{faq.question}</Text>
-                <Icon
-                  as={ChevronDownIcon}
-                  size={16}
-                  className={cn('text-foreground-subtle', expanded && 'rotate-180')}
-                />
+                <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={16} className="text-foreground-subtle" />
               </Pressable>
               {expanded ? (
                 <Text variant="bodySm" className="pb-4 text-foreground-muted">
