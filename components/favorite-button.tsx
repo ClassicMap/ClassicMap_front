@@ -5,7 +5,7 @@ import type { FavoriteTargetType } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { BookmarkIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 interface FavoriteButtonProps {
   kind: FavoriteTargetType;
@@ -21,11 +21,25 @@ interface FavoriteButtonProps {
 export function FavoriteButton({ kind, id, name, variant = 'icon', className }: FavoriteButtonProps) {
   const { active, toggle, pending } = useFavorite(kind, id);
   const label = active ? `${name} 레퍼토리에서 빼기` : `${name} 레퍼토리에 담기`;
+  // 눌러서 담긴 순간에만 아이콘이 톡 튄다 (처음 불러올 때 담겨 있던 건 가만히)
+  const pressed = React.useRef(false);
+  const [pop, setPop] = React.useState(false);
+  React.useEffect(() => {
+    if (!active || !pressed.current) return;
+    pressed.current = false;
+    setPop(true);
+    const timer = setTimeout(() => setPop(false), 480);
+    return () => clearTimeout(timer);
+  }, [active]);
+  const onPress = () => {
+    pressed.current = !active;
+    toggle();
+  };
 
   if (variant === 'labeled') {
     return (
       <Pressable
-        onPress={toggle}
+        onPress={onPress}
         disabled={pending}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
@@ -35,11 +49,9 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
           active ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
           className
         )}>
-        <Icon
-          as={BookmarkIcon}
-          size={16}
-          className={active ? 'fill-primary text-primary' : 'text-foreground'}
-        />
+        <View className={pop ? 'cm-pop' : undefined}>
+          <Icon as={BookmarkIcon} size={16} className={active ? 'fill-primary text-primary' : 'text-foreground'} />
+        </View>
         <Text className={cn('text-label font-semibold', active ? 'text-primary' : 'text-foreground')}>
           {active ? '레퍼토리에 있어요' : '레퍼토리에 담기'}
         </Text>
@@ -49,7 +61,7 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
 
   return (
     <Pressable
-      onPress={toggle}
+      onPress={onPress}
       disabled={pending}
       hitSlop={6}
       accessibilityRole="button"
@@ -59,11 +71,9 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
         'size-9 items-center justify-center rounded-full web:transition-colors web:duration-fast web:hover:bg-surface-3',
         className
       )}>
-      <Icon
-        as={BookmarkIcon}
-        size={17}
-        className={active ? 'fill-primary text-primary' : 'text-foreground-subtle'}
-      />
+      <View className={pop ? 'cm-pop' : undefined}>
+        <Icon as={BookmarkIcon} size={17} className={active ? 'fill-primary text-primary' : 'text-foreground-subtle'} />
+      </View>
     </Pressable>
   );
 }

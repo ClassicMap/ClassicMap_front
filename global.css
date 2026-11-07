@@ -262,3 +262,82 @@
     }
   }
 }
+
+/* 재생 중 막대 (equalizer.tsx), 담기 버튼 톡 튐 (favorite-button.tsx), 이미지 나타남 */
+@layer components {
+  .cm-eq > * {
+    transform-origin: bottom;
+    animation: cm-eq 900ms ease-in-out infinite;
+  }
+  .cm-eq > *:nth-child(2) {
+    animation-duration: 720ms;
+    animation-delay: -240ms;
+  }
+  .cm-eq > *:nth-child(3) {
+    animation-duration: 1040ms;
+    animation-delay: -520ms;
+  }
+  @keyframes cm-eq {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  .cm-pop {
+    animation: cm-pop 460ms var(--ease-pop);
+  }
+  @keyframes cm-pop {
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(0.8);
+    }
+    65% {
+      transform: scale(1.24);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .cm-fade-in {
+    transition: opacity 260ms var(--ease-settle);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-eq > *,
+    .cm-pop {
+      animation: none;
+    }
+    .cm-fade-in {
+      transition: none;
+    }
+  }
+}
+
+/* 하단 플레이바가 나타날 때 아래에서 올라온다 */
+@layer components {
+  .cm-rise {
+    animation: cm-rise 280ms var(--ease-settle);
+  }
+  @keyframes cm-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cm-rise {
+      animation: none;
+    }
+  }
+}

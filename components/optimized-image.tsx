@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, ImageProps, View } from 'react-native';
+import { Image, ImageProps, Platform, View } from 'react-native';
 import { getImageCandidates } from '@/lib/utils/image';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
@@ -55,6 +55,8 @@ const OptimizedImageComponent = ({
       <Image
         {...props}
         source={{ uri: imageUrl }}
+        // 웹은 다 받은 이미지가 툭 나타나지 않고 짧게 페이드인한다
+        className={Platform.OS === 'web' ? 'cm-fade-in' : undefined}
         style={[style, { opacity: loading ? 0 : 1 }]}
         onLoad={() => {
           setLoading(false);

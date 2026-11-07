@@ -14,6 +14,7 @@ import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { GradientWash } from '@/components/ui/gradient-wash';
+import { Equalizer } from '@/components/ui/equalizer';
 import { GenreBadge } from '@/components/piece/genre-badge';
 import { PieceCover } from '@/components/piece/piece-cover';
 import { genreWash } from '@/lib/design/genre-palette';
@@ -725,6 +726,7 @@ interface SlotProps {
 
 function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
   const credit = primaryCredit(performance);
+  const playing = useComparePlayer((state) => state.playing && state.current?.performanceId === performance.id);
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
   const support = supportingCredits(performance);
@@ -760,9 +762,12 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
           <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={32} />
         </RepertoireThumb>
         <View className="min-w-0 flex-1">
-          <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-            {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            {active && playing ? <Equalizer playing size={11} /> : null}
+            <Text numberOfLines={1} className={cn('shrink text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+              {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
+            </Text>
+          </View>
           {support ? (
             <Text variant="caption" numberOfLines={1}>
               {support}
