@@ -60,7 +60,7 @@ export function PieceCover({
         </Defs>
         <Rect width={size} height={size} fill={`url(#${gradientId})`} />
       </Svg>
-      {portrait ? <CoverPortrait uri={portrait} size={size} /> : null}
+      {portrait ? <CoverPortrait key={portrait} uri={portrait} size={size} /> : null}
       {/* 네이티브는 마스크가 없어 왼쪽을 시작색으로 덮어 초상 경계를 지운다 */}
       {portrait && Platform.OS !== 'web' ? (
         <Scrim from="left" color={from} opacity={0.95} extent={58} />
