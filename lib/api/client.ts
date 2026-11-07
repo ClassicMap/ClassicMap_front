@@ -976,8 +976,10 @@ export const PieceAPI = {
   /**
    * 작곡가 작품의 갈래·형식별 개수. 작곡가 화면의 갈래 칩과 형식 머리를 그린다
    */
-  async getCatalog(composerId: number): Promise<ComposerCatalog> {
-    const data = await requestJson<ComposerCatalog>(`/composers/${composerId}/catalog`);
+  /** q 가 있으면 그 검색에 걸린 작품만 갈래·형식별로 센다(검색 중 갈래 칩의 결과 수) */
+  async getCatalog(composerId: number, q?: string): Promise<ComposerCatalog> {
+    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+    const data = await requestJson<ComposerCatalog>(`/composers/${composerId}/catalog${query}`);
     return mapCatalog(data);
   },
 

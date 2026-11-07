@@ -70,16 +70,21 @@ export function useComposerPieces(
 }
 
 /** 작곡가 작품의 갈래·형식별 개수 */
-export function composerCatalogQueryOptions(composerId: number) {
+export function composerCatalogQueryOptions(composerId: number, q = '') {
   return queryOptions({
-    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId), 'catalog'] as const,
-    queryFn: () => PieceAPI.getCatalog(composerId),
+    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId), 'catalog', q] as const,
+    queryFn: () => PieceAPI.getCatalog(composerId, q || undefined),
     staleTime: 5 * 60_000,
   });
 }
 
-export function useComposerCatalog(composerId: number | undefined) {
-  return useQuery({ ...composerCatalogQueryOptions(composerId ?? 0), enabled: (composerId ?? 0) > 0 });
+/** q 를 주면 검색 결과의 갈래별 수다. 검색어가 바뀌는 동안 앞 수를 그대로 둔다 */
+export function useComposerCatalog(composerId: number | undefined, q = '') {
+  return useQuery({
+    ...composerCatalogQueryOptions(composerId ?? 0, q),
+    enabled: (composerId ?? 0) > 0,
+    placeholderData: q ? keepPreviousData : undefined,
+  });
 }
 
 /**
