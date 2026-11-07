@@ -172,6 +172,8 @@ export function findCachedComparisonPiece(queryClient: QueryClient, pieceId: num
       sectorCount: piece.sectorCount,
       performerCount: piece.performerCount,
       performers: piece.performers,
+      // 머리 커버·색 번짐이 장르를 쓴다. 빠지면 미리 채운 머리가 뉴트럴 커버로 남는다
+      genre: piece.genre ?? null,
     },
   };
 }
