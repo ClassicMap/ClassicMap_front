@@ -59,7 +59,7 @@ export function PieceCard({
       accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${genre ? `, ${genre.label}` : ''} 비교하기`}
       accessibilityActions={onDismiss ? [{ name: 'dismiss', label: '관심 없음' }] : undefined}
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
-      className={cn(WEB_CARD, 'group -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
+      className={cn(WEB_CARD, 'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <View>
         <PieceCover
           title={piece.pieceTitle}
@@ -131,7 +131,7 @@ export function PersonCard({
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
-      className={cn(WEB_CARD, '-m-2 items-center rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
+      className={cn(WEB_CARD, '-m-1.5 items-center rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
         <EntityThumb name={name} image={image} shape="circle" size={width} />
       </RepertoireThumb>
@@ -157,7 +157,7 @@ export function ConcertCard({ concert, width, onPress }: { concert: Concert; wid
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={concert.title}
-      className={cn(WEB_CARD, '-m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
+      className={cn(WEB_CARD, '-m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {concert.title}
