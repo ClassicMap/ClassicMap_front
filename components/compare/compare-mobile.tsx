@@ -19,7 +19,7 @@ import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { GenreLink } from '@/components/piece/genre-link';
-import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { OptimizedImage } from '@/components/optimized-image';
@@ -288,7 +288,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               accessibilityRole="link"
               accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
-              <PieceMosaic performers={piece.performers} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={48} />
+              <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={48} />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-1.5">
                   <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">
@@ -418,8 +418,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       sectorId: activeSector.id,
       sectorName: activeSector.sectorName,
       genre: pieceInfo?.genre ?? null,
+      coverVideoId: pieceInfo?.coverVideoId ?? null,
     });
-  }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, pieceInfo?.genre, recordRecent]);
+  }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent]);
 
   const active = performances.find((performance) => performance.id === activeId);
   const preview = active ?? performances.find((performance) => performance.clipStatus === 'ready');
@@ -470,8 +471,8 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {/* 머리: 작품은 사각. 음반 연결이 없어 작곡가 초상을 쓴다 */}
       <View className="mt-3 flex-row items-end gap-4">
         {title ? (
-          <PieceMosaic
-            performers={pieceInfo?.performers ?? []}
+          <PieceArt
+            coverVideoId={pieceInfo?.coverVideoId}
             fallbackImage={pieceInfo?.composerAvatarUrl}
             fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
             size={88}

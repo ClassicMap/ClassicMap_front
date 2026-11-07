@@ -10,7 +10,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
 import { playPiece } from '@/lib/player/play-piece';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { PieceArt } from '@/components/piece/piece-art';
 import { TrackIndex } from '@/components/piece/track-index';
 import { GenreLink } from '@/components/piece/genre-link';
 import { performerNamesLine } from '@/lib/data/comparison';
@@ -553,7 +553,7 @@ function ComparableRow({
       accessibilityLabel={`${piece.pieceTitle} 비교하기`}
       className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index + 1} pieceId={piece.pieceId} onPlay={onPlay} />
-      <PieceMosaic performers={piece.performers} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
+      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}

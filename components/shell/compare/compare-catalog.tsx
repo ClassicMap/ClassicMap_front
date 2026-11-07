@@ -1,6 +1,6 @@
 import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { Button } from '@/components/ui/button';
-import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { PieceArt } from '@/components/piece/piece-art';
 import { TrackIndex } from '@/components/piece/track-index';
 import { GenreLink } from '@/components/piece/genre-link';
 import { performerNamesLine } from '@/lib/data/comparison';
@@ -403,7 +403,7 @@ function PieceRow({
       accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${inRepertoire ? ', 레퍼토리에 있어요' : ''} 비교하기`}
       className="group flex-row items-center gap-4 rounded-md px-3 py-2.5 transition-colors duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index} pieceId={piece.pieceId} onPlay={playHere} />
-      <PieceMosaic performers={piece.performers} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={44} />
+      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={44} />
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">

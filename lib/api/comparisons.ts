@@ -324,6 +324,7 @@ export function parsePiece(value: unknown): ComparisonPiece {
       imageUrl: optionalString(performer.imageUrl),
     })),
     genre: isPieceGenre(value.genre) ? value.genre : null,
+    coverVideoId: optionalString(value.coverVideoId),
   };
 }
 

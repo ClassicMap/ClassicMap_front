@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Equalizer } from '@/components/ui/equalizer';
 import { GenreLink } from '@/components/piece/genre-link';
-import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
@@ -152,8 +152,9 @@ export function ComparePieceView({
       sectorId: activeSector.id,
       sectorName: activeSector.sectorName,
       genre: pieceInfo?.genre ?? null,
+      coverVideoId: pieceInfo?.coverVideoId ?? null,
     });
-  }, [pieceId, first, activeSector, composerAvatar, pieceInfo?.genre, recordRecent, stale]);
+  }, [pieceId, first, activeSector, composerAvatar, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent, stale]);
 
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
@@ -330,9 +331,9 @@ export function ComparePieceView({
         {/* 머리: 작품은 사각. 크게 보기에서는 영상에 자리를 내주려 줄인다 */}
         <View className="flex-row items-end gap-6">
           {pieceTitle ? (
-            // 작품 그림: 이 곡을 연주한 사람들 사진 2×2 (음반 연결이 없어 연주자 얼굴로 묶는다)
-            <PieceMosaic
-              performers={pieceInfo?.performers ?? []}
+            // 작품 그림: 대표 연주의 음반 표지 (스포티파이 앨범 머리)
+            <PieceArt
+              coverVideoId={pieceInfo?.coverVideoId}
               fallbackImage={composerAvatar}
               fallbackName={composerName ?? pieceTitle}
               size={theater ? 72 : 136}

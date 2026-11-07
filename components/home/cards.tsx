@@ -1,7 +1,7 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { OptimizedImage } from '@/components/optimized-image';
-import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { PieceArt } from '@/components/piece/piece-art';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
@@ -75,7 +75,8 @@ export function PieceCard({
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
       className={cn(WEB_CARD, 'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <View>
-        <PieceMosaic
+        <PieceArt
+          coverVideoId={piece.coverVideoId}
           performers={piece.performers}
           fallbackImage={piece.composerAvatarUrl}
           fallbackName={piece.composerName}
@@ -270,7 +271,7 @@ export function RecentTile({
         'group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
         className
       )}>
-      <EntityThumb name={item.composerName} image={item.composerAvatarUrl} shape="square" size={56} />
+      <PieceArt coverVideoId={item.coverVideoId} fallbackImage={item.composerAvatarUrl} fallbackName={item.composerName} size={56} radius={0} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-label font-semibold text-foreground">
           {item.pieceTitle}

@@ -323,6 +323,8 @@ export interface ComparisonPiece {
   performers: ComparisonPiecePerformer[];
   /** 장르 7종. 서버가 아직 분류하지 않은 작품은 null */
   genre?: PieceGenre | null;
+  /** 카드 그림으로 쓸 대표 연주 영상(YouTube id). 썸네일 가운데가 대개 음반 표지다 */
+  coverVideoId?: string | null;
 }
 
 /** `/comparison-genres`: 장르마다 공개 비교 작품 수와 대표 작곡가 초상(겹치지 않게 최대 3명) */
