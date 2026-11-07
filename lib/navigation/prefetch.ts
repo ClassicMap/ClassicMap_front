@@ -92,9 +92,42 @@ export interface PrefetchHandlers {
   onFocus?: () => void;
 }
 
+/** 포인터는 하나라 호버 대기는 한 번에 하나만 둔다 */
+let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+let hoverKey: string | null = null;
+
+function cancelHover(key?: string) {
+  if (key !== undefined && key !== hoverKey) return;
+  if (hoverTimer) clearTimeout(hoverTimer);
+  hoverTimer = null;
+  hoverKey = null;
+}
+
+/**
+ * 훅을 쓸 수 없는 곳(목록 map 안)에서 쓰는 미리 부르기 핸들러.
+ * 데스크톱 웹은 호버(80ms 머문 뒤)·키보드 포커스에서, 터치는 누르기 시작할 때 부른다.
+ */
+export function createPrefetchHandlers(queryClient: QueryClient, target: PrefetchTarget | null | undefined): PrefetchHandlers {
+  if (!target) return {};
+  const key = targetKey(target);
+  const fire = () => {
+    cancelHover(key);
+    void prefetchTarget(queryClient, target);
+  };
+  const handlers: PrefetchHandlers = { onPressIn: fire, onFocus: fire };
+  if (Platform.OS === 'web') {
+    handlers.onHoverIn = () => {
+      cancelHover();
+      hoverKey = key;
+      hoverTimer = setTimeout(fire, HOVER_INTENT_MS);
+    };
+    handlers.onHoverOut = () => cancelHover(key);
+  }
+  return handlers;
+}
+
 /**
  * 카드·행에 펼쳐 붙이는 미리 부르기 핸들러.
- * 데스크톱 웹은 호버(80ms 머문 뒤)·키보드 포커스에서, 터치는 누르기 시작할 때 부른다.
  *
  *   const prefetch = usePrefetchOnHover({ kind: 'piece', pieceId, composerId });
  *   <Pressable {...prefetch} onPress={open} />
@@ -104,39 +137,14 @@ export interface PrefetchHandlers {
  */
 export function usePrefetchOnHover(target: PrefetchTarget | null | undefined): PrefetchHandlers {
   const queryClient = useQueryClient();
-  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const key = target ? targetKey(target) : null;
   const targetRef = React.useRef(target);
   targetRef.current = target;
-
-  React.useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    []
+  // 대상 객체가 렌더마다 새로 만들어져도 같은 대상이면 핸들러를 새로 만들지 않는다
+  return React.useMemo(
+    () => (key ? createPrefetchHandlers(queryClient, targetRef.current) : {}),
+    [key, queryClient]
   );
-
-  return React.useMemo<PrefetchHandlers>(() => {
-    if (!key) return {};
-    const fire = () => {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = null;
-      const current = targetRef.current;
-      if (current) void prefetchTarget(queryClient, current);
-    };
-    const handlers: PrefetchHandlers = { onPressIn: fire, onFocus: fire };
-    if (Platform.OS === 'web') {
-      handlers.onHoverIn = () => {
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(fire, HOVER_INTENT_MS);
-      };
-      handlers.onHoverOut = () => {
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = null;
-      };
-    }
-    return handlers;
-  }, [key, queryClient]);
 }
 
 /** 주소(href)로 대상을 알아낸다. 사이드바 레퍼토리처럼 주소만 가진 링크에 쓴다 */
