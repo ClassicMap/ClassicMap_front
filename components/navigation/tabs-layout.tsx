@@ -11,6 +11,7 @@ import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_CHROME_TRANSLUCENT } from '@/components/navigation/tab-chrome';
+import { runRouteTransition } from '@/lib/navigation/view-transition';
 
 /**
  * 모바일 탭 구성: 홈 · 둘러보기 · 비교 · 공연 · 레퍼토리.
@@ -40,6 +41,18 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
     <Tabs
       // 데스크톱 웹은 셸(SideNav·TopBar)이 크롬을 맡으므로 탭바·헤더를 숨긴다.
       tabBar={hideChrome ? () => null : undefined}
+      // 모바일 웹: 탭바 이동은 expo-router 를 거치지 않으므로 여기서 화면 전환으로 감싼다
+      screenListeners={
+        Platform.OS === 'web'
+          ? ({ navigation, route }) => ({
+              tabPress: (event) => {
+                if (navigation.isFocused()) return;
+                event.preventDefault();
+                runRouteTransition(() => navigation.navigate(route.name, route.params));
+              },
+            })
+          : undefined
+      }
       screenOptions={{
         headerShown: !hideChrome,
         sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
