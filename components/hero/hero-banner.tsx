@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
-import { ArrowLeftIcon, PlayIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -77,27 +77,36 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
   );
 }
 
-/** 배너 아래 큰 재생 버튼 (스포티파이 머리 재생). 누르면 그 자리에서 바로 튼다 */
+/**
+ * 배너 아래 큰 재생 버튼 (스포티파이 머리 재생). 누르면 그 자리에서 바로 튼다.
+ * 이 화면의 곡이 나오는 중이면 일시정지 버튼이 된다
+ */
 export function HeroPlayButton({
   label,
   onPress,
   busy = false,
+  playing = false,
 }: {
   label: string;
   onPress: () => void;
   busy?: boolean;
+  playing?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={busy}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={playing ? '일시정지' : label}
       className={cn(
         'size-14 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40 web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95',
         busy && 'opacity-60'
       )}>
-      <Icon as={PlayIcon} size={22} className="ml-0.5 fill-primary-foreground text-primary-foreground" />
+      <Icon
+        as={playing ? PauseIcon : PlayIcon}
+        size={22}
+        className={cn('fill-primary-foreground text-primary-foreground', !playing && 'ml-0.5')}
+      />
     </Pressable>
   );
 }

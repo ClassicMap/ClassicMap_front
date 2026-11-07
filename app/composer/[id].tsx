@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
 import { playPiece } from '@/lib/player/play-piece';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { TrackIndex } from '@/components/piece/track-index';
 import { GenreLink } from '@/components/piece/genre-link';
@@ -139,6 +140,10 @@ export default function ComposerDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [starting, setStarting] = React.useState(false);
+  // 이 작곡가 곡이 지금 플레이어에 있으면 큰 버튼이 재생·일시정지를 바꾼다
+  const playerHere = useComparePlayer((state) => state.current?.composerId === composerId);
+  const playingHere = useComparePlayer((state) => state.playing && state.current?.composerId === composerId);
+  const pausedHere = playerHere && !playingHere;
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -317,7 +322,12 @@ export default function ComposerDetailScreen() {
         {/* 행동: 재생(첫 비교 작품을 그 자리에서) → 담기 → 관리 */}
         <View className="mt-6 flex-row flex-wrap items-center gap-4">
           {firstComparable ? (
-            <HeroPlayButton label={`${firstComparable.pieceTitle} 바로 듣기`} busy={starting} onPress={playFirst} />
+            <HeroPlayButton
+              label={`${firstComparable.pieceTitle} 바로 듣기`}
+              busy={starting}
+              playing={playingHere}
+              onPress={playingHere || pausedHere ? () => comparePlayer.togglePlay() : playFirst}
+            />
           ) : null}
           <FavoriteButton kind="composers" id={composer.id} name={composer.name} variant="labeled" />
           {canEdit ? (
