@@ -110,6 +110,7 @@ interface APIPiecePart {
   } | null;
   notable?: boolean;
   appleMusicUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
 interface APIPieceSearchResult extends APIPiece {
@@ -335,6 +336,7 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
   nameEn: api.nameEn,
   notable: api.notable === true,
   appleMusicUrl: api.appleMusicUrl ?? null,
+  spotifyUrl: api.spotifyUrl ?? null,
   linkedPiece: api.linkedPiece
     ? {
         id: api.linkedPiece.id,

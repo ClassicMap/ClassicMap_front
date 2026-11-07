@@ -322,10 +322,10 @@ function PiecePartRow({
   // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
   const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
   const linked = part.linkedPiece;
-  // 따로 작품 행으로 이어진 곡은 그 작품의 링크를, 아니면 이 곡의 Apple Music 트랙 링크를 쓴다
+  // 따로 작품 행으로 이어진 곡은 그 작품의 링크를, 아니면 이 곡의 트랙 링크를 쓴다
   const links = linked
     ? listenLinks(linked)
-    : listenLinks({ appleMusicUrl: part.appleMusicUrl });
+    : listenLinks({ appleMusicUrl: part.appleMusicUrl, spotifyUrl: part.spotifyUrl });
   return (
     <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
       <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>

@@ -121,6 +121,8 @@ export interface PiecePart {
   notable: boolean;
   /** 이 곡의 Apple Music 트랙 링크. 이어진 작품이 있으면 그 작품 링크를 쓴다 */
   appleMusicUrl: string | null;
+  /** 이 곡의 Spotify 트랙 링크. 쓰는 법은 appleMusicUrl 과 같다 */
+  spotifyUrl: string | null;
 }
 
 export interface ComposerMajorPiece {
