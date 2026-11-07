@@ -184,10 +184,10 @@
   }
 
   /* 재생 버튼: 평소엔 숨어 있다가 카드 호버·포커스에 아래에서 올라온다 */
+  /* 그림자는 컴포넌트의 web:shadow-lg 로 준다. box-shadow 를 여기 쓰면 NativeWind 네이티브 변환이 깨져 앱 번들이 안 만들어졌다 */
   .cm-play-fab {
     opacity: 0;
     transform: translateY(8px);
-    box-shadow: 0 8px 18px rgb(0 0 0 / 0.35);
     transition:
       opacity 200ms var(--ease-settle),
       transform 260ms var(--ease-settle);

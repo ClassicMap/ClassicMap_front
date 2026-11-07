@@ -80,7 +80,7 @@ export function PieceCard({
         ) : null}
         {/* 데스크톱 호버에서만 드러나는 재생 버튼. 아래에서 올라오며 나타난다 */}
         {Platform.OS === 'web' ? (
-          <View className="cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary">
+          <View className="cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40">
             <Icon
               as={PlayIcon}
               size={17}
@@ -271,7 +271,7 @@ export function RecentTile({
         </Text>
       </View>
       {Platform.OS === 'web' ? (
-        <View className="cm-play-fab size-8 items-center justify-center rounded-full bg-primary">
+        <View className="cm-play-fab size-8 items-center justify-center rounded-full bg-primary web:shadow-md web:shadow-black/30">
           <Icon
             as={PlayIcon}
             size={13}
