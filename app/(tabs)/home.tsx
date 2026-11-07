@@ -2,6 +2,7 @@ import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/compo
 import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
+import { usePinnedToday } from '@/hooks/use-pinned-today';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -17,7 +18,8 @@ import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
-import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import { useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
+import { DEFAULT_CONCERT_FILTER, periodRange } from '@/lib/data/concert-filters';
 import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import type {
@@ -124,11 +126,15 @@ export default function HomeScreen() {
   const catalog = useComparisonPieces();
   const composersQuery = useRecommendedComposers();
   const artistsQuery = useArtists();
-  const concertsQuery = useConcerts();
+  // 공연 탭과 같은 기본 필터(클래식, 오늘 이후). 필터 없는 목록은 뮤지컬·국악이 섞여 홈에 어린이 뮤지컬이 먼저 떴다
+  const concertRange = React.useMemo(() => periodRange('all'), []);
+  const { query: concertsQuery } = useFilteredConcerts(DEFAULT_CONCERT_FILTER, concertRange);
   const recentPieces = useRecentPieces().data ?? [];
 
   const reco = useHomeRecommendations();
-  const recoToday = reco.data?.today ?? null;
+  // 오늘의 비교는 하루 동안 고정한다. 작품을 보고 돌아올 때마다 추천이 다시 계산돼 곡이 바뀌었다
+  const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify(taste.answers)}`;
+  const recoToday = usePinnedToday(reco.data?.today ?? null, todayContext);
   const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
   const favorites = useMyFavorites(taste.signedIn);
 
@@ -248,7 +254,7 @@ export default function HomeScreen() {
       />
     ) : null;
 
-  const todaySection = catalog.isLoading || reco.isLoading ? (
+  const todaySection = catalog.isLoading || (reco.isLoading && !recoToday) || recoToday === undefined ? (
     <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
   ) : catalog.isError ? (
     <View className="rounded-xl border border-border">
