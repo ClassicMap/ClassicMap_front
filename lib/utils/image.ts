@@ -88,3 +88,25 @@ export function toRelativePath(url: string | undefined | null): string | undefin
   // 다른 도메인의 URL인 경우 그대로 반환
   return url;
 }
+
+const MZSTATIC_SIZE = /\/(\d+)x(\d+)(bb|cc|sr)?\.(jpg|jpeg|png|webp)$/i;
+/** 배너에 쓸 큰 폭. 위키미디어가 캐시해 두는 표준 폭이다 */
+const HERO_WIDTH = 1280;
+
+/**
+ * 화면 폭 배너에 쓸 큰 그림 주소를 순서대로 준다. 목록용 500px 썸네일을 늘리면 흐려서
+ * 위키미디어는 1280px 썸네일, 애플 뮤직(mzstatic)은 1400px 로 바꿔 먼저 시도하고 실패하면 원래 주소로 간다.
+ */
+export function getHeroImageCandidates(path: string | undefined | null): string[] {
+  if (!path) return [];
+  const urls: string[] = [];
+  if (path.startsWith('http')) {
+    const wiki = wikimediaThumbnailUrl(path, HERO_WIDTH);
+    if (wiki) urls.push(getImageUrl(wiki));
+    if (path.includes('mzstatic.com') && MZSTATIC_SIZE.test(path)) {
+      urls.push(path.replace(MZSTATIC_SIZE, '/1400x1400$3.$4'));
+    }
+  }
+  urls.push(...getImageCandidates(path));
+  return urls.filter((url, index) => urls.indexOf(url) === index);
+}

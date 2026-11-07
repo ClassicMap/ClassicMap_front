@@ -7,16 +7,8 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import {
-  GENRE_STYLES,
-  genreForeground,
-  type GenreStyle,
-  genreWash,
-  type PieceGenre,
-} from '@/lib/design/genre-palette';
-import { GradientWash } from '@/components/ui/gradient-wash';
-import { useHeaderTint } from '@/hooks/use-header-tint';
-import { useColorScheme } from 'nativewind';
+import { Chip } from '@/components/ui/chip';
+import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -24,7 +16,6 @@ import { cn } from '@/lib/utils';
 import { AlertCircleIcon, ChevronLeftIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { type LayoutChangeEvent, Platform, Pressable, ScrollView, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 export interface GenreShelf {
   genre: PieceGenre;
@@ -62,35 +53,8 @@ export function useGenreShelves() {
   };
 }
 
-/** 장르 색 면. 크기를 안 주면 부모를 꽉 채운다 */
-function GenreGradient({
-  style,
-  width,
-  height,
-}: {
-  style: GenreStyle;
-  width?: number;
-  height?: number;
-}) {
-  const id = `genre-${React.useId().replace(/:/g, '')}`;
-  return (
-    <Svg
-      width={width ?? '100%'}
-      height={height ?? '100%'}
-      style={{ position: 'absolute', left: 0, top: 0 }}>
-      <Defs>
-        <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={style.from} />
-          <Stop offset="1" stopColor={style.to} />
-        </LinearGradient>
-      </Defs>
-      <Rect width={width ?? '100%'} height={height ?? '100%'} fill={`url(#${id})`} />
-    </Svg>
-  );
-}
-
 /**
- * 장르 타일 (스포티파이 '모두 둘러보기' 타일 꼴): 장르 색 면, 왼쪽 위 이름, 오른쪽 아래에 비스듬히 얹은 초상.
+ * 장르 타일 (스포티파이 '모두 둘러보기' 타일 꼴): 장르 단색 면, 왼쪽 위 이름, 오른쪽 아래에 비스듬히 얹은 초상.
  */
 export function GenreTile({
   shelf,
@@ -112,8 +76,8 @@ export function GenreTile({
       accessibilityRole="link"
       accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieceCount}곡`}
       className={cn(Platform.OS === 'web' && 'cm-tile', 'overflow-hidden rounded-lg')}
-      style={{ width, height }}>
-      <GenreGradient style={shelf.style} width={width} height={height} />
+      style={{ width, height, backgroundColor: shelf.style.color }}>
+
       {shelf.portrait ? (
         <View
           pointerEvents="none"
@@ -145,115 +109,41 @@ export function GenreTile({
   );
 }
 
-/** 폭에 맞춰 장르 타일을 한 줄(넓은 화면) 또는 두 줄 격자(좁은 화면)로 깐다 */
+/**
+ * 장르 타일 격자 (둘러보기·비교 탭). 넓으면 들어가는 칸 수로 줄마다 고르게(7개면 4+3),
+ * 좁으면 두 칸씩 깐다. 장르를 다 보여 줘서 뒤쪽 장르로 못 가는 일이 없게 한다.
+ */
 export function GenreTiles({
   wide,
   onOpen,
   minTileWidth = 140,
-  scroll = false,
-  grid = false,
   className,
 }: {
   wide: boolean;
   onOpen: (genre: PieceGenre) => void;
   minTileWidth?: number;
-  /** 좁은 화면에서 격자 대신 가로로 흘린다 (홈 셸프) */
-  scroll?: boolean;
-  /** 넓은 화면에서 한 줄로 자르지 않고 줄을 바꿔 다 보인다 (비교 탭·둘러보기) */
-  grid?: boolean;
   className?: string;
 }) {
   const { shelves, isLoading } = useGenreShelves();
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 16 : 10;
-  const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
-
-  if (!wide && scroll) {
-    return (
-      <ScrollShelf gap={10} className={className}>
-        {isLoading && shelves.length === 0
-          ? Array.from({ length: 3 }, (_, index) => (
-              <Skeleton key={index} className="rounded-lg" style={{ width: 136, height: 88 }} />
-            ))
-          : shelves.map((shelf) => (
-              <GenreTile key={shelf.genre} shelf={shelf} width={136} height={88} onPress={() => onOpen(shelf.genre)} />
-            ))}
-      </ScrollShelf>
-    );
-  }
-
-  if (!wide) {
-    // 좁은 화면: 두 칸 격자
-    const tileWidth = width > 0 ? Math.floor((width - gap) / 2) : 0;
-    return (
-      <View onLayout={onLayout} className={cn('flex-row flex-wrap', className)} style={{ gap }}>
-        {isLoading && shelves.length === 0
-          ? Array.from({ length: 4 }, (_, index) => (
-              <Skeleton
-                key={index}
-                className="rounded-lg"
-                style={{ width: tileWidth || '48%', height: 92 }}
-              />
-            ))
-          : tileWidth > 0
-            ? shelves.map((shelf) => (
-                <GenreTile
-                  key={shelf.genre}
-                  shelf={shelf}
-                  width={tileWidth}
-                  height={92}
-                  onPress={() => onOpen(shelf.genre)}
-                />
-              ))
-            : null}
-      </View>
-    );
-  }
-
-  if (grid) {
-    // 넓은 화면 격자: 장르를 다 보인다. 줄마다 칸 수가 고르게(7개면 4+3) 나눈다
-    const maxColumns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap))) : 0;
-    const count = Math.max(1, shelves.length);
-    const rows = maxColumns > 0 ? Math.ceil(count / maxColumns) : 1;
-    const columns = Math.ceil(count / rows);
-    const tileWidth = maxColumns > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
-    const tileHeight = Math.round(Math.min(132, Math.max(96, tileWidth * 0.5)));
-    return (
-      <View onLayout={onLayout} className={cn('flex-row flex-wrap', className)} style={{ gap }}>
-        {isLoading && shelves.length === 0
-          ? Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="flex-1 rounded-lg" style={{ height: 110 }} />
-            ))
-          : tileWidth > 0
-            ? shelves.map((shelf) => (
-                <GenreTile
-                  key={shelf.genre}
-                  shelf={shelf}
-                  width={tileWidth}
-                  height={tileHeight}
-                  onPress={() => onOpen(shelf.genre)}
-                />
-              ))
-            : null}
-      </View>
-    );
-  }
-
-  // 넓은 화면: 들어가는 만큼 한 줄 (스포티파이 셸프 규칙)
-  const columns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap))) : 0;
-  const visible = shelves.slice(0, columns);
-  // 장르가 칸보다 적으면 있는 만큼 나눠 넓힌다
-  const count = Math.max(1, visible.length);
-  const tileWidth = columns > 0 ? Math.floor((width - gap * (count - 1)) / count) : 0;
-  const tileHeight = Math.round(Math.min(132, Math.max(96, tileWidth * 0.62)));
+  const count = Math.max(1, shelves.length);
+  const maxColumns = wide ? (width > 0 ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap))) : 0) : 2;
+  const rows = maxColumns > 0 ? Math.ceil(count / maxColumns) : 1;
+  const columns = wide ? Math.ceil(count / rows) : 2;
+  const tileWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
+  const tileHeight = wide ? Math.round(Math.min(132, Math.max(96, tileWidth * 0.5))) : 92;
   return (
-    <View onLayout={onLayout} className={cn('flex-row', className)} style={{ gap }}>
+    <View
+      onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}
+      className={cn('flex-row flex-wrap', className)}
+      style={{ gap }}>
       {isLoading && shelves.length === 0
-        ? Array.from({ length: Math.max(columns, 4) }, (_, index) => (
-            <Skeleton key={index} className="flex-1 rounded-lg" style={{ height: 110 }} />
+        ? Array.from({ length: 4 }, (_, index) => (
+            <Skeleton key={index} className="rounded-lg" style={{ width: tileWidth || '48%', height: tileHeight }} />
           ))
         : tileWidth > 0
-          ? visible.map((shelf) => (
+          ? shelves.map((shelf) => (
               <GenreTile
                 key={shelf.genre}
                 shelf={shelf}
@@ -276,20 +166,17 @@ export function CompareGenrePieces({
   wide,
   onBack,
   onOpen,
+  onSelectGenre,
 }: {
   genre: PieceGenre;
   wide: boolean;
   onBack: () => void;
   onOpen: (piece: ComparisonPiece) => void;
+  onSelectGenre: (genre: PieceGenre) => void;
 }) {
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
-  const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const wash = genreWash(genre, scheme);
-  const accent = genreForeground(genre, scheme);
-  useHeaderTint(wash);
   // 장르 작품은 서버에서 장르로 걸러 쪽 단위로 받는다
   const query = useGenrePieces(genre);
   const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
@@ -303,22 +190,15 @@ export function CompareGenrePieces({
     <ScrollView
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      {/* 머리: 장르 색을 위에서 옅게 번지게 깐다 (작품·작곡가 화면과 같은 꼴). 큰 색 덩어리는 과했다 */}
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 340 : 280 }}>
-        <GradientWash color={wash} />
-      </View>
       <Pressable onPress={onBack} accessibilityRole="link" className="mb-5 flex-row items-center gap-1 self-start">
         <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
         <Text variant="caption" className="text-foreground-muted">
           비교
         </Text>
       </Pressable>
-      <Text variant="micro" className="uppercase tracking-widest" style={accent ? { color: accent } : undefined}>
-        장르
-      </Text>
       <Text
         className={cn(
-          'mt-1 font-extrabold tracking-tight text-foreground',
+          'font-extrabold tracking-tight text-foreground',
           wide ? 'text-[56px] leading-[60px]' : 'text-[40px] leading-[44px]'
         )}>
         {style.label}
@@ -326,6 +206,17 @@ export function CompareGenrePieces({
       <Text variant="bodySm" className="mt-2 text-foreground-muted">
         {count !== undefined ? `비교할 수 있는 작품 ${count}곡` : ' '}
       </Text>
+      {/* 다른 장르로 바로 넘어가는 칩 (스포티파이 홈 칩 꼴) */}
+      <ScrollShelf gap={8} className="mt-5">
+        {shelves.map((item) => (
+          <Chip
+            key={item.genre}
+            label={item.style.label}
+            selected={item.genre === genre}
+            onPress={() => item.genre !== genre && onSelectGenre(item.genre)}
+          />
+        ))}
+      </ScrollShelf>
 
       <View className="mt-7" onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
         {query.isLoading ? (
@@ -357,7 +248,7 @@ export function CompareGenrePieces({
             <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
               {pieces.map((piece) => (
                 <View key={piece.pieceId} style={{ width: itemWidth }}>
-                  <PieceCard piece={piece} width={itemWidth} showGenreLabel={false} onPress={() => onOpen(piece)} />
+                  <PieceCard piece={piece} width={itemWidth} hideGenre onPress={() => onOpen(piece)} />
                 </View>
               ))}
             </View>

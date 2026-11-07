@@ -69,6 +69,7 @@ export function CompareMobileScreen() {
         genre={genre}
         wide={false}
         onBack={() => router.setParams({ genre: undefined })}
+        onSelectGenre={(key) => router.setParams({ genre: key })}
         onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
       />
     );

@@ -65,8 +65,8 @@ export function useGenreSummaries() {
   return useQuery(genreSummariesQueryOptions());
 }
 
-export function useGenrePieces(genre: PieceGenre) {
-  return useInfiniteQuery(genrePiecesQueryOptions(genre));
+export function useGenrePieces(genre: PieceGenre, enabled = true) {
+  return useInfiniteQuery({ ...genrePiecesQueryOptions(genre), enabled });
 }
 
 export function pieceSectorsQueryOptions(pieceId: number) {

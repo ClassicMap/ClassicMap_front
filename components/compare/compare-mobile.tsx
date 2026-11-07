@@ -18,10 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
-import { GradientWash } from '@/components/ui/gradient-wash';
-import { GenreBadge } from '@/components/piece/genre-badge';
-import { useHeaderTint } from '@/hooks/use-header-tint';
-import { PieceCover } from '@/components/piece/piece-cover';
+import { GenreLink } from '@/components/piece/genre-link';
+import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { OptimizedImage } from '@/components/optimized-image';
@@ -65,8 +63,7 @@ import {
   SettingsIcon,
 } from 'lucide-react-native';
 import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
-import { genreStyle, genreWash, type PieceGenre } from '@/lib/design/genre-palette';
-import { useColorScheme } from 'nativewind';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
@@ -291,7 +288,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               accessibilityRole="link"
               accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
-              <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} initialOf={piece.composerName} size={48} />
+              <PieceMosaic performers={piece.performers} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={48} />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-1.5">
                   <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">
@@ -431,9 +428,6 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const curveFloor = sharedFloorDb(performances.map((performance) => performance.loudness));
   const title = first?.pieceTitle ?? pieceInfo?.pieceTitle;
   const composerIdForLink = first?.composerId ?? pieceInfo?.composerId ?? composerId;
-  const { colorScheme } = useColorScheme();
-  const headerWash = genreWash(pieceInfo?.genre, colorScheme === 'dark' ? 'dark' : 'light');
-  useHeaderTint(headerWash);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -458,10 +452,6 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
 
   return (
     <ScrollView {...scrollInsets} className="flex-1 bg-background" contentContainerClassName="px-4 pb-28">
-      {/* 작품 장르 색을 머리 뒤로 번지게 깐다 */}
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: 300 }}>
-        <GradientWash color={headerWash} />
-      </View>
       <View className="flex-row items-center justify-between">
         <BackButton onPress={goBack} />
         <View className="mt-3 flex-row items-center gap-1">
@@ -480,14 +470,19 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {/* 머리: 작품은 사각. 음반 연결이 없어 작곡가 초상을 쓴다 */}
       <View className="mt-3 flex-row items-end gap-4">
         {title ? (
-          <PieceCover title={title} genre={pieceInfo?.genre} portrait={pieceInfo?.composerAvatarUrl} size={88} showLabel={false} />
+          <PieceMosaic
+            performers={pieceInfo?.performers ?? []}
+            fallbackImage={pieceInfo?.composerAvatarUrl}
+            fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
+            size={88}
+          />
         ) : (
           <Skeleton className="size-[88px] rounded-md" />
         )}
         <View className="min-w-0 flex-1">
           {title ? (
             <>
-              <GenreBadge genre={pieceInfo?.genre} className="mb-1" />
+              <GenreLink genre={pieceInfo?.genre} className="mb-1" />
               <Text className="text-title-2 font-bold text-foreground">{title}</Text>
               {/* 작곡가 이름을 누르면 작곡가 화면으로 간다 */}
               <View className="mt-1 flex-row items-center">

@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
-import { GradientWash } from '@/components/ui/gradient-wash';
-import { PieceCover } from '@/components/piece/piece-cover';
-import { genreStyle, washColor } from '@/lib/design/genre-palette';
+import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
+import { playPiece } from '@/lib/player/play-piece';
+import { PieceMosaic } from '@/components/piece/piece-mosaic';
+import { TrackIndex } from '@/components/piece/track-index';
+import { genreStyle } from '@/lib/design/genre-palette';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +19,6 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminComposerAPI, AdminPieceAPI } from '@/lib/api/admin';
 import { ComposerAPI } from '@/lib/api/client';
-import { getEraColor, getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
@@ -29,17 +30,15 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
-  ArrowLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronUpIcon,
   EditIcon,
   ExternalLinkIcon,
-  PlayIcon,
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
+import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -136,11 +135,11 @@ export default function ComposerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const composerId = Number(id);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [starting, setStarting] = React.useState(false);
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
-  const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const [editVisible, setEditVisible] = React.useState(false);
   const [pieceFormVisible, setPieceFormVisible] = React.useState(false);
@@ -241,9 +240,6 @@ export default function ComposerDetailScreen() {
     );
   }
 
-  const eraColor = getEraForeground(composer.period, scheme);
-  const eraBase = getEraColor(composer.period)?.base;
-  const eraWash = eraBase ? washColor(eraBase, scheme, 0.8) : null;
   const years = `${composer.birthYear}–${composer.deathYear ?? ''}`;
   const meta = [
     years,
@@ -256,6 +252,15 @@ export default function ComposerDetailScreen() {
     .map((keyword) => keyword.trim())
     .filter(Boolean);
   const firstComparable = comparable[0];
+  // 머리 재생: 첫 비교 작품을 그 자리에서 튼다. 틀 연주가 없으면 비교 화면으로 간다
+  const playFirst = () => {
+    if (!firstComparable) return;
+    setStarting(true);
+    playPiece(queryClient, { pieceId: firstComparable.pieceId })
+      .then((played) => !played && openCompare(firstComparable.pieceId))
+      .catch(() => openCompare(firstComparable.pieceId))
+      .finally(() => setStarting(false));
+  };
 
   const about =
     composer.bio || styleKeywords.length > 0 || composer.influence ? (
@@ -299,55 +304,18 @@ export default function ComposerDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
-        {/* 시대 색을 머리 뒤로 번지게 깐다 (스포티파이 아티스트 화면) */}
-        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 400 : 340 }}>
-          <GradientWash color={eraWash} />
-        </View>
-        {!wide ? (
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
-            accessibilityLabel="뒤로"
-            className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
-            <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-          </Pressable>
-        ) : null}
+        <HeroBanner
+          image={composer.avatarUrl}
+          title={composer.name}
+          meta={[composer.period, ...meta]}
+          wide={wide}
+          onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
+        />
 
-        {/* 머리: 사람은 원형 */}
-        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-end gap-8' : 'mt-2 items-center')}>
-          <EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={wide ? 208 : 148} />
-          <View className={cn('min-w-0', wide ? 'flex-1 pb-2' : 'items-center')}>
-            {wide ? (
-              <Text variant="micro" className="uppercase tracking-widest">
-                작곡가
-              </Text>
-            ) : null}
-            <Text
-              className={cn(
-                'font-extrabold tracking-tight text-foreground',
-                wide ? 'mt-2 text-[64px] leading-[66px]' : 'text-[34px] leading-10'
-              )}>
-              {composer.name}
-            </Text>
-            <Text variant="bodySm" className={cn('mt-3 text-foreground-muted', !wide && 'text-center')}>
-              <Text className="font-semibold" style={eraColor ? { color: eraColor } : undefined}>
-                {composer.period}
-              </Text>
-              {meta.map((part) => `  ·  ${part}`).join('')}
-            </Text>
-          </View>
-        </View>
-
-        {/* 행동: 바로 듣기가 먼저, 담기는 그다음 */}
-        <View className={cn('mt-6 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
+        {/* 행동: 재생(첫 비교 작품을 그 자리에서) → 담기 → 관리 */}
+        <View className="mt-6 flex-row flex-wrap items-center gap-4">
           {firstComparable ? (
-            <Pressable
-              onPress={() => openCompare(firstComparable.pieceId)}
-              accessibilityRole="button"
-              accessibilityLabel={`${firstComparable.pieceTitle} 비교 듣기`}
-              className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-5 web:transition-opacity web:hover:opacity-90">
-              <Icon as={PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
-              <Text className="text-label font-bold text-primary-foreground">비교 듣기</Text>
-            </Pressable>
+            <HeroPlayButton label={`${firstComparable.pieceTitle} 바로 듣기`} busy={starting} onPress={playFirst} />
           ) : null}
           <FavoriteButton kind="composers" id={composer.id} name={composer.name} variant="labeled" />
           {canEdit ? (
@@ -388,6 +356,11 @@ export default function ComposerDetailScreen() {
                       piece={piece}
                       wide={wide}
                       onPress={() => openCompare(piece.pieceId)}
+                      onPlay={() =>
+                        void playPiece(queryClient, { pieceId: piece.pieceId })
+                          .then((played) => !played && openCompare(piece.pieceId))
+                          .catch(() => openCompare(piece.pieceId))
+                      }
                     />
                   ))}
                   {comparableQuery.hasNextPage ? (
@@ -552,22 +525,23 @@ function ComparableRow({
   piece,
   wide,
   onPress,
+  onPlay,
 }: {
   index: number;
   piece: ComparisonPiece;
   wide: boolean;
   onPress: () => void;
+  /** 번호 칸을 누르면 그 자리에서 바로 튼다 */
+  onPlay: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`${piece.pieceTitle} 비교하기`}
-      className="-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
-      <Text variant="mono" className="w-6 text-center text-foreground-subtle">
-        {index + 1}
-      </Text>
-      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} initialOf={piece.composerName} size={40} />
+      className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
+      <TrackIndex index={index + 1} pieceId={piece.pieceId} onPlay={onPlay} />
+      <PieceMosaic performers={piece.performers} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}

@@ -2,12 +2,10 @@ import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/compo
 import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
-import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
+import { useGenreShelves } from '@/components/compare/genre-browse';
+import { Chip } from '@/components/ui/chip';
 import { usePinnedToday } from '@/hooks/use-pinned-today';
-import { useHeaderTint } from '@/hooks/use-header-tint';
 import type { PieceGenre } from '@/lib/design/genre-palette';
-import { HomeWash, homeWashColor, homeWashHover } from '@/components/home/home-wash';
-import { useColorScheme } from 'nativewind';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -21,7 +19,7 @@ import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/dat
 import { TasteAPI } from '@/lib/api/taste';
 import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
-import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
+import { useComparisonPieces, useGenrePieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
 import { useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
 import { DEFAULT_CONCERT_FILTER, periodRange } from '@/lib/data/concert-filters';
@@ -169,12 +167,16 @@ export default function HomeScreen() {
   // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
   const todayPiece = recoToday ?? today;
 
-  // 위쪽 색 번짐(HomeWash)과 같은 색으로 좁은 웹 상단바를 물들인다. 좁은 화면은 호버가 없어 오늘의 비교 색이다
-  const { colorScheme } = useColorScheme();
-  useHeaderTint(wide ? null : homeWashColor(todayPiece?.genre, colorScheme === 'dark' ? 'dark' : 'light'));
-  const shelfPieces = React.useMemo(
+  // '비교할 수 있는 작품' 줄의 장르 칩. 고르면 그 장르 첫 쪽으로 줄을 바꾼다
+  const [shelfGenre, setShelfGenre] = React.useState<PieceGenre | null>(null);
+  const genreQuery = useGenrePieces(shelfGenre ?? 'symphony', shelfGenre !== null);
+  const allShelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
     [pieces, todayPiece?.pieceId]
+  );
+  const shelfPieces = React.useMemo(
+    () => (shelfGenre ? (genreQuery.data?.pages[0] ?? []) : allShelfPieces),
+    [allShelfPieces, genreQuery.data, shelfGenre]
   );
 
   const favoriteArtistIds = React.useMemo(
@@ -264,7 +266,6 @@ export default function HomeScreen() {
   };
   const openRecent = (item: RecentPiece) => openPiece(item);
   const genreShelves = useGenreShelves();
-  const openGenre = (genre: PieceGenre) => router.push(`/compare?genre=${genre}` as Href);
 
   const gap = wide ? 20 : 12;
 
@@ -320,7 +321,6 @@ export default function HomeScreen() {
       className="flex-1 bg-background web:bg-surface-1"
       contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-      <HomeWash todayGenre={todayPiece?.genre} height={wide ? 420 : 320} />
       <Text variant={wide ? 'display' : 'title1'}>{greeting(new Date())}</Text>
 
       {onboarding ? <View className="mt-5">{onboarding}</View> : null}
@@ -337,7 +337,7 @@ export default function HomeScreen() {
             rowGap={wide ? 12 : 8}
             keyOf={(item) => item.pieceId}
             renderItem={(item) => (
-              <RecentTile item={item} onPress={() => openRecent(item)} onHoverChange={homeWashHover.set} />
+              <RecentTile item={item} onPress={() => openRecent(item)} />
             )}
           />
         </View>
@@ -396,8 +396,25 @@ export default function HomeScreen() {
         </Section>
       ))}
 
-      <Section wide={wide} title="비교할 수 있는 작품" onAction={() => router.push('/compare' as Href)}>
-        {catalog.isLoading ? (
+      <Section
+        wide={wide}
+        title="비교할 수 있는 작품"
+        onAction={() => router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)}>
+        {/* 장르 칩: 이 줄만 그 장르로 걸러 본다 (스포티파이 홈 칩) */}
+        {genreShelves.shelves.length > 0 ? (
+          <ScrollShelf gap={8} className="mb-4">
+            <Chip label="전체" selected={shelfGenre === null} onPress={() => setShelfGenre(null)} />
+            {genreShelves.shelves.map((shelf) => (
+              <Chip
+                key={shelf.genre}
+                label={shelf.style.label}
+                selected={shelfGenre === shelf.genre}
+                onPress={() => setShelfGenre(shelfGenre === shelf.genre ? null : shelf.genre)}
+              />
+            ))}
+          </ScrollShelf>
+        ) : null}
+        {catalog.isLoading || (shelfGenre !== null && genreQuery.isLoading) ? (
           <CardSkeletonRow wide={wide} shape="square" />
         ) : shelfPieces.length === 0 ? null : wide ? (
           <ShelfRow
@@ -417,12 +434,6 @@ export default function HomeScreen() {
           />
         )}
       </Section>
-
-      {genreShelves.isLoading || genreShelves.shelves.length > 0 ? (
-        <Section wide={wide} title="장르로 듣기" onAction={() => router.push('/compare' as Href)} actionLabel="비교 탭">
-          <GenreTiles wide={wide} scroll={!wide} onOpen={openGenre} />
-        </Section>
-      ) : null}
 
       <Section wide={wide} title="연주자" onAction={() => router.push('/artists?type=artist' as Href)}>
         {artistsQuery.isLoading ? (

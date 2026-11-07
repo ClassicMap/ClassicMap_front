@@ -1,19 +1,22 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { OptimizedImage } from '@/components/optimized-image';
-import { PieceCover } from '@/components/piece/piece-cover';
+import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
-import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { genreStyle } from '@/lib/design/genre-palette';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
-import { PlayIcon, XIcon } from 'lucide-react-native';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { playPiece } from '@/lib/player/play-piece';
+import { useQueryClient } from '@tanstack/react-query';
+import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
@@ -31,7 +34,7 @@ export function PieceCard({
   onPress,
   reason,
   onDismiss,
-  showGenreLabel,
+  hideGenre = false,
 }: {
   piece: ComparisonPiece;
   width: number;
@@ -40,8 +43,8 @@ export function PieceCard({
   reason?: string;
   /** 추천에서 뺀다(관심 없음). 웹은 호버하면 버튼이 뜨고, 앱은 길게 누른다 */
   onDismiss?: () => void;
-  /** 커버 위 장르 글자. 한 장르만 모인 화면에서는 끈다 */
-  showGenreLabel?: boolean;
+  /** 한 장르만 모인 화면에서는 부제에 장르 대신 연주자 수를 쓴다 */
+  hideGenre?: boolean;
 }) {
   const confirmDismiss = onDismiss
     ? () =>
@@ -51,6 +54,15 @@ export function PieceCard({
         ])
     : undefined;
   const genre = genreStyle(piece.genre);
+  const queryClient = useQueryClient();
+  const isCurrent = useComparePlayer((state) => state.current?.pieceId === piece.pieceId);
+  const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === piece.pieceId);
+  // 그 자리에서 바로 튼다(영상은 하단 플레이바). 틀 연주가 없으면 비교 화면을 연다
+  const playHere = () => {
+    playPiece(queryClient, { pieceId: piece.pieceId })
+      .then((played) => !played && onPress())
+      .catch(() => onPress());
+  };
   // 데스크톱은 호버, 터치는 누르기 시작할 때 다음 화면 데이터를 미리 받는다
   const prefetch = usePrefetchOnHover({ kind: 'piece', pieceId: piece.pieceId, composerId: piece.composerId });
   return (
@@ -64,12 +76,10 @@ export function PieceCard({
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
       className={cn(WEB_CARD, 'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <View>
-        <PieceCover
-          title={piece.pieceTitle}
-          genre={piece.genre}
-          portrait={piece.composerAvatarUrl}
-          initialOf={piece.composerName}
-          showLabel={showGenreLabel}
+        <PieceMosaic
+          performers={piece.performers}
+          fallbackImage={piece.composerAvatarUrl}
+          fallbackName={piece.composerName}
           size={width}
         />
         {onDismiss && Platform.OS === 'web' ? (
@@ -83,22 +93,30 @@ export function PieceCard({
             <Text className="text-micro font-semibold text-white">관심 없음</Text>
           </Pressable>
         ) : null}
-        {/* 데스크톱 호버에서만 드러나는 재생 버튼. 아래에서 올라오며 나타난다 */}
+        {/* 데스크톱 호버에서 아래에서 올라오는 재생 버튼. 그 자리에서 바로 튼다.
+            지금 듣는 작품이면 일시정지 버튼으로 늘 떠 있다 */}
         {Platform.OS === 'web' ? (
-          <View className="cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40">
+          <Pressable
+            onPress={isCurrent ? () => comparePlayer.togglePlay() : playHere}
+            accessibilityRole="button"
+            accessibilityLabel={playing ? `${piece.pieceTitle} 일시정지` : `${piece.pieceTitle} 바로 듣기`}
+            className={cn(
+              'cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40',
+              isCurrent && 'cm-play-fab-on'
+            )}>
             <Icon
-              as={PlayIcon}
+              as={playing ? PauseIcon : PlayIcon}
               size={17}
-              className="ml-0.5 fill-primary-foreground text-primary-foreground"
+              className={cn('fill-primary-foreground text-primary-foreground', !playing && 'ml-0.5')}
             />
-          </View>
+          </Pressable>
         ) : null}
       </View>
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {piece.pieceTitle}
       </Text>
       <Text variant="caption" numberOfLines={1} className="mt-0.5">
-        {reason ? piece.composerName : `${piece.composerName} · 연주자 ${piece.performerCount}`}
+        {[piece.composerName, (!hideGenre && genre?.label) || `연주자 ${piece.performerCount}`].join(' · ')}
       </Text>
       {reason ? (
         <Text numberOfLines={1} className="mt-0.5 text-caption font-semibold text-primary">
@@ -221,18 +239,15 @@ export function EraTile({
 
 /**
  * 최근 본 작품: 가로로 눕힌 작은 타일 (스포티파이 첫 줄 바로가기).
- * 웹은 호버하면 바탕이 밝아지고 오른쪽에 재생 버튼이 뜬다. 홈 위쪽 색 번짐도 이 작품 색으로 바뀐다
+ * 웹은 호버하면 바탕이 밝아지고 오른쪽에 재생 버튼이 뜬다
  */
 export function RecentTile({
   item,
   onPress,
-  onHoverChange,
   className,
 }: {
   item: RecentPiece;
   onPress: () => void;
-  /** 웹 호버. 들어오면 이 작품 장르(없으면 null), 나가면 undefined. 홈 위쪽 색 번짐을 바꾼다 */
-  onHoverChange?: (genre: PieceGenre | null | undefined) => void;
   className?: string;
 }) {
   const prefetch = usePrefetchOnHover({
@@ -245,14 +260,6 @@ export function RecentTile({
     <Pressable
       {...prefetch}
       onPress={onPress}
-      onHoverIn={() => {
-        prefetch.onHoverIn?.();
-        onHoverChange?.(item.genre ?? null);
-      }}
-      onHoverOut={() => {
-        prefetch.onHoverOut?.();
-        onHoverChange?.(undefined);
-      }}
       accessibilityRole="link"
       accessibilityLabel={`${item.composerName} ${item.pieceTitle} 다시 보기`}
       className={cn(
@@ -260,14 +267,7 @@ export function RecentTile({
         'group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
         className
       )}>
-      <PieceCover
-        title={item.pieceTitle}
-        genre={item.genre}
-        portrait={item.composerAvatarUrl}
-        initialOf={item.composerName}
-        size={56}
-        radius={0}
-      />
+      <EntityThumb name={item.composerName} image={item.composerAvatarUrl} shape="square" size={56} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-label font-semibold text-foreground">
           {item.pieceTitle}

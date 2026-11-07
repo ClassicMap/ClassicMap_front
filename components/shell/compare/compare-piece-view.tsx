@@ -13,11 +13,9 @@ import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
-import { GradientWash } from '@/components/ui/gradient-wash';
 import { Equalizer } from '@/components/ui/equalizer';
-import { GenreBadge } from '@/components/piece/genre-badge';
-import { PieceCover } from '@/components/piece/piece-cover';
-import { genreWash } from '@/lib/design/genre-palette';
+import { GenreLink } from '@/components/piece/genre-link';
+import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
@@ -62,7 +60,6 @@ import {
   RectangleHorizontalIcon,
   SettingsIcon,
 } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -109,8 +106,6 @@ export function ComparePieceView({
   // 앞 화면 목록에 있던 작품이면 요청을 기다리지 않고 바로 채워진다 (머리가 스켈레톤을 거치지 않는다)
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const composerAvatar = pieceInfo?.composerAvatarUrl ?? null;
-  const { colorScheme } = useColorScheme();
-  const headerWash = genreWash(pieceInfo?.genre, colorScheme === 'dark' ? 'dark' : 'light');
   const backComposerId = composerId ?? first?.composerId ?? pieceInfo?.composerId;
   const backLabel = pieceInfo?.composerName ?? first?.composerName;
   const pieceTitle = first?.pieceTitle ?? pieceInfo?.pieceTitle;
@@ -325,10 +320,6 @@ export function ComparePieceView({
   return (
     <View className="flex-1">
       <ScrollView ref={scrollRef} className="flex-1" contentContainerClassName="px-7 pb-10">
-        {/* 작품 장르 색을 머리 뒤로 번지게 깐다 (스포티파이 상세 화면) */}
-        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: theater ? 220 : 360 }}>
-          <GradientWash color={headerWash} />
-        </View>
         <Pressable onPress={goBack} className="mb-4 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
@@ -339,13 +330,13 @@ export function ComparePieceView({
         {/* 머리: 작품은 사각. 크게 보기에서는 영상에 자리를 내주려 줄인다 */}
         <View className="flex-row items-end gap-6">
           {pieceTitle ? (
-            // 앨범 연결(B22)이 없어 작품 사각에는 작곡가 초상을 쓴다 (1차 시안과 같음)
-            <PieceCover
-              title={pieceTitle}
-              genre={pieceInfo?.genre}
-              portrait={composerAvatar}
+            // 작품 그림: 이 곡을 연주한 사람들 사진 2×2 (음반 연결이 없어 연주자 얼굴로 묶는다)
+            <PieceMosaic
+              performers={pieceInfo?.performers ?? []}
+              fallbackImage={composerAvatar}
+              fallbackName={composerName ?? pieceTitle}
               size={theater ? 72 : 136}
-              className="shadow-lg shadow-black/40"
+              className="web:shadow-xl web:shadow-black/50"
             />
           ) : (
             <Skeleton className={cn('rounded-md', theater ? 'size-[72px]' : 'size-[136px]')} />
@@ -356,7 +347,7 @@ export function ComparePieceView({
                 <Text variant="micro" className="uppercase tracking-widest">
                   비교
                 </Text>
-                <GenreBadge genre={pieceInfo?.genre} />
+                <GenreLink genre={pieceInfo?.genre} />
               </View>
             ) : null}
             {pieceTitle ? (
