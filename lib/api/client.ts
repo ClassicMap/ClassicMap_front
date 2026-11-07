@@ -17,8 +17,12 @@ import {
   getComposersByPeriod,
 } from '../data';
 
+import { isPieceGenre } from '../design/genre-palette';
 import type {
   Composer,
+  ComposerCatalog,
+  ComposerPiece,
+  ComposerPieceFilter,
   Piece,
   PiecePart,
   PiecePartKind,
@@ -76,6 +80,14 @@ interface APIPiece {
   youtubeMusicUrl?: string;
   partCount?: number;
   partKind?: PiecePartKind | null;
+  genre?: string | null;
+  formKey?: string | null;
+  notable?: boolean;
+}
+
+interface APIComposerPiece extends APIPiece {
+  notableParts?: number[];
+  matchedPart?: { sequenceNumber: number; name: string } | null;
 }
 
 interface APIPiecePart {
@@ -93,6 +105,7 @@ interface APIPiecePart {
     spotifyUrl: string | null;
     appleMusicUrl: string | null;
   } | null;
+  notable?: boolean;
 }
 
 interface APIPieceSearchResult extends APIPiece {
@@ -276,6 +289,24 @@ const mapPiece = (api: APIPiece): Piece => ({
   youtubeMusicUrl: api.youtubeMusicUrl,
   partCount: api.partCount,
   partKind: api.partKind,
+  genre: isPieceGenre(api.genre) ? api.genre : null,
+  formKey: api.formKey ?? null,
+  notable: api.notable === true,
+});
+
+const mapComposerPiece = (api: APIComposerPiece): ComposerPiece => ({
+  ...mapPiece(api),
+  notableParts: api.notableParts ?? [],
+  matchedPart: api.matchedPart ?? null,
+});
+
+const mapCatalog = (api: ComposerCatalog): ComposerCatalog => ({
+  total: api.total,
+  notableTotal: api.notableTotal,
+  genres: api.genres.map((genre) => ({
+    ...genre,
+    genre: isPieceGenre(genre.genre) ? genre.genre : null,
+  })),
 });
 
 const mapPiecePart = (api: APIPiecePart): PiecePart => ({
@@ -286,6 +317,7 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
   name: api.name,
   nameKo: api.nameKo,
   nameEn: api.nameEn,
+  notable: api.notable === true,
   linkedPiece: api.linkedPiece
     ? {
         id: api.linkedPiece.id,
@@ -766,8 +798,9 @@ export const ComposerAPI = {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`);
       if (!response.ok) throw new Error('Failed to fetch piece');
-      const pieceData: APIPiece = await response.json();
-      return pieceData;
+      const pieceData: APIPiece | null = await response.json();
+      if (!pieceData) return null;
+      return { ...pieceData, genre: isPieceGenre(pieceData.genre) ? pieceData.genre : null };
     }
     return Promise.resolve(getPieceById(id) ?? null);
   },
@@ -908,24 +941,40 @@ export const PieceAPI = {
   },
 
   /**
-   * 작곡가의 작품 한 페이지. 스트리밍 링크·설명이 있는 작품이 앞에 온다
+   * 작곡가의 작품 한 페이지. 거르기가 없으면 손본 작품이 앞에 온다(listening).
+   * genre·form·notable 로 거르고, sort 로 작품번호순·연도순·대표곡 먼저를 고른다
    */
   async getPageByComposer(
     composerId: number,
-    params: { offset: number; limit: number }
-  ): Promise<Piece[]> {
+    params: { offset: number; limit: number } & ComposerPieceFilter
+  ): Promise<ComposerPiece[]> {
     if (USE_REAL_API) {
       const query = new URLSearchParams({ offset: String(params.offset), limit: String(params.limit) });
+      if (params.genre) query.append('genre', params.genre);
+      if (params.form) query.append('form', params.form);
+      if (params.sort) query.append('sort', params.sort);
+      if (params.q?.trim()) query.append('q', params.q.trim());
+      if (params.notable) query.append('notable', '1');
       const response = await authenticatedFetch(
         `${API_BASE_URL}/composers/${composerId}/pieces?${query.toString()}`
       );
       if (!response.ok) throw new Error('Failed to fetch pieces');
-      const data: APIPiece[] = await response.json();
-      return data.map(mapPiece);
+      const data: APIComposerPiece[] = await response.json();
+      return data.map(mapComposerPiece);
     }
     return Promise.resolve(
-      PIECES.filter((p) => p.composerId === composerId).slice(params.offset, params.offset + params.limit)
+      PIECES.filter((p) => p.composerId === composerId)
+        .slice(params.offset, params.offset + params.limit)
+        .map((piece) => ({ ...piece, notableParts: [], matchedPart: null }))
     );
+  },
+
+  /**
+   * 작곡가 작품의 갈래·형식별 개수. 작곡가 화면의 갈래 칩과 형식 머리를 그린다
+   */
+  async getCatalog(composerId: number): Promise<ComposerCatalog> {
+    const data = await requestJson<ComposerCatalog>(`/composers/${composerId}/catalog`);
+    return mapCatalog(data);
   },
 
   /**

@@ -41,8 +41,54 @@ export interface Piece {
   partCount?: number;
   /** 묶음 안 곡의 단위. movement 면 악장, work·null 이면 곡으로 센다 */
   partKind?: PiecePartKind | null;
+  /** 장르 7종. 못 정한 작품은 null 이고 작곡가 화면에서 '기타'로 묶는다 */
+  genre?: PieceGenre | null;
+  /** 갈래 안 형식 키(nocturne·string_quartet 등). 이름은 작곡가 catalog 응답에 있다 */
+  formKey?: string | null;
+  /** 대표곡 표시. 목록 순서는 그대로 두고 표시만 한다 */
+  notable?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 작곡가 작품 목록 한 줄. 세트 안 대표 곡 번호와 검색에 걸린 세트 안 곡이 붙는다 */
+export interface ComposerPiece extends Piece {
+  notableParts: number[];
+  matchedPart: { sequenceNumber: number; name: string } | null;
+}
+
+/** 작곡가 작품 목록 정렬. listening 은 손본 작품 먼저(기존 기본값) */
+export type ComposerPieceSort = 'listening' | 'catalogue' | 'year' | 'notable';
+
+/** 작곡가 작품 목록 거르기. genre 'other' 는 장르를 못 정한 작품이다 */
+export interface ComposerPieceFilter {
+  genre?: PieceGenre | 'other';
+  form?: string;
+  sort?: ComposerPieceSort;
+  q?: string;
+  notable?: boolean;
+}
+
+export interface ComposerCatalogForm {
+  formKey: string;
+  name: string;
+  count: number;
+  notableCount: number;
+}
+
+export interface ComposerCatalogGenre {
+  /** null 은 장르를 못 정한 작품('기타') */
+  genre: PieceGenre | null;
+  count: number;
+  notableCount: number;
+  forms: ComposerCatalogForm[];
+}
+
+/** 작곡가 작품의 갈래·형식별 개수. 작품이 많은 갈래부터, '기타'는 맨 뒤다 */
+export interface ComposerCatalog {
+  total: number;
+  notableTotal: number;
+  genres: ComposerCatalogGenre[];
 }
 
 export type PiecePartKind = 'movement' | 'work';
@@ -66,6 +112,8 @@ export interface PiecePart {
   nameKo: string | null;
   nameEn: string | null;
   linkedPiece: PiecePartLinkedPiece | null;
+  /** 세트 안 대표 곡 */
+  notable: boolean;
 }
 
 export interface ComposerMajorPiece {
