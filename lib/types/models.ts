@@ -117,6 +117,8 @@ export interface PiecePart {
   linkedPiece: PiecePartLinkedPiece | null;
   /** 세트 안 대표 곡 */
   notable: boolean;
+  /** 이 곡의 Apple Music 트랙 링크. 이어진 작품이 있으면 그 작품 링크를 쓴다 */
+  appleMusicUrl: string | null;
 }
 
 export interface ComposerMajorPiece {

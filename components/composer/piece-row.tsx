@@ -322,24 +322,23 @@ function PiecePartRow({
   // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
   const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
   const linked = part.linkedPiece;
-  const links = linked && !linked.comparable ? listenLinks(linked) : [];
+  // 따로 작품 행으로 이어진 곡은 그 작품의 링크를, 아니면 이 곡의 Apple Music 트랙 링크를 쓴다
+  const links = linked
+    ? listenLinks(linked)
+    : listenLinks({ appleMusicUrl: part.appleMusicUrl });
   return (
     <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
       <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
         {movement ? `${part.sequenceNumber}악장` : `${part.sequenceNumber}.`}
       </Text>
-      <View className="min-w-0 flex-1">
-        <View className="flex-row items-center gap-1.5">
+      <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-3 gap-y-1">
+        <View className="min-w-0 shrink flex-row items-center gap-1.5">
           {part.notable ? <NotableStar size={12} label="대표 곡" /> : null}
           <Text numberOfLines={2} className="shrink text-body-sm text-foreground">
             {part.name}
           </Text>
         </View>
-        {links.length > 0 ? (
-          <View className="mt-1">
-            <ListenLinks name={part.name} links={links} />
-          </View>
-        ) : null}
+        {links.length > 0 ? <ListenLinks name={part.name} links={links} /> : null}
       </View>
       {linked?.comparable ? (
         <Chip
