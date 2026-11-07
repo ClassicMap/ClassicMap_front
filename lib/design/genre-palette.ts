@@ -1,7 +1,7 @@
 import type { ColorScheme } from './tokens';
 
 /**
- * 작품 장르 7종 (2026-11-07 사용자 결정). 원곡 편성 기준으로 서버가 `genre` 로 준다.
+ * 작품 장르 7종 (2026-11-07 사용자 결정). 처음 고른 색이 진하다는 의견에 채도를 낮춘 차분한 톤으로 둔다. 원곡 편성 기준으로 서버가 `genre` 로 준다.
  * 시대 색처럼 데이터 카테고리 전용이라 버튼·보더 같은 UI 크롬에는 쓰지 않는다.
  * 사용처: 작품 커버 그라데이션, 작품 머리 배경, 장르 타일·칩.
  */
@@ -34,56 +34,56 @@ export const GENRE_STYLES: Record<PieceGenre, GenreStyle> = {
   symphony: {
     key: 'symphony',
     label: '교향곡',
-    from: '#232B6B',
-    to: '#6A45C4',
+    from: '#2E3463',
+    to: '#5A4E8C',
     onDark: '#A99BF0',
     onLight: '#4B37A0',
   },
   concerto: {
     key: 'concerto',
     label: '협주곡',
-    from: '#E8772B',
-    to: '#C42E3F',
+    from: '#9A5A32',
+    to: '#8E4650',
     onDark: '#F5A15C',
     onLight: '#A8411C',
   },
   piano: {
     key: 'piano',
     label: '피아노',
-    from: '#0B7470',
-    to: '#2EA463',
+    from: '#255F5C',
+    to: '#4A8566',
     onDark: '#55C9A8',
     onLight: '#0B6B5C',
   },
   chamber: {
     key: 'chamber',
     label: '실내악',
-    from: '#636F1F',
-    to: '#C08B2C',
+    from: '#575D2F',
+    to: '#8F7646',
     onDark: '#CDB65E',
     onLight: '#6B5A12',
   },
   orchestral: {
     key: 'orchestral',
     label: '관현악',
-    from: '#1A50BE',
-    to: '#3AA9E6',
+    from: '#2A4570',
+    to: '#4C7EA0',
     onDark: '#6FB6F2',
     onLight: '#1B4FA8',
   },
   stage: {
     key: 'stage',
     label: '오페라·발레',
-    from: '#741C5F',
-    to: '#D12A4E',
+    from: '#5A2C50',
+    to: '#8E4559',
     onDark: '#EA6C8C',
     onLight: '#A11B45',
   },
   vocal: {
     key: 'vocal',
     label: '성악',
-    from: '#4E3CA8',
-    to: '#B896E6',
+    from: '#3E3866',
+    to: '#7D6AA6',
     onDark: '#C2A8F2',
     onLight: '#5A3FB0',
   },
@@ -136,9 +136,9 @@ export function rgba(hex: string, alpha: number): string {
  * 주황·분홍 같은 밝은 색을 그대로 깔면 머리 글자가 묻혀서 이렇게 한다.
  */
 export function washColor(hex: string, scheme: ColorScheme, strength = 1): string {
-  if (scheme === 'light') return rgba(hex, 0.2 * strength);
-  const [r, g, b] = hexToRgb(hex).map((channel) => Math.round(channel * 0.58));
-  return `rgba(${r}, ${g}, ${b}, ${Math.min(1, 0.92 * strength)})`;
+  if (scheme === 'light') return rgba(hex, 0.14 * strength);
+  const [r, g, b] = hexToRgb(hex).map((channel) => Math.round(channel * 0.5));
+  return `rgba(${r}, ${g}, ${b}, ${Math.min(1, 0.62 * strength)})`;
 }
 
 /**
