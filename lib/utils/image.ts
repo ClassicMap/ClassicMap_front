@@ -91,11 +91,11 @@ export function toRelativePath(url: string | undefined | null): string | undefin
 
 const MZSTATIC_SIZE = /\/(\d+)x(\d+)(bb|cc|sr)?\.(jpg|jpeg|png|webp)$/i;
 /** 배너에 쓸 큰 폭. 위키미디어가 캐시해 두는 표준 폭이다 */
-const HERO_WIDTH = 1280;
+const HERO_WIDTH = 1920;
 
 /**
  * 화면 폭 배너에 쓸 큰 그림 주소를 순서대로 준다. 목록용 500px 썸네일을 늘리면 흐려서
- * 위키미디어는 1280px 썸네일, 애플 뮤직(mzstatic)은 1400px 로 바꿔 먼저 시도하고 실패하면 원래 주소로 간다.
+ * 위키미디어는 1920px 썸네일, 애플 뮤직(mzstatic)은 1400px 로 바꿔 먼저 시도하고 실패하면 원래 주소로 간다.
  */
 export function getHeroImageCandidates(path: string | undefined | null): string[] {
   if (!path) return [];

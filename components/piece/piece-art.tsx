@@ -5,7 +5,10 @@ import { Scrim } from '@/components/ui/scrim';
 import type { ComparisonPiecePerformer } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
-import { Image, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
+import { type Href, useRouter } from 'expo-router';
 
 interface PieceArtProps {
   /** 대표 연주 영상(YouTube id). 썸네일 가운데를 정사각으로 잘라 음반 표지로 쓴다 */
@@ -59,8 +62,6 @@ export function PieceArt({
 
   return (
     <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
       className={cn('overflow-hidden bg-surface-3', className)}
       style={{ width: size, height: size, borderRadius: corner }}>
       {coverVideoId && !coverFailed ? (
@@ -86,16 +87,59 @@ export function PieceArt({
           <Scrim from="bottom" opacity={0.55} extent={38} />
           <View className="absolute flex-row" style={{ left: Math.round(size * 0.05), bottom: Math.round(size * 0.05) }}>
             {faces.map((performer, index) => (
-              <View
+              <FaceLink
                 key={performer.artistId}
-                className="rounded-full border-2 border-black/60"
-                style={{ marginLeft: index === 0 ? 0 : -Math.round(face * 0.32) }}>
-                <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={face} />
-              </View>
+                performer={performer}
+                size={face}
+                overlap={index === 0 ? 0 : -Math.round(face * 0.32)}
+              />
             ))}
           </View>
         </>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * 표지 위 연주자 얼굴. 웹은 호버하면 위에 이름 말풍선이 뜨고 살짝 올라온다. 누르면 그 연주자 화면으로 간다.
+ * 카드(작품으로 가는 누름) 안에 있지만 안쪽 누름이 먼저 받는다.
+ */
+function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerformer; size: number; overlap: number }) {
+  const router = useRouter();
+  const [hovered, setHovered] = React.useState(false);
+  const prefetch = usePrefetchOnHover({ kind: 'artist', artistId: performer.artistId });
+  return (
+    <Pressable
+      {...prefetch}
+      onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
+      onHoverIn={() => {
+        prefetch.onHoverIn?.();
+        setHovered(true);
+      }}
+      onHoverOut={() => {
+        prefetch.onHoverOut?.();
+        setHovered(false);
+      }}
+      accessibilityRole="link"
+      accessibilityLabel={`${performer.artistName} 화면으로`}
+      hitSlop={3}
+      className={cn(
+        'rounded-full border-2 border-black/60 web:transition-transform web:duration-fast',
+        hovered && 'web:-translate-y-0.5'
+      )}
+      style={{ marginLeft: overlap, zIndex: hovered ? 2 : 1 }}>
+      <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={size} />
+      {hovered ? (
+        <View
+          pointerEvents="none"
+          className="absolute rounded-md bg-black/85 px-2 py-1"
+          style={{ bottom: size + 8, left: -6 }}>
+          <Text numberOfLines={1} className="text-micro font-semibold text-white web:whitespace-nowrap">
+            {performer.artistName}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
   );
 }

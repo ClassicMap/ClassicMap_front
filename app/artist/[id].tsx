@@ -306,12 +306,14 @@ export default function ArtistDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
+        {/* 배너 전용 가로 사진이 있으면 폭으로 깔고, 없으면 프로필 사진을 오른쪽에 세운다 */}
         <HeroBanner
-          image={artist.imageUrl}
+          image={artist.banner?.url ?? artist.imageUrl}
+          focalPoint={artist.banner?.focalPoint}
           title={artist.name}
           meta={[...meta, artist.englishName]}
           wide={wide}
-          imageLayout="side"
+          imageLayout={artist.banner ? 'cover' : 'side'}
           onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))}
         />
 
@@ -358,7 +360,11 @@ export default function ArtistDetailScreen() {
           </View>
         ) : null}
 
-        <PhotoCredit imageUrl={artist.imageUrl} credit={artist.imageCredit} centered={false} />
+        <PhotoCredit
+          imageUrl={artist.banner?.url ?? artist.imageUrl}
+          credit={artist.banner?.credit ?? artist.imageCredit}
+          centered={false}
+        />
 
         {/* 본문: 넓으면 두 열 (비교 | 공연·수상) */}
         <View className={cn('mt-10', wide ? 'flex-row gap-10' : 'gap-10')}>

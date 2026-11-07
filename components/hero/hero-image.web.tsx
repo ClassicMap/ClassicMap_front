@@ -10,7 +10,19 @@ export type HeroImageLayout = 'cover' | 'side';
  *   오른쪽에 높이에 맞춰 통째로 세운다(애플 뮤직 아티스트 화면). 연주자 사진용.
  * 큰 그림이 실패하면 다음 후보(원래 크기)로 넘어가고, 다 받으면 짧게 나타난다.
  */
-export function HeroImage({ uri, height, layout = 'cover' }: { uri: string; width: number; height: number; layout?: HeroImageLayout }) {
+export function HeroImage({
+  uri,
+  height,
+  layout = 'cover',
+  focalPoint = '50% 22%',
+}: {
+  uri: string;
+  width: number;
+  height: number;
+  layout?: HeroImageLayout;
+  /** cover 에서 얼굴이 오게 할 CSS object-position. 배너 전용 사진은 서버가 준다 */
+  focalPoint?: string;
+}) {
   const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri]);
   const [attempt, setAttempt] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
@@ -84,7 +96,7 @@ export function HeroImage({ uri, height, layout = 'cover' }: { uri: string; widt
         width: '100%',
         height: '100%',
         objectFit: 'cover',
-        objectPosition: '50% 22%',
+        objectPosition: focalPoint,
         opacity: loaded ? 1 : 0,
       }}
     />

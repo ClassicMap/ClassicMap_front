@@ -111,8 +111,17 @@ export interface Artist {
   topAwardId?: number;
   /** 지금 사진의 출처. 공개된 출처 기록이 있을 때만 온다 */
   imageCredit?: ImageCredit | null;
+  /** 화면 머리 배너용 가로 사진. 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 아티스트 화면 머리 배너: 가로 사진, 얼굴 초점(CSS object-position), 출처 */
+export interface ArtistBanner {
+  url: string;
+  focalPoint?: string;
+  credit: ImageCredit;
 }
 
 /** 사진 출처. 위키미디어 사진은 작가·라이선스, 보도용 사진은 출처 이름이다 */

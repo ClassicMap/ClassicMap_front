@@ -19,13 +19,15 @@ interface HeroBannerProps {
   onBack?: () => void;
   /** cover: 초상을 폭으로 깐다(작곡가), side: 사진을 오른쪽에 세우고 뒤는 흐리게(연주자) */
   imageLayout?: HeroImageLayout;
+  /** cover 에서 얼굴이 오게 할 CSS object-position */
+  focalPoint?: string;
 }
 
 /**
  * 작곡가·아티스트 화면 머리 (스포티파이 아티스트 화면 꼴). 초상을 화면 폭 배너로 깔고
  * 아래쪽을 어둡게 눌러 그 위 왼쪽 아래에 이름을 크게 쓴다. 본문 좌우 여백을 뚫고 가장자리까지 채운다.
  */
-export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout = 'cover' }: HeroBannerProps) {
+export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout = 'cover', focalPoint }: HeroBannerProps) {
   const [width, setWidth] = React.useState(0);
   const insets = useSafeAreaInsets();
   const hasImage = Boolean(image);
@@ -37,7 +39,9 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       className={cn('relative overflow-hidden bg-surface-2', wide ? '-mx-7' : '-mx-4')}
       style={{ height }}>
-      {image ? <HeroImage uri={image} width={width} height={height} layout={imageLayout} /> : null}
+      {image ? (
+        <HeroImage uri={image} width={width} height={height} layout={imageLayout} focalPoint={focalPoint} />
+      ) : null}
       {hasImage ? (
         <>
           <Scrim from="bottom" opacity={0.86} extent={72} />

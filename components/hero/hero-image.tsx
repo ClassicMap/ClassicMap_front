@@ -14,11 +14,14 @@ export function HeroImage({
   width,
   height,
   layout = 'cover',
+  focalPoint = '50% 22%',
 }: {
   uri: string;
   width: number;
   height: number;
   layout?: HeroImageLayout;
+  /** 웹과 같은 'x% y%'. 네이티브는 세로 값만 써서 위아래 위치를 맞춘다 */
+  focalPoint?: string;
 }) {
   const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri]);
   const [attempt, setAttempt] = React.useState(0);
@@ -40,13 +43,14 @@ export function HeroImage({
   }
 
   const tall = Math.max(height, width * 1.1);
+  const focusY = Number(/\s(\d{1,3})%$/.exec(focalPoint)?.[1] ?? 22) / 100;
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
       <Image
         source={{ uri: src }}
         resizeMode="cover"
         onError={onError}
-        style={{ position: 'absolute', left: 0, top: -Math.round((tall - height) * 0.22), width, height: tall }}
+        style={{ position: 'absolute', left: 0, top: -Math.round((tall - height) * focusY), width, height: tall }}
       />
     </View>
   );
