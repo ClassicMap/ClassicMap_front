@@ -69,6 +69,7 @@ export default function CompareScreenWeb() {
           genre={genre}
           wide
           onBack={() => router.setParams({ genre: undefined })}
+          onSelectGenre={(key) => router.setParams({ genre: key })}
           // 장르에서 연 작품은 새 기록으로 쌓아 브라우저 뒤로가 장르 목록으로 돌아오게 한다
           onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
         />

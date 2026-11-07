@@ -88,3 +88,30 @@ export function toRelativePath(url: string | undefined | null): string | undefin
   // 다른 도메인의 URL인 경우 그대로 반환
   return url;
 }
+
+const MZSTATIC_SIZE = /\/(\d+)x(\d+)(bb|cc|sr)?\.(jpg|jpeg|png|webp)$/i;
+/** 배너에 쓸 큰 폭. 위키미디어가 캐시해 두는 표준 폭이다 */
+const HERO_WIDTH = 1920;
+
+/** 애플 뮤직 정사각 그림을 키울 크기 */
+const MZSTATIC_SQUARE = 1400;
+
+/**
+ * 화면 폭 배너에 쓸 큰 그림 주소를 순서대로 준다. 목록용 500px 썸네일을 늘리면 흐려서
+ * 위키미디어는 1920px 썸네일, 애플 뮤직(mzstatic) 정사각 그림은 1400px 로 바꿔 먼저 시도하고 실패하면 원래 주소로 간다.
+ * 애플 뮤직 가로 배너(2880x1440 등)는 이미 크고, 정사각으로 바꾸면 잘리므로 그대로 쓴다.
+ */
+export function getHeroImageCandidates(path: string | undefined | null): string[] {
+  if (!path) return [];
+  const urls: string[] = [];
+  if (path.startsWith('http')) {
+    const wiki = wikimediaThumbnailUrl(path, HERO_WIDTH);
+    if (wiki) urls.push(getImageUrl(wiki));
+    const size = path.includes('mzstatic.com') ? MZSTATIC_SIZE.exec(path) : null;
+    if (size && size[1] === size[2] && Number(size[1]) < MZSTATIC_SQUARE) {
+      urls.push(path.replace(MZSTATIC_SIZE, `/${MZSTATIC_SQUARE}x${MZSTATIC_SQUARE}$3.$4`));
+    }
+  }
+  urls.push(...getImageCandidates(path));
+  return urls.filter((url, index) => urls.indexOf(url) === index);
+}

@@ -18,6 +18,8 @@ export interface RecentPiece {
   sectorName: string | null;
   /** 커버 색. 장르가 붙기 전에 저장한 항목에는 없다 */
   genre?: PieceGenre | null;
+  /** 카드 그림(대표 연주 영상). 붙기 전에 저장한 항목에는 없다 */
+  coverVideoId?: string | null;
   viewedAt: number;
 }
 
@@ -45,7 +47,11 @@ async function readRecentPieces(): Promise<RecentPiece[]> {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter(isRecentPiece).map((item) => ({ ...item, genre: isPieceGenre(item.genre) ? item.genre : null }))
+      ? parsed.filter(isRecentPiece).map((item) => ({
+          ...item,
+          genre: isPieceGenre(item.genre) ? item.genre : null,
+          coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
+        }))
       : [];
   } catch {
     return [];

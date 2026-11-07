@@ -9,9 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
-import { GradientWash } from '@/components/ui/gradient-wash';
-import { genreOfSound, genreStyle, washColor } from '@/lib/design/genre-palette';
-import { soundOfArtistCategory } from '@/lib/data/taste-labels';
+import { HeroBanner } from '@/components/hero/hero-banner';
+import { PhotoCredit } from '@/components/hero/photo-credit';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -29,12 +28,10 @@ import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
-  ArrowLeftIcon,
   EditIcon,
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -100,7 +97,6 @@ export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const artistId = Number(id);
   const router = useRouter();
-  const { colorScheme } = useColorScheme();
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -304,9 +300,6 @@ export default function ArtistDetailScreen() {
     </View>
   );
 
-  const washStyle = genreStyle(genreOfSound(soundOfArtistCategory(artist.category ?? '')));
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const headerWash = washStyle ? washColor(scheme === 'dark' ? washStyle.from : washStyle.to, scheme, 0.8) : null;
 
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
@@ -314,85 +307,65 @@ export default function ArtistDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
-        {/* 악기 색을 머리 뒤로 번지게 깐다 (스포티파이 아티스트 화면). 피아니스트는 피아노 색 */}
-        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 400 : 340 }}>
-          <GradientWash color={headerWash} />
-        </View>
-        {!wide ? (
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.push('/search'))}
-            accessibilityLabel="뒤로"
-            className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
-            <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-          </Pressable>
-        ) : null}
+        {/* 배너 전용 가로 사진이 있으면 폭으로 깔고, 없으면 프로필 사진을 오른쪽에 세운다 */}
+        <HeroBanner
+          image={artist.banner?.url ?? artist.imageUrl}
+          focalPoint={artist.banner?.focalPoint}
+          title={artist.name}
+          meta={[...meta, artist.englishName]}
+          wide={wide}
+          imageLayout={artist.banner ? 'cover' : 'side'}
+          onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))}
+        />
 
-        {/* 머리: 사람은 원형. 넓으면 이름·소개·버튼을 사진 옆 위쪽부터 쌓는다 (애플 클래식처럼) */}
-        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-start gap-8' : 'mt-2 items-center')}>
-          <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={wide ? 208 : 148} />
-          <View className={cn('min-w-0', wide ? 'flex-1 pt-3' : 'w-full items-center')}>
-            {wide ? (
-              <Text variant="micro" className="uppercase tracking-widest">
-                아티스트
+        {/* 행동: 담기 → 관리 */}
+        <View className="mt-6 flex-row flex-wrap items-center gap-3">
+          <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
+          {canEdit ? (
+            <>
+              <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
+                <Icon as={EditIcon} size={14} className="text-foreground" />
+                <Text>수정</Text>
+              </Button>
+              <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
+                <Icon as={TrashIcon} size={14} className="text-destructive" />
+                <Text className="text-destructive">삭제</Text>
+              </Button>
+            </>
+          ) : null}
+        </View>
+
+        {artist.bio || artist.style ? (
+          <View className="mt-6 max-w-[720px]">
+            {artist.bio ? (
+              <Text variant="bodySm" numberOfLines={bioExpanded ? undefined : 3} className="text-foreground-muted">
+                {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
+                {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
               </Text>
             ) : null}
-            <Text
-              className={cn(
-                'font-extrabold tracking-tight text-foreground',
-                wide ? 'mt-2 text-[64px] leading-[66px]' : 'text-[34px] leading-10'
-              )}>
-              {artist.name}
-            </Text>
-            <Text variant="bodySm" className={cn('mt-3 text-foreground-muted', !wide && 'text-center')}>
-              <Text className="font-semibold text-foreground">{meta[0]}</Text>
-              {meta.slice(1).map((part) => `  ·  ${part}`).join('')}
-              {artist.englishName ? `  ·  ${artist.englishName}` : ''}
-            </Text>
-
-            {artist.bio || artist.style ? (
-              <View className={cn('mt-4 max-w-[640px]', !wide && 'w-full')}>
-                {artist.bio ? (
-                  <Text variant="bodySm" numberOfLines={bioExpanded ? undefined : 3} className="text-foreground-muted">
-                    {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
-                    {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
-                  </Text>
-                ) : null}
-                {artist.style && (bioExpanded || !artist.bio) ? (
-                  <Text variant="bodySm" className={cn('text-foreground-muted', artist.bio && 'mt-3')}>
-                    {artist.style}
-                  </Text>
-                ) : null}
-                {(artist.bio && artist.bio.length > 120) || (artist.bio && artist.style) ? (
-                  <Pressable
-                    onPress={() => setBioExpanded((value) => !value)}
-                    accessibilityRole="button"
-                    className="mt-1.5 self-start">
-                    <Text variant="label" className="text-foreground">
-                      {bioExpanded ? '접기' : '더 보기'}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
+            {artist.style && (bioExpanded || !artist.bio) ? (
+              <Text variant="bodySm" className={cn('text-foreground-muted', artist.bio && 'mt-3')}>
+                {artist.style}
+              </Text>
             ) : null}
-
-            <View className={cn('mt-5 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
-              <FavoriteButton kind="artists" id={artist.id} name={artist.name} variant="labeled" />
-              {canEdit ? (
-                <>
-                  <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
-                    <Icon as={EditIcon} size={14} className="text-foreground" />
-                    <Text>수정</Text>
-                  </Button>
-                  <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
-                    <Icon as={TrashIcon} size={14} className="text-destructive" />
-                    <Text className="text-destructive">삭제</Text>
-                  </Button>
-                </>
-              ) : null}
-            </View>
-            <PhotoCredit imageUrl={artist.imageUrl} credit={artist.imageCredit} centered={!wide} />
+            {(artist.bio && artist.bio.length > 120) || (artist.bio && artist.style) ? (
+              <Pressable
+                onPress={() => setBioExpanded((value) => !value)}
+                accessibilityRole="button"
+                className="mt-1.5 self-start">
+                <Text variant="label" className="text-foreground">
+                  {bioExpanded ? '접기' : '더 보기'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
-        </View>
+        ) : null}
+
+        <PhotoCredit
+          imageUrl={artist.banner?.url ?? artist.imageUrl}
+          credit={artist.banner?.credit ?? artist.imageCredit}
+          centered={false}
+        />
 
         {/* 본문: 넓으면 두 열 (비교 | 공연·수상) */}
         <View className={cn('mt-10', wide ? 'flex-row gap-10' : 'gap-10')}>
@@ -489,41 +462,4 @@ export default function ArtistDetailScreen() {
   );
 }
 
-/**
- * 사진 출처 한 줄. 위키미디어 사진은 저작자 표시가 라이선스 조건이라 작가·라이선스를 밝히고,
- * 보도용 사진은 출처 이름을, 애플뮤직 사진은 그 이름을 쓴다. 누르면 출처 페이지가 열린다
- */
-function PhotoCredit({
-  imageUrl,
-  credit,
-  centered,
-}: {
-  imageUrl?: string;
-  credit?: ImageCredit | null;
-  centered: boolean;
-}) {
-  const label = credit
-    ? credit.author && credit.license
-      ? `${credit.author} · ${credit.license}`
-      : credit.creditLine ?? credit.author ?? null
-    : imageUrl && /(^|\.)mzstatic\.com\//.test(imageUrl.replace(/^https?:\/\//, ''))
-      ? 'Apple Music'
-      : null;
-  if (!label) return null;
-  const text = (
-    <Text variant="micro" numberOfLines={1} className="text-foreground-subtle">
-      {`사진: ${label}`}
-    </Text>
-  );
-  return credit ? (
-    <Pressable
-      onPress={() => void Linking.openURL(credit.sourceUrl).catch(() => undefined)}
-      accessibilityRole="link"
-      accessibilityLabel={`사진 출처: ${label}`}
-      className={cn('mt-4 max-w-full web:hover:opacity-80', centered ? 'self-center' : 'self-start')}>
-      {text}
-    </Pressable>
-  ) : (
-    <View className={cn('mt-4 max-w-full', centered ? 'self-center' : 'self-start')}>{text}</View>
-  );
-}
+
