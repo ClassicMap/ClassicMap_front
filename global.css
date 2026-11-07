@@ -151,3 +151,114 @@
     }
   }
 }
+
+/* 카드·커버 움직임 (2026-11-07 스포티파이 느낌). 웹에만 걸린다.
+   ease-settle: 빠르게 시작해 부드럽게 멈춘다. ease-pop: 살짝 넘쳤다 돌아온다.
+   호버는 마우스가 있는 화면에서만, 움직임 줄이기 설정이면 끝 상태만 보인다. */
+@layer components {
+  :root {
+    --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* 카드 바탕: 호버하면 표면색이 밝아지고, 누르는 동안 살짝 눌린다 */
+  .cm-card {
+    transition:
+      background-color 200ms var(--ease-settle),
+      transform 140ms var(--ease-settle);
+  }
+  .cm-card:active {
+    transform: scale(0.985);
+  }
+
+  /* 작품 커버의 작곡가 초상: 흑백으로 바꿔 장르 색에 녹이고 왼쪽은 그라데이션으로 이어 준다 */
+  .cm-cover-portrait {
+    filter: grayscale(1) contrast(1.12) brightness(1.04);
+    mix-blend-mode: luminosity;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
+    transform-origin: 70% 25%;
+    transition:
+      opacity 240ms var(--ease-settle),
+      transform 420ms var(--ease-settle);
+  }
+
+  /* 재생 버튼: 평소엔 숨어 있다가 카드 호버·포커스에 아래에서 올라온다 */
+  .cm-play-fab {
+    opacity: 0;
+    transform: translateY(8px);
+    box-shadow: 0 8px 18px rgb(0 0 0 / 0.35);
+    transition:
+      opacity 200ms var(--ease-settle),
+      transform 260ms var(--ease-settle);
+  }
+  .group:focus-visible .cm-play-fab {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 시대·장르 타일: 호버하면 색이 한 톤 살아난다 */
+  .cm-tile {
+    transition:
+      filter 220ms var(--ease-settle),
+      transform 140ms var(--ease-settle);
+  }
+  .cm-tile:active {
+    transform: scale(0.98);
+  }
+
+  @media (hover: hover) {
+    .group:hover .cm-cover-portrait {
+      transform: scale(1.05);
+    }
+    .group:hover .cm-play-fab {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cm-play-fab:hover {
+      transform: translateY(0) scale(1.06);
+    }
+    .cm-tile:hover {
+      filter: brightness(1.1) saturate(1.08);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-card,
+    .cm-cover-portrait,
+    .cm-play-fab,
+    .cm-tile {
+      transition: none;
+    }
+    .cm-card:active,
+    .cm-tile:active,
+    .group:hover .cm-cover-portrait {
+      transform: none;
+    }
+    .cm-play-fab,
+    .group:hover .cm-play-fab,
+    .cm-play-fab:hover {
+      transform: none;
+    }
+  }
+}
+
+/* 색 번짐 (gradient-wash.web.tsx). 배경색만 전환해서 호버로 색이 바뀔 때 부드럽게 넘어간다 */
+@layer components {
+  .cm-wash {
+    transition: background-color 700ms var(--ease-settle);
+  }
+  .cm-wash-down {
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.5) 45%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.5) 45%, transparent 100%);
+  }
+  .cm-wash-right {
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.45) 50%, transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 0.45) 50%, transparent 100%);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cm-wash {
+      transition: none;
+    }
+  }
+}

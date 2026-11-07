@@ -9,6 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { GradientWash } from '@/components/ui/gradient-wash';
+import { genreOfSound, genreStyle, washColor } from '@/lib/design/genre-palette';
+import { soundOfArtistCategory } from '@/lib/data/taste-labels';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -31,6 +34,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -96,6 +100,7 @@ export default function ArtistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const artistId = Number(id);
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -299,12 +304,20 @@ export default function ArtistDetailScreen() {
     </View>
   );
 
+  const washStyle = genreStyle(genreOfSound(soundOfArtistCategory(artist.category ?? '')));
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const headerWash = washStyle ? washColor(scheme === 'dark' ? washStyle.from : washStyle.to, scheme, 0.8) : null;
+
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
         className="flex-1"
         refreshControl={<RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
+        {/* 악기 색을 머리 뒤로 번지게 깐다 (스포티파이 아티스트 화면). 피아니스트는 피아노 색 */}
+        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 400 : 340 }}>
+          <GradientWash color={headerWash} />
+        </View>
         {!wide ? (
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.push('/search'))}

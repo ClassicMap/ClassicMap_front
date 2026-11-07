@@ -1,12 +1,14 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { OptimizedImage } from '@/components/optimized-image';
+import { PieceCover } from '@/components/piece/piece-cover';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -14,7 +16,10 @@ import { PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
-/** 비교할 수 있는 작품. 작품은 콘텐츠라 사각이고, 음반 연결이 없어 작곡가 초상을 쓴다 */
+/**
+ * 비교할 수 있는 작품. 작품은 콘텐츠라 사각이고, 장르 색 커버에 작곡가 초상을 녹인다.
+ * 웹은 스포티파이 카드처럼 호버하면 바탕이 밝아지고 재생 버튼이 아래에서 올라온다.
+ */
 export function PieceCard({
   piece,
   width,
@@ -37,17 +42,23 @@ export function PieceCard({
           { text: '관심 없음', style: 'destructive', onPress: onDismiss },
         ])
     : undefined;
+  const genre = genreStyle(piece.genre);
   return (
     <Pressable
       onPress={onPress}
       onLongPress={Platform.OS === 'web' ? undefined : confirmDismiss}
       accessibilityRole="link"
-      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle} 비교하기`}
+      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${genre ? `, ${genre.label}` : ''} 비교하기`}
       accessibilityActions={onDismiss ? [{ name: 'dismiss', label: '관심 없음' }] : undefined}
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
-      className="group">
+      className="cm-card group -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
       <View>
-        <EntityThumb name={piece.pieceTitle} image={piece.composerAvatarUrl} shape="square" size={width} />
+        <PieceCover
+          title={piece.pieceTitle}
+          genre={piece.genre}
+          portrait={piece.composerAvatarUrl}
+          size={width}
+        />
         {onDismiss && Platform.OS === 'web' ? (
           <Pressable
             onPress={onDismiss}
@@ -59,10 +70,16 @@ export function PieceCard({
             <Text className="text-micro font-semibold text-white">관심 없음</Text>
           </Pressable>
         ) : null}
-        {/* 데스크톱 호버에서만 드러나는 재생 버튼 (1차 시안 .pbtn) */}
-        <View className="absolute bottom-2 right-2 size-10 items-center justify-center rounded-full bg-primary opacity-0 web:transition-opacity web:duration-fast web:group-hover:opacity-100">
-          <Icon as={PlayIcon} size={16} className="ml-0.5 fill-primary-foreground text-primary-foreground" />
-        </View>
+        {/* 데스크톱 호버에서만 드러나는 재생 버튼. 아래에서 올라오며 나타난다 */}
+        {Platform.OS === 'web' ? (
+          <View className="cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary">
+            <Icon
+              as={PlayIcon}
+              size={17}
+              className="ml-0.5 fill-primary-foreground text-primary-foreground"
+            />
+          </View>
+        ) : null}
       </View>
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {piece.pieceTitle}
@@ -101,7 +118,7 @@ export function PersonCard({
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
-      className="items-center rounded-lg web:transition-opacity web:hover:opacity-90">
+      className="cm-card -m-2 items-center rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
       <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
         <EntityThumb name={name} image={image} shape="circle" size={width} />
       </RepertoireThumb>
@@ -123,7 +140,11 @@ export function PersonCard({
 /** 공연 포스터. KOPIS 포스터는 세로가 길어 3:4로 자른다 */
 export function ConcertCard({ concert, width, onPress }: { concert: Concert; width: number; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="link" accessibilityLabel={concert.title} className="web:hover:opacity-90">
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={concert.title}
+      className="cm-card -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
       <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {concert.title}
@@ -158,7 +179,7 @@ export function EraTile({
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       accessibilityRole="link"
       accessibilityLabel={`${era.name} 시대 타임라인 보기`}
-      className="overflow-hidden rounded-lg bg-surface-3 web:transition-opacity web:hover:opacity-90"
+      className="cm-tile overflow-hidden rounded-lg bg-surface-3"
       style={{ height }}>
       {/* 초상은 세로가 길다. 폭에 맞춰 위쪽(얼굴)부터 보이게 깐다 */}
       {portrait && width > 0 ? (
@@ -180,18 +201,40 @@ export function EraTile({
   );
 }
 
-/** 최근 본 작품: 가로로 눕힌 작은 타일 (Spotify 첫 줄 바로가기) */
-export function RecentTile({ item, onPress, className }: { item: RecentPiece; onPress: () => void; className?: string }) {
+/**
+ * 최근 본 작품: 가로로 눕힌 작은 타일 (스포티파이 첫 줄 바로가기).
+ * 웹은 호버하면 바탕이 밝아지고 오른쪽에 재생 버튼이 뜬다. 홈 위쪽 색 번짐도 이 작품 색으로 바뀐다
+ */
+export function RecentTile({
+  item,
+  onPress,
+  onHoverChange,
+  className,
+}: {
+  item: RecentPiece;
+  onPress: () => void;
+  /** 웹 호버. 들어오면 이 작품 장르(없으면 null), 나가면 undefined. 홈 위쪽 색 번짐을 바꾼다 */
+  onHoverChange?: (genre: PieceGenre | null | undefined) => void;
+  className?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      onHoverIn={onHoverChange ? () => onHoverChange(item.genre ?? null) : undefined}
+      onHoverOut={onHoverChange ? () => onHoverChange(undefined) : undefined}
       accessibilityRole="link"
       accessibilityLabel={`${item.composerName} ${item.pieceTitle} 다시 보기`}
       className={cn(
-        'h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:transition-colors web:duration-fast web:hover:bg-surface-3',
+        'cm-card group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
         className
       )}>
-      <EntityThumb name={item.pieceTitle} image={item.composerAvatarUrl} shape="square" size={56} />
+      <PieceCover
+        title={item.pieceTitle}
+        genre={item.genre}
+        portrait={item.composerAvatarUrl}
+        size={56}
+        radius={0}
+      />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-label font-semibold text-foreground">
           {item.pieceTitle}
@@ -200,6 +243,15 @@ export function RecentTile({ item, onPress, className }: { item: RecentPiece; on
           {item.sectorName ? `${item.composerName} · ${item.sectorName}` : item.composerName}
         </Text>
       </View>
+      {Platform.OS === 'web' ? (
+        <View className="cm-play-fab size-8 items-center justify-center rounded-full bg-primary">
+          <Icon
+            as={PlayIcon}
+            size={13}
+            className="ml-0.5 fill-primary-foreground text-primary-foreground"
+          />
+        </View>
+      ) : null}
     </Pressable>
   );
 }

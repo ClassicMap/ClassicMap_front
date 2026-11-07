@@ -2,6 +2,8 @@ import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { OptimizedImage } from '@/components/optimized-image';
+import { GenreBadge } from '@/components/piece/genre-badge';
+import { GradientWash } from '@/components/ui/gradient-wash';
 import { Scrim } from '@/components/ui/scrim';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -17,7 +19,9 @@ import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
+import { genreForeground, genreStyle, washColor } from '@/lib/design/genre-palette';
 import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
+import { useColorScheme } from 'nativewind';
 import { cn } from '@/lib/utils';
 import { PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -61,6 +65,10 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
   const reasonLine = reasons.join(' · ');
   const performancesQuery = useSectorComparisonPerformances(sector?.id);
   const [selected, setSelected] = React.useState(0);
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const genre = genreStyle(piece.genre);
+  const accent = genreForeground(piece.genre, scheme);
 
   const lines = React.useMemo<PerformerLine[]>(() => {
     const images = new Map(piece.performers.map((performer) => [performer.artistId, performer.imageUrl]));
@@ -156,6 +164,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
       <View>
         {media}
         <Pressable onPress={open} accessibilityRole="link" className="mt-3">
+          <GenreBadge genre={piece.genre} className="mb-1" />
           <Text numberOfLines={2} className="text-headline font-bold text-foreground">
             {title}
           </Text>
@@ -173,13 +182,18 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
   }
 
   return (
-    <View className="flex-row gap-7 rounded-2xl border border-border bg-surface-2/60 p-5">
+    <View className="flex-row gap-7 overflow-hidden rounded-2xl border border-border bg-surface-2/60 p-5">
+      {/* 작품 장르 색을 왼쪽에서 번지게 깐다 (스포티파이 카드 색) */}
+      {genre ? <GradientWash color={washColor(scheme === 'dark' ? genre.from : genre.to, scheme, 0.75)} direction="right" /> : null}
       <View className="min-w-0 flex-[1.35]">{media}</View>
       <View className="min-w-0 flex-1 justify-between py-1">
         <View>
-          <Text variant="micro" className="uppercase tracking-widest text-primary">
-            오늘의 비교
-          </Text>
+          <View className="flex-row items-center gap-2.5">
+            <Text variant="micro" className="uppercase tracking-widest text-primary" style={accent ? { color: accent } : undefined}>
+              오늘의 비교
+            </Text>
+            {genre ? <Text className="text-micro text-foreground-subtle">{`· ${genre.label}`}</Text> : null}
+          </View>
           <Text numberOfLines={2} className="mt-2 text-title-2 font-bold text-foreground">
             {piece.pieceTitle}
           </Text>

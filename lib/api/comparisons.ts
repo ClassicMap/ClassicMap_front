@@ -1,3 +1,4 @@
+import { isPieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
   ClipAlignment,
@@ -321,6 +322,7 @@ export function parsePiece(value: unknown): ComparisonPiece {
       artistName: requireString(performer.artistName, 'performers.artistName'),
       imageUrl: optionalString(performer.imageUrl),
     })),
+    genre: isPieceGenre(value.genre) ? value.genre : null,
   };
 }
 

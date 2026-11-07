@@ -1,3 +1,4 @@
+import type { PieceGenre } from '@/lib/design/genre-palette';
 // ============================================
 // Database Models (데이터베이스 스키마와 동일)
 // ============================================
@@ -320,6 +321,8 @@ export interface ComparisonPiece {
   sectorCount: number;
   performerCount: number;
   performers: ComparisonPiecePerformer[];
+  /** 장르 7종. 서버가 아직 분류하지 않은 작품은 null */
+  genre?: PieceGenre | null;
 }
 
 export interface ComparisonPerformancePage {

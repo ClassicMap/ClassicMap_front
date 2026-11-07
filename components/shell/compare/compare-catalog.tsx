@@ -1,4 +1,7 @@
+import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { Button } from '@/components/ui/button';
+import { PieceCover } from '@/components/piece/piece-cover';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -27,12 +30,13 @@ import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface CompareCatalogProps {
+  onOpenGenre: (genre: PieceGenre) => void;
   onOpenComposer: (composerId: number) => void;
   onOpenPiece: (piece: ComparisonPiece) => void;
 }
 
 /** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
-export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogProps) {
+export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareCatalogProps) {
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
@@ -49,6 +53,7 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
     () => searchComparable(comparable.data, query, repertoire),
     [comparable.data, query, repertoire]
   );
+  const genreCount = useGenreShelves().shelves.length;
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
@@ -103,18 +108,31 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
           description="연주자 세 명 이상의 영상이 모이면 여기에 나와요."
         />
       ) : (
-        <View className="mt-8 flex-row flex-wrap gap-x-5 gap-y-7">
-          {composers.map((composer) => (
-            <ComposerCard
-              key={composer.composerId}
-              composer={composer}
-              inRepertoire={repertoire.composers.has(composer.composerId)}
-              repertoirePieceCount={repertoirePieces.get(composer.composerId) ?? 0}
-              repertoireArtists={repertoire.artists}
-              onPress={() => onOpenComposer(composer.composerId)}
-            />
-          ))}
-        </View>
+        <>
+          {genreCount > 0 ? (
+            <>
+              <Text variant="title2" className="mt-9">
+                장르로 찾기
+              </Text>
+              <GenreTiles wide onOpen={onOpenGenre} className="mt-4" />
+            </>
+          ) : null}
+          <Text variant="title2" className={genreCount > 0 ? 'mt-11' : 'mt-9'}>
+            작곡가로 찾기
+          </Text>
+          <View className="mt-5 flex-row flex-wrap gap-x-5 gap-y-7">
+            {composers.map((composer) => (
+              <ComposerCard
+                key={composer.composerId}
+                composer={composer}
+                inRepertoire={repertoire.composers.has(composer.composerId)}
+                repertoirePieceCount={repertoirePieces.get(composer.composerId) ?? 0}
+                repertoireArtists={repertoire.artists}
+                onPress={() => onOpenComposer(composer.composerId)}
+              />
+            ))}
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -376,6 +394,7 @@ function PieceRow({
       <Text variant="mono" className="w-6 text-right text-foreground-subtle">
         {index}
       </Text>
+      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} size={44} />
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
@@ -383,9 +402,9 @@ function PieceRow({
           </Text>
           {inRepertoire ? <RepertoireMark /> : null}
         </View>
-        {piece.opusNumber ? (
+        {piece.opusNumber || piece.genre ? (
           <Text variant="caption" numberOfLines={1} className="mt-0.5">
-            {piece.opusNumber}
+            {[genreStyle(piece.genre)?.label, piece.opusNumber].filter(Boolean).join(' · ')}
           </Text>
         ) : null}
       </View>

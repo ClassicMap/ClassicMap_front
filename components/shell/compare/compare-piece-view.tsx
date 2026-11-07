@@ -13,6 +13,10 @@ import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { GradientWash } from '@/components/ui/gradient-wash';
+import { GenreBadge } from '@/components/piece/genre-badge';
+import { PieceCover } from '@/components/piece/piece-cover';
+import { genreWash } from '@/lib/design/genre-palette';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
@@ -57,6 +61,7 @@ import {
   RectangleHorizontalIcon,
   SettingsIcon,
 } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -99,6 +104,8 @@ export function ComparePieceView({
   const first = performancesQuery.data?.[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const composerAvatar = pieceInfo?.composerAvatarUrl ?? null;
+  const { colorScheme } = useColorScheme();
+  const headerWash = genreWash(pieceInfo?.genre, colorScheme === 'dark' ? 'dark' : 'light');
   const backComposerId = composerId ?? first?.composerId;
   const backLabel = first?.composerName ?? pieceInfo?.composerName;
   const goBack = () => onBack(backComposerId);
@@ -136,8 +143,9 @@ export function ComparePieceView({
       composerAvatarUrl: composerAvatar,
       sectorId: activeSector.id,
       sectorName: activeSector.sectorName,
+      genre: pieceInfo?.genre ?? null,
     });
-  }, [pieceId, first, activeSector, composerAvatar, recordRecent]);
+  }, [pieceId, first, activeSector, composerAvatar, pieceInfo?.genre, recordRecent]);
 
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
@@ -302,6 +310,10 @@ export function ComparePieceView({
   return (
     <View className="flex-1">
       <ScrollView className="flex-1" contentContainerClassName="px-7 pb-10">
+        {/* 작품 장르 색을 머리 뒤로 번지게 깐다 (스포티파이 상세 화면) */}
+        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: theater ? 220 : 360 }}>
+          <GradientWash color={headerWash} />
+        </View>
         <Pressable onPress={goBack} className="mb-4 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
@@ -313,15 +325,24 @@ export function ComparePieceView({
         <View className="flex-row items-end gap-6">
           {first ? (
             // 앨범 연결(B22)이 없어 작품 사각에는 작곡가 초상을 쓴다 (1차 시안과 같음)
-            <EntityThumb name={first.pieceTitle} image={composerAvatar} shape="square" size={theater ? 72 : 136} />
+            <PieceCover
+              title={first.pieceTitle}
+              genre={pieceInfo?.genre}
+              portrait={composerAvatar}
+              size={theater ? 72 : 136}
+              className="shadow-lg shadow-black/40"
+            />
           ) : (
             <Skeleton className={cn('rounded-md', theater ? 'size-[72px]' : 'size-[136px]')} />
           )}
           <View className="min-w-0 flex-1 pb-1">
             {!theater ? (
-              <Text variant="micro" className="uppercase tracking-widest">
-                비교
-              </Text>
+              <View className="flex-row items-center gap-2.5">
+                <Text variant="micro" className="uppercase tracking-widest">
+                  비교
+                </Text>
+                <GenreBadge genre={pieceInfo?.genre} />
+              </View>
             ) : null}
             {first ? (
               <>

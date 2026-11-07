@@ -4,7 +4,9 @@ import {
   CompareMobilePiece,
 } from '@/components/compare/compare-mobile';
 import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { CompareGenrePieces } from '@/components/compare/genre-browse';
+import { isPieceGenre } from '@/lib/design/genre-palette';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 
 function toId(value: string | string[] | undefined): number | undefined {
@@ -16,7 +18,14 @@ function toId(value: string | string[] | undefined): number | undefined {
 /** 네이티브와 좁은 웹의 비교 탭: 작곡가 → 작곡가의 작품 → 작품 비교. 주소 파라미터가 곧 상태다 */
 export function CompareMobileScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string; focus?: string }>();
+  const params = useLocalSearchParams<{
+    pieceId?: string;
+    sectorId?: string;
+    composerId?: string;
+    focus?: string;
+    genre?: string;
+  }>();
+  const genre = isPieceGenre(params.genre) ? params.genre : undefined;
   const pieceId = toId(params.pieceId);
   const composerId = toId(params.composerId);
   const focus = parseFocusParam(params.focus);
@@ -54,6 +63,17 @@ export function CompareMobileScreen() {
     );
   }
 
+  if (genre) {
+    return (
+      <CompareGenrePieces
+        genre={genre}
+        wide={false}
+        onBack={() => router.setParams({ genre: undefined })}
+        onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
+      />
+    );
+  }
+
   if (composerId) {
     return (
       <CompareMobileComposerPieces
@@ -66,6 +86,7 @@ export function CompareMobileScreen() {
 
   return (
     <CompareMobileCatalog
+      onOpenGenre={(key) => router.push(`/compare?genre=${key}` as Href)}
       onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
       onOpenPiece={(piece) =>
         router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })

@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { GradientWash } from '@/components/ui/gradient-wash';
+import { PieceCover } from '@/components/piece/piece-cover';
+import { genreStyle, washColor } from '@/lib/design/genre-palette';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +17,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminComposerAPI, AdminPieceAPI } from '@/lib/api/admin';
 import { ComposerAPI } from '@/lib/api/client';
-import { getEraForeground } from '@/lib/design/era-palette';
+import { getEraColor, getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
@@ -239,6 +242,8 @@ export default function ComposerDetailScreen() {
   }
 
   const eraColor = getEraForeground(composer.period, scheme);
+  const eraBase = getEraColor(composer.period)?.base;
+  const eraWash = eraBase ? washColor(eraBase, scheme, 0.8) : null;
   const years = `${composer.birthYear}–${composer.deathYear ?? ''}`;
   const meta = [
     years,
@@ -294,6 +299,10 @@ export default function ComposerDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
+        {/* 시대 색을 머리 뒤로 번지게 깐다 (스포티파이 아티스트 화면) */}
+        <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 400 : 340 }}>
+          <GradientWash color={eraWash} />
+        </View>
         {!wide ? (
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
@@ -558,12 +567,13 @@ function ComparableRow({
       <Text variant="mono" className="w-6 text-center text-foreground-subtle">
         {index + 1}
       </Text>
+      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}
         </Text>
         <Text variant="caption" numberOfLines={1} className="mt-0.5">
-          {[piece.opusNumber, `구간 ${piece.sectorCount}`].filter(Boolean).join(' · ')}
+          {[genreStyle(piece.genre)?.label, piece.opusNumber, `구간 ${piece.sectorCount}`].filter(Boolean).join(' · ')}
         </Text>
       </View>
       {/* 사람은 원형. 작품마다 다른 얼굴이 이 목록의 차이다 */}
