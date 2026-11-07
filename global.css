@@ -305,7 +305,7 @@
     }
   }
 
-  .cm-fade-in {
+  .cm-img-fade {
     transition: opacity 260ms var(--ease-settle);
   }
 
@@ -314,7 +314,7 @@
     .cm-pop {
       animation: none;
     }
-    .cm-fade-in {
+    .cm-img-fade {
       transition: none;
     }
   }

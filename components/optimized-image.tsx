@@ -56,7 +56,7 @@ const OptimizedImageComponent = ({
         {...props}
         source={{ uri: imageUrl }}
         // 웹은 다 받은 이미지가 툭 나타나지 않고 짧게 페이드인한다
-        className={Platform.OS === 'web' ? 'cm-fade-in' : undefined}
+        className={Platform.OS === 'web' ? 'cm-img-fade' : undefined}
         style={[style, { opacity: loading ? 0 : 1 }]}
         onLoad={() => {
           setLoading(false);
