@@ -66,6 +66,7 @@ import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
+import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 
 interface ComparePieceViewProps {
   pieceId: number;
@@ -115,6 +116,11 @@ export function ComparePieceView({
   const pieceTitle = first?.pieceTitle ?? pieceInfo?.pieceTitle;
   const composerName = first?.composerName ?? pieceInfo?.composerName;
   const headerComposerId = first?.composerId ?? pieceInfo?.composerId;
+  // 머리 줄에서 연주자·구간을 누르면 이 화면의 그 자리로 부드럽게 내려간다
+  const scrollRef = React.useRef<ScrollView>(null);
+  const anchors = React.useRef<{ sectors: number; performances: number }>({ sectors: 0, performances: 0 });
+  const scrollToAnchor = (anchor: 'sectors' | 'performances') =>
+    scrollRef.current?.scrollTo({ y: Math.max(0, anchors.current[anchor] - 16), animated: true });
   const goBack = () => onBack(backComposerId);
 
   // 레퍼토리에 담은 연주자를 앞으로. 나머지는 원래 순서 (재생 순서도 이 순서다)
@@ -318,7 +324,7 @@ export function ComparePieceView({
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" contentContainerClassName="px-7 pb-10">
+      <ScrollView ref={scrollRef} className="flex-1" contentContainerClassName="px-7 pb-10">
         {/* 작품 장르 색을 머리 뒤로 번지게 깐다 (스포티파이 상세 화면) */}
         <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: theater ? 220 : 360 }}>
           <GradientWash color={headerWash} />
@@ -363,17 +369,45 @@ export function ComparePieceView({
                   {pieceTitle}
                 </Text>
                 <View className={cn('flex-row items-center gap-2', theater ? 'mt-1.5' : 'mt-3')}>
-                  <Text variant="bodySm" className="text-foreground-muted">
-                    <Text className="font-semibold text-foreground">{composerName}</Text>
-                    {[
-                      pieceInfo?.opusNumber,
-                      pieceInfo || first ? `연주자 ${pieceInfo?.performerCount ?? first?.credits.length}` : null,
-                      `구간 ${sectors.length || (pieceInfo?.sectorCount ?? 0)}`,
-                    ]
-                      .filter(Boolean)
-                      .map((part) => `  ·  ${part}`)
-                      .join('')}
-                  </Text>
+                  {/* 항목마다 그 내용으로 바로 간다: 작곡가 → 작곡가 화면, 연주자·구간 → 이 화면의 그 자리 */}
+                  <View className="flex-row flex-wrap items-center">
+                    {composerName && headerComposerId ? (
+                      <MetaLink
+                        label={composerName}
+                        strong
+                        accessibilityLabel={`${composerName} 작곡가 화면으로`}
+                        prefetch={{ kind: 'composer', composerId: headerComposerId }}
+                        onPress={() => router.push(`/composer/${headerComposerId}` as Href)}
+                      />
+                    ) : composerName ? (
+                      <Text variant="bodySm" className="font-semibold text-foreground">
+                        {composerName}
+                      </Text>
+                    ) : null}
+                    {pieceInfo?.opusNumber ? (
+                      <Text variant="bodySm" className="text-foreground-muted">{`  ·  ${pieceInfo.opusNumber}`}</Text>
+                    ) : null}
+                    {pieceInfo || first ? (
+                      <>
+                        <Text variant="bodySm" className="text-foreground-muted">
+                          {'  ·  '}
+                        </Text>
+                        <MetaLink
+                          label={`연주자 ${pieceInfo?.performerCount ?? first?.credits.length}`}
+                          accessibilityLabel="연주 칸으로"
+                          onPress={() => scrollToAnchor('performances')}
+                        />
+                      </>
+                    ) : null}
+                    <Text variant="bodySm" className="text-foreground-muted">
+                      {'  ·  '}
+                    </Text>
+                    <MetaLink
+                      label={`구간 ${sectors.length || (pieceInfo?.sectorCount ?? 0)}`}
+                      accessibilityLabel="구간 고르는 곳으로"
+                      onPress={() => scrollToAnchor('sectors')}
+                    />
+                  </View>
                   <FavoriteButton kind="pieces" id={pieceId} name={pieceTitle} />
                   {canEdit ? (
                     <Pressable
@@ -394,7 +428,9 @@ export function ComparePieceView({
           </View>
         </View>
 
-        <View className={cn('max-w-[880px]', theater ? 'mt-5' : 'mt-8')}>
+        <View
+          className={cn('max-w-[880px]', theater ? 'mt-5' : 'mt-8')}
+          onLayout={(event) => (anchors.current.sectors = event.nativeEvent.layout.y)}>
           <SectionStaff
             sectors={sectors}
             activeSectorId={activeSector?.id}
@@ -460,6 +496,7 @@ export function ComparePieceView({
           </View>
         ) : null}
 
+        <View onLayout={(event) => (anchors.current.performances = event.nativeEvent.layout.y)}>
         {sectorsQuery.isLoading || performancesQuery.isLoading ? (
           <View className="mt-6 flex-row flex-wrap gap-5">
             {Array.from({ length: 3 }, (_, index) => (
@@ -560,6 +597,7 @@ export function ComparePieceView({
             ))}
           </SlotGrid>
         )}
+        </View>
 
         <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-12 max-w-[880px]" />
       </ScrollView>
@@ -782,22 +820,28 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
       </View>
 
       <View className="mt-3 flex-row items-center gap-3">
-        <RepertoireThumb active={inRepertoire} badgeSize={14}>
-          <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={32} />
-        </RepertoireThumb>
+        {/* 얼굴·이름을 누르면 그 연주자 화면으로 간다 */}
+        <ArtistLink artistId={credit?.artistId} name={credit?.artistName}>
+          <RepertoireThumb active={inRepertoire} badgeSize={14}>
+            <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={32} />
+          </RepertoireThumb>
+        </ArtistLink>
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center gap-1.5">
             {/* 고른 연주는 막대를 늘 둔다. 멈추면 낮게 서서 이름이 좌우로 밀리지 않는다 */}
             {active ? <Equalizer playing={playing} size={11} /> : null}
-            <Text numberOfLines={1} className={cn('shrink text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-              {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
-            </Text>
+            <ArtistLink artistId={credit?.artistId} name={credit?.artistName} className="shrink">
+              <Text
+                numberOfLines={1}
+                className={cn(
+                  'text-body-sm font-semibold web:underline-offset-4 web:group-hover:underline',
+                  active ? 'text-primary' : 'text-foreground'
+                )}>
+                {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
+              </Text>
+            </ArtistLink>
           </View>
-          {support ? (
-            <Text variant="caption" numberOfLines={1}>
-              {support}
-            </Text>
-          ) : null}
+          {support ? <SupportingCreditLinks performance={performance} /> : null}
         </View>
         <Text variant="mono" className="text-foreground-subtle">
           {clipClock(duration)}
@@ -1272,6 +1316,92 @@ function PlayerBar({
           </a>
         ) : null}
       </View>
+    </View>
+  );
+}
+
+/** 작품 머리 줄의 누를 수 있는 항목. 호버하면 밑줄이 생기고, 다음 화면이면 미리 받는다 */
+function MetaLink({
+  label,
+  strong = false,
+  accessibilityLabel,
+  prefetch,
+  onPress,
+}: {
+  label: string;
+  strong?: boolean;
+  accessibilityLabel: string;
+  prefetch?: PrefetchTarget;
+  onPress: () => void;
+}) {
+  const handlers = usePrefetchOnHover(prefetch);
+  return (
+    <Pressable
+      {...handlers}
+      onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={accessibilityLabel}
+      className="group rounded-sm">
+      <Text
+        variant="bodySm"
+        className={cn(
+          'web:underline-offset-4 web:group-hover:underline',
+          strong ? 'font-semibold text-foreground' : 'text-foreground-muted web:group-hover:text-foreground'
+        )}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** 연주자 화면으로 가는 누름 자리. id 가 없으면 그냥 감싸기만 한다 */
+function ArtistLink({
+  artistId,
+  name,
+  className,
+  children,
+}: {
+  artistId: number | undefined;
+  name: string | undefined;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const handlers = usePrefetchOnHover(artistId ? { kind: 'artist', artistId } : null);
+  if (!artistId) return <View className={className}>{children}</View>;
+  return (
+    <Pressable
+      {...handlers}
+      onPress={() => router.push(`/artist/${artistId}` as Href)}
+      accessibilityRole="link"
+      accessibilityLabel={`${name ?? '연주자'} 화면으로`}
+      className={cn('group', className)}>
+      {children}
+    </Pressable>
+  );
+}
+
+/** 지휘자·악단 줄. 사람마다 그 연주자 화면으로 간다 */
+function SupportingCreditLinks({ performance }: { performance: ComparisonPerformance }) {
+  const credits = performance.credits.filter(
+    (credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra')
+  );
+  return (
+    // 한 줄로 두고 넘치면 말줄임한다. 두 줄로 넘어가면 한 줄의 칸끼리 높이가 어긋났다
+    <View className="flex-row items-center overflow-hidden">
+      {credits.map((credit, index) => (
+        <React.Fragment key={`${credit.role}-${credit.artistId}`}>
+          {index > 0 ? <Text variant="caption">{' · '}</Text> : null}
+          <ArtistLink artistId={credit.artistId} name={credit.artistName} className="min-w-0 shrink">
+            <Text
+              variant="caption"
+              numberOfLines={1}
+              className="web:underline-offset-4 web:group-hover:text-foreground web:group-hover:underline">
+              {credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName}
+            </Text>
+          </ArtistLink>
+        </React.Fragment>
+      ))}
     </View>
   );
 }

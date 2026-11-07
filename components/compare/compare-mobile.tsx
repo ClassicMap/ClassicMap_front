@@ -430,6 +430,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   // 이 구간의 곡선은 모두 같은 눈금으로 그린다
   const curveFloor = sharedFloorDb(performances.map((performance) => performance.loudness));
   const title = first?.pieceTitle ?? pieceInfo?.pieceTitle;
+  const composerIdForLink = first?.composerId ?? pieceInfo?.composerId ?? composerId;
   const { colorScheme } = useColorScheme();
   const headerWash = genreWash(pieceInfo?.genre, colorScheme === 'dark' ? 'dark' : 'light');
   useHeaderTint(headerWash);
@@ -488,11 +489,23 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
             <>
               <GenreBadge genre={pieceInfo?.genre} className="mb-1" />
               <Text className="text-title-2 font-bold text-foreground">{title}</Text>
-              <Text variant="caption" numberOfLines={1} className="mt-1">
-                {[first?.composerName ?? pieceInfo?.composerName, pieceInfo ? `연주자 ${pieceInfo.performerCount}` : null]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
+              {/* 작곡가 이름을 누르면 작곡가 화면으로 간다 */}
+              <View className="mt-1 flex-row items-center">
+                {composerIdForLink && (first?.composerName ?? pieceInfo?.composerName) ? (
+                  <Pressable
+                    onPress={() => router.push(`/composer/${composerIdForLink}` as Href)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`${first?.composerName ?? pieceInfo?.composerName} 작곡가 화면으로`}
+                    hitSlop={8}>
+                    <Text variant="caption" className="font-semibold text-foreground underline">
+                      {first?.composerName ?? pieceInfo?.composerName}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text variant="caption">{first?.composerName ?? pieceInfo?.composerName ?? ''}</Text>
+                )}
+                {pieceInfo ? <Text variant="caption">{` · 연주자 ${pieceInfo.performerCount}`}</Text> : null}
+              </View>
             </>
           ) : (
             <Skeleton className="h-7 w-3/4" />
