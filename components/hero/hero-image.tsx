@@ -20,11 +20,13 @@ export function HeroImage({
   width: number;
   height: number;
   layout?: HeroImageLayout;
-  /** 웹과 같은 'x% y%'. 네이티브는 세로 값만 써서 위아래 위치를 맞춘다 */
+  /** 웹 object-position 과 같은 'x% y%' */
   focalPoint?: string;
 }) {
   const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri]);
   const [attempt, setAttempt] = React.useState(0);
+  const [natural, setNatural] = React.useState<{ width: number; height: number } | null>(null);
+  React.useEffect(() => setNatural(null), [uri]);
   const src = candidates[attempt];
   if (!src || width <= 0) return null;
   const onError = () => setAttempt((current) => current + 1);
@@ -42,16 +44,37 @@ export function HeroImage({
     );
   }
 
-  const tall = Math.max(height, width * 1.1);
-  const focusY = Number(/\s(\d{1,3})%$/.exec(focalPoint)?.[1] ?? 22) / 100;
+  // 웹 object-position 과 같게: 칸을 덮는 크기로 키운 뒤 남는 만큼을 초점 비율로 민다.
+  // 그림 크기를 받기 전에는 폭에 맞춘 키 큰 칸에 깔아 둔다
+  const [focusX, focusY] = parseFocalPoint(focalPoint);
+  const scale = natural ? Math.max(width / natural.width, height / natural.height) : 0;
+  const drawn = natural
+    ? { width: natural.width * scale, height: natural.height * scale }
+    : { width, height: Math.max(height, width * 1.1) };
   return (
     <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
       <Image
         source={{ uri: src }}
         resizeMode="cover"
         onError={onError}
-        style={{ position: 'absolute', left: 0, top: -Math.round((tall - height) * focusY), width, height: tall }}
+        onLoad={(event) => {
+          const { width: w, height: h } = event.nativeEvent.source;
+          if (w > 0 && h > 0) setNatural({ width: w, height: h });
+        }}
+        style={{
+          position: 'absolute',
+          left: -Math.round((drawn.width - width) * focusX),
+          top: -Math.round((drawn.height - height) * focusY),
+          width: drawn.width,
+          height: drawn.height,
+        }}
       />
     </View>
   );
+}
+
+function parseFocalPoint(focalPoint: string): [number, number] {
+  const match = /^(\d{1,3})% (\d{1,3})%$/.exec(focalPoint.trim());
+  if (!match) return [0.5, 0.22];
+  return [Math.min(100, Number(match[1])) / 100, Math.min(100, Number(match[2])) / 100];
 }
