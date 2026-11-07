@@ -266,6 +266,7 @@ const mapComposer = (api: any): Composer => {
     influence: api.influence,
     pieceCount: api.pieceCount,
     tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
+    banner: mapBanner(api.banner),
   };
   return mapped;
 };

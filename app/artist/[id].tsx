@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { HeroBanner } from '@/components/hero/hero-banner';
+import { PhotoCredit } from '@/components/hero/photo-credit';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -461,41 +462,4 @@ export default function ArtistDetailScreen() {
   );
 }
 
-/**
- * 사진 출처 한 줄. 위키미디어 사진은 저작자 표시가 라이선스 조건이라 작가·라이선스를 밝히고,
- * 보도용 사진은 출처 이름을, 애플뮤직 사진은 그 이름을 쓴다. 누르면 출처 페이지가 열린다
- */
-function PhotoCredit({
-  imageUrl,
-  credit,
-  centered,
-}: {
-  imageUrl?: string;
-  credit?: ImageCredit | null;
-  centered: boolean;
-}) {
-  const label = credit
-    ? credit.author && credit.license
-      ? `${credit.author} · ${credit.license}`
-      : credit.creditLine ?? credit.author ?? null
-    : imageUrl && /(^|\.)mzstatic\.com\//.test(imageUrl.replace(/^https?:\/\//, ''))
-      ? 'Apple Music'
-      : null;
-  if (!label) return null;
-  const text = (
-    <Text variant="micro" numberOfLines={1} className="text-foreground-subtle">
-      {`사진: ${label}`}
-    </Text>
-  );
-  return credit ? (
-    <Pressable
-      onPress={() => void Linking.openURL(credit.sourceUrl).catch(() => undefined)}
-      accessibilityRole="link"
-      accessibilityLabel={`사진 출처: ${label}`}
-      className={cn('mt-4 max-w-full web:hover:opacity-80', centered ? 'self-center' : 'self-start')}>
-      {text}
-    </Pressable>
-  ) : (
-    <View className={cn('mt-4 max-w-full', centered ? 'self-center' : 'self-start')}>{text}</View>
-  );
-}
+

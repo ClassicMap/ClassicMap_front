@@ -8,6 +8,7 @@ import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
+import { PhotoCredit } from '@/components/hero/photo-credit';
 import { playPiece } from '@/lib/player/play-piece';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { PieceArt } from '@/components/piece/piece-art';
@@ -311,8 +312,10 @@ export default function ComposerDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
+        {/* 배너 전용 가로 그림이 있으면 그걸, 없으면 초상을 폭으로 깐다 */}
         <HeroBanner
-          image={composer.avatarUrl}
+          image={composer.banner?.url ?? composer.avatarUrl}
+          focalPoint={composer.banner?.focalPoint}
           title={composer.name}
           meta={[composer.period, ...meta]}
           wide={wide}
@@ -343,6 +346,9 @@ export default function ComposerDetailScreen() {
             </>
           ) : null}
         </View>
+        {composer.banner ? (
+          <PhotoCredit imageUrl={composer.banner.url} credit={composer.banner.credit} centered={false} />
+        ) : null}
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
           <View className="min-w-0 flex-1 gap-11">

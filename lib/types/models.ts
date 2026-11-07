@@ -19,6 +19,8 @@ export interface Composer {
   style?: string;
   influence?: string;
   pieceCount?: number;
+  /** 화면 머리 배너용 가로 그림. 상세 응답에 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
