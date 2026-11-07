@@ -13,6 +13,7 @@ import {
   PIECE_GENRES,
   type PieceGenre,
 } from '@/lib/design/genre-palette';
+import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useComparableComposers } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -106,8 +107,11 @@ export function GenreTile({
   onPress: () => void;
 }) {
   const art = Math.round(height * 0.62);
+  // 장르 화면은 비교 탭과 같은 전체 목록을 쓴다
+  const prefetch = usePrefetchOnHover({ kind: 'compare-catalog' });
   return (
     <Pressable
+      {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieces.length}곡`}

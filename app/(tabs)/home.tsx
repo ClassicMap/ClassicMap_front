@@ -442,6 +442,7 @@ export default function HomeScreen() {
                 caption={getArtistCategoryLabel(artist.category)}
                 width={width}
                 onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
               />
             )}
           />
@@ -454,6 +455,7 @@ export default function HomeScreen() {
                   image={artist.imageUrl}
                   width={76}
                   onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
                 />
               </View>
             ))}
@@ -483,6 +485,7 @@ export default function HomeScreen() {
                 caption={composer.period}
                 width={width}
                 onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
               />
             )}
           />
@@ -495,6 +498,7 @@ export default function HomeScreen() {
                   image={composer.avatarUrl}
                   width={76}
                   onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
                 />
               </View>
             ))}

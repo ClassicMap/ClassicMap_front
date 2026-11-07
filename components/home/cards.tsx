@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -43,8 +44,11 @@ export function PieceCard({
         ])
     : undefined;
   const genre = genreStyle(piece.genre);
+  // 데스크톱은 호버, 터치는 누르기 시작할 때 다음 화면 데이터를 미리 받는다
+  const prefetch = usePrefetchOnHover({ kind: 'piece', pieceId: piece.pieceId, composerId: piece.composerId });
   return (
     <Pressable
+      {...prefetch}
       onPress={onPress}
       onLongPress={Platform.OS === 'web' ? undefined : confirmDismiss}
       accessibilityRole="link"
@@ -104,6 +108,7 @@ export function PersonCard({
   width,
   onPress,
   inRepertoire = false,
+  prefetchTarget,
 }: {
   name: string;
   image?: string | null;
@@ -112,9 +117,13 @@ export function PersonCard({
   onPress: () => void;
   /** 레퍼토리에 담긴 사람이면 사진 모서리 배지와 이름 옆 표시 */
   inRepertoire?: boolean;
+  /** 호버·누르기 시작에 미리 받을 다음 화면 */
+  prefetchTarget?: PrefetchTarget;
 }) {
+  const prefetch = usePrefetchOnHover(prefetchTarget);
   return (
     <Pressable
+      {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
@@ -217,11 +226,24 @@ export function RecentTile({
   onHoverChange?: (genre: PieceGenre | null | undefined) => void;
   className?: string;
 }) {
+  const prefetch = usePrefetchOnHover({
+    kind: 'piece',
+    pieceId: item.pieceId,
+    composerId: item.composerId,
+    sectorId: item.sectorId,
+  });
   return (
     <Pressable
+      {...prefetch}
       onPress={onPress}
-      onHoverIn={onHoverChange ? () => onHoverChange(item.genre ?? null) : undefined}
-      onHoverOut={onHoverChange ? () => onHoverChange(undefined) : undefined}
+      onHoverIn={() => {
+        prefetch.onHoverIn?.();
+        onHoverChange?.(item.genre ?? null);
+      }}
+      onHoverOut={() => {
+        prefetch.onHoverOut?.();
+        onHoverChange?.(undefined);
+      }}
       accessibilityRole="link"
       accessibilityLabel={`${item.composerName} ${item.pieceTitle} 다시 보기`}
       className={cn(
