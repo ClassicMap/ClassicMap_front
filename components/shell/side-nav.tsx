@@ -5,6 +5,8 @@ import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, groupLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { createPrefetchHandlers, type PrefetchTarget, prefetchTargetFromHref } from '@/lib/navigation/prefetch';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
@@ -23,13 +25,21 @@ interface NavItem {
   href: Href;
   /** 이 경로들 중 하나로 시작하면 활성 */
   match: readonly string[];
+  /** 호버하면 미리 받을 첫 화면 데이터 */
+  prefetch?: PrefetchTarget;
   renderIcon: (props: NavIconProps) => React.ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: '홈', href: '/home', match: ['/home'], renderIcon: (p) => <Icon as={HomeIcon} {...p} /> },
   { label: '검색', href: '/search', match: ['/search'], renderIcon: (p) => <Icon as={SearchIcon} {...p} /> },
-  { label: '비교', href: '/compare', match: ['/compare'], renderIcon: (p) => <CompareIcon {...p} /> },
+  {
+    label: '비교',
+    href: '/compare',
+    match: ['/compare'],
+    prefetch: { kind: 'compare-catalog' },
+    renderIcon: (p) => <CompareIcon {...p} />,
+  },
   {
     label: '아티스트',
     href: '/artists',
@@ -46,6 +56,7 @@ const LIBRARY_PER_SECTION = 4;
 export function SideNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
+  const queryClient = useQueryClient();
 
   return (
     <View
@@ -63,6 +74,7 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
         return (
           <Link key={item.label} href={item.href} asChild>
             <Pressable
+              {...createPrefetchHandlers(queryClient, active ? null : item.prefetch)}
               accessibilityRole="link"
               accessibilityLabel={item.label}
               accessibilityState={{ selected: active }}
@@ -109,6 +121,7 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
 function Library() {
   const { isSignedIn } = useAuth();
   const favorites = useMyRepertoire(isSignedIn === true);
+  const queryClient = useQueryClient();
 
   const sections = React.useMemo(
     () => (favorites.data ? groupLibraryEntries(buildLibraryEntries(favorites.data), LIBRARY_PER_SECTION) : []),
@@ -149,7 +162,9 @@ function Library() {
               </View>
               {section.entries.map((entry) => (
                 <Link key={entry.key} href={entry.href as Href} asChild>
-                  <Pressable className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
+                  <Pressable
+                    {...createPrefetchHandlers(queryClient, prefetchTargetFromHref(entry.href))}
+                    className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
                     <LibraryThumb entry={entry} />
                     <View className="min-w-0 flex-1">
                       <Text numberOfLines={1} className="text-[13px] font-semibold">

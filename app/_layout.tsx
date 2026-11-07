@@ -19,6 +19,7 @@ import { RootChrome } from '@/components/navigation/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
 import { useTasteSync } from '@/lib/hooks/useTaste';
+import { installRouteTransitions } from '@/lib/navigation/view-transition';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -58,6 +59,8 @@ export default function RootLayout() {
 }
 
 SplashScreen.preventAutoHideAsync();
+// 웹: 앱 안 이동을 화면 전환으로 감싼다 (네이티브는 아무것도 하지 않는다)
+installRouteTransitions();
 
 function Routes() {
   const { isLoaded, userId, getToken } = useAuth();
