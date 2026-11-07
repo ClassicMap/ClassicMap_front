@@ -28,7 +28,7 @@ const COVER_SIDE = 270;
 const COVER_LEFT = (THUMB_WIDTH - COVER_SIDE) / 2;
 const COVER_TOP = (THUMB_HEIGHT - COVER_SIDE) / 2;
 /** 얼굴을 겹쳐 둘 만큼 큰 자리. 목록 줄 같은 작은 자리에는 표지만 */
-const FACES_MIN_SIZE = 120;
+const FACES_MIN_SIZE = 100;
 const MAX_FACES = 4;
 
 function coverThumbUrl(videoId: string): string {
