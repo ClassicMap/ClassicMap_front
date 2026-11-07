@@ -1,6 +1,6 @@
 import { clipClock } from '@/lib/data/comparison';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { PieceCover } from '@/components/piece/piece-cover';
 import { Icon } from '@/components/ui/icon';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -115,7 +115,8 @@ function GroupHeader({ group }: { group: PieceGroup }) {
   const piece = useComparisonPiece(group.pieceId, group.composerId).data;
   return (
     <View className="flex-row items-center gap-3 py-2">
-      <EntityThumb name={group.composerName} image={piece?.composerAvatarUrl} shape="circle" size={36} />
+      {/* 작품은 사각 장르 커버. 같은 작곡가 곡이 여럿이어도 장르 색으로 갈린다 */}
+      <PieceCover title={group.pieceTitle} genre={piece?.genre} portrait={piece?.composerAvatarUrl} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body font-bold text-foreground">
           {group.pieceTitle}
