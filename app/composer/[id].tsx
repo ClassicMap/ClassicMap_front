@@ -23,6 +23,7 @@ import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances
 import { useComposer } from '@/lib/query/hooks/useComposers';
 import { PIECE_QUERY_KEYS } from '@/lib/query/hooks/usePieces';
 import { ComposerWorks } from '@/components/composer/composer-works';
+import { MoreLink } from '@/components/ui/more-link';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ComparisonPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -81,6 +82,8 @@ export default function ComposerDetailScreen() {
   const wide = layout === 'desktop' || layout === 'wide';
   const { colorScheme } = useColorScheme();
   const scrollRef = React.useRef<ScrollView>(null);
+  const comparableRef = React.useRef<View>(null);
+  const [comparableOpen, setComparableOpen] = React.useState(false);
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const [editVisible, setEditVisible] = React.useState(false);
@@ -94,6 +97,31 @@ export default function ComposerDetailScreen() {
   const refreshPieces = () => queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
 
   const comparable = React.useMemo(() => comparableQuery.data?.pages.flat() ?? [], [comparableQuery.data]);
+  const comparableFoldable =
+    comparable.length > COMPARABLE_PREVIEW || Boolean(comparableQuery.hasNextPage);
+  const shownComparable = comparableOpen ? comparable : comparable.slice(0, COMPARABLE_PREVIEW);
+  // 긴 목록 끝에서 접으면 이 칸 머리가 화면 위로 지나가 있어 다른 곳이 보인다.
+  // 머리로 스크롤을 옮기고 같이 접는다
+  const collapseComparable = () => {
+    const scroll = scrollRef.current;
+    const viewport = scroll?.getNativeScrollRef();
+    const section = comparableRef.current;
+    const collapse = () => setComparableOpen(false);
+    if (!scroll || !viewport || !section) return collapse();
+    section.measureInWindow((_x, sectionTop) => {
+      viewport.measureInWindow((_vx, viewportTop) => {
+        if (sectionTop >= viewportTop) return collapse();
+        section.measureLayout(
+          scroll.getInnerViewNode(),
+          (_lx, y) => {
+            scroll.scrollTo({ y: Math.max(0, y - 16), animated: false });
+            collapse();
+          },
+          collapse
+        );
+      });
+    });
+  };
   const comparableIds = React.useMemo(() => new Set(comparable.map((piece) => piece.pieceId)), [comparable]);
   const performers = React.useMemo(() => collectPerformers(comparable), [comparable]);
 
@@ -308,8 +336,8 @@ export default function ComposerDetailScreen() {
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
           <View className="min-w-0 flex-1 gap-11">
-            {/* 비교할 수 있는 작품 (1차 시안: 번호 행) */}
-            <View>
+            {/* 비교할 수 있는 작품 (1차 시안: 번호 행). 많으면 5곡만 보이고 펼친다 */}
+            <View ref={comparableRef}>
               <SectionTitle title="비교할 수 있는 작품" meta={comparable.length > 0 ? `${comparable.length}곡` : undefined} />
               {comparableQuery.isLoading ? (
                 <View className="gap-2">
@@ -323,7 +351,7 @@ export default function ComposerDetailScreen() {
                 </Text>
               ) : (
                 <View>
-                  {comparable.map((piece, index) => (
+                  {shownComparable.map((piece, index) => (
                     <ComparableRow
                       key={piece.pieceId}
                       index={index}
@@ -332,16 +360,28 @@ export default function ComposerDetailScreen() {
                       onPress={() => openCompare(piece.pieceId)}
                     />
                   ))}
-                  {comparableQuery.hasNextPage ? (
-                    <Pressable
-                      onPress={() => comparableQuery.fetchNextPage()}
-                      disabled={comparableQuery.isFetchingNextPage}
-                      className="mt-2 self-start px-2 py-1">
-                      <Text variant="label" className="text-foreground-muted">
-                        {comparableQuery.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
+                  <View className="mt-1 flex-row gap-4">
+                    {!comparableOpen && comparableFoldable ? (
+                      <MoreLink
+                        label={
+                          comparableQuery.hasNextPage
+                            ? '더 보기'
+                            : `${comparable.length.toLocaleString('ko-KR')}곡 모두 보기`
+                        }
+                        onPress={() => setComparableOpen(true)}
+                      />
+                    ) : null}
+                    {comparableOpen && comparableQuery.hasNextPage ? (
+                      <MoreLink
+                        label={comparableQuery.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+                        onPress={() => comparableQuery.fetchNextPage()}
+                        disabled={comparableQuery.isFetchingNextPage}
+                      />
+                    ) : null}
+                    {comparableOpen ? (
+                      <MoreLink label="접기" collapse onPress={collapseComparable} />
+                    ) : null}
+                  </View>
                 </View>
               )}
             </View>
@@ -429,6 +469,9 @@ export default function ComposerDetailScreen() {
     </View>
   );
 }
+
+/** 비교할 수 있는 작품을 접어 둘 때 보이는 수(스포티파이 아티스트 '인기' 칸처럼 5곡) */
+const COMPARABLE_PREVIEW = 5;
 
 function SectionTitle({ title, meta }: { title: string; meta?: string }) {
   return (

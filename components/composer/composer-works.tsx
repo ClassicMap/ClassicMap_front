@@ -2,6 +2,7 @@ import { NotableStar, PieceRow } from '@/components/composer/piece-row';
 import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
+import { MoreLink } from '@/components/ui/more-link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { GenreMark } from '@/components/piece/genre-mark';
@@ -20,7 +21,7 @@ import type {
   ComposerPieceSort,
   Piece,
 } from '@/lib/types/models';
-import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { SearchIcon, XIcon } from 'lucide-react-native';
 import { THEME } from '@/lib/theme';
 import { useIsFetching } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -731,36 +732,5 @@ function StarCount({ count }: { count: number }) {
         {count}
       </Text>
     </View>
-  );
-}
-
-/** 목록 아래 '더 보기'·'접기'. 모든 목록이 같은 모양을 쓴다 */
-function MoreLink({
-  label,
-  onPress,
-  disabled,
-  collapse,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  collapse?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      hitSlop={6}
-      className="mt-1 flex-row items-center gap-1 self-start rounded-full py-1.5 pr-2 web:transition-opacity web:hover:opacity-80">
-      <Text variant="label" className="text-foreground-muted">
-        {label}
-      </Text>
-      <Icon
-        as={collapse ? ChevronUpIcon : ChevronDownIcon}
-        size={14}
-        className="text-foreground-subtle"
-      />
-    </Pressable>
   );
 }
