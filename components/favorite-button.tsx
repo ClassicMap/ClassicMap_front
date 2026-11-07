@@ -29,7 +29,11 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
     pressed.current = false;
     setPop(true);
     const timer = setTimeout(() => setPop(false), 480);
-    return () => clearTimeout(timer);
+    // 끝나기 전에 다시 누르면 타이머만 지워져 톡 튐이 켜진 채로 남았다. 같이 끈다
+    return () => {
+      clearTimeout(timer);
+      setPop(false);
+    };
   }, [active]);
   const onPress = () => {
     pressed.current = !active;
