@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { GradientWash } from '@/components/ui/gradient-wash';
 import { GenreBadge } from '@/components/piece/genre-badge';
+import { useHeaderTint } from '@/hooks/use-header-tint';
 import { PieceCover } from '@/components/piece/piece-cover';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
@@ -431,6 +432,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const title = first?.pieceTitle ?? pieceInfo?.pieceTitle;
   const { colorScheme } = useColorScheme();
   const headerWash = genreWash(pieceInfo?.genre, colorScheme === 'dark' ? 'dark' : 'light');
+  useHeaderTint(headerWash);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (

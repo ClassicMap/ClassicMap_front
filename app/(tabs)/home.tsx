@@ -5,6 +5,7 @@ import { TodayComparison, type TodayComparisonTarget } from '@/components/home/t
 import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { GradientWash } from '@/components/ui/gradient-wash';
 import { usePinnedToday } from '@/hooks/use-pinned-today';
+import { useHeaderTint } from '@/hooks/use-header-tint';
 import { genreStyle, washColor, type PieceGenre } from '@/lib/design/genre-palette';
 import { useColorScheme } from 'nativewind';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -167,6 +168,8 @@ export default function HomeScreen() {
     : scheme === 'dark'
       ? 'hsla(38, 62%, 60%, 0.12)'
       : 'hsla(36, 62%, 40%, 0.07)';
+  // 좁은 웹은 상단바도 같은 색으로 (데스크톱은 호버로 바뀌는 색이라 상단바가 없는 셸에서만 보인다)
+  useHeaderTint(wide ? null : homeWash);
   const shelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
     [pieces, todayPiece?.pieceId]
