@@ -325,6 +325,13 @@ export interface ComparisonPiece {
   genre?: PieceGenre | null;
 }
 
+/** `/comparison-genres`: 장르마다 공개 비교 작품 수와 대표 작곡가 초상(겹치지 않게 최대 3명) */
+export interface ComparisonGenreSummary {
+  genre: PieceGenre;
+  pieceCount: number;
+  portraits: { composerId: number; avatarUrl: string }[];
+}
+
 export interface ComparisonPerformancePage {
   items: ComparisonPerformance[];
   nextCursor: string | null;

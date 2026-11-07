@@ -1,20 +1,16 @@
 import { PieceCard } from '@/components/home/cards';
 import { ScrollShelf } from '@/components/home/shelf';
 import { OptimizedImage } from '@/components/optimized-image';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { CompareIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import {
-  GENRE_STYLES,
-  type GenreStyle,
-  PIECE_GENRES,
-  type PieceGenre,
-} from '@/lib/design/genre-palette';
+import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
-import { useComparableComposers } from '@/lib/query/hooks/useComparisonPerformances';
+import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { AlertCircleIcon, ChevronLeftIcon } from 'lucide-react-native';
@@ -25,43 +21,36 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 export interface GenreShelf {
   genre: PieceGenre;
   style: GenreStyle;
-  /** 연주자 많은 순(목록 응답 순서 그대로) */
-  pieces: ComparisonPiece[];
+  /** 공개 비교 작품 수 */
+  pieceCount: number;
   /** 타일에 비스듬히 얹을 대표 초상 */
   portrait: string | null;
 }
 
 /**
- * 비교할 수 있는 작품을 장르별로 묶는다. 비교 탭이 이미 받아 둔 전체 목록(작곡가 묶음과 같은 캐시)을 쓴다.
- * 대표 초상은 장르마다 다른 작곡가가 되게 앞 장르가 쓴 작곡가를 건너뛴다.
+ * 장르 타일 줄. 서버 장르 요약(/comparison-genres)만 받는다(카탈로그 전체를 받지 않는다).
+ * 대표 초상은 장르마다 다른 작곡가가 되게, 서버가 준 후보 중 앞 장르가 쓴 작곡가를 건너뛴다.
  */
 export function useGenreShelves() {
-  const comparable = useComparableComposers();
+  const summaries = useGenreSummaries();
   const shelves = React.useMemo<GenreShelf[]>(() => {
-    const pieces = comparable.data?.pieces ?? [];
     const used = new Set<number>();
-    return PIECE_GENRES.flatMap((genre) => {
-      const inGenre = pieces.filter((piece) => piece.genre === genre);
-      if (inGenre.length === 0) return [];
-      const lead =
-        inGenre.find((piece) => piece.composerAvatarUrl && !used.has(piece.composerId)) ??
-        inGenre.find((piece) => piece.composerAvatarUrl);
+    return (summaries.data ?? []).map((summary) => {
+      const lead = summary.portraits.find((portrait) => !used.has(portrait.composerId)) ?? summary.portraits[0];
       if (lead) used.add(lead.composerId);
-      return [
-        {
-          genre,
-          style: GENRE_STYLES[genre],
-          pieces: inGenre,
-          portrait: lead?.composerAvatarUrl ?? null,
-        },
-      ];
+      return {
+        genre: summary.genre,
+        style: GENRE_STYLES[summary.genre],
+        pieceCount: summary.pieceCount,
+        portrait: lead?.avatarUrl ?? null,
+      };
     });
-  }, [comparable.data?.pieces]);
+  }, [summaries.data]);
   return {
     shelves,
-    isLoading: comparable.isLoading,
-    isError: comparable.isError,
-    refetch: comparable.refetch,
+    isLoading: summaries.isLoading,
+    isError: summaries.isError,
+    refetch: summaries.refetch,
   };
 }
 
@@ -107,14 +96,13 @@ export function GenreTile({
   onPress: () => void;
 }) {
   const art = Math.round(height * 0.62);
-  // 장르 화면은 비교 탭과 같은 전체 목록을 쓴다
-  const prefetch = usePrefetchOnHover({ kind: 'compare-catalog' });
+  const prefetch = usePrefetchOnHover({ kind: 'genre', genre: shelf.genre });
   return (
     <Pressable
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieces.length}곡`}
+      accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieceCount}곡`}
       className="cm-tile overflow-hidden rounded-lg"
       style={{ width, height }}>
       <GenreGradient style={shelf.style} width={width} height={height} />
@@ -143,7 +131,7 @@ export function GenreTile({
         <Text numberOfLines={1} className="text-headline font-extrabold text-white">
           {shelf.style.label}
         </Text>
-        <Text className="mt-0.5 text-caption font-semibold text-white/75">{`${shelf.pieces.length}곡`}</Text>
+        <Text className="mt-0.5 text-caption font-semibold text-white/75">{`${shelf.pieceCount}곡`}</Text>
       </View>
     </Pressable>
   );
@@ -155,6 +143,7 @@ export function GenreTiles({
   onOpen,
   minTileWidth = 140,
   scroll = false,
+  grid = false,
   className,
 }: {
   wide: boolean;
@@ -162,6 +151,8 @@ export function GenreTiles({
   minTileWidth?: number;
   /** 좁은 화면에서 격자 대신 가로로 흘린다 (홈 셸프) */
   scroll?: boolean;
+  /** 넓은 화면에서 한 줄로 자르지 않고 줄을 바꿔 다 보인다 (비교 탭·둘러보기) */
+  grid?: boolean;
   className?: string;
 }) {
   const { shelves, isLoading } = useGenreShelves();
@@ -203,6 +194,35 @@ export function GenreTiles({
                   shelf={shelf}
                   width={tileWidth}
                   height={92}
+                  onPress={() => onOpen(shelf.genre)}
+                />
+              ))
+            : null}
+      </View>
+    );
+  }
+
+  if (grid) {
+    // 넓은 화면 격자: 장르를 다 보인다. 줄마다 칸 수가 고르게(7개면 4+3) 나눈다
+    const maxColumns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap))) : 0;
+    const count = Math.max(1, shelves.length);
+    const rows = maxColumns > 0 ? Math.ceil(count / maxColumns) : 1;
+    const columns = Math.ceil(count / rows);
+    const tileWidth = maxColumns > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
+    const tileHeight = Math.round(Math.min(132, Math.max(96, tileWidth * 0.5)));
+    return (
+      <View onLayout={onLayout} className={cn('flex-row flex-wrap', className)} style={{ gap }}>
+        {isLoading && shelves.length === 0
+          ? Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="flex-1 rounded-lg" style={{ height: 110 }} />
+            ))
+          : tileWidth > 0
+            ? shelves.map((shelf) => (
+                <GenreTile
+                  key={shelf.genre}
+                  shelf={shelf}
+                  width={tileWidth}
+                  height={tileHeight}
                   onPress={() => onOpen(shelf.genre)}
                 />
               ))
@@ -254,9 +274,12 @@ export function CompareGenrePieces({
   onBack: () => void;
   onOpen: (piece: ComparisonPiece) => void;
 }) {
-  const { shelves, isLoading, isError, refetch } = useGenreShelves();
+  const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
-  const shelf = shelves.find((item) => item.genre === genre);
+  const count = shelves.find((item) => item.genre === genre)?.pieceCount;
+  // 장르 작품은 서버에서 장르로 걸러 쪽 단위로 받는다
+  const query = useGenrePieces(genre);
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 20 : 12;
   const columns =
@@ -294,12 +317,12 @@ export function CompareGenrePieces({
           {style.label}
         </Text>
         <Text variant="bodySm" className="mt-2 text-white/80">
-          {shelf ? `비교할 수 있는 작품 ${shelf.pieces.length}곡` : ' '}
+          {count !== undefined ? `비교할 수 있는 작품 ${count}곡` : ' '}
         </Text>
       </View>
 
       <View className="mt-7" onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-        {isLoading ? (
+        {query.isLoading ? (
           <View className="flex-row flex-wrap" style={{ gap }}>
             {Array.from({ length: wide ? 10 : 4 }, (_, index) => (
               <View key={index} style={{ width: itemWidth || 150 }} className="gap-2">
@@ -308,15 +331,15 @@ export function CompareGenrePieces({
               </View>
             ))}
           </View>
-        ) : isError ? (
+        ) : query.isError ? (
           <EmptyState
             icon={AlertCircleIcon}
             tone="error"
             title="작품 목록을 불러오지 못했어요"
             description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-            action={{ label: '다시 시도', onPress: () => refetch() }}
+            action={{ label: '다시 시도', onPress: () => query.refetch() }}
           />
-        ) : !shelf ? (
+        ) : pieces.length === 0 ? (
           <EmptyState
             icon={CompareIcon}
             title={`${style.label} 작품은 아직 비교할 수 없어요`}
@@ -324,13 +347,26 @@ export function CompareGenrePieces({
             action={{ label: '비교로 돌아가기', onPress: onBack }}
           />
         ) : itemWidth > 0 ? (
-          <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
-            {shelf.pieces.map((piece) => (
-              <View key={piece.pieceId} style={{ width: itemWidth }}>
-                <PieceCard piece={piece} width={itemWidth} onPress={() => onOpen(piece)} />
+          <>
+            <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
+              {pieces.map((piece) => (
+                <View key={piece.pieceId} style={{ width: itemWidth }}>
+                  <PieceCard piece={piece} width={itemWidth} onPress={() => onOpen(piece)} />
+                </View>
+              ))}
+            </View>
+            {query.hasNextPage ? (
+              <View className="mt-8 items-center">
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onPress={() => query.fetchNextPage()}
+                  disabled={query.isFetchingNextPage}>
+                  <Text>{query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}</Text>
+                </Button>
               </View>
-            ))}
-          </View>
+            ) : null}
+          </>
         ) : null}
       </View>
     </ScrollView>

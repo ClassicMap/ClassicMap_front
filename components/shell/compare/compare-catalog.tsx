@@ -114,7 +114,7 @@ export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: Com
               <Text variant="title2" className="mt-9">
                 장르로 찾기
               </Text>
-              <GenreTiles wide onOpen={onOpenGenre} className="mt-4" />
+              <GenreTiles wide grid onOpen={onOpenGenre} className="mt-4" />
             </>
           ) : null}
           <Text variant="title2" className={genreCount > 0 ? 'mt-11' : 'mt-9'}>

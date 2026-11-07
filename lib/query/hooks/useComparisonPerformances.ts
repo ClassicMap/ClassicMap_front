@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query';
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
+import type { PieceGenre } from '@/lib/design/genre-palette';
 import type { ComparisonPerformance, ComparisonPiece, ComparisonPiecePerformer, HomeRecommendations } from '@/lib/types/models';
 
 const PAGE_SIZE = 10;
@@ -16,6 +17,9 @@ const PAGE_SIZE = 10;
 export const COMPARISON_QUERY_KEYS = {
   artist: (artistId: number) => ['artists', artistId, 'comparison-performances'] as const,
   pieces: (composerId?: number) => ['comparison-pieces', composerId ?? 'all'] as const,
+  /** 'comparison-pieces' 아래에 둬서 작품 머리 미리 채우기(findCachedComparisonPiece)가 같이 찾는다 */
+  genrePieces: (genre: PieceGenre) => ['comparison-pieces', 'genre', genre] as const,
+  genres: ['comparison-genres'] as const,
   pieceSectors: (pieceId: number) => ['pieces', pieceId, 'comparison-sectors'] as const,
   sectorPerformances: (sectorId: number) => ['sectors', sectorId, 'comparison-performances'] as const,
 };
@@ -34,6 +38,35 @@ export function comparisonPiecesQueryOptions(composerId?: number) {
     initialPageParam: 0,
     staleTime: COMPARISON_STALE_MS,
   });
+}
+
+/** 한 장르의 비교 작품. 장르 화면이 쪽 단위로 받는다 */
+export function genrePiecesQueryOptions(genre: PieceGenre) {
+  return infiniteQueryOptions({
+    queryKey: COMPARISON_QUERY_KEYS.genrePieces(genre),
+    queryFn: ({ pageParam }) => ComparisonAPI.getPieces({ genre, offset: pageParam, limit: CATALOG_PAGE_SIZE }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < CATALOG_PAGE_SIZE ? undefined : pages.length * CATALOG_PAGE_SIZE,
+    initialPageParam: 0,
+    staleTime: COMPARISON_STALE_MS,
+  });
+}
+
+/** 장르 요약(장르별 작품 수·대표 초상). 홈·둘러보기·비교 탭 장르 타일이 쓴다 */
+export function genreSummariesQueryOptions() {
+  return queryOptions({
+    queryKey: COMPARISON_QUERY_KEYS.genres,
+    queryFn: () => ComparisonAPI.getGenreSummaries(),
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useGenreSummaries() {
+  return useQuery(genreSummariesQueryOptions());
+}
+
+export function useGenrePieces(genre: PieceGenre) {
+  return useInfiniteQuery(genrePiecesQueryOptions(genre));
 }
 
 export function pieceSectorsQueryOptions(pieceId: number) {

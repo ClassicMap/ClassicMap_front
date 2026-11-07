@@ -427,7 +427,7 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       {genres.isLoading || genres.shelves.length > 0 ? (
         <View className="gap-3">
           <Text variant="title3">장르로 찾기</Text>
-          <GenreTiles wide={isWide} onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)} />
+          <GenreTiles wide={isWide} grid onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)} />
         </View>
       ) : null}
 

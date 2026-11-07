@@ -1,10 +1,12 @@
 import { defaultComparisonSector, sortComparisonSectors } from '@/lib/data/comparison';
+import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { artistQueryOptions } from '@/lib/query/hooks/useArtists';
 import {
   comparableComposersQueryOptions,
   comparisonPieceQueryOptions,
   comparisonPiecesQueryOptions,
   findCachedComparisonPiece,
+  genrePiecesQueryOptions,
   pieceSectorsQueryOptions,
   sectorPerformancesQueryOptions,
 } from '@/lib/query/hooks/useComparisonPerformances';
@@ -20,7 +22,9 @@ export type PrefetchTarget =
   | { kind: 'artist'; artistId: number }
   | { kind: 'composer'; composerId: number }
   /** 비교 탭 첫 화면(작곡가 목록) */
-  | { kind: 'compare-catalog' };
+  | { kind: 'compare-catalog' }
+  /** 장르 화면 첫 쪽 */
+  | { kind: 'genre'; genre: PieceGenre };
 
 /** 호버가 이만큼 머물러야 부른다. 격자 위를 훑고 지나갈 때 요청이 쏟아지지 않게 한다 */
 const HOVER_INTENT_MS = 80;
@@ -35,6 +39,8 @@ function targetKey(target: PrefetchTarget): string {
       return `composer:${target.composerId}`;
     case 'compare-catalog':
       return 'compare-catalog';
+    case 'genre':
+      return `genre:${target.genre}`;
   }
 }
 
@@ -79,6 +85,9 @@ export function prefetchTarget(queryClient: QueryClient, target: PrefetchTarget)
         return;
       case 'compare-catalog':
         await queryClient.prefetchQuery(comparableComposersQueryOptions());
+        return;
+      case 'genre':
+        await queryClient.prefetchInfiniteQuery(genrePiecesQueryOptions(target.genre));
         return;
     }
   };
@@ -159,6 +168,8 @@ export function prefetchTargetFromHref(href: string): PrefetchTarget | null {
     const pieceId = Number(params.get('pieceId'));
     const composerId = Number(params.get('composerId'));
     const sectorId = Number(params.get('sectorId'));
+    const genre = params.get('genre');
+    if (isPieceGenre(genre)) return { kind: 'genre', genre };
     if (Number.isInteger(pieceId) && pieceId > 0) {
       return {
         kind: 'piece',
