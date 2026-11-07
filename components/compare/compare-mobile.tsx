@@ -291,7 +291,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               accessibilityRole="link"
               accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
-              <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} size={48} />
+              <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} initialOf={piece.composerName} size={48} />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-1.5">
                   <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">

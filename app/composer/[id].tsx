@@ -567,7 +567,7 @@ function ComparableRow({
       <Text variant="mono" className="w-6 text-center text-foreground-subtle">
         {index + 1}
       </Text>
-      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} size={40} />
+      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} initialOf={piece.composerName} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}

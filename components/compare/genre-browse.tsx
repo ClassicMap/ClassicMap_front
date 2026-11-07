@@ -4,11 +4,19 @@ import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { Scrim } from '@/components/ui/scrim';
 import { CompareIcon } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import {
+  GENRE_STYLES,
+  genreForeground,
+  type GenreStyle,
+  genreWash,
+  type PieceGenre,
+} from '@/lib/design/genre-palette';
+import { GradientWash } from '@/components/ui/gradient-wash';
+import { useHeaderTint } from '@/hooks/use-header-tint';
+import { useColorScheme } from 'nativewind';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -277,6 +285,11 @@ export function CompareGenrePieces({
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
+  const { colorScheme } = useColorScheme();
+  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
+  const wash = genreWash(genre, scheme);
+  const accent = genreForeground(genre, scheme);
+  useHeaderTint(wash);
   // 장르 작품은 서버에서 장르로 걸러 쪽 단위로 받는다
   const query = useGenrePieces(genre);
   const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
@@ -290,36 +303,29 @@ export function CompareGenrePieces({
     <ScrollView
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      <View
-        className={cn(
-          'relative overflow-hidden rounded-2xl',
-          wide ? '-mx-2 px-7 pb-7 pt-5' : 'px-5 pb-6 pt-4'
-        )}>
-        <GenreGradient style={style} />
-        <Scrim from="bottom" opacity={0.35} extent={70} />
-        <Pressable
-          onPress={onBack}
-          accessibilityRole="link"
-          className="mb-6 flex-row items-center gap-1 self-start">
-          <Icon as={ChevronLeftIcon} size={16} className="text-white/80" />
-          <Text variant="caption" className="text-white/80">
-            비교
-          </Text>
-        </Pressable>
-        <Text variant="micro" className="uppercase tracking-widest text-white/75">
-          장르
-        </Text>
-        <Text
-          className={cn(
-            'mt-1 font-extrabold tracking-tight text-white',
-            wide ? 'text-[56px] leading-[60px]' : 'text-[40px] leading-[44px]'
-          )}>
-          {style.label}
-        </Text>
-        <Text variant="bodySm" className="mt-2 text-white/80">
-          {count !== undefined ? `비교할 수 있는 작품 ${count}곡` : ' '}
-        </Text>
+      {/* 머리: 장르 색을 위에서 옅게 번지게 깐다 (작품·작곡가 화면과 같은 꼴). 큰 색 덩어리는 과했다 */}
+      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 340 : 280 }}>
+        <GradientWash color={wash} />
       </View>
+      <Pressable onPress={onBack} accessibilityRole="link" className="mb-5 flex-row items-center gap-1 self-start">
+        <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
+        <Text variant="caption" className="text-foreground-muted">
+          비교
+        </Text>
+      </Pressable>
+      <Text variant="micro" className="uppercase tracking-widest" style={accent ? { color: accent } : undefined}>
+        장르
+      </Text>
+      <Text
+        className={cn(
+          'mt-1 font-extrabold tracking-tight text-foreground',
+          wide ? 'text-[56px] leading-[60px]' : 'text-[40px] leading-[44px]'
+        )}>
+        {style.label}
+      </Text>
+      <Text variant="bodySm" className="mt-2 text-foreground-muted">
+        {count !== undefined ? `비교할 수 있는 작품 ${count}곡` : ' '}
+      </Text>
 
       <View className="mt-7" onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
         {query.isLoading ? (
@@ -351,7 +357,7 @@ export function CompareGenrePieces({
             <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
               {pieces.map((piece) => (
                 <View key={piece.pieceId} style={{ width: itemWidth }}>
-                  <PieceCard piece={piece} width={itemWidth} onPress={() => onOpen(piece)} />
+                  <PieceCard piece={piece} width={itemWidth} showGenreLabel={false} onPress={() => onOpen(piece)} />
                 </View>
               ))}
             </View>

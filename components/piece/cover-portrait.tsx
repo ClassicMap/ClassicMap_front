@@ -9,7 +9,7 @@ export interface CoverPortraitProps {
 }
 
 /**
- * 커버 오른쪽에 까는 작곡가 초상 (네이티브). 블렌드가 없어 반투명으로 색을 비치게 한다.
+ * 커버 오른쪽에 까는 작곡가 초상 (네이티브). 원래 색 그대로 두고, 왼쪽 장르 색은 커버가 덮는다.
  * 웹 구현은 cover-portrait.web.tsx
  */
 export function CoverPortrait({ uri, size }: CoverPortraitProps) {
@@ -17,7 +17,7 @@ export function CoverPortrait({ uri, size }: CoverPortraitProps) {
   return (
     <View
       pointerEvents="none"
-      style={{ position: 'absolute', right: 0, top: 0, width, height: size, opacity: 0.62 }}>
+      style={{ position: 'absolute', right: 0, top: 0, width, height: size }}>
       <OptimizedImage uri={uri} resizeMode="cover" style={{ width, height: size }} />
     </View>
   );

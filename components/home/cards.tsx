@@ -31,6 +31,7 @@ export function PieceCard({
   onPress,
   reason,
   onDismiss,
+  showGenreLabel,
 }: {
   piece: ComparisonPiece;
   width: number;
@@ -39,6 +40,8 @@ export function PieceCard({
   reason?: string;
   /** 추천에서 뺀다(관심 없음). 웹은 호버하면 버튼이 뜨고, 앱은 길게 누른다 */
   onDismiss?: () => void;
+  /** 커버 위 장르 글자. 한 장르만 모인 화면에서는 끈다 */
+  showGenreLabel?: boolean;
 }) {
   const confirmDismiss = onDismiss
     ? () =>
@@ -65,6 +68,8 @@ export function PieceCard({
           title={piece.pieceTitle}
           genre={piece.genre}
           portrait={piece.composerAvatarUrl}
+          initialOf={piece.composerName}
+          showLabel={showGenreLabel}
           size={width}
         />
         {onDismiss && Platform.OS === 'web' ? (
@@ -259,6 +264,7 @@ export function RecentTile({
         title={item.pieceTitle}
         genre={item.genre}
         portrait={item.composerAvatarUrl}
+        initialOf={item.composerName}
         size={56}
         radius={0}
       />

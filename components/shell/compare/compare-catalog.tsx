@@ -394,7 +394,7 @@ function PieceRow({
       <Text variant="mono" className="w-6 text-right text-foreground-subtle">
         {index}
       </Text>
-      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} size={44} />
+      <PieceCover title={piece.pieceTitle} genre={piece.genre} portrait={piece.composerAvatarUrl} initialOf={piece.composerName} size={44} />
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">

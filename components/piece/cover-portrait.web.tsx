@@ -8,8 +8,8 @@ export interface CoverPortraitProps {
 }
 
 /**
- * 커버 오른쪽에 까는 작곡가 초상 (웹). 흑백으로 바꿔 커버 색에 녹이고(luminosity),
- * 왼쪽은 마스크로 흐려 그라데이션과 이어지게 한다. 카드 호버(group)에서 살짝 커진다.
+ * 커버 오른쪽에 까는 작곡가 초상 (웹). 원래 색 그대로 두고 왼쪽만 마스크로 흐려
+ * 장르 색 띠와 이어지게 한다. 카드 호버(group)에서 살짝 커진다.
  * 주소가 바뀌면 부모가 key 로 새로 만든다. 상태를 되돌리는 이펙트를 두면 캐시된 이미지의
  * load 가 그 이펙트보다 먼저 와서 투명한 채로 남을 수 있었다.
  */
@@ -49,7 +49,7 @@ export function CoverPortrait({ uri, size }: CoverPortraitProps) {
         height: size,
         objectFit: 'cover',
         objectPosition: '50% 18%',
-        opacity: loaded ? 0.92 : 0,
+        opacity: loaded ? 1 : 0,
       }}
     />
   );
