@@ -138,8 +138,19 @@ export default function HomeScreen() {
 
   const reco = useHomeRecommendations();
   // 오늘의 비교는 하루 동안 고정한다. 작품을 보고 돌아올 때마다 추천이 다시 계산돼 곡이 바뀌었다
-  const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify(taste.answers)}`;
-  const recoToday = usePinnedToday(reco.data?.today ?? null, todayContext);
+  // 추천을 바꾸는 답만 본다(로그인하면 answers 에 온보딩 상태·기록 설정까지 실려 와서 골라 담는다)
+  const { listeningLevel, sounds, instrument, favoritePeriods: periods, seedPieceIds } = taste.answers;
+  const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify([
+    listeningLevel,
+    sounds,
+    instrument,
+    periods,
+    seedPieceIds,
+  ])}`;
+  const recoToday = usePinnedToday(reco.data?.today ?? null, todayContext, {
+    updatedAt: reco.dataUpdatedAt,
+    placeholder: reco.isPlaceholderData,
+  });
   const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
   const favorites = useMyFavorites(taste.signedIn);
 
