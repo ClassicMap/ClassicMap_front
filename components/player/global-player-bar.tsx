@@ -45,7 +45,7 @@ export function GlobalPlayerBar() {
           <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={32} />
           <View className="min-w-0 flex-1">
             <View className="flex-row items-center gap-1.5">
-              {playing ? <Equalizer playing size={11} /> : null}
+              <Equalizer playing={playing} size={11} />
               <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground web:hover:underline">
                 {current.artistName}
               </Text>

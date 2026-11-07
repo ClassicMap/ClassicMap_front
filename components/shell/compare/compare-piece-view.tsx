@@ -787,7 +787,8 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
         </RepertoireThumb>
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center gap-1.5">
-            {active && playing ? <Equalizer playing size={11} /> : null}
+            {/* 고른 연주는 막대를 늘 둔다. 멈추면 낮게 서서 이름이 좌우로 밀리지 않는다 */}
+            {active ? <Equalizer playing={playing} size={11} /> : null}
             <Text numberOfLines={1} className={cn('shrink text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
               {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
             </Text>
