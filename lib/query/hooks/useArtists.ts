@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
 import { AdminArtistAPI } from '@/lib/api/admin';
 import type { Artist } from '@/lib/types/models';
@@ -53,12 +53,16 @@ export function useArtists() {
  * - id가 없으면 쿼리 비활성화
  * - 아티스트 상세 정보 캐싱
  */
-export function useArtist(id: number | undefined) {
-  return useQuery({
-    queryKey: ARTIST_QUERY_KEYS.detail(id!),
-    queryFn: () => ArtistAPI.getById(id!),
-    enabled: !!id && id > 0,
+/** 아티스트 상세 쿼리 설정. 화면 훅과 미리 부르기(lib/navigation/prefetch)가 같이 쓴다 */
+export function artistQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: ARTIST_QUERY_KEYS.detail(id),
+    queryFn: () => ArtistAPI.getById(id),
   });
+}
+
+export function useArtist(id: number | undefined) {
+  return useQuery({ ...artistQueryOptions(id ?? 0), enabled: !!id && id > 0 });
 }
 
 /**
