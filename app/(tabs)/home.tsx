@@ -3,10 +3,10 @@ import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
 import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
-import { GradientWash } from '@/components/ui/gradient-wash';
 import { usePinnedToday } from '@/hooks/use-pinned-today';
 import { useHeaderTint } from '@/hooks/use-header-tint';
-import { genreStyle, washColor, type PieceGenre } from '@/lib/design/genre-palette';
+import type { PieceGenre } from '@/lib/design/genre-palette';
+import { HomeWash, homeWashColor, homeWashHover } from '@/components/home/home-wash';
 import { useColorScheme } from 'nativewind';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
@@ -169,18 +169,9 @@ export default function HomeScreen() {
   // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
   const todayPiece = recoToday ?? today;
 
-  // 위쪽 색 번짐: 평소엔 오늘의 비교 장르 색, 최근 본 작품에 호버하면 그 작품 색 (스포티파이 홈)
+  // 위쪽 색 번짐(HomeWash)과 같은 색으로 좁은 웹 상단바를 물들인다. 좁은 화면은 호버가 없어 오늘의 비교 색이다
   const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const [hoverGenre, setHoverGenre] = React.useState<PieceGenre | null | undefined>(undefined);
-  const washGenre = genreStyle(hoverGenre !== undefined ? hoverGenre : todayPiece?.genre);
-  const homeWash = washGenre
-    ? washColor(scheme === 'dark' ? washGenre.from : washGenre.to, scheme, 0.7)
-    : scheme === 'dark'
-      ? 'hsla(38, 62%, 60%, 0.12)'
-      : 'hsla(36, 62%, 40%, 0.07)';
-  // 좁은 웹은 상단바도 같은 색으로 (데스크톱은 호버로 바뀌는 색이라 상단바가 없는 셸에서만 보인다)
-  useHeaderTint(wide ? null : homeWash);
+  useHeaderTint(wide ? null : homeWashColor(todayPiece?.genre, colorScheme === 'dark' ? 'dark' : 'light'));
   const shelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
     [pieces, todayPiece?.pieceId]
@@ -329,9 +320,7 @@ export default function HomeScreen() {
       className="flex-1 bg-background web:bg-surface-1"
       contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-      <View pointerEvents="none" className="absolute inset-x-0 top-0" style={{ height: wide ? 420 : 320 }}>
-        <GradientWash color={homeWash} />
-      </View>
+      <HomeWash todayGenre={todayPiece?.genre} height={wide ? 420 : 320} />
       <Text variant={wide ? 'display' : 'title1'}>{greeting(new Date())}</Text>
 
       {onboarding ? <View className="mt-5">{onboarding}</View> : null}
@@ -348,7 +337,7 @@ export default function HomeScreen() {
             rowGap={wide ? 12 : 8}
             keyOf={(item) => item.pieceId}
             renderItem={(item) => (
-              <RecentTile item={item} onPress={() => openRecent(item)} onHoverChange={setHoverGenre} />
+              <RecentTile item={item} onPress={() => openRecent(item)} onHoverChange={homeWashHover.set} />
             )}
           />
         </View>
