@@ -4,7 +4,8 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { genreForeground, genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { GenreMark } from '@/components/piece/genre-mark';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { useComposerCatalog, useComposerPieces } from '@/lib/query/hooks/usePieces';
 import type {
   ComposerCatalogForm,
@@ -15,7 +16,6 @@ import type {
   Piece,
 } from '@/lib/types/models';
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -166,14 +166,11 @@ function GenreChips({
   value: GenreKey | 'all';
   onChange: (next: GenreKey | 'all') => void;
 }) {
-  const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
       <Chip label="전체" count={total} selected={value === 'all'} onPress={() => onChange('all')} />
       {genres.map((item) => {
         const key = genreKey(item);
-        const color = item.genre ? genreForeground(item.genre, scheme) : undefined;
         return (
           <Chip
             key={key}
@@ -181,12 +178,8 @@ function GenreChips({
             count={item.count}
             selected={value === key}
             onPress={() => onChange(key)}
-            leading={
-              <View
-                className="size-2 rounded-full bg-foreground-subtle"
-                style={color ? { backgroundColor: color } : undefined}
-              />
-            }
+            className="pl-1"
+            leading={<GenreMark genre={item.genre} size={24} />}
           />
         );
       })}
@@ -216,11 +209,9 @@ function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPi
 }
 
 function GenreHeader({ genre, notableCount }: { genre: GenreKey; notableCount: number }) {
-  const { colorScheme } = useColorScheme();
-  const color = genre === 'other' ? undefined : genreForeground(genre, colorScheme === 'dark' ? 'dark' : 'light');
   return (
-    <View className="flex-row items-center gap-2">
-      <View className="size-2.5 rounded-full bg-foreground-subtle" style={color ? { backgroundColor: color } : undefined} />
+    <View className="flex-row items-center gap-2.5">
+      <GenreMark genre={genre === 'other' ? null : genre} size={28} />
       <Text className="text-body font-semibold text-foreground">{genreLabel(genre)}</Text>
       {notableCount > 0 ? <StarCount count={notableCount} /> : null}
     </View>
