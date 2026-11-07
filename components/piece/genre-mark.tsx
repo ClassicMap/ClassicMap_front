@@ -32,7 +32,7 @@ export function GenreMark({ genre, size = 20 }: { genre: PieceGenre | null; size
       </Svg>
       {/* 절대 위치로 깐 그라데이션 위에 오도록 아이콘도 자리를 갖는 View 로 감싼다(웹 쌓임 순서) */}
       <View style={{ position: 'relative' }}>
-        <IconComponent size={Math.round(size * 0.74)} color="#FFFFFF" strokeWidth={size < 26 ? 2.1 : 1.85} />
+        <IconComponent size={Math.round(size * 0.72)} color="#FFFFFF" />
       </View>
     </View>
   );
