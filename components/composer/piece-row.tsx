@@ -93,6 +93,34 @@ export function catalogueLabel(piece: Piece): string | null {
   return piece.opusNumber?.trim() || null;
 }
 
+/**
+ * 글에서 검색 낱말이 맞은 곳을 모두 강조한다. 대소문자는 가리지 않고, 긴 낱말을 먼저 맞춘다.
+ * 맞는 곳이 없으면 글을 그대로 둔다
+ */
+export function Highlighted({ text, terms }: { text: string; terms?: readonly string[] }) {
+  const words = (terms ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  if (words.length === 0) return <>{text}</>;
+  const pattern = new RegExp(`(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const pieces = text.split(pattern);
+  if (pieces.length === 1) return <>{text}</>;
+  return (
+    <>
+      {pieces.map((piece, index) =>
+        index % 2 === 1 ? (
+          <Text key={index} className="font-bold text-primary">
+            {piece}
+          </Text>
+        ) : (
+          piece
+        )
+      )}
+    </>
+  );
+}
+
 function isComposerPiece(piece: Piece | ComposerPiece): piece is ComposerPiece {
   return 'notableParts' in piece;
 }
@@ -110,8 +138,14 @@ export function PieceRow({
   onComparePart,
   onEdit,
   onDelete,
+  highlight,
+  leading,
 }: {
   piece: Piece | ComposerPiece;
+  /** 검색어. 제목과 걸린 세트 안 곡에서 맞은 곳을 강조한다 */
+  highlight?: readonly string[];
+  /** 제목 앞 표지(검색 결과의 장르 표지 등) */
+  leading?: React.ReactNode;
   comparable: boolean;
   canEdit: boolean;
   onCompare: () => void;
@@ -130,11 +164,12 @@ export function PieceRow({
   return (
     <View className="border-b border-border">
       <View className="flex-row items-center gap-3 py-2.5">
+        {leading}
         <View className="min-w-0 flex-1">
           <View className="flex-row items-center gap-1.5">
             {piece.notable ? <NotableStar /> : null}
             <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
-              {piece.title}
+              <Highlighted text={piece.title} terms={highlight} />
             </Text>
             {partCount > 0 ? (
               <Pressable
@@ -171,7 +206,8 @@ export function PieceRow({
           ) : null}
           {matchedPart ? (
             <Text variant="caption" numberOfLines={1} className="mt-0.5 text-foreground">
-              {`→ ${partLabel(matchedPart.sequenceNumber, piece.partKind)} ${matchedPart.name}`}
+              {`→ ${partLabel(matchedPart.sequenceNumber, piece.partKind)} `}
+              <Highlighted text={matchedPart.name} terms={highlight} />
             </Text>
           ) : null}
         </View>

@@ -1,5 +1,6 @@
 import {
   infiniteQueryOptions,
+  keepPreviousData,
   queryOptions,
   useInfiniteQuery,
   useMutation,
@@ -58,11 +59,13 @@ export function composerPiecesQueryOptions(
 export function useComposerPieces(
   composerId: number | undefined,
   filter: ComposerPieceFilter = {},
-  options: { pageSize?: number; enabled?: boolean } = {}
+  options: { pageSize?: number; enabled?: boolean; keepPrevious?: boolean } = {}
 ) {
   return useInfiniteQuery({
     ...composerPiecesQueryOptions(composerId ?? 0, filter, options.pageSize),
     enabled: (composerId ?? 0) > 0 && options.enabled !== false,
+    // 검색어가 바뀌는 동안 앞 결과를 그대로 두어 목록이 깜빡이지 않게 한다
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
   });
 }
 

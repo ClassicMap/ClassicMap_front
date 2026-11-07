@@ -16,8 +16,10 @@ import type {
   Piece,
 } from '@/lib/types/models';
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import { THEME } from '@/lib/theme';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 
 type GenreKey = PieceGenre | 'other';
 
@@ -34,6 +36,33 @@ const SORTS: { key: ComposerPieceSort; label: string }[] = [
   { key: 'year', label: '작곡 연도순' },
   { key: 'notable', label: '대표곡 먼저' },
 ];
+
+/** 검색어를 데이터 표기로도 한 번 더 강조한다(서버 검색의 별칭과 같다): 야상곡 → 녹턴, op 9 → Op. 9 */
+const SEARCH_ALIASES: [string, string][] = [
+  ['야상곡', '녹턴'],
+  ['에튀드', '연습곡'],
+  ['폴로네이즈', '폴로네즈'],
+  ['프렐류드', '전주곡'],
+  ['판타지', '환상곡'],
+  ['랩소디', '광시곡'],
+];
+
+function highlightTerms(q: string): string[] {
+  // 서버처럼 낱말마다 찾고, 작품번호 머리(Op.·K.·BWV)는 뒤 숫자와 붙여 한 낱말로 본다
+  const words = q.replace(/\b(op\.?|k\.?|kv|bwv|hob\.|rv)\s+(?=\d)/gi, '$1\u0001').split(/\s+/);
+  const terms = new Set<string>();
+  for (const raw of words) {
+    const word = raw.replace(/\u0001/g, ' ').trim();
+    if (!word) continue;
+    terms.add(word);
+    let normalized = word.replace(/^op\.?\s*(\d)/i, 'Op. $1');
+    for (const [alias, canonical] of SEARCH_ALIASES) normalized = normalized.split(alias).join(canonical);
+    terms.add(normalized);
+  }
+  return [...terms];
+}
+
+const SEARCH_DEBOUNCE_MS = 200;
 
 function genreKey(genre: ComposerCatalogGenre): GenreKey {
   return genre.genre ?? 'other';
@@ -61,6 +90,7 @@ export interface ComposerWorksProps {
  */
 export function ComposerWorks(props: ComposerWorksProps) {
   const { composerId, composerName, headerAction } = props;
+  const { colorScheme } = useColorScheme();
   const catalogQuery = useComposerCatalog(composerId);
   const catalog = catalogQuery.data;
   const [genre, setGenre] = React.useState<GenreKey | 'all'>('all');
@@ -70,11 +100,19 @@ export function ComposerWorks(props: ComposerWorksProps) {
   const [q, setQ] = React.useState('');
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setQ(text.trim()), 250);
+    const timer = setTimeout(() => setQ(text.trim()), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [text]);
 
   const selected = genre === 'all' ? undefined : catalog?.genres.find((item) => genreKey(item) === genre);
+  const searching = q.length > 0;
+  // 검색은 고른 갈래 안에서 하고, 관련도순으로 받는다. 검색어가 바뀌는 동안 앞 결과를 그대로 둔다
+  const searchQuery = useComposerPieces(
+    composerId,
+    { q, sort: 'relevance', genre: genre === 'all' ? undefined : genre },
+    { pageSize: PAGE_SIZE, enabled: searching, keepPrevious: true }
+  );
+  const pendingSearch = text.trim() !== q || (searching && searchQuery.isFetching);
 
   return (
     <View className="gap-4">
@@ -91,10 +129,17 @@ export function ComposerWorks(props: ComposerWorksProps) {
       </View>
 
       <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface-1 px-3 web:focus-within:border-ring">
-        <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
+        {text && pendingSearch ? (
+          <ActivityIndicator size="small" color={THEME[colorScheme === 'dark' ? 'dark' : 'light'].mutedForeground} style={{ width: 16, height: 16 }} />
+        ) : (
+          <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
+        )}
         <Input
           value={text}
           onChangeText={setText}
+          onKeyPress={(event) => {
+            if (Platform.OS === 'web' && event.nativeEvent.key === 'Escape') setText('');
+          }}
           placeholder={`${composerName} 작품에서 찾기 · 제목, 작품번호, 별칭`}
           accessibilityLabel={`${composerName} 작품에서 찾기`}
           returnKeyType="search"
@@ -107,9 +152,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
         ) : null}
       </View>
 
-      {q ? (
-        <SearchResults {...props} q={q} />
-      ) : catalogQuery.isLoading ? (
+      {catalogQuery.isLoading ? (
         <RowsSkeleton count={6} />
       ) : catalogQuery.isError || !catalog ? (
         <RetryRow message="작품 목록을 불러오지 못했어요." onRetry={() => catalogQuery.refetch()} />
@@ -123,12 +166,22 @@ export function ComposerWorks(props: ComposerWorksProps) {
             genres={catalog.genres}
             total={catalog.total}
             value={genre}
+            showCounts={!searching}
             onChange={(next) => {
               setGenre(next);
               setNotableOnly(false);
             }}
           />
-          {genre === 'all' || !selected ? (
+          {searching ? (
+            <SearchResults
+              {...props}
+              q={q}
+              query={searchQuery}
+              genreLabel={genre === 'all' ? null : genreLabel(genre)}
+              onSearchAll={() => setGenre('all')}
+              onClear={() => setText('')}
+            />
+          ) : genre === 'all' || !selected ? (
             <View className="gap-8">
               {catalog.genres.map((item) => (
                 <GenrePreview
@@ -159,23 +212,26 @@ function GenreChips({
   genres,
   total,
   value,
+  showCounts,
   onChange,
 }: {
   genres: ComposerCatalogGenre[];
   total: number;
   value: GenreKey | 'all';
+  /** 검색 중에는 전체 작품 수가 결과 수로 오해되지 않게 숨긴다 */
+  showCounts: boolean;
   onChange: (next: GenreKey | 'all') => void;
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-      <Chip label="전체" count={total} selected={value === 'all'} onPress={() => onChange('all')} />
+      <Chip label="전체" count={showCounts ? total : undefined} selected={value === 'all'} onPress={() => onChange('all')} />
       {genres.map((item) => {
         const key = genreKey(item);
         return (
           <Chip
             key={key}
             label={genreLabel(key)}
-            count={item.count}
+            count={showCounts ? item.count : undefined}
             selected={value === key}
             onPress={() => onChange(key)}
             className="pl-1"
@@ -362,29 +418,84 @@ function PagedList({
   );
 }
 
-function SearchResults({ q, ...props }: ComposerWorksProps & { q: string }) {
-  const query = useComposerPieces(props.composerId, { q, sort: 'catalogue' }, { pageSize: PAGE_SIZE });
+function SearchResults({
+  q,
+  query,
+  genreLabel: scope,
+  onSearchAll,
+  onClear,
+  ...props
+}: ComposerWorksProps & {
+  q: string;
+  query: ReturnType<typeof useComposerPieces>;
+  /** 고른 갈래 이름. null 이면 전체에서 찾는다 */
+  genreLabel: string | null;
+  onSearchAll: () => void;
+  onClear: () => void;
+}) {
   const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
-  if (query.isLoading) return <RowsSkeleton count={4} />;
+  const terms = React.useMemo(() => highlightTerms(q), [q]);
+  // 첫 검색에만 자리표시를 보이고, 그 뒤로는 앞 결과를 흐리게 둔 채 새 결과를 기다린다
+  if (query.isLoading && pieces.length === 0) return <RowsSkeleton count={3} />;
   if (query.isError) return <RetryRow message="검색하지 못했어요." onRetry={() => query.refetch()} />;
-  if (pieces.length === 0) {
-    return (
-      <Text variant="bodySm" className="text-foreground-muted">
-        {`'${q}'에 맞는 작품이 없어요. 작품번호(Op. 28)나 별칭(빗방울)으로 찾아보세요.`}
-      </Text>
-    );
-  }
+  const stale = query.isPlaceholderData;
+  const where = scope ? `${scope}에서 ` : '';
   return (
     <View className="gap-2">
-      <Text variant="caption">{`검색 결과 ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}</Text>
-      <Rows pieces={pieces} {...props} />
-      {query.hasNextPage ? (
-        <MoreLink
-          label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
-          onPress={() => query.fetchNextPage()}
-          disabled={query.isFetchingNextPage}
-        />
-      ) : null}
+      <View className="flex-row flex-wrap items-baseline justify-between gap-2">
+        <Text variant="caption" accessibilityLiveRegion="polite">
+          {stale
+            ? `${where}'${q}' 찾는 중…`
+            : pieces.length === 0
+              ? `${where}'${q}'에 맞는 작품이 없어요`
+              : `${where}'${q}' ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}
+        </Text>
+        <Pressable onPress={onClear} hitSlop={6} accessibilityRole="button">
+          <Text variant="label" className="text-foreground-muted">
+            검색 지우기
+          </Text>
+        </Pressable>
+      </View>
+      {pieces.length === 0 && !stale ? (
+        <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
+          <Text variant="bodySm" className="text-foreground-muted">
+            작품번호(Op. 28, K. 331), 별칭(빗방울, 운명), 형식(녹턴, 소나타)으로도 찾을 수 있어요.
+          </Text>
+          {scope ? (
+            <Pressable onPress={onSearchAll} hitSlop={6} className="self-start">
+              <Text variant="label" className="text-primary">
+                {`전체 갈래에서 '${q}' 찾기`}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : (
+        <View className="web:transition-opacity web:duration-150" style={{ opacity: stale ? 0.55 : 1 }}>
+          <View className="border-t border-border">
+            {pieces.map((piece) => (
+              <PieceRow
+                key={piece.id}
+                piece={piece}
+                highlight={terms}
+                leading={<GenreMark genre={piece.genre ?? null} size={22} />}
+                comparable={props.comparableIds.has(piece.id)}
+                canEdit={props.canEdit}
+                onCompare={() => props.onCompare(piece.id)}
+                onComparePart={props.onCompare}
+                onEdit={() => props.onEdit(piece)}
+                onDelete={() => props.onDelete(piece)}
+              />
+            ))}
+          </View>
+          {query.hasNextPage ? (
+            <MoreLink
+              label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+              onPress={() => query.fetchNextPage()}
+              disabled={query.isFetchingNextPage}
+            />
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }

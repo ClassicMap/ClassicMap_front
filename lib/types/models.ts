@@ -60,8 +60,8 @@ export interface ComposerPiece extends Piece {
   matchedPart: { sequenceNumber: number; name: string } | null;
 }
 
-/** 작곡가 작품 목록 정렬. listening 은 손본 작품 먼저(기존 기본값) */
-export type ComposerPieceSort = 'listening' | 'catalogue' | 'year' | 'notable';
+/** 작곡가 작품 목록 정렬. listening 은 손본 작품 먼저(기존 기본값), relevance 는 검색 관련도 */
+export type ComposerPieceSort = 'listening' | 'catalogue' | 'year' | 'notable' | 'relevance';
 
 /** 작곡가 작품 목록 거르기. genre 'other' 는 장르를 못 정한 작품이다 */
 export interface ComposerPieceFilter {
