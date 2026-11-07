@@ -7,7 +7,11 @@ import { Text } from '@/components/ui/text';
 import { GenreMark } from '@/components/piece/genre-mark';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
-import { useComposerCatalog, useComposerPieces } from '@/lib/query/hooks/usePieces';
+import {
+  PIECE_QUERY_KEYS,
+  useComposerCatalog,
+  useComposerPieces,
+} from '@/lib/query/hooks/usePieces';
 import type {
   ComposerCatalogForm,
   ComposerCatalogGenre,
@@ -18,6 +22,7 @@ import type {
 } from '@/lib/types/models';
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { THEME } from '@/lib/theme';
+import { useIsFetching } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
@@ -78,6 +83,10 @@ const SECTION_GAP = 16;
 /** 웹에서 위에 붙은 검색 칸의 위아래 여백. 제자리를 지키도록 같은 만큼 바깥 여백을 당긴다 */
 const STICKY_PAD = Platform.OS === 'web' ? 8 : 0;
 const STICKY_STYLE = { marginVertical: -STICKY_PAD, paddingVertical: STICKY_PAD };
+/** 입력을 멈추고 결과가 다 온 뒤 이만큼 지나면 잡아 둔 빈자리를 거둔다 */
+const SETTLE_MS = 700;
+/** 빈자리를 거두는 시간(웹 transition-[min-height] duration-300 과 같다) */
+const RELEASE_MS = 300;
 
 function genreKey(genre: ComposerCatalogGenre): GenreKey {
   return genre.genre ?? 'other';
@@ -109,8 +118,9 @@ type AlignMode = 'focus' | 'reset';
  *
  * 검색·갈래를 바꿀 때 화면이 움직이지 않게 한다.
  * - 검색창과 갈래 칩은 웹에서 화면 위에 붙는다(sticky).
- * - 검색하거나 갈래를 고르면 아래 칸이 화면 높이만큼은 늘 자리를 잡는다. 결과가 짧아져도 문서가 줄어
- *   스크롤이 밀리는 일이 없다.
+ * - 검색어·갈래가 바뀌면 아래 칸이 화면 높이만큼 자리를 잡는다. 결과가 짧아져도 문서가 줄어 스크롤이
+ *   밀리는 일이 없어서 치는 동안 화면이 가만히 있다. 입력을 멈추고 결과가 다 오면 그 빈자리를 부드럽게
+ *   거두어 보통 페이지 끝처럼 둔다(좁은 화면은 키보드가 떠 있는 동안 거두지 않는다).
  * - 검색 칸이 위에 붙어 있을 때 검색어·갈래가 바뀌면 그 칸의 제자리로 스크롤을 돌린다. 붙은 칸은 그대로
  *   보이고 아래 목록만 처음부터 다시 보인다.
  * - 좁은 화면은 검색창을 누르면 화면 위로 올린다(모바일 검색 화면처럼 위는 검색창, 아래는 결과).
@@ -129,6 +139,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
   const [notableOnly, setNotableOnly] = React.useState(false);
   const [text, setText] = React.useState('');
   const [q, setQ] = React.useState('');
+  const [focused, setFocused] = React.useState(false);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setQ(text.trim()), SEARCH_DEBOUNCE_MS);
@@ -174,6 +185,31 @@ export function ComposerWorks(props: ComposerWorksProps) {
     },
     [scrollRef]
   );
+
+  // 검색어·갈래가 바뀐 그 렌더부터 빈자리를 잡고(holding), 입력이 멈추고 받을 것이 없으면 거둔다
+  const viewKey = `${genre}\u0000${q}`;
+  const [settledKey, setSettledKey] = React.useState(viewKey);
+  const holding = settledKey !== viewKey;
+  // 거둘 때는 실제 목록 높이까지만 줄여서 움직임이 그 높이에서 부드럽게 멎게 한다
+  const [contentHeight, setContentHeight] = React.useState(0);
+  const [releasing, setReleasing] = React.useState(false);
+  const fetching = useIsFetching({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) }) > 0;
+  const typing = text.trim() !== q;
+  const keyboardUp = narrow && focused;
+  React.useEffect(() => {
+    if (!holding || typing || fetching || keyboardUp) return;
+    const timer = setTimeout(() => {
+      setSettledKey(viewKey);
+      setReleasing(true);
+    }, SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [holding, typing, fetching, keyboardUp, viewKey]);
+  React.useEffect(() => {
+    if (!releasing) return;
+    const timer = setTimeout(() => setReleasing(false), RELEASE_MS + 50);
+    return () => clearTimeout(timer);
+  }, [releasing]);
+  const reserveHeight = holding ? windowHeight : releasing ? contentHeight : 0;
 
   // 검색어·갈래가 바뀌면 새 목록을 처음부터 보인다(검색 칸이 위에 붙어 있을 때만 움직인다)
   const firstRender = React.useRef(true);
@@ -223,8 +259,10 @@ export function ComposerWorks(props: ComposerWorksProps) {
               if (Platform.OS === 'web' && event.nativeEvent.key === 'Escape') clearSearch();
             }}
             onFocus={() => {
+              setFocused(true);
               if (narrow) alignSearchBlock('focus');
             }}
+            onBlur={() => setFocused(false)}
             onSubmitEditing={() => setQ(text.trim())}
             placeholder={`${composerName} 작품에서 찾기 · 제목, 작품번호, 별칭`}
             accessibilityLabel={`${composerName} 작품에서 찾기`}
@@ -267,38 +305,44 @@ export function ComposerWorks(props: ComposerWorksProps) {
           아직 등록된 작품이 없어요.
         </Text>
       ) : (
-        // 검색하거나 갈래를 고르면 결과가 짧아도 화면 높이만큼 자리를 잡아 스크롤이 밀리지 않게 한다
-        <View style={searching || genre !== 'all' ? { minHeight: windowHeight } : undefined}>
-          {searching ? (
-            <SearchResults
-              {...props}
-              q={q}
-              query={searchQuery}
-              genreLabel={genre === 'all' ? null : genreLabel(genre)}
-              onSearchAll={() => setGenre('all')}
-              onClear={clearSearch}
-            />
-          ) : genre === 'all' || !selected ? (
-            <View className="gap-8">
-              {catalog.genres.map((item) => (
-                <GenrePreview
-                  key={genreKey(item)}
-                  {...props}
-                  genre={item}
-                  onOpen={() => setGenre(genreKey(item))}
-                />
-              ))}
-            </View>
-          ) : (
-            <GenreView
-              {...props}
-              genre={selected}
-              sort={sort}
-              onSort={setSort}
-              notableOnly={notableOnly}
-              onNotableOnly={setNotableOnly}
-            />
+        // 바뀌는 동안은 화면 높이만큼 자리를 잡고(바로), 거둘 때는 줄어드는 것을 부드럽게 보인다(웹)
+        <View
+          className={cn(
+            !holding && releasing && 'web:transition-[min-height] web:duration-300 web:ease-out'
           )}
+          style={{ minHeight: reserveHeight }}>
+          <View onLayout={(event) => setContentHeight(event.nativeEvent.layout.height)}>
+            {searching ? (
+              <SearchResults
+                {...props}
+                q={q}
+                query={searchQuery}
+                genreLabel={genre === 'all' ? null : genreLabel(genre)}
+                onSearchAll={() => setGenre('all')}
+                onClear={clearSearch}
+              />
+            ) : genre === 'all' || !selected ? (
+              <View className="gap-8">
+                {catalog.genres.map((item) => (
+                  <GenrePreview
+                    key={genreKey(item)}
+                    {...props}
+                    genre={item}
+                    onOpen={() => setGenre(genreKey(item))}
+                  />
+                ))}
+              </View>
+            ) : (
+              <GenreView
+                {...props}
+                genre={selected}
+                sort={sort}
+                onSort={setSort}
+                notableOnly={notableOnly}
+                onNotableOnly={setNotableOnly}
+              />
+            )}
+          </View>
         </View>
       )}
     </View>
