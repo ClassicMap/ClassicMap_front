@@ -344,31 +344,19 @@ export default function ComposerDetailScreen() {
               )}
             </View>
 
-            {/* 이 작품들을 연주한 사람: 사람은 원형 */}
-            {performers.length > 0 ? (
+            {/* 이 작품들을 연주한 사람: 넓은 화면은 오른쪽 칸, 좁은 화면은 가로 띠 */}
+            {!wide && performers.length > 0 ? (
               <View>
                 <SectionTitle title="이 작품들을 연주한 사람" meta={`${performers.length}명`} />
-                {wide ? (
-                  <View className="flex-row flex-wrap gap-x-4 gap-y-5">
-                    {performers.slice(0, 12).map((performer) => (
-                      <PerformerTile
-                        key={performer.artistId}
-                        performer={performer}
-                        onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
-                      />
-                    ))}
-                  </View>
-                ) : (
-                  <ScrollShelf>
-                    {performers.map((performer) => (
-                      <PerformerTile
-                        key={performer.artistId}
-                        performer={performer}
-                        onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
-                      />
-                    ))}
-                  </ScrollShelf>
-                )}
+                <ScrollShelf>
+                  {performers.map((performer) => (
+                    <PerformerTile
+                      key={performer.artistId}
+                      performer={performer}
+                      onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
+                    />
+                  ))}
+                </ScrollShelf>
               </View>
             ) : null}
 
@@ -400,7 +388,17 @@ export default function ComposerDetailScreen() {
             />
           </View>
 
-          {wide && about ? <View className="w-[340px]">{about}</View> : null}
+          {wide && (about || performers.length > 0) ? (
+            <View className="w-[340px] gap-10">
+              {about}
+              {performers.length > 0 ? (
+                <PerformerSidebar
+                  performers={performers}
+                  onOpen={(artistId) => router.push(`/artist/${artistId}` as Href)}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -506,5 +504,60 @@ function PerformerTile({ performer, onPress }: { performer: PerformerSummary; on
         {caption}
       </Text>
     </Pressable>
+  );
+}
+
+const SIDEBAR_PERFORMERS = 8;
+
+/** 넓은 화면 오른쪽 칸의 연주자 목록. 여러 작품을 친 사람이 앞에 온다 */
+function PerformerSidebar({
+  performers,
+  onOpen,
+}: {
+  performers: PerformerSummary[];
+  onOpen: (artistId: number) => void;
+}) {
+  const [all, setAll] = React.useState(false);
+  const shown = all ? performers : performers.slice(0, SIDEBAR_PERFORMERS);
+  return (
+    <View>
+      <View className="mb-2.5 flex-row items-baseline gap-2">
+        <Text variant="headline">이 작품들을 연주한 사람</Text>
+        <Text variant="caption">{`${performers.length}명`}</Text>
+      </View>
+      <View className="gap-1">
+        {shown.map((performer) => {
+          const caption =
+            performer.pieces.length > 1
+              ? `${performer.pieces[0]} 외 ${performer.pieces.length - 1}곡`
+              : performer.pieces[0];
+          return (
+            <Pressable
+              key={performer.artistId}
+              onPress={() => onOpen(performer.artistId)}
+              accessibilityRole="link"
+              accessibilityLabel={`${performer.artistName}, ${caption}`}
+              className="flex-row items-center gap-3 rounded-lg px-1.5 py-1.5 active:bg-surface-2 web:transition-colors web:hover:bg-surface-2">
+              <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={40} />
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={1} className="text-label font-semibold text-foreground">
+                  {performer.artistName}
+                </Text>
+                <Text numberOfLines={1} className="text-caption text-foreground-muted">
+                  {caption}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      {performers.length > SIDEBAR_PERFORMERS ? (
+        <Pressable onPress={() => setAll((value) => !value)} hitSlop={6} className="mt-2 self-start px-1.5 py-1">
+          <Text variant="label" className="text-foreground-muted">
+            {all ? '접기' : `${performers.length}명 모두 보기`}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }

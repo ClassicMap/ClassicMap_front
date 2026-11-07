@@ -1,5 +1,4 @@
-import { PieceRow } from '@/components/composer/piece-row';
-import { Button } from '@/components/ui/button';
+import { NotableStar, PieceRow } from '@/components/composer/piece-row';
 import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,7 @@ import type {
   ComposerPieceSort,
   Piece,
 } from '@/lib/types/models';
-import { SearchIcon, XIcon } from 'lucide-react-native';
+import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -223,9 +222,7 @@ function GenreHeader({ genre, notableCount }: { genre: GenreKey; notableCount: n
     <View className="flex-row items-center gap-2">
       <View className="size-2.5 rounded-full bg-foreground-subtle" style={color ? { backgroundColor: color } : undefined} />
       <Text className="text-body font-semibold text-foreground">{genreLabel(genre)}</Text>
-      {notableCount > 0 ? (
-        <Text variant="caption" className="text-primary">{`대표 ${notableCount}`}</Text>
-      ) : null}
+      {notableCount > 0 ? <StarCount count={notableCount} /> : null}
     </View>
   );
 }
@@ -248,9 +245,7 @@ function GenrePreview({ genre, onOpen, ...props }: ComposerWorksProps & { genre:
         <Rows pieces={pieces} {...props} />
       )}
       {genre.count > PREVIEW_SIZE ? (
-        <Button variant="outline" size="sm" className="self-start" onPress={onOpen}>
-          <Text>{`${genreLabel(key)} ${genre.count.toLocaleString('ko-KR')}곡 모두 보기`}</Text>
-        </Button>
+        <MoreLink label={`${genreLabel(key)} ${genre.count.toLocaleString('ko-KR')}곡 모두 보기`} onPress={onOpen} />
       ) : null}
     </View>
   );
@@ -284,6 +279,7 @@ function GenreView({
             size="sm"
             label="대표곡만"
             count={genre.notableCount}
+            leading={<NotableStar size={11} />}
             selected={notableOnly}
             onPress={() => onNotableOnly(!notableOnly)}
           />
@@ -325,12 +321,10 @@ function FormGroup({
   const preview = useComposerPieces(props.composerId, filter, { pageSize: FORM_PREVIEW_SIZE, enabled: !open });
   return (
     <View className="gap-1">
-      <View className="flex-row items-baseline gap-2 border-b border-border pb-1.5">
+      <View className="flex-row items-center gap-2 pb-1.5">
         <Text className="text-body-sm font-semibold text-foreground-muted">{form.name}</Text>
         <Text variant="caption" className="tabular-nums">{`${total}곡`}</Text>
-        {!notableOnly && form.notableCount > 0 ? (
-          <Text variant="caption" className="text-primary">{`대표 ${form.notableCount}`}</Text>
-        ) : null}
+        {!notableOnly && form.notableCount > 0 ? <StarCount count={form.notableCount} /> : null}
       </View>
       {open ? (
         <PagedList {...props} filter={filter} bare onCollapse={() => setOpen(false)} />
@@ -342,9 +336,7 @@ function FormGroup({
         <>
           <Rows pieces={preview.data?.pages[0] ?? []} {...props} />
           {total > FORM_PREVIEW_SIZE ? (
-            <Button variant="ghost" size="sm" className="self-start" onPress={() => setOpen(true)}>
-              <Text>{`${form.name} ${total - FORM_PREVIEW_SIZE}곡 더 보기`}</Text>
-            </Button>
+            <MoreLink label={`${total - FORM_PREVIEW_SIZE}곡 더 보기`} onPress={() => setOpen(true)} />
           ) : null}
         </>
       )}
@@ -365,17 +357,15 @@ function PagedList({
   return (
     <View className={bare ? undefined : 'gap-2'}>
       <Rows pieces={pieces} {...props} />
-      <View className="mt-2 flex-row gap-2">
+      <View className="flex-row gap-4">
         {query.hasNextPage ? (
-          <Button variant="outline" size="sm" onPress={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-            <Text>{query.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
-          </Button>
+          <MoreLink
+            label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+            onPress={() => query.fetchNextPage()}
+            disabled={query.isFetchingNextPage}
+          />
         ) : null}
-        {onCollapse ? (
-          <Button variant="ghost" size="sm" onPress={onCollapse}>
-            <Text>접기</Text>
-          </Button>
-        ) : null}
+        {onCollapse ? <MoreLink label="접기" onPress={onCollapse} collapse /> : null}
       </View>
     </View>
   );
@@ -398,9 +388,11 @@ function SearchResults({ q, ...props }: ComposerWorksProps & { q: string }) {
       <Text variant="caption">{`검색 결과 ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}</Text>
       <Rows pieces={pieces} {...props} />
       {query.hasNextPage ? (
-        <Button variant="outline" size="sm" className="self-start" onPress={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-          <Text>{query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}</Text>
-        </Button>
+        <MoreLink
+          label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+          onPress={() => query.fetchNextPage()}
+          disabled={query.isFetchingNextPage}
+        />
       ) : null}
     </View>
   );
@@ -428,5 +420,43 @@ function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }
         </Text>
       </Pressable>
     </View>
+  );
+}
+
+function StarCount({ count }: { count: number }) {
+  return (
+    <View className="flex-row items-center gap-1" accessibilityLabel={`대표곡 ${count}곡`}>
+      <NotableStar size={11} />
+      <Text variant="caption" className="tabular-nums">
+        {count}
+      </Text>
+    </View>
+  );
+}
+
+/** 목록 아래 '더 보기'·'접기'. 모든 목록이 같은 모양을 쓴다 */
+function MoreLink({
+  label,
+  onPress,
+  disabled,
+  collapse,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  collapse?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      hitSlop={6}
+      className="mt-1 flex-row items-center gap-1 self-start rounded-full py-1.5 pr-2 web:transition-opacity web:hover:opacity-80">
+      <Text variant="label" className="text-foreground-muted">
+        {label}
+      </Text>
+      <Icon as={collapse ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
+    </Pressable>
   );
 }

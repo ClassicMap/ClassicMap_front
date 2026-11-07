@@ -83,6 +83,8 @@ interface APIPiece {
   genre?: string | null;
   formKey?: string | null;
   notable?: boolean;
+  catalogueSystem?: string | null;
+  catalogueNumber?: string | null;
 }
 
 interface APIComposerPiece extends APIPiece {
@@ -281,6 +283,8 @@ const mapPiece = (api: APIPiece): Piece => ({
   type: 'song', // 기본값
   description: api.description,
   opusNumber: api.opusNumber,
+  catalogueSystem: api.catalogueSystem ?? null,
+  catalogueNumber: api.catalogueNumber ?? null,
   compositionYear: api.compositionYear,
   difficultyLevel: api.difficultyLevel,
   durationMinutes: api.durationMinutes,

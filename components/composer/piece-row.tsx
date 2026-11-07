@@ -1,5 +1,4 @@
 import { FavoriteButton } from '@/components/favorite-button';
-import { Badge } from '@/components/ui/badge';
 import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,7 +7,9 @@ import { usePieceParts } from '@/lib/query/hooks/usePieces';
 import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, TrashIcon } from 'lucide-react-native';
+import { THEME } from '@/lib/theme';
+import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, TrashIcon } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { Linking, Pressable, View } from 'react-native';
 
@@ -74,6 +75,24 @@ function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
   return ordered;
 }
 
+/** 대표곡 별. 채운 별을 강조색으로 그린다 */
+export function NotableStar({ size = 13, label = '대표곡' }: { size?: number; label?: string }) {
+  const { colorScheme } = useColorScheme();
+  const color = THEME[colorScheme === 'dark' ? 'dark' : 'light'].primary;
+  return (
+    <View accessible accessibilityLabel={label} className="shrink-0">
+      <Icon as={StarIcon} size={size} color={color} fill={color} />
+    </View>
+  );
+}
+
+/** 목록에 쓰는 작품번호. 목록 체계·번호가 있으면 그것(Op. 10, K. 331), 없으면 opusNumber */
+export function catalogueLabel(piece: Piece): string | null {
+  const number = piece.catalogueNumber?.trim();
+  if (number) return [piece.catalogueSystem?.trim(), number].filter(Boolean).join(' ');
+  return piece.opusNumber?.trim() || null;
+}
+
 function isComposerPiece(piece: Piece | ComposerPiece): piece is ComposerPiece {
   return 'notableParts' in piece;
 }
@@ -107,16 +126,16 @@ export function PieceRow({
   const links = listenLinks(piece);
   const notableParts = isComposerPiece(piece) ? piece.notableParts : [];
   const matchedPart = isComposerPiece(piece) ? piece.matchedPart : null;
-  const detail = [piece.opusNumber, piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean).join(' · ');
+  const detail = [catalogueLabel(piece), piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean);
   return (
     <View className="border-b border-border">
-      <View className="flex-row items-center gap-3 py-3">
+      <View className="flex-row items-center gap-3 py-2.5">
         <View className="min-w-0 flex-1">
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1.5">
+            {piece.notable ? <NotableStar /> : null}
             <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
               {piece.title}
             </Text>
-            {piece.notable ? <Badge tone="accent" label="대표곡" className="shrink-0" /> : null}
             {partCount > 0 ? (
               <Pressable
                 onPress={() => setExpanded((value) => !value)}
@@ -132,22 +151,29 @@ export function PieceRow({
               </Pressable>
             ) : null}
           </View>
-          {detail || piece.titleEn ? (
-            <Text variant="caption" numberOfLines={1} className="mt-0.5">
-              {[detail, piece.titleEn].filter(Boolean).join(' · ')}
-            </Text>
-          ) : null}
-          {notableParts.length > 0 ? (
-            <Text variant="caption" numberOfLines={1} className="mt-0.5 text-primary">
-              {`대표 곡 ${notableParts.map((sequence) => partLabel(sequence, piece.partKind)).join(' · ')}`}
-            </Text>
+          {detail.length > 0 || links.length > 0 || notableParts.length > 0 ? (
+            <View className="mt-0.5 flex-row flex-wrap items-center gap-x-2.5 gap-y-1">
+              {detail.length > 0 ? (
+                <Text variant="caption" className="tabular-nums">
+                  {detail.join(' · ')}
+                </Text>
+              ) : null}
+              {notableParts.length > 0 ? (
+                <View className="flex-row items-center gap-1">
+                  <NotableStar size={11} label="대표 곡" />
+                  <Text variant="caption" className="text-foreground">
+                    {notableParts.map((sequence) => partLabel(sequence, piece.partKind)).join(' · ')}
+                  </Text>
+                </View>
+              ) : null}
+              {links.length > 0 ? <ListenLinks name={piece.title} links={links} /> : null}
+            </View>
           ) : null}
           {matchedPart ? (
             <Text variant="caption" numberOfLines={1} className="mt-0.5 text-foreground">
               {`→ ${partLabel(matchedPart.sequenceNumber, piece.partKind)} ${matchedPart.name}`}
             </Text>
           ) : null}
-          {links.length > 0 ? <ListenLinks name={piece.title} links={links} /> : null}
         </View>
         {comparable ? (
           <Chip size="sm" label="비교 듣기" onPress={onCompare} accessibilityLabel={`${piece.title} 비교 듣기`} />
@@ -173,7 +199,7 @@ export function PieceRow({
 
 function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
   return (
-    <View className="mt-1.5 flex-row flex-wrap gap-3">
+    <View className="flex-row flex-wrap gap-2.5">
       {links.map((link) => (
         <Pressable
           key={link.label}
@@ -267,13 +293,17 @@ function PiecePartRow({
         {movement ? `${part.sequenceNumber}악장` : `${part.sequenceNumber}.`}
       </Text>
       <View className="min-w-0 flex-1">
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-1.5">
+          {part.notable ? <NotableStar size={12} label="대표 곡" /> : null}
           <Text numberOfLines={2} className="shrink text-body-sm text-foreground">
             {part.name}
           </Text>
-          {part.notable ? <Badge tone="accent" label="대표" className="shrink-0" /> : null}
         </View>
-        {links.length > 0 ? <ListenLinks name={part.name} links={links} /> : null}
+        {links.length > 0 ? (
+          <View className="mt-1">
+            <ListenLinks name={part.name} links={links} />
+          </View>
+        ) : null}
       </View>
       {linked?.comparable ? (
         <Chip

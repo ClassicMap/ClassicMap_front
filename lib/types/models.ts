@@ -31,6 +31,9 @@ export interface Piece {
   type: 'album' | 'song';
   description?: string;
   opusNumber?: string;
+  /** 작품 목록 체계와 번호(Op.·K.·BWV·B. …). 없으면 opusNumber 를 쓴다 */
+  catalogueSystem?: string | null;
+  catalogueNumber?: string | null;
   compositionYear?: number;
   difficultyLevel?: number;
   durationMinutes?: number;
