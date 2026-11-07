@@ -4,7 +4,6 @@ import { OptimizedImage } from '@/components/optimized-image';
 import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
@@ -193,8 +192,8 @@ export function ConcertCard({ concert, width, onPress }: { concert: Concert; wid
 }
 
 /**
- * 시대로 듣기 타일: 시대 색 면 + 대표 작곡가 초상을 눕혀 깔고 연대 범위를 쓴다.
- * 작곡가 수는 계속 바뀌는 값이라 쓰지 않는다 (설계 문서 7.1).
+ * 시대로 듣기 타일: 장르 타일과 같은 꼴(단색 면 + 왼쪽 위 이름 + 오른쪽 아래 비스듬한 초상).
+ * 초상에 시대 색을 덧칠하던 꼴은 걷었다. 작곡가 수는 계속 바뀌는 값이라 쓰지 않는다 (설계 문서 7.1).
  */
 export function EraTile({
   era,
@@ -207,31 +206,35 @@ export function EraTile({
   height: number;
   onPress: () => void;
 }) {
-  const [width, setWidth] = React.useState(0);
-  const tint = getEraColor(era.name)?.base ?? '#555';
+  const color = getEraColor(era.name)?.tile ?? '#4A4540';
+  const art = Math.round(height * 0.66);
   return (
     <Pressable
       onPress={onPress}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       accessibilityRole="link"
       accessibilityLabel={`${era.name} 시대 타임라인 보기`}
-      className={cn(WEB_TILE, 'overflow-hidden rounded-lg bg-surface-3')}
-      style={{ height }}>
-      {/* 초상은 세로가 길다. 폭에 맞춰 위쪽(얼굴)부터 보이게 깐다 */}
-      {portrait && width > 0 ? (
-        <OptimizedImage
-          uri={portrait}
-          resizeMode="cover"
-          style={{ position: 'absolute', top: 0, left: 0, width, height: Math.max(height, width * 1.25) }}
-        />
+      className={cn(WEB_TILE, 'overflow-hidden rounded-lg')}
+      style={{ height, backgroundColor: color }}>
+      {portrait ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: art,
+            height: art,
+            right: -Math.round(art * 0.14),
+            bottom: -Math.round(art * 0.08),
+            transform: [{ rotate: '25deg' }],
+            borderRadius: 4,
+            overflow: 'hidden',
+            ...(Platform.OS === 'web' ? { boxShadow: '0 4px 14px rgba(0,0,0,0.38)' } : null),
+          }}>
+          <OptimizedImage uri={portrait} resizeMode="cover" style={{ width: art, height: art }} />
+        </View>
       ) : null}
-      <View className="absolute inset-0" style={{ backgroundColor: tint, opacity: portrait ? 0.42 : 0.85 }} />
-      <Scrim from="bottom" opacity={0.72} extent={80} />
-      <View className="flex-1 justify-end p-3">
-        <Text className="text-headline font-bold text-white">{era.name}</Text>
-        <Text variant="mono" className="mt-0.5 text-white/80">
-          {`${era.startYear}–${era.endYear}`}
-        </Text>
+      <View className="p-3">
+        <Text className="text-headline font-extrabold text-white">{era.name}</Text>
+        <Text className="mt-0.5 text-caption font-semibold text-white/75">{`${era.startYear}–${era.endYear}`}</Text>
       </View>
     </Pressable>
   );

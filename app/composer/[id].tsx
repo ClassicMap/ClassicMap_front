@@ -11,6 +11,8 @@ import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
 import { playPiece } from '@/lib/player/play-piece';
 import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { TrackIndex } from '@/components/piece/track-index';
+import { GenreLink } from '@/components/piece/genre-link';
+import { performerNamesLine } from '@/lib/data/comparison';
 import { genreStyle } from '@/lib/design/genre-palette';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
@@ -547,23 +549,23 @@ function ComparableRow({
           {piece.pieceTitle}
         </Text>
         <Text variant="caption" numberOfLines={1} className="mt-0.5">
-          {[genreStyle(piece.genre)?.label, piece.opusNumber, `구간 ${piece.sectorCount}`].filter(Boolean).join(' · ')}
+          {performerNamesLine(piece.performers, piece.performerCount)}
         </Text>
       </View>
-      {/* 사람은 원형. 작품마다 다른 얼굴이 이 목록의 차이다 */}
-      <View className="flex-row">
-        {piece.performers.slice(0, wide ? 4 : 3).map((performer, position) => (
-          <View
-            key={performer.artistId}
-            className="rounded-full border-2 border-background web:border-surface-1"
-            style={{ marginLeft: position === 0 ? 0 : -8 }}>
-            <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={24} />
-          </View>
-        ))}
-      </View>
+      {/* 넓으면 가운데 칸에 장르·작품번호 (스포티파이 앨범 칸 자리) */}
       {wide ? (
-        <Text variant="caption" className="w-16 text-right tabular-nums">
-          {`연주자 ${piece.performerCount}`}
+        <View className="w-[200px]">
+          <GenreLink genre={piece.genre} />
+          {piece.opusNumber ? (
+            <Text variant="caption" numberOfLines={1}>
+              {piece.opusNumber}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      {wide ? (
+        <Text variant="caption" className="w-14 text-right tabular-nums">
+          {`구간 ${piece.sectorCount}`}
         </Text>
       ) : null}
       <FavoriteButton kind="pieces" id={piece.pieceId} name={piece.pieceTitle} />

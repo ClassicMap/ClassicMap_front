@@ -2,6 +2,8 @@ import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { Button } from '@/components/ui/button';
 import { PieceMosaic } from '@/components/piece/piece-mosaic';
 import { TrackIndex } from '@/components/piece/track-index';
+import { GenreLink } from '@/components/piece/genre-link';
+import { performerNamesLine } from '@/lib/data/comparison';
 import { playPiece } from '@/lib/player/play-piece';
 import { useQueryClient } from '@tanstack/react-query';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
@@ -409,15 +411,21 @@ function PieceRow({
           </Text>
           {inRepertoire ? <RepertoireMark /> : null}
         </View>
-        {piece.opusNumber || piece.genre ? (
-          <Text variant="caption" numberOfLines={1} className="mt-0.5">
-            {[genreStyle(piece.genre)?.label, piece.opusNumber].filter(Boolean).join(' · ')}
+        <Text variant="caption" numberOfLines={1} className="mt-0.5">
+          {performerNamesLine(piece.performers, piece.performerCount)}
+        </Text>
+      </View>
+      {/* 가운데 칸: 장르·작품번호 (스포티파이 앨범 칸 자리) */}
+      <View className="w-[200px]">
+        <GenreLink genre={piece.genre} />
+        {piece.opusNumber ? (
+          <Text variant="caption" numberOfLines={1}>
+            {piece.opusNumber}
           </Text>
         ) : null}
       </View>
-      <Faces performers={piece.performers} max={4} highlightIds={repertoireArtists} />
-      <Text variant="caption" className="w-[108px] text-foreground-subtle">
-        연주자 {piece.performerCount} · 구간 {piece.sectorCount}
+      <Text variant="caption" className="w-14 text-right tabular-nums text-foreground-subtle">
+        구간 {piece.sectorCount}
       </Text>
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />
     </Pressable>

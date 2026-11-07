@@ -311,6 +311,7 @@ export default function ArtistDetailScreen() {
           title={artist.name}
           meta={[...meta, artist.englishName]}
           wide={wide}
+          imageLayout="side"
           onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))}
         />
 

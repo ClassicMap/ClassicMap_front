@@ -103,3 +103,10 @@ export function pickDailyPiece(
   );
   return pool[dayNumber % pool.length];
 }
+
+/** 목록 줄 부제: 연주자 이름 셋까지, 나머지는 '외 n명' (스포티파이 곡 목록의 아티스트 줄) */
+export function performerNamesLine(performers: readonly { artistName: string }[], total: number): string {
+  const names = performers.slice(0, 3).map((performer) => performer.artistName);
+  const rest = Math.max(0, total - names.length);
+  return rest > 0 ? `${names.join(', ')} 외 ${rest}명` : names.join(', ');
+}
