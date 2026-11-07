@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { GenreMark } from '@/components/piece/genre-mark';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { useComposerCatalog, useComposerPieces } from '@/lib/query/hooks/usePieces';
 import type {
@@ -17,9 +18,17 @@ import type {
 } from '@/lib/types/models';
 import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { THEME } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 type GenreKey = PieceGenre | 'other';
 
@@ -56,13 +65,19 @@ function highlightTerms(q: string): string[] {
     if (!word) continue;
     terms.add(word);
     let normalized = word.replace(/^op\.?\s*(\d)/i, 'Op. $1');
-    for (const [alias, canonical] of SEARCH_ALIASES) normalized = normalized.split(alias).join(canonical);
+    for (const [alias, canonical] of SEARCH_ALIASES)
+      normalized = normalized.split(alias).join(canonical);
     terms.add(normalized);
   }
   return [...terms];
 }
 
 const SEARCH_DEBOUNCE_MS = 200;
+/** 작품 영역 안 칸 사이 간격. 검색 칸의 제자리를 셈할 때도 쓴다 */
+const SECTION_GAP = 16;
+/** 웹에서 위에 붙은 검색 칸의 위아래 여백. 제자리를 지키도록 같은 만큼 바깥 여백을 당긴다 */
+const STICKY_PAD = Platform.OS === 'web' ? 8 : 0;
+const STICKY_STYLE = { marginVertical: -STICKY_PAD, paddingVertical: STICKY_PAD };
 
 function genreKey(genre: ComposerCatalogGenre): GenreKey {
   return genre.genre ?? 'other';
@@ -82,15 +97,31 @@ export interface ComposerWorksProps {
   onCompare: (pieceId: number) => void;
   onEdit: (piece: Piece) => void;
   onDelete: (piece: Piece) => void;
+  /** 작품 영역을 품은 화면 스크롤. 검색 칸을 화면 위로 맞추는 데 쓴다 */
+  scrollRef?: React.RefObject<ScrollView | null>;
 }
+
+type AlignMode = 'focus' | 'reset';
 
 /**
  * 작곡가 작품 영역: 작곡가 안 검색, 갈래 칩, 전체 보기(갈래마다 5곡), 갈래 보기(형식 묶음·정렬·대표곡만).
  * 갈래 안 기본 순서는 작품번호순이고 대표곡은 자리를 옮기지 않고 표시만 한다.
+ *
+ * 검색·갈래를 바꿀 때 화면이 움직이지 않게 한다.
+ * - 검색창과 갈래 칩은 웹에서 화면 위에 붙는다(sticky).
+ * - 검색하거나 갈래를 고르면 아래 칸이 화면 높이만큼은 늘 자리를 잡는다. 결과가 짧아져도 문서가 줄어
+ *   스크롤이 밀리는 일이 없다.
+ * - 검색 칸이 위에 붙어 있을 때 검색어·갈래가 바뀌면 그 칸의 제자리로 스크롤을 돌린다. 붙은 칸은 그대로
+ *   보이고 아래 목록만 처음부터 다시 보인다.
+ * - 좁은 화면은 검색창을 누르면 화면 위로 올린다(모바일 검색 화면처럼 위는 검색창, 아래는 결과).
  */
 export function ComposerWorks(props: ComposerWorksProps) {
-  const { composerId, composerName, headerAction } = props;
+  const { composerId, composerName, headerAction, scrollRef } = props;
   const { colorScheme } = useColorScheme();
+  const { layout } = useBreakpoint();
+  const narrow = layout !== 'desktop' && layout !== 'wide';
+  const { height: windowHeight } = useWindowDimensions();
+  const headerRef = React.useRef<View>(null);
   const catalogQuery = useComposerCatalog(composerId);
   const catalog = catalogQuery.data;
   const [genre, setGenre] = React.useState<GenreKey | 'all'>('all');
@@ -104,7 +135,8 @@ export function ComposerWorks(props: ComposerWorksProps) {
     return () => clearTimeout(timer);
   }, [text]);
 
-  const selected = genre === 'all' ? undefined : catalog?.genres.find((item) => genreKey(item) === genre);
+  const selected =
+    genre === 'all' ? undefined : catalog?.genres.find((item) => genreKey(item) === genre);
   const searching = q.length > 0;
   // 검색은 고른 갈래 안에서 하고, 관련도순으로 받는다. 검색어가 바뀌는 동안 앞 결과를 그대로 둔다
   const searchQuery = useComposerPieces(
@@ -113,10 +145,54 @@ export function ComposerWorks(props: ComposerWorksProps) {
     { pageSize: PAGE_SIZE, enabled: searching, keepPrevious: true }
   );
   const pendingSearch = text.trim() !== q || (searching && searchQuery.isFetching);
+  // 검색 중 갈래 칩에는 그 갈래의 결과 수를 보인다(검색어와 상관없는 갈래 순서·이름은 전체 목록 그대로)
+  const resultCatalog = useComposerCatalog(composerId, q).data;
+  const resultCounts = React.useMemo(() => {
+    if (!searching || !resultCatalog) return null;
+    const byGenre = new Map<GenreKey, number>();
+    for (const item of resultCatalog.genres) byGenre.set(genreKey(item), item.count);
+    return { total: resultCatalog.total, byGenre };
+  }, [searching, resultCatalog]);
+
+  const alignSearchBlock = React.useCallback(
+    (mode: AlignMode) => {
+      const scroll = scrollRef?.current;
+      const header = headerRef.current;
+      const viewport = scroll?.getNativeScrollRef();
+      if (!scroll || !header || !viewport) return;
+      header.measureLayout(scroll.getInnerViewNode(), (_x, headerY, _width, headerHeight) => {
+        // 검색 칸의 제자리(스크롤 안 위치). 붙어 있어도 머리 줄은 제자리에 있어서 머리 줄로 잰다
+        const homeY = headerY + headerHeight + SECTION_GAP - STICKY_PAD;
+        header.measureInWindow((_hx, headerTop) => {
+          viewport.measureInWindow((_vx, viewportTop, _vw, viewportHeight) => {
+            const screenY = headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop;
+            const move = mode === 'focus' ? screenY > viewportHeight * 0.3 : screenY < 0;
+            if (move) scroll.scrollTo({ y: homeY, animated: mode === 'focus' });
+          });
+        });
+      });
+    },
+    [scrollRef]
+  );
+
+  // 검색어·갈래가 바뀌면 새 목록을 처음부터 보인다(검색 칸이 위에 붙어 있을 때만 움직인다)
+  const firstRender = React.useRef(true);
+  React.useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    alignSearchBlock('reset');
+  }, [q, genre, alignSearchBlock]);
+
+  const clearSearch = React.useCallback(() => {
+    setText('');
+    setQ('');
+  }, []);
 
   return (
-    <View className="gap-4">
-      <View className="flex-row items-center justify-between">
+    <View style={{ gap: SECTION_GAP }}>
+      <View ref={headerRef} className="flex-row items-center justify-between">
         <View className="flex-row items-baseline gap-2">
           <Text variant="title3">작품</Text>
           {catalog ? (
@@ -128,27 +204,57 @@ export function ComposerWorks(props: ComposerWorksProps) {
         {headerAction}
       </View>
 
-      <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface-1 px-3 web:focus-within:border-ring">
-        {text && pendingSearch ? (
-          <ActivityIndicator size="small" color={THEME[colorScheme === 'dark' ? 'dark' : 'light'].mutedForeground} style={{ width: 16, height: 16 }} />
-        ) : (
-          <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
-        )}
-        <Input
-          value={text}
-          onChangeText={setText}
-          onKeyPress={(event) => {
-            if (Platform.OS === 'web' && event.nativeEvent.key === 'Escape') setText('');
-          }}
-          placeholder={`${composerName} 작품에서 찾기 · 제목, 작품번호, 별칭`}
-          accessibilityLabel={`${composerName} 작품에서 찾기`}
-          returnKeyType="search"
-          className="h-10 flex-1 border-0 bg-transparent px-0 shadow-none dark:bg-transparent web:focus-visible:border-transparent web:focus-visible:ring-0"
-        />
-        {text ? (
-          <Pressable onPress={() => setText('')} accessibilityLabel="검색어 지우기" hitSlop={8}>
-            <Icon as={XIcon} size={16} className="text-foreground-subtle" />
-          </Pressable>
+      {/* 검색창과 갈래 칩: 웹에서는 화면 위에 붙는다 */}
+      <View className="gap-3 web:sticky web:top-0 web:z-10 web:bg-surface-1" style={STICKY_STYLE}>
+        <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface-1 px-3 web:focus-within:border-ring">
+          {text && pendingSearch ? (
+            <ActivityIndicator
+              size="small"
+              color={THEME[colorScheme === 'dark' ? 'dark' : 'light'].mutedForeground}
+              style={{ width: 16, height: 16 }}
+            />
+          ) : (
+            <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
+          )}
+          <Input
+            value={text}
+            onChangeText={setText}
+            onKeyPress={(event) => {
+              if (Platform.OS === 'web' && event.nativeEvent.key === 'Escape') clearSearch();
+            }}
+            onFocus={() => {
+              if (narrow) alignSearchBlock('focus');
+            }}
+            onSubmitEditing={() => setQ(text.trim())}
+            placeholder={`${composerName} 작품에서 찾기 · 제목, 작품번호, 별칭`}
+            accessibilityLabel={`${composerName} 작품에서 찾기`}
+            returnKeyType="search"
+            className="h-10 flex-1 border-0 bg-transparent px-0 shadow-none web:focus-visible:border-transparent web:focus-visible:ring-0 dark:bg-transparent"
+          />
+          {text ? (
+            <Pressable onPress={clearSearch} accessibilityLabel="검색어 지우기" hitSlop={8}>
+              <Icon as={XIcon} size={16} className="text-foreground-subtle" />
+            </Pressable>
+          ) : null}
+        </View>
+        {catalog && catalog.total > 0 ? (
+          <GenreChips
+            genres={catalog.genres}
+            total={catalog.total}
+            value={genre}
+            resultCounts={resultCounts}
+            onChange={(next) => {
+              setGenre(next);
+              setNotableOnly(false);
+            }}
+          />
+        ) : null}
+        {/* 위에 붙었을 때 아래로 지나가는 목록과의 경계를 부드럽게 한다(붙지 않으면 칸 사이 빈자리에 깔린다) */}
+        {Platform.OS === 'web' ? (
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 top-full h-2 bg-gradient-to-b from-surface-1 to-transparent"
+          />
         ) : null}
       </View>
 
@@ -161,17 +267,8 @@ export function ComposerWorks(props: ComposerWorksProps) {
           아직 등록된 작품이 없어요.
         </Text>
       ) : (
-        <>
-          <GenreChips
-            genres={catalog.genres}
-            total={catalog.total}
-            value={genre}
-            showCounts={!searching}
-            onChange={(next) => {
-              setGenre(next);
-              setNotableOnly(false);
-            }}
-          />
+        // 검색하거나 갈래를 고르면 결과가 짧아도 화면 높이만큼 자리를 잡아 스크롤이 밀리지 않게 한다
+        <View style={searching || genre !== 'all' ? { minHeight: windowHeight } : undefined}>
           {searching ? (
             <SearchResults
               {...props}
@@ -179,7 +276,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
               query={searchQuery}
               genreLabel={genre === 'all' ? null : genreLabel(genre)}
               onSearchAll={() => setGenre('all')}
-              onClear={() => setText('')}
+              onClear={clearSearch}
             />
           ) : genre === 'all' || !selected ? (
             <View className="gap-8">
@@ -202,7 +299,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
               onNotableOnly={setNotableOnly}
             />
           )}
-        </>
+        </View>
       )}
     </View>
   );
@@ -212,29 +309,35 @@ function GenreChips({
   genres,
   total,
   value,
-  showCounts,
+  resultCounts,
   onChange,
 }: {
   genres: ComposerCatalogGenre[];
   total: number;
   value: GenreKey | 'all';
-  /** 검색 중에는 전체 작품 수가 결과 수로 오해되지 않게 숨긴다 */
-  showCounts: boolean;
+  /** 검색 중이면 갈래마다 검색 결과 수. 칩 순서와 이름은 그대로 두고 수만 바꾼다(결과 0 인 갈래는 흐리게) */
+  resultCounts: { total: number; byGenre: ReadonlyMap<GenreKey, number> } | null;
   onChange: (next: GenreKey | 'all') => void;
 }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-      <Chip label="전체" count={showCounts ? total : undefined} selected={value === 'all'} onPress={() => onChange('all')} />
+      <Chip
+        label="전체"
+        count={resultCounts ? resultCounts.total : total}
+        selected={value === 'all'}
+        onPress={() => onChange('all')}
+      />
       {genres.map((item) => {
         const key = genreKey(item);
+        const count = resultCounts ? (resultCounts.byGenre.get(key) ?? 0) : item.count;
         return (
           <Chip
             key={key}
             label={genreLabel(key)}
-            count={showCounts ? item.count : undefined}
+            count={count}
             selected={value === key}
             onPress={() => onChange(key)}
-            className="pl-1"
+            className={cn('pl-1', count === 0 && value !== key && 'opacity-40')}
             leading={<GenreMark genre={item.genre} size={24} />}
           />
         );
@@ -243,7 +346,10 @@ function GenreChips({
   );
 }
 
-type RowActions = Pick<ComposerWorksProps, 'comparableIds' | 'canEdit' | 'onCompare' | 'onEdit' | 'onDelete'>;
+type RowActions = Pick<
+  ComposerWorksProps,
+  'comparableIds' | 'canEdit' | 'onCompare' | 'onEdit' | 'onDelete'
+>;
 
 function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPiece[] }) {
   return (
@@ -274,25 +380,41 @@ function GenreHeader({ genre, notableCount }: { genre: GenreKey; notableCount: n
   );
 }
 
-function GenrePreview({ genre, onOpen, ...props }: ComposerWorksProps & { genre: ComposerCatalogGenre; onOpen: () => void }) {
+function GenrePreview({
+  genre,
+  onOpen,
+  ...props
+}: ComposerWorksProps & { genre: ComposerCatalogGenre; onOpen: () => void }) {
   const key = genreKey(genre);
-  const query = useComposerPieces(props.composerId, { genre: key, sort: 'notable' }, { pageSize: PREVIEW_SIZE });
+  const query = useComposerPieces(
+    props.composerId,
+    { genre: key, sort: 'notable' },
+    { pageSize: PREVIEW_SIZE }
+  );
   const pieces = query.data?.pages[0] ?? [];
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
         <GenreHeader genre={key} notableCount={genre.notableCount} />
-        <Text variant="caption" className="tabular-nums">{`${genre.count.toLocaleString('ko-KR')}곡`}</Text>
+        <Text
+          variant="caption"
+          className="tabular-nums">{`${genre.count.toLocaleString('ko-KR')}곡`}</Text>
       </View>
       {query.isLoading ? (
         <RowsSkeleton count={Math.min(genre.count, PREVIEW_SIZE)} />
       ) : query.isError ? (
-        <RetryRow message={`${genreLabel(key)} 작품을 불러오지 못했어요.`} onRetry={() => query.refetch()} />
+        <RetryRow
+          message={`${genreLabel(key)} 작품을 불러오지 못했어요.`}
+          onRetry={() => query.refetch()}
+        />
       ) : (
         <Rows pieces={pieces} {...props} />
       )}
       {genre.count > PREVIEW_SIZE ? (
-        <MoreLink label={`${genreLabel(key)} ${genre.count.toLocaleString('ko-KR')}곡 모두 보기`} onPress={onOpen} />
+        <MoreLink
+          label={`${genreLabel(key)} ${genre.count.toLocaleString('ko-KR')}곡 모두 보기`}
+          onPress={onOpen}
+        />
       ) : null}
     </View>
   );
@@ -319,7 +441,13 @@ function GenreView({
     <View className="gap-4">
       <View className="flex-row flex-wrap items-center gap-2">
         {SORTS.map((item) => (
-          <Chip key={item.key} size="sm" label={item.label} selected={sort === item.key} onPress={() => onSort(item.key)} />
+          <Chip
+            key={item.key}
+            size="sm"
+            label={item.label}
+            selected={sort === item.key}
+            onPress={() => onSort(item.key)}
+          />
         ))}
         {genre.notableCount > 0 ? (
           <Chip
@@ -362,10 +490,17 @@ function FormGroup({
   filter,
   notableOnly,
   ...props
-}: ComposerWorksProps & { form: ComposerCatalogForm; filter: ComposerPieceFilter; notableOnly: boolean }) {
+}: ComposerWorksProps & {
+  form: ComposerCatalogForm;
+  filter: ComposerPieceFilter;
+  notableOnly: boolean;
+}) {
   const [open, setOpen] = React.useState(false);
   const total = notableOnly ? form.notableCount : form.count;
-  const preview = useComposerPieces(props.composerId, filter, { pageSize: FORM_PREVIEW_SIZE, enabled: !open });
+  const preview = useComposerPieces(props.composerId, filter, {
+    pageSize: FORM_PREVIEW_SIZE,
+    enabled: !open,
+  });
   return (
     <View className="gap-1">
       <View className="flex-row items-center gap-2 pb-1.5">
@@ -378,12 +513,18 @@ function FormGroup({
       ) : preview.isLoading ? (
         <RowsSkeleton count={Math.min(total, FORM_PREVIEW_SIZE)} />
       ) : preview.isError ? (
-        <RetryRow message={`${form.name} 작품을 불러오지 못했어요.`} onRetry={() => preview.refetch()} />
+        <RetryRow
+          message={`${form.name} 작품을 불러오지 못했어요.`}
+          onRetry={() => preview.refetch()}
+        />
       ) : (
         <>
           <Rows pieces={preview.data?.pages[0] ?? []} {...props} />
           {total > FORM_PREVIEW_SIZE ? (
-            <MoreLink label={`${total - FORM_PREVIEW_SIZE}곡 더 보기`} onPress={() => setOpen(true)} />
+            <MoreLink
+              label={`${total - FORM_PREVIEW_SIZE}곡 더 보기`}
+              onPress={() => setOpen(true)}
+            />
           ) : null}
         </>
       )}
@@ -400,7 +541,8 @@ function PagedList({
   const query = useComposerPieces(props.composerId, filter, { pageSize: PAGE_SIZE });
   const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
   if (query.isLoading) return <RowsSkeleton count={6} />;
-  if (query.isError) return <RetryRow message="작품 목록을 불러오지 못했어요." onRetry={() => query.refetch()} />;
+  if (query.isError)
+    return <RetryRow message="작품 목록을 불러오지 못했어요." onRetry={() => query.refetch()} />;
   return (
     <View className={bare ? undefined : 'gap-2'}>
       <Rows pieces={pieces} {...props} />
@@ -435,20 +577,26 @@ function SearchResults({
 }) {
   const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
   const terms = React.useMemo(() => highlightTerms(q), [q]);
-  // 첫 검색에만 자리표시를 보이고, 그 뒤로는 앞 결과를 흐리게 둔 채 새 결과를 기다린다
-  if (query.isLoading && pieces.length === 0) return <RowsSkeleton count={3} />;
-  if (query.isError) return <RetryRow message="검색하지 못했어요." onRetry={() => query.refetch()} />;
-  const stale = query.isPlaceholderData;
+  // 첫 검색에만 자리표시를 보이고, 그 뒤로는 앞 결과를 흐리게 둔 채 새 결과를 기다린다.
+  // 결과 수 줄은 어느 때나 같은 자리에 한 줄로 두어 아래 목록이 위아래로 밀리지 않게 한다
+  const firstLoad = query.isLoading && pieces.length === 0;
+  const stale = query.isPlaceholderData || firstLoad;
   const where = scope ? `${scope}에서 ` : '';
   return (
     <View className="gap-2">
-      <View className="flex-row flex-wrap items-baseline justify-between gap-2">
-        <Text variant="caption" accessibilityLiveRegion="polite">
-          {stale
-            ? `${where}'${q}' 찾는 중…`
-            : pieces.length === 0
-              ? `${where}'${q}'에 맞는 작품이 없어요`
-              : `${where}'${q}' ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Text
+          variant="caption"
+          numberOfLines={1}
+          className="flex-1"
+          accessibilityLiveRegion="polite">
+          {query.isError
+            ? `${where}'${q}' 검색하지 못했어요`
+            : stale
+              ? `${where}'${q}' 찾는 중…`
+              : pieces.length === 0
+                ? `${where}'${q}'에 맞는 작품이 없어요`
+                : `${where}'${q}' ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}
         </Text>
         <Pressable onPress={onClear} hitSlop={6} accessibilityRole="button">
           <Text variant="label" className="text-foreground-muted">
@@ -456,7 +604,11 @@ function SearchResults({
           </Text>
         </Pressable>
       </View>
-      {pieces.length === 0 && !stale ? (
+      {query.isError ? (
+        <RetryRow message="검색하지 못했어요." onRetry={() => query.refetch()} />
+      ) : firstLoad ? (
+        <RowsSkeleton count={3} />
+      ) : pieces.length === 0 && !stale ? (
         <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
           <Text variant="bodySm" className="text-foreground-muted">
             작품번호(Op. 28, K. 331), 별칭(빗방울, 운명), 형식(녹턴, 소나타)으로도 찾을 수 있어요.
@@ -470,7 +622,9 @@ function SearchResults({
           ) : null}
         </View>
       ) : (
-        <View className="web:transition-opacity web:duration-150" style={{ opacity: stale ? 0.55 : 1 }}>
+        <View
+          className="web:transition-opacity web:duration-150"
+          style={{ opacity: stale ? 0.55 : 1 }}>
           <View className="border-t border-border">
             {pieces.map((piece) => (
               <PieceRow
@@ -558,7 +712,11 @@ function MoreLink({
       <Text variant="label" className="text-foreground-muted">
         {label}
       </Text>
-      <Icon as={collapse ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
+      <Icon
+        as={collapse ? ChevronUpIcon : ChevronDownIcon}
+        size={14}
+        className="text-foreground-subtle"
+      />
     </Pressable>
   );
 }

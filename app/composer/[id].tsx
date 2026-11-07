@@ -80,6 +80,7 @@ export default function ComposerDetailScreen() {
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const { colorScheme } = useColorScheme();
+  const scrollRef = React.useRef<ScrollView>(null);
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const [editVisible, setEditVisible] = React.useState(false);
@@ -236,6 +237,7 @@ export default function ComposerDetailScreen() {
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
@@ -371,6 +373,7 @@ export default function ComposerDetailScreen() {
               onCompare={openCompare}
               onEdit={handleEditPiece}
               onDelete={handleDeletePiece}
+              scrollRef={scrollRef}
               headerAction={
                 canEdit ? (
                   <Button
