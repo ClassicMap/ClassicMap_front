@@ -17,6 +17,10 @@ import { PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
+/** 웹 전용 움직임 클래스(global.css 카드·커버 움직임). 같은 규칙이 네이티브로도 컴파일돼서 웹에서만 단다 */
+const WEB_CARD = Platform.OS === 'web' ? 'cm-card' : undefined;
+const WEB_TILE = Platform.OS === 'web' ? 'cm-tile' : undefined;
+
 /**
  * 비교할 수 있는 작품. 작품은 콘텐츠라 사각이고, 장르 색 커버에 작곡가 초상을 녹인다.
  * 웹은 스포티파이 카드처럼 호버하면 바탕이 밝아지고 재생 버튼이 아래에서 올라온다.
@@ -55,7 +59,7 @@ export function PieceCard({
       accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${genre ? `, ${genre.label}` : ''} 비교하기`}
       accessibilityActions={onDismiss ? [{ name: 'dismiss', label: '관심 없음' }] : undefined}
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
-      className="cm-card group -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
+      className={cn(WEB_CARD, 'group -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
       <View>
         <PieceCover
           title={piece.pieceTitle}
@@ -127,7 +131,7 @@ export function PersonCard({
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
-      className="cm-card -m-2 items-center rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
+      className={cn(WEB_CARD, '-m-2 items-center rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
       <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
         <EntityThumb name={name} image={image} shape="circle" size={width} />
       </RepertoireThumb>
@@ -153,7 +157,7 @@ export function ConcertCard({ concert, width, onPress }: { concert: Concert; wid
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={concert.title}
-      className="cm-card -m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2">
+      className={cn(WEB_CARD, '-m-2 rounded-xl p-2 active:bg-surface-2 web:hover:bg-surface-2')}>
       <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {concert.title}
@@ -188,7 +192,7 @@ export function EraTile({
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       accessibilityRole="link"
       accessibilityLabel={`${era.name} 시대 타임라인 보기`}
-      className="cm-tile overflow-hidden rounded-lg bg-surface-3"
+      className={cn(WEB_TILE, 'overflow-hidden rounded-lg bg-surface-3')}
       style={{ height }}>
       {/* 초상은 세로가 길다. 폭에 맞춰 위쪽(얼굴)부터 보이게 깐다 */}
       {portrait && width > 0 ? (
@@ -247,7 +251,8 @@ export function RecentTile({
       accessibilityRole="link"
       accessibilityLabel={`${item.composerName} ${item.pieceTitle} 다시 보기`}
       className={cn(
-        'cm-card group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
+        WEB_CARD,
+        'group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
         className
       )}>
       <PieceCover

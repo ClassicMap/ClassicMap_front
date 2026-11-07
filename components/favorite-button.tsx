@@ -5,7 +5,7 @@ import type { FavoriteTargetType } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { BookmarkIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 interface FavoriteButtonProps {
   kind: FavoriteTargetType;
@@ -49,7 +49,7 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
           active ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
           className
         )}>
-        <View className={pop ? 'cm-pop' : undefined}>
+        <View className={pop && Platform.OS === 'web' ? 'cm-pop' : undefined}>
           <Icon as={BookmarkIcon} size={16} className={active ? 'fill-primary text-primary' : 'text-foreground'} />
         </View>
         <Text className={cn('text-label font-semibold', active ? 'text-primary' : 'text-foreground')}>
@@ -71,7 +71,7 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
         'size-9 items-center justify-center rounded-full web:transition-colors web:duration-fast web:hover:bg-surface-3',
         className
       )}>
-      <View className={pop ? 'cm-pop' : undefined}>
+      <View className={pop && Platform.OS === 'web' ? 'cm-pop' : undefined}>
         <Icon as={BookmarkIcon} size={17} className={active ? 'fill-primary text-primary' : 'text-foreground-subtle'} />
       </View>
     </Pressable>

@@ -103,7 +103,7 @@ export function GenreTile({
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieceCount}곡`}
-      className="cm-tile overflow-hidden rounded-lg"
+      className={cn(Platform.OS === 'web' && 'cm-tile', 'overflow-hidden rounded-lg')}
       style={{ width, height }}>
       <GenreGradient style={shelf.style} width={width} height={height} />
       {shelf.portrait ? (
