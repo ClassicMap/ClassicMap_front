@@ -15,6 +15,7 @@ import {
   SOUND_OPTIONS,
 } from '@/lib/data/taste-labels';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { t, useLocale } from '@/lib/i18n';
 import { TASTE_QUERY_KEYS } from '@/lib/hooks/useTaste';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import type { OnboardingPiece, TasteAnswers } from '@/lib/types/models';
@@ -53,6 +54,7 @@ const SUGGESTED_ARTISTS = 10;
  * 어느 장이든 건너뛸 수 있고, 닫으면 그때까지 고른 답만 남긴다.
  */
 export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingProps) {
+  useLocale();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const insets = useSafeAreaInsets();
@@ -82,17 +84,17 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
     <View className="flex-row items-center justify-between gap-3">
       {step > 0 ? (
         <Button variant="ghost" disabled={busy} onPress={() => go(step - 1)}>
-          <Text className="text-foreground-muted">이전</Text>
+          <Text className="text-foreground-muted">{t('이전')}</Text>
         </Button>
       ) : (
         <View />
       )}
       <View className="flex-row items-center gap-2">
         <Button variant="ghost" disabled={busy} onPress={next}>
-          <Text className="text-foreground-muted">건너뛰기</Text>
+          <Text className="text-foreground-muted">{t('건너뛰기')}</Text>
         </Button>
         <Button disabled={busy} onPress={next} className="rounded-full px-6">
-          <Text>{busy ? '저장 중…' : last ? '시작하기' : '다음'}</Text>
+          <Text>{busy ? t('저장 중…') : last ? t('시작하기') : t('다음')}</Text>
         </Button>
       </View>
     </View>
@@ -111,7 +113,7 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
           <View className="flex-row items-center gap-3">
             <View
               className="flex-1 flex-row gap-1.5"
-              accessibilityLabel={`${STEPS}단계 중 ${step + 1}단계`}>
+              accessibilityLabel={t('{total}단계 중 {step}단계', { total: STEPS, step: step + 1 })}>
               {Array.from({ length: STEPS }, (_, index) => (
                 <View
                   key={index}
@@ -126,7 +128,7 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
               onPress={() => run(() => onClose(result()))}
               disabled={busy}
               accessibilityRole="button"
-              accessibilityLabel="나중에 할게요"
+              accessibilityLabel={t('나중에 할게요')}
               hitSlop={8}
               className="size-10 items-center justify-center rounded-full bg-surface-2">
               <Icon as={XIcon} size={18} className="text-foreground" />
@@ -156,6 +158,7 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
 }
 
 function StepHeading({ title, hint }: { title: string; hint: string }) {
+  useLocale();
   return (
     <View className="mb-6 gap-1.5">
       <Text className="text-[26px] font-bold leading-9 tracking-tight text-foreground">
@@ -174,11 +177,12 @@ interface StepProps {
 }
 
 function LevelStep({ answers, onChange }: StepProps) {
+  useLocale();
   return (
     <View>
       <StepHeading
-        title="클래식, 얼마나 들어요?"
-        hint="답에 따라 처음 열어 드릴 곡과 구간이 달라져요."
+        title={t('클래식, 얼마나 들어요?')}
+        hint={t('답에 따라 처음 열어 드릴 곡과 구간이 달라져요.')}
       />
       <View className="gap-2">
         {LEVEL_OPTIONS.map((option) => {
@@ -206,7 +210,7 @@ function LevelStep({ answers, onChange }: StepProps) {
                   'text-body',
                   selected ? 'font-semibold text-foreground' : 'text-foreground'
                 )}>
-                {option.label}
+                {t(option.label)}
               </Text>
               {selected ? <Icon as={CheckIcon} size={18} className="text-primary" /> : null}
             </Pressable>
@@ -216,13 +220,13 @@ function LevelStep({ answers, onChange }: StepProps) {
       {answers.listeningLevel === 'player' ? (
         <View className="mt-6 gap-2.5">
           <Text variant="label" className="text-foreground-muted">
-            어떤 악기를 연주해요?
+            {t('어떤 악기를 연주해요?')}
           </Text>
           <View className="flex-row flex-wrap gap-2">
             {INSTRUMENT_OPTIONS.map((option) => (
               <Chip
                 key={option.key}
-                label={option.label}
+                label={t(option.label)}
                 selected={answers.instrument === option.key}
                 onPress={() =>
                   onChange({
@@ -240,11 +244,12 @@ function LevelStep({ answers, onChange }: StepProps) {
 }
 
 function SoundStep({ answers, onChange }: StepProps) {
+  useLocale();
   return (
     <View>
       <StepHeading
-        title="어떤 소리에 끌려요?"
-        hint="여러 개 골라도 돼요. 고른 소리마다 한 곡씩은 꼭 보여 드려요."
+        title={t('어떤 소리에 끌려요?')}
+        hint={t('여러 개 골라도 돼요. 고른 소리마다 한 곡씩은 꼭 보여 드려요.')}
       />
       <View className="flex-row flex-wrap gap-2.5">
         {SOUND_OPTIONS.map((option) => {
@@ -252,7 +257,7 @@ function SoundStep({ answers, onChange }: StepProps) {
           return (
             <Chip
               key={option.key}
-              label={option.label}
+              label={t(option.label)}
               selected={selected}
               onPress={() =>
                 onChange({
@@ -271,6 +276,7 @@ function SoundStep({ answers, onChange }: StepProps) {
 }
 
 function PieceStep({ answers, onChange }: StepProps) {
+  useLocale();
   const { layout } = useBreakpoint();
   const columns = layout === 'mobile' ? 2 : 3;
   const query = useQuery({
@@ -291,8 +297,8 @@ function PieceStep({ answers, onChange }: StepProps) {
   return (
     <View>
       <StepHeading
-        title="아는 곡이 있으면 골라 주세요"
-        hint="하나도 없어도 괜찮아요. 고른 곡과 닮은 곡을 먼저 보여 드려요."
+        title={t('아는 곡이 있으면 골라 주세요')}
+        hint={t('하나도 없어도 괜찮아요. 고른 곡과 닮은 곡을 먼저 보여 드려요.')}
       />
       {query.isLoading ? (
         <View className="flex-row flex-wrap gap-2.5">
@@ -307,11 +313,11 @@ function PieceStep({ answers, onChange }: StepProps) {
       ) : query.isError ? (
         <View className="items-start gap-2 rounded-xl bg-surface-2 p-4">
           <Text variant="bodySm" className="text-foreground-muted">
-            곡 목록을 불러오지 못했어요. 이 장은 건너뛰어도 괜찮아요.
+            {t('곡 목록을 불러오지 못했어요. 이 장은 건너뛰어도 괜찮아요.')}
           </Text>
           <Pressable onPress={() => query.refetch()} accessibilityRole="button" hitSlop={8}>
             <Text variant="label" className="text-primary">
-              다시 시도
+              {t('다시 시도')}
             </Text>
           </Pressable>
         </View>
@@ -365,6 +371,7 @@ function PeopleStep({
   people: PersonPick[];
   onChange: (people: PersonPick[]) => void;
 }) {
+  const { locale } = useLocale();
   const [text, setText] = React.useState('');
   const q = useDebounce(text.trim(), 250);
   const catalog = useComparisonPieces();
@@ -417,7 +424,7 @@ function PeopleStep({
       });
     }
     return list;
-  }, [catalog.data, onboardingPieces.data]);
+  }, [catalog.data, onboardingPieces.data, locale]);
 
   const results = React.useMemo<PersonPick[]>(
     () => [
@@ -434,7 +441,7 @@ function PeopleStep({
         image: artist.imageUrl ?? null,
       })),
     ],
-    [artistResults.data, composerResults.data]
+    [artistResults.data, composerResults.data, locale]
   );
 
   const isPicked = (person: PersonPick) =>
@@ -451,8 +458,8 @@ function PeopleStep({
   return (
     <View>
       <StepHeading
-        title="좋아하는 연주자나 작곡가가 있어요?"
-        hint="고르면 레퍼토리에 담아 두고, 그 사람이 나오는 비교를 앞에 보여 드려요."
+        title={t('좋아하는 연주자나 작곡가가 있어요?')}
+        hint={t('고르면 레퍼토리에 담아 두고, 그 사람이 나오는 비교를 앞에 보여 드려요.')}
       />
       <View className="relative">
         <View className="absolute inset-y-0 left-3.5 z-10 justify-center" pointerEvents="none">
@@ -462,7 +469,7 @@ function PeopleStep({
           nativeID="onboarding-people-search"
           value={text}
           onChangeText={setText}
-          placeholder="이름으로 찾기"
+          placeholder={t('이름으로 찾기')}
           autoCorrect={false}
           className="h-12 rounded-full pl-10 md:text-body"
         />
@@ -488,7 +495,7 @@ function PeopleStep({
         <Skeleton className="mt-6 h-24 w-full rounded-xl" />
       ) : searching && shown.length === 0 ? (
         <Text variant="bodySm" className="mt-6 text-foreground-muted">
-          맞는 사람이 없어요. 다른 이름으로 찾아 보세요.
+          {t('맞는 사람이 없어요. 다른 이름으로 찾아 보세요.')}
         </Text>
       ) : (
         (['artist', 'composer'] as const).map((kind) => {
@@ -497,7 +504,7 @@ function PeopleStep({
           return (
             <View key={kind} className="mt-6">
               <Text variant="label" className="mb-2.5 text-foreground-muted">
-                {kind === 'artist' ? (searching ? '연주자' : '이런 연주자는 어때요') : '작곡가'}
+                {kind === 'artist' ? (searching ? t('연주자') : t('이런 연주자는 어때요')) : t('작곡가')}
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {group.map((person) => (

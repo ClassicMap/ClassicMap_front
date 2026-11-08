@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -21,6 +22,7 @@ interface PlayerSlotProps {
  * 자리 자체는 누름을 통과시키고, 조작부가 있는 자리에서만 안쪽 영상이 누름을 받는다.
  */
 export function PlayerSlot({ performanceId, fit = 'cover', radius = 0, controls = false, className }: PlayerSlotProps) {
+  useLocale();
   const ref = React.useRef<View>(null);
 
   // 레이아웃 효과로 건다: 자리가 지워질 때 React 가 DOM 을 떼기 전에 영상을 다른 곳으로 옮겨야

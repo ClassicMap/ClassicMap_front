@@ -1,3 +1,5 @@
+import type { NameSidecar } from '@/lib/i18n';
+import type { PieceGenre } from '@/lib/design/genre-palette';
 // ============================================
 // Database Models (데이터베이스 스키마와 동일)
 // ============================================
@@ -18,6 +20,8 @@ export interface Composer {
   style?: string;
   influence?: string;
   pieceCount?: number;
+  /** 화면 머리 배너용 가로 그림. 상세 응답에 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -30,6 +34,9 @@ export interface Piece {
   type: 'album' | 'song';
   description?: string;
   opusNumber?: string;
+  /** 작품 목록 체계와 번호(Op.·K.·BWV·B. …). 없으면 opusNumber 를 쓴다 */
+  catalogueSystem?: string | null;
+  catalogueNumber?: string | null;
   compositionYear?: number;
   difficultyLevel?: number;
   durationMinutes?: number;
@@ -40,8 +47,54 @@ export interface Piece {
   partCount?: number;
   /** 묶음 안 곡의 단위. movement 면 악장, work·null 이면 곡으로 센다 */
   partKind?: PiecePartKind | null;
+  /** 장르 7종. 못 정한 작품은 null 이고 작곡가 화면에서 '기타'로 묶는다 */
+  genre?: PieceGenre | null;
+  /** 갈래 안 형식 키(nocturne·string_quartet 등). 이름은 작곡가 catalog 응답에 있다 */
+  formKey?: string | null;
+  /** 대표곡 표시. 목록 순서는 그대로 두고 표시만 한다 */
+  notable?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 작곡가 작품 목록 한 줄. 세트 안 대표 곡 번호와 검색에 걸린 세트 안 곡이 붙는다 */
+export interface ComposerPiece extends Piece {
+  notableParts: number[];
+  matchedPart: { sequenceNumber: number; name: string } | null;
+}
+
+/** 작곡가 작품 목록 정렬. listening 은 손본 작품 먼저(기존 기본값), relevance 는 검색 관련도 */
+export type ComposerPieceSort = 'listening' | 'catalogue' | 'year' | 'notable' | 'relevance';
+
+/** 작곡가 작품 목록 거르기. genre 'other' 는 장르를 못 정한 작품이다 */
+export interface ComposerPieceFilter {
+  genre?: PieceGenre | 'other';
+  form?: string;
+  sort?: ComposerPieceSort;
+  q?: string;
+  notable?: boolean;
+}
+
+export interface ComposerCatalogForm {
+  formKey: string;
+  name: string;
+  count: number;
+  notableCount: number;
+}
+
+export interface ComposerCatalogGenre {
+  /** null 은 장르를 못 정한 작품('기타') */
+  genre: PieceGenre | null;
+  count: number;
+  notableCount: number;
+  forms: ComposerCatalogForm[];
+}
+
+/** 작곡가 작품의 갈래·형식별 개수. 작품이 많은 갈래부터, '기타'는 맨 뒤다 */
+export interface ComposerCatalog {
+  total: number;
+  notableTotal: number;
+  genres: ComposerCatalogGenre[];
 }
 
 export type PiecePartKind = 'movement' | 'work';
@@ -65,6 +118,12 @@ export interface PiecePart {
   nameKo: string | null;
   nameEn: string | null;
   linkedPiece: PiecePartLinkedPiece | null;
+  /** 세트 안 대표 곡 */
+  notable: boolean;
+  /** 이 곡의 Apple Music 트랙 링크. 이어진 작품이 있으면 그 작품 링크를 쓴다 */
+  appleMusicUrl: string | null;
+  /** 이 곡의 Spotify 트랙 링크. 쓰는 법은 appleMusicUrl 과 같다 */
+  spotifyUrl: string | null;
 }
 
 export interface ComposerMajorPiece {
@@ -110,8 +169,17 @@ export interface Artist {
   topAwardId?: number;
   /** 지금 사진의 출처. 공개된 출처 기록이 있을 때만 온다 */
   imageCredit?: ImageCredit | null;
+  /** 화면 머리 배너용 가로 사진. 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 아티스트 화면 머리 배너: 가로 사진, 얼굴 초점(CSS object-position), 출처 */
+export interface ArtistBanner {
+  url: string;
+  focalPoint?: string;
+  credit: ImageCredit;
 }
 
 /** 사진 출처. 위키미디어 사진은 작가·라이선스, 보도용 사진은 출처 이름이다 */
@@ -204,6 +272,8 @@ export interface PerformanceCredit {
   role: PerformanceCreditRole;
   isPrimary: boolean;
   displayOrder: number;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 export interface ComparisonPerformance {
@@ -227,6 +297,8 @@ export interface ComparisonPerformance {
   loudness: LoudnessProfile | null;
   /** 같은 구간 기준 연주에 맞춘 정렬 지도. 없거나 덜 맞으면 null(같은 지점은 비율로 맞춘다) */
   alignment: ClipAlignment | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 /**
@@ -301,12 +373,16 @@ export interface ComparisonSector {
   primaryArtistCount: number;
   /** 확정된 추천 비교. 없으면 null */
   featuredPair: FeaturedPair | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 export interface ComparisonPiecePerformer {
   artistId: number;
   artistName: string;
   imageUrl: string | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 /** `/comparison-pieces`: 공개 섹터가 하나 이상 있는 작품 */
@@ -320,6 +396,19 @@ export interface ComparisonPiece {
   sectorCount: number;
   performerCount: number;
   performers: ComparisonPiecePerformer[];
+  /** 장르 7종. 서버가 아직 분류하지 않은 작품은 null */
+  genre?: PieceGenre | null;
+  /** 카드 그림으로 쓸 대표 연주 영상(YouTube id). 썸네일 가운데가 대개 음반 표지다 */
+  coverVideoId?: string | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
+}
+
+/** `/comparison-genres`: 장르마다 공개 비교 작품 수와 대표 작곡가 초상(겹치지 않게 최대 3명) */
+export interface ComparisonGenreSummary {
+  genre: PieceGenre;
+  pieceCount: number;
+  portraits: { composerId: number; avatarUrl: string }[];
 }
 
 export interface ComparisonPerformancePage {
@@ -568,6 +657,8 @@ export interface RecommendedPiece extends ComparisonPiece {
   sectorId: number | null;
   sectorName: string | null;
   reasons: string[];
+  /** 추천 이유의 한국어·영어 */
+  reasonsByLocale?: { ko: string[]; en: string[] };
 }
 
 export type RecommendationShelfKey = 'taste' | 'known' | 'starter';

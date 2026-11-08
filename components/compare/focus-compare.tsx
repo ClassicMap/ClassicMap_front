@@ -32,6 +32,7 @@ import {
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, FeaturedPair } from '@/lib/types/models';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   AlertCircleIcon,
@@ -96,16 +97,17 @@ function artistKey(performance: ComparisonPerformance): number {
  * 웹은 두 클립만 미리 불러 두고 소리 나는 쪽만 튼다. 네이티브는 플레이어 하나로 전환한다.
  */
 export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onChangeSector }: FocusCompareProps) {
+  const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
-  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data]);
+  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data, locale]);
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
-    [pieceInfo?.performers]
+    [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
     (performance: ComparisonPerformance) => {
@@ -127,7 +129,7 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       const pb = list.find((performance) => artistKey(performance) === artistKey(b));
       return { sector, a: pa, b: pb, loading: allSectors[index]?.isLoading ?? false };
     });
-  }, [a, b, sectors, allSectors]);
+  }, [a, b, sectors, allSectors, locale]);
 
   // 집중 비교가 보이는 동안 셸 영상은 쉬고 미니 플레이어도 숨는다.
   // 탭 화면은 떠나도 뒤에 살아 있으므로 마운트가 아니라 화면 포커스를 따른다
@@ -144,10 +146,10 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       <EmptyState
         icon={AlertCircleIcon}
         tone="error"
-        title="집중 비교를 불러오지 못했어요"
-        description="잠시 뒤 다시 시도해 주세요."
+        title={t('집중 비교를 불러오지 못했어요')}
+        description={t('잠시 뒤 다시 시도해 주세요.')}
         action={{
-          label: '다시 시도',
+          label: t('다시 시도'),
           onPress: () => {
             void sectorsQuery.refetch();
             void performancesQuery.refetch();
@@ -171,9 +173,9 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     return (
       <EmptyState
         icon={AlertCircleIcon}
-        title="이 두 연주는 함께 비교할 수 없어요"
-        description="비교 화면에서 연주자를 다시 골라 주세요."
-        action={{ label: '비교 화면으로', onPress: onExit }}
+        title={t('이 두 연주는 함께 비교할 수 없어요')}
+        description={t('비교 화면에서 연주자를 다시 골라 주세요.')}
+        action={{ label: t('비교 화면으로'), onPress: onExit }}
       />
     );
   }
@@ -252,6 +254,7 @@ interface SideProgress {
 }
 
 function FocusStage(props: FocusStageProps) {
+  useLocale();
   const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue, featuredPair } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
@@ -367,13 +370,13 @@ function FocusStage(props: FocusStageProps) {
         <Pressable onPress={exit} accessibilityRole="button" className="mb-3 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
-            {`${a.pieceTitle} 비교로 돌아가기`}
+            {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
           </Text>
         </Pressable>
         <View className={cn('gap-3', !narrow && 'flex-row items-end justify-between')}>
           <View className="min-w-0 flex-1">
             <Text variant="micro" className="uppercase tracking-widest text-primary">
-              1:1 집중 비교
+              {t('1:1 집중 비교')}
             </Text>
             <Text className={cn('font-extrabold tracking-tight text-foreground', narrow ? 'mt-1 text-[24px]' : 'mt-1.5 text-[32px] leading-[36px]')}>
               {`${primaryCredit(a)?.artistName ?? 'A'}  ·  ${primaryCredit(b)?.artistName ?? 'B'}`}
@@ -387,26 +390,26 @@ function FocusStage(props: FocusStageProps) {
               <SwitchToggle
                 on={together}
                 onChange={setTogether}
-                label="동시 재생"
-                hint="켜면 두 영상이 같은 지점에서 함께 움직이고, 소리는 고른 쪽만 나요"
+                label={t('동시 재생')}
+                hint={t('켜면 두 영상이 같은 지점에서 함께 움직이고, 소리는 고른 쪽만 나요')}
               />
             ) : null}
             {/* 동시 재생 중에는 늘 같은 지점이라 전환 방식(같은 지점·이어서)을 쓰지 않는다. 크로스페이드는 소리만 겹쳐 넘긴다 */}
             <View pointerEvents={together ? 'none' : 'auto'} className={cn('flex-row items-center gap-2', together && 'opacity-40')}>
               <Segmented
-                label="전환"
+                label={t('전환')}
                 value={mode}
                 options={[
-                  { value: 'align', label: '같은 지점' },
-                  { value: 'resume', label: '이어서' },
+                  { value: 'align', label: t('같은 지점') },
+                  { value: 'resume', label: t('이어서') },
                 ]}
                 onChange={setMode}
               />
             </View>
             <Segmented
-              label="자동 전환"
+              label={t('자동 전환')}
               value={auto}
-              options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? '끔' : `${value}초` }))}
+              options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? t('끔') : t('{n}초', { n: value }) }))}
               onChange={setAuto}
             />
             {Platform.OS === 'web' ? (
@@ -419,14 +422,14 @@ function FocusStage(props: FocusStageProps) {
                 onPress={toggleLoop}
                 accessibilityRole="button"
                 accessibilityState={{ selected: Boolean(loop) || editingLoop }}
-                accessibilityLabel={loop ? '구간 반복 해제' : '구간 반복 지정'}
+                accessibilityLabel={loop ? t('구간 반복 해제') : t('구간 반복 지정')}
                 className={cn(
                   'h-8 flex-row items-center gap-1.5 rounded-full border px-3',
                   loop || editingLoop ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2'
                 )}>
                 <Icon as={RepeatIcon} size={14} className={loop || editingLoop ? 'text-primary' : 'text-foreground'} />
                 <Text className={cn('text-label', loop || editingLoop ? 'text-primary' : 'text-foreground')}>
-                  {loop ? '반복 해제' : editingLoop ? '진행바를 끌어 지정' : '구간 반복'}
+                  {loop ? t('반복 해제') : editingLoop ? t('진행바를 끌어 지정') : t('구간 반복')}
                 </Text>
               </Pressable>
             )}
@@ -440,7 +443,7 @@ function FocusStage(props: FocusStageProps) {
             return (
               <Chip
                 key={row.sector.id}
-                label={available || row.loading ? row.sector.sectorName : `${row.sector.sectorName} · 없음`}
+                label={available || row.loading ? row.sector.sectorName : t('{name} · 없음', { name: row.sector.sectorName })}
                 selected={row.sector.id === activeSectorId}
                 disabled={!available}
                 className={cn(!available && 'opacity-50')}
@@ -474,7 +477,7 @@ function FocusStage(props: FocusStageProps) {
                 <Pressable
                   onPress={() => (on ? engine.togglePlay() : engine.switchTo(side))}
                   accessibilityRole="button"
-                  accessibilityLabel={on ? `${performer.name} 재생·일시정지` : `${performer.name} 연주로 바꾸기`}
+                  accessibilityLabel={on ? t('{name} 재생·일시정지', { name: performer.name }) : t('{name} 연주로 바꾸기', { name: performer.name })}
                   // 테두리는 늘 두고 색만 바꾼다. ring(그림자)을 켜고 끄면 NativeWind가 개발 모드에서 컴포넌트를 바꿔 끼우며 오류를 낸다
                   className={cn(
                     'relative aspect-video w-full overflow-hidden rounded-xl border-2 bg-black',
@@ -496,11 +499,11 @@ function FocusStage(props: FocusStageProps) {
                   {/* 듣는 쪽에만 상태를 띄운다. 누구인지는 아래 얼굴과 이름이 말한다 */}
                   {on ? (
                     <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
-                      <Text className="text-micro font-bold text-primary">{engine.playing ? '재생 중' : '일시정지'}</Text>
+                      <Text className="text-micro font-bold text-primary">{engine.playing ? t('재생 중') : t('status::일시정지')}</Text>
                     </View>
                   ) : together ? (
                     <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
-                      <Text className="text-micro font-bold text-white/80">소리 끔 · 같은 지점</Text>
+                      <Text className="text-micro font-bold text-white/80">{t('소리 끔 · 같은 지점')}</Text>
                     </View>
                   ) : null}
                 </Pressable>
@@ -508,7 +511,7 @@ function FocusStage(props: FocusStageProps) {
                   <PerformerMark performer={performer} tone={side} size={40} dim={!on} />
                   <View className="min-w-0 flex-1">
                     <Text numberOfLines={1} className={cn('text-body font-bold', on ? 'text-primary' : 'text-foreground')}>
-                      {primaryCredit(performance)?.artistName ?? '연주자 정보 없음'}
+                      {primaryCredit(performance)?.artistName ?? t('연주자 정보 없음')}
                     </Text>
                     {/* 크레딧이 없다고 독주라는 뜻은 아니다. 없으면 적지 않는다 */}
                     {supportingCredits(performance) ? (
@@ -552,8 +555,8 @@ function FocusStage(props: FocusStageProps) {
         {a.loudness || b.loudness ? (
           <View className="mt-8 gap-4 rounded-xl border border-border bg-surface-1 p-4">
             <View className="flex-row items-baseline justify-between gap-3">
-              <Text className="text-body font-bold text-foreground">음량 곡선</Text>
-              <Text variant="caption">가로는 구간 진행률이에요</Text>
+              <Text className="text-body font-bold text-foreground">{t('음량 곡선')}</Text>
+              <Text variant="caption">{t('가로는 구간 진행률이에요')}</Text>
             </View>
             <LoudnessOverlay
               a={{ loudness: a.loudness, durationMs: clipDurationMs(a) }}
@@ -1018,6 +1021,7 @@ function NativeLoopButton({
   progress: { current: number; duration: number };
   onChange: (loop: LoopRange | null) => void;
 }) {
+  useLocale();
   const [start, setStart] = React.useState<number | null>(null);
   const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
   const active = Boolean(loop) || start !== null;
@@ -1040,11 +1044,11 @@ function NativeLoopButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={loop ? '구간 반복 해제' : start !== null ? '구간 반복 끝 지점 정하기' : '구간 반복 시작 지점 정하기'}
+      accessibilityLabel={loop ? t('구간 반복 해제') : start !== null ? t('구간 반복 끝 지점 정하기') : t('구간 반복 시작 지점 정하기')}
       className={cn('h-8 flex-row items-center gap-1.5 rounded-full border px-3', active ? 'border-primary bg-primary-muted' : 'border-border-strong')}>
       <Icon as={RepeatIcon} size={14} className={active ? 'text-primary' : 'text-foreground'} />
       <Text className={cn('text-label', active ? 'text-primary' : 'text-foreground')}>
-        {loop ? '반복 해제' : start !== null ? '여기까지 반복' : '구간 반복'}
+        {loop ? t('반복 해제') : start !== null ? t('여기까지 반복') : t('구간 반복')}
       </Text>
     </Pressable>
   );
@@ -1061,6 +1065,7 @@ function Segmented<T extends string | number>({
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
+  useLocale();
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={label} className="flex-row items-center gap-2">
       <Text variant="caption" className="text-foreground-subtle">
@@ -1104,6 +1109,7 @@ function SideControls({
   progress: SideProgress;
   onSeek: (seconds: number) => void;
 }) {
+  useLocale();
   const [scrub, setScrub] = React.useState<number | null>(null);
   const [trackWidth, setTrackWidth] = React.useState(0);
   const duration = progress.duration;
@@ -1124,7 +1130,7 @@ function SideControls({
                 setScrub(null);
                 onSeek(value * duration);
               }}
-              label={`${name} 영상 위치`}
+              label={t('{name} 영상 위치', { name })}
               valueText={(value) => `${fineClock(value * duration)} / ${fineClock(duration)}`}
               step={duration > 0 ? 1 / duration : 0.05}
               disabled={duration <= 0}
@@ -1134,7 +1140,7 @@ function SideControls({
           ) : (
             <Pressable
               accessibilityRole="adjustable"
-              accessibilityLabel={`${name} 영상 위치`}
+              accessibilityLabel={t('{name} 영상 위치', { name })}
               accessibilityValue={{ text: `${fineClock(progress.current)} / ${fineClock(duration)}` }}
               onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
               onPress={(event) => {
@@ -1158,7 +1164,11 @@ function SideControls({
             onPress={() => onSeek(progress.current + step)}
             disabled={duration <= 0}
             accessibilityRole="button"
-            accessibilityLabel={`${name} ${Math.abs(step)}초 ${step < 0 ? '뒤로' : '앞으로'}`}
+            accessibilityLabel={
+              step < 0
+                ? t('{name} {n}초 뒤로', { name, n: Math.abs(step) })
+                : t('{name} {n}초 앞으로', { name, n: Math.abs(step) })
+            }
             className="h-7 min-w-11 items-center justify-center rounded-full border border-border-strong px-2 active:bg-surface-2 web:hover:bg-surface-2">
             <Text variant="mono" className="text-caption text-foreground">
               {`${step < 0 ? '−' : '+'}${Math.abs(step)}`}
@@ -1184,22 +1194,23 @@ function LengthTable({
   rows: SectorRow[];
   activeSectorId: number | undefined;
 }) {
+  useLocale();
   const performerA = performerOf(a, imageOf);
   const performerB = performerOf(b, imageOf);
   return (
     <View className="mt-8 rounded-xl border border-border bg-surface-1 p-4">
       <View className="flex-row items-baseline justify-between gap-3">
-        <Text className="text-body font-bold text-foreground">구간별 길이</Text>
-        <Text variant="caption">{`차이: ${performerB.name} 연주가 길면 +, 짧으면 −`}</Text>
+        <Text className="text-body font-bold text-foreground">{t('구간별 길이')}</Text>
+        <Text variant="caption">{t('차이: {name} 연주가 길면 +, 짧으면 −', { name: performerB.name })}</Text>
       </View>
       <View className="mt-3 flex-row border-b border-border pb-2">
         <Text variant="caption" className="flex-[1.4] font-semibold text-foreground-subtle">
-          구간
+          {t('col::구간')}
         </Text>
         <LengthHead performer={performerA} tone="a" />
         <LengthHead performer={performerB} tone="b" />
         <Text variant="caption" className="w-16 text-right font-semibold text-foreground-subtle">
-          차이
+          {t('col::차이')}
         </Text>
       </View>
       {rows.map((row) => {
@@ -1213,15 +1224,15 @@ function LengthTable({
               {row.sector.sectorName}
             </Text>
             <Text variant="mono" className="flex-1 text-right text-foreground">
-              {row.loading ? '…' : da !== null ? clipClock(da) : '없음'}
+              {row.loading ? '…' : da !== null ? clipClock(da) : t('cell::없음')}
             </Text>
             <Text variant="mono" className="flex-1 text-right text-foreground">
-              {row.loading ? '…' : db !== null ? clipClock(db) : '없음'}
+              {row.loading ? '…' : db !== null ? clipClock(db) : t('cell::없음')}
             </Text>
             <Text
               variant="mono"
               className={cn('w-16 text-right', diff === null ? 'text-foreground-subtle' : diff > 0 ? 'text-primary' : 'text-foreground')}>
-              {diff === null ? '—' : `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}초`}
+              {diff === null ? '—' : t('{n}초', { n: `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}` })}
             </Text>
           </View>
         );
@@ -1232,18 +1243,20 @@ function LengthTable({
 
 /** 크로스페이드: 켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐 넘긴다. 켠 상태는 기억한다 (웹만) */
 function CrossfadeToggle() {
+  useLocale();
   const on = useComparePlayer((state) => state.crossfade);
   return (
     <SwitchToggle
       on={on}
       onChange={(next) => comparePlayer.setCrossfade(next)}
-      label="크로스페이드"
-      hint="켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐서 넘겨요"
+      label={t('크로스페이드')}
+      hint={t('켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐서 넘겨요')}
     />
   );
 }
 
 function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (on: boolean) => void; label: string; hint: string }) {
+  useLocale();
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -1262,6 +1275,7 @@ function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (o
 
 /** 길이 표 머리: 얼굴과 이름 */
 function LengthHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  useLocale();
   return (
     <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
       <PerformerMark performer={performer} tone={tone} size={16} />
@@ -1289,6 +1303,7 @@ function FocusBar({
   onLoopChange: (range: LoopRange | null) => void;
   onExit: () => void;
 }) {
+  useLocale();
   const { progress } = engine;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
@@ -1296,7 +1311,7 @@ function FocusBar({
   const playButton = (
     <Pressable
       onPress={engine.togglePlay}
-      accessibilityLabel={engine.playing ? '일시정지 (스페이스)' : '재생 (스페이스)'}
+      accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
       className="size-10 items-center justify-center rounded-full bg-foreground">
       <Icon as={engine.playing ? PauseIcon : PlayIcon} size={17} className="fill-background text-background" />
     </Pressable>
@@ -1306,7 +1321,7 @@ function FocusBar({
   const swapButton = (
     <Pressable
       onPress={() => engine.switchTo(other)}
-      accessibilityLabel={`${performers[other].name} 연주로 바꾸기 (Tab)`}
+      accessibilityLabel={t('{name} 연주로 바꾸기 (Tab)', { name: performers[other].name })}
       className="h-10 flex-row items-center gap-1.5 rounded-full border border-border-strong pl-1.5 pr-2 web:hover:bg-surface-2">
       {(['a', 'b'] as const).map((side, index) => (
         <React.Fragment key={side}>
@@ -1324,7 +1339,7 @@ function FocusBar({
   const exitButton = (
     <Pressable
       onPress={onExit}
-      accessibilityLabel="집중 비교 나가기 (Esc)"
+      accessibilityLabel={t('집중 비교 나가기 (Esc)')}
       className="size-9 items-center justify-center rounded-full web:hover:bg-surface-2">
       <Icon as={XIcon} size={17} className="text-foreground-muted" />
     </Pressable>
@@ -1401,6 +1416,7 @@ function LoopProgress({
   onLoop: (range: LoopRange | null) => void;
   duration: number;
 }) {
+  useLocale();
   const trackRef = React.useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = React.useState<{ from: number; to: number } | null>(null);
   const ratioAt = (clientX: number) => {
@@ -1416,7 +1432,7 @@ function LoopProgress({
       ref={trackRef}
       role="slider"
       tabIndex={0}
-      aria-label={editing ? '반복할 구간 끌어서 지정' : '재생 위치'}
+      aria-label={editing ? t('반복할 구간 끌어서 지정') : t('재생 위치')}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(clamped * 100)}

@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Path } from 'react-native-svg';
 import { createClassicIcon, type ClassicIconProps } from './icon-base';
 
@@ -18,5 +19,6 @@ const RepertoireFilled = createClassicIcon('RepertoireIconFilled', ({ color }) =
 
 /** 담긴 상태는 목록선을 지우고 면으로 채웁니다. 12px에서도 채움 여부만으로 구분됩니다. */
 export function RepertoireIcon({ filled = false, ...props }: ClassicIconProps & { filled?: boolean }) {
+  useLocale();
   return filled ? <RepertoireFilled {...props} /> : <RepertoireOutline {...props} />;
 }

@@ -1,7 +1,15 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { PieceAPI } from '@/lib/api/client';
 import { AdminPieceAPI } from '@/lib/api/admin';
-import type { Piece } from '@/lib/types/models';
+import type { ComposerPieceFilter, Piece } from '@/lib/types/models';
 
 /**
  * 쿼리 키 상수
@@ -29,18 +37,53 @@ export function usePiece(id: number | undefined) {
 const COMPOSER_PIECES_PAGE = 30;
 
 /**
- * 작곡가 상세의 작품 목록. 페이지를 이어 붙인다 (프로젝트 지침: 전체를 한 번에 받지 않는다)
+ * 작곡가 작품 목록 쿼리 설정. 화면 훅과 미리 부르기(lib/navigation/prefetch)가 같이 쓴다.
+ * 페이지를 이어 붙인다(프로젝트 지침: 전체를 한 번에 받지 않는다). 거르기마다 따로 캐시한다
  */
-export function useComposerPieces(composerId: number | undefined) {
-  return useInfiniteQuery({
-    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId ?? 0), 'pages'] as const,
+export function composerPiecesQueryOptions(
+  composerId: number,
+  filter: ComposerPieceFilter = {},
+  pageSize: number = COMPOSER_PIECES_PAGE
+) {
+  return infiniteQueryOptions({
+    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId), 'pages', filter, pageSize] as const,
     queryFn: ({ pageParam }) =>
-      PieceAPI.getPageByComposer(composerId ?? 0, { offset: pageParam, limit: COMPOSER_PIECES_PAGE }),
+      PieceAPI.getPageByComposer(composerId, { offset: pageParam, limit: pageSize, ...filter }),
     getNextPageParam: (lastPage, pages) =>
-      lastPage.length < COMPOSER_PIECES_PAGE ? undefined : pages.length * COMPOSER_PIECES_PAGE,
+      lastPage.length < pageSize ? undefined : pages.length * pageSize,
     initialPageParam: 0,
-    enabled: (composerId ?? 0) > 0,
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useComposerPieces(
+  composerId: number | undefined,
+  filter: ComposerPieceFilter = {},
+  options: { pageSize?: number; enabled?: boolean; keepPrevious?: boolean } = {}
+) {
+  return useInfiniteQuery({
+    ...composerPiecesQueryOptions(composerId ?? 0, filter, options.pageSize),
+    enabled: (composerId ?? 0) > 0 && options.enabled !== false,
+    // 검색어가 바뀌는 동안 앞 결과를 그대로 두어 목록이 깜빡이지 않게 한다
+    placeholderData: options.keepPrevious ? keepPreviousData : undefined,
+  });
+}
+
+/** 작곡가 작품의 갈래·형식별 개수 */
+export function composerCatalogQueryOptions(composerId: number, q = '') {
+  return queryOptions({
+    queryKey: [...PIECE_QUERY_KEYS.byComposer(composerId), 'catalog', q] as const,
+    queryFn: () => PieceAPI.getCatalog(composerId, q || undefined),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** q 를 주면 검색 결과의 갈래별 수다. 검색어가 바뀌는 동안 앞 수를 그대로 둔다 */
+export function useComposerCatalog(composerId: number | undefined, q = '') {
+  return useQuery({
+    ...composerCatalogQueryOptions(composerId ?? 0, q),
+    enabled: (composerId ?? 0) > 0,
+    placeholderData: q ? keepPreviousData : undefined,
   });
 }
 

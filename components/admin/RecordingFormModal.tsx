@@ -11,6 +11,7 @@ import {
 import { ImageUploadField } from '@/components/admin/form-image';
 import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
 import { AdminRecordingAPI } from '@/lib/api/admin';
+import { msg, t, useLocale } from '@/lib/i18n';
 import type { Recording } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,13 +29,14 @@ interface RecordingFormModalProps {
 type ReleaseKind = 'album' | 'single';
 
 const RELEASE_KIND_OPTIONS: ReadonlyArray<ChoiceOption<ReleaseKind>> = [
-  { value: 'album', label: '앨범' },
-  { value: 'single', label: '싱글' },
+  { value: 'album', label: msg('kind::앨범') },
+  { value: 'single', label: msg('싱글') },
 ];
 
 type RecordingField = 'title' | 'year';
 
 export function RecordingFormModal({ visible, artistId, recording, onClose, onSuccess }: RecordingFormModalProps) {
+  useLocale();
   const [title, setTitle] = React.useState('');
   const [year, setYear] = React.useState('');
   const [releaseDate, setReleaseDate] = React.useState('');
@@ -85,7 +87,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   const pickCover = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.');
+      Alert.alert(t('사진 접근 권한이 필요해요'), t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.'));
       return;
     }
 
@@ -143,18 +145,18 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
         const serverUrl = data.url;
         setCoverUrl(serverUrl);
         setSelectedCover(serverUrl);
-        Alert.alert('커버 이미지를 올렸어요');
+        Alert.alert(t('커버 이미지를 올렸어요'));
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
-      Alert.alert('커버 이미지를 올리지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('커버 이미지를 올리지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     }
   };
 
   const errors: FieldErrors<RecordingField> = {
-    title: title ? undefined : '제목을 입력해 주세요.',
-    year: year ? undefined : '발매 연도를 입력해 주세요.',
+    title: title ? undefined : t('제목을 입력해 주세요.'),
+    year: year ? undefined : t('발매 연도를 입력해 주세요.'),
   };
   const shown: FieldErrors<RecordingField> = attempted ? errors : {};
 
@@ -180,7 +182,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           youtubeMusicUrl: youtubeMusicUrl || undefined,
           externalUrl: externalUrl || undefined,
         });
-        Alert.alert('음반을 수정했어요');
+        Alert.alert(t('음반을 수정했어요'));
       } else {
         await AdminRecordingAPI.create({
           artistId,
@@ -196,12 +198,12 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           youtubeMusicUrl: youtubeMusicUrl || undefined,
           externalUrl: externalUrl || undefined,
         });
-        Alert.alert('음반을 추가했어요');
+        Alert.alert(t('음반을 추가했어요'));
       }
       onSuccess();
       onClose();
     } catch (error) {
-      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('저장하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -210,34 +212,34 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   return (
     <FormModal
       visible={visible}
-      title={recording ? '음반 수정' : '음반 추가'}
+      title={recording ? t('음반 수정') : t('음반 추가')}
       subtitle={recording?.title}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
-      <FormSection title="이미지">
+      <FormSection title={t('form::이미지')}>
         <ImageUploadField
-          label="커버 이미지"
+          label={t('커버 이미지')}
           uri={selectedCover}
           heightRatio={1}
           onPick={pickCover}
-          help="고르면 바로 올라가요. 저장을 눌러야 음반에 반영돼요."
+          help={t('고르면 바로 올라가요. 저장을 눌러야 음반에 반영돼요.')}
         />
       </FormSection>
 
-      <FormSection title="기본 정보">
+      <FormSection title={t('기본 정보')}>
         <TextField
-          label="제목"
+          label={t('제목')}
           required
           value={title}
           onChangeText={setTitle}
-          placeholder="음반 제목"
+          placeholder={t('음반 제목')}
           error={shown.title}
         />
         <FormRow>
           <TextField
-            label="발매 연도"
+            label={t('발매 연도')}
             required
             value={year}
             onChangeText={setYear}
@@ -246,16 +248,21 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
             error={shown.year}
           />
           <TextField
-            label="정확한 발매일"
+            label={t('정확한 발매일')}
             value={releaseDate}
             onChangeText={setReleaseDate}
             placeholder="2024-01-15"
           />
         </FormRow>
         <FormRow>
-          <TextField label="레이블" value={label} onChangeText={setLabel} placeholder="레이블 이름" />
           <TextField
-            label="트랙 수"
+            label={t('레이블')}
+            value={label}
+            onChangeText={setLabel}
+            placeholder={t('레이블 이름')}
+          />
+          <TextField
+            label={t('트랙 수')}
             value={trackCount}
             onChangeText={setTrackCount}
             placeholder="10"
@@ -263,14 +270,14 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           />
         </FormRow>
         <ChoiceField
-          label="구분"
+          label={t('구분')}
           options={RELEASE_KIND_OPTIONS}
           value={isSingle ? 'single' : 'album'}
           onChange={(kind) => setIsSingle(kind === 'single')}
         />
       </FormSection>
 
-      <FormSection title="스트리밍 링크">
+      <FormSection title={t('스트리밍 링크')}>
         <TextField
           label="Spotify URL"
           value={spotifyUrl}
@@ -296,7 +303,7 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
           keyboardType="url"
         />
         <TextField
-          label="기타 링크"
+          label={t('기타 링크')}
           value={externalUrl}
           onChangeText={setExternalUrl}
           placeholder="https://…"

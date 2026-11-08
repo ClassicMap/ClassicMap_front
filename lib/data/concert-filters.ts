@@ -1,3 +1,4 @@
+import { msg, t } from '@/lib/i18n';
 import type { Concert } from '@/lib/types/models';
 
 /**
@@ -7,21 +8,21 @@ import type { Concert } from '@/lib/types/models';
  */
 
 export const CONCERT_GENRES = [
-  { key: 'classic', label: '클래식', value: '서양음악(클래식)' },
-  { key: 'gugak', label: '국악', value: '한국음악(국악)' },
-  { key: 'musical', label: '뮤지컬', value: '뮤지컬' },
-  { key: 'all', label: '모든 장르', value: undefined },
+  { key: 'classic', label: msg('클래식'), value: '서양음악(클래식)' },
+  { key: 'gugak', label: msg('국악'), value: '한국음악(국악)' },
+  { key: 'musical', label: msg('뮤지컬'), value: '뮤지컬' },
+  { key: 'all', label: msg('모든 장르'), value: undefined },
 ] as const;
 
 export type ConcertGenreKey = (typeof CONCERT_GENRES)[number]['key'];
 
 export const CONCERT_PERIODS = [
-  { key: 'all', label: '모든 날짜' },
-  { key: 'today', label: '오늘' },
-  { key: 'weekend', label: '이번 주말' },
-  { key: 'week', label: '이번 주' },
-  { key: 'month', label: '이번 달' },
-  { key: 'next-month', label: '다음 달' },
+  { key: 'all', label: msg('모든 날짜') },
+  { key: 'today', label: msg('오늘') },
+  { key: 'weekend', label: msg('이번 주말') },
+  { key: 'week', label: msg('이번 주') },
+  { key: 'month', label: msg('이번 달') },
+  { key: 'next-month', label: msg('다음 달') },
 ] as const;
 
 export type ConcertPeriodKey = (typeof CONCERT_PERIODS)[number]['key'];
@@ -31,43 +32,43 @@ export type ConcertPeriodKey = (typeof CONCERT_PERIODS)[number]['key'];
  * 응답에 `instrumentation`이 없던 배포 전 백엔드에서는 제목 키워드로 화면에서 나눈다.
  */
 export const CONCERT_INSTRUMENTS = [
-  { key: 'piano', label: '피아노', hint: '독주·듀오', keywords: ['피아노', '피아니스트'] },
+  { key: 'piano', label: msg('피아노'), hint: msg('독주·듀오'), keywords: ['피아노', '피아니스트'] },
   {
     key: 'strings',
-    label: '현악',
-    hint: '바이올린·첼로·기타',
+    label: msg('현악'),
+    hint: msg('바이올린·첼로·기타'),
     keywords: ['바이올린', '비올라', '첼로', '현악', '기타', '하프', '바이올리니스트', '첼리스트', '콘트라베이스'],
   },
   {
     key: 'winds',
-    label: '관악',
-    hint: '플루트·클라리넷·호른',
+    label: msg('관악'),
+    hint: msg('플루트·클라리넷·호른'),
     keywords: ['플루트', '오보에', '클라리넷', '바순', '호른', '트럼펫', '트롬본', '색소폰', '목관', '금관', '관악'],
   },
   {
     key: 'vocal',
-    label: '성악',
-    hint: '독창·가곡',
+    label: msg('성악'),
+    hint: msg('독창·가곡'),
     keywords: ['소프라노', '메조', '테너', '바리톤', '베이스 ', '카운터테너', '가곡', '성악'],
   },
-  { key: 'choir', label: '합창', hint: '합창단·콰이어', keywords: ['합창', '콰이어', '코랄'] },
+  { key: 'choir', label: msg('합창'), hint: msg('합창단·콰이어'), keywords: ['합창', '콰이어', '코랄'] },
   {
     key: 'orchestra',
-    label: '오케스트라',
-    hint: '교향악단·필하모닉',
+    label: msg('오케스트라'),
+    hint: msg('교향악단·필하모닉'),
     keywords: ['교향악단', '필하모닉', '심포니', '오케스트라', '관현악', '시향', '교향곡'],
   },
   {
     key: 'chamber',
-    label: '실내악',
-    hint: '트리오·콰르텟·앙상블',
+    label: msg('실내악'),
+    hint: msg('트리오·콰르텟·앙상블'),
     keywords: ['콰르텟', '사중주', '트리오', '삼중주', '오중주', '앙상블', '듀오', '실내악', '챔버'],
   },
-  { key: 'opera', label: '오페라', hint: '전막·갈라', keywords: ['오페라'] },
+  { key: 'opera', label: msg('inst::오페라'), hint: msg('전막·갈라'), keywords: ['오페라'] },
   {
     key: 'crossover',
-    label: '크로스오버',
-    hint: '재즈·영화·게임 음악',
+    label: msg('크로스오버'),
+    hint: msg('재즈·영화·게임 음악'),
     keywords: ['크로스오버', '재즈', '영화음악', '게임', 'OST'],
   },
 ] as const;
@@ -79,7 +80,8 @@ export function isInstrumentKey(value: string | undefined): value is ConcertInst
 }
 
 export function instrumentLabel(key: ConcertInstrumentKey): string {
-  return CONCERT_INSTRUMENTS.find((instrument) => instrument.key === key)?.label ?? key;
+  const label = CONCERT_INSTRUMENTS.find((instrument) => instrument.key === key)?.label;
+  return label ? t(label) : key;
 }
 
 /** 제목에 든 낱말로 편성을 나눈다. 한 공연이 여러 편성에 들 수 있다 */
@@ -104,11 +106,11 @@ export function concertInstruments(concert: Pick<Concert, 'title' | 'instrumenta
 
 /** 권역. 지역 선택 팝오버·시트에서 묶어 보여 주기만 하고, 필터 값은 여전히 시·도 하나다 */
 export const AREA_REGIONS: { label: string; areas: string[] }[] = [
-  { label: '수도권', areas: ['서울특별시', '경기도', '인천광역시'] },
-  { label: '충청', areas: ['대전광역시', '세종특별자치시', '충청북도', '충청남도'] },
-  { label: '경상', areas: ['부산광역시', '대구광역시', '울산광역시', '경상북도', '경상남도'] },
-  { label: '전라', areas: ['광주광역시', '전북특별자치도', '전라남도', '전남광주통합특별시'] },
-  { label: '강원·제주', areas: ['강원특별자치도', '제주특별자치도'] },
+  { label: msg('수도권'), areas: ['서울특별시', '경기도', '인천광역시'] },
+  { label: msg('충청'), areas: ['대전광역시', '세종특별자치시', '충청북도', '충청남도'] },
+  { label: msg('경상'), areas: ['부산광역시', '대구광역시', '울산광역시', '경상북도', '경상남도'] },
+  { label: msg('전라'), areas: ['광주광역시', '전북특별자치도', '전라남도', '전남광주통합특별시'] },
+  { label: msg('강원·제주'), areas: ['강원특별자치도', '제주특별자치도'] },
 ];
 
 export interface ConcertFilter {
@@ -200,17 +202,20 @@ export function countActiveFilters(filter: ConcertFilter): number {
 }
 
 export function genreLabel(key: ConcertGenreKey): string {
-  return CONCERT_GENRES.find((genre) => genre.key === key)?.label ?? key;
+  const label = CONCERT_GENRES.find((genre) => genre.key === key)?.label;
+  return label ? t(label) : key;
 }
 
 export function periodLabel(key: ConcertPeriodKey): string {
-  return CONCERT_PERIODS.find((period) => period.key === key)?.label ?? key;
+  const label = CONCERT_PERIODS.find((period) => period.key === key)?.label;
+  return label ? t(label) : key;
 }
 
 /** 기간 프리셋 옆에 붙이는 실제 날짜 (`10.3–10.4`) */
 export function formatRange(range: DayRange): string {
-  const short = (day: string) => `${Number(day.slice(5, 7))}.${Number(day.slice(8, 10))}`;
-  if (!range.to) return `${short(range.from)}부터`;
+  const short = (day: string) =>
+    t('{month}.{day}', { month: Number(day.slice(5, 7)), day: Number(day.slice(8, 10)) });
+  if (!range.to) return t('{day}부터', { day: short(range.from) });
   return range.from === range.to ? short(range.from) : `${short(range.from)}–${short(range.to)}`;
 }
 

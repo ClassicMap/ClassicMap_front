@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { MyPageAPI } from '@/lib/api/client';
 import { clearAllData } from '@/lib/api/mock-db';
+import { t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useAuth as useAppAuth } from '@/lib/hooks/useAuth';
@@ -12,8 +13,12 @@ import { type Href, Redirect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Linking, View } from 'react-native';
 
-const CONFIRM_WORD = '삭제';
 const SUPPORT_EMAIL = 'kang3171611@naver.com';
+
+/** 되돌릴 수 없는 삭제를 확인하려고 직접 입력하게 하는 낱말. 언어마다 다르다 */
+function confirmWord(): string {
+  return t('입력어::삭제');
+}
 
 function isUnsupported(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) return false;
@@ -30,6 +35,7 @@ function isUnsupported(error: unknown): boolean {
  * 앱에서 지울 수 없는 계정이면 메일로 요청하는 길을 안내한다.
  */
 export default function DeleteAccountScreen() {
+  useLocale();
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useAuth();
@@ -40,11 +46,11 @@ export default function DeleteAccountScreen() {
   const { isSignedIn, loading } = useAppAuth();
 
   const openMail = () => {
-    const subject = 'ClassicMap 계정 삭제 요청';
-    const body = `계정 삭제를 요청합니다.\n\n이메일: ${email}\n삭제 사유: `;
+    const subject = t('ClassicMap 계정 삭제 요청');
+    const body = t('계정 삭제를 요청합니다.\n\n이메일: {email}\n삭제 사유: ', { email });
     void Linking.openURL(
       `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    ).catch(() => setError(`메일 앱을 열지 못했어요. ${SUPPORT_EMAIL}로 직접 보내 주세요.`));
+    ).catch(() => setError(t('메일 앱을 열지 못했어요. {email}로 직접 보내 주세요.', { email: SUPPORT_EMAIL })));
   };
 
   const remove = async () => {
@@ -59,11 +65,11 @@ export default function DeleteAccountScreen() {
       await user.delete();
     } catch (err) {
       if (dataDeleted) {
-        setError('기록은 지웠지만 로그인 계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.');
+        setError(t('기록은 지웠지만 로그인 계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.'));
       } else if (isUnsupported(err)) {
-        setError(`이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 ${SUPPORT_EMAIL}에 삭제를 요청해 주세요.`);
+        setError(t('이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 {email}에 삭제를 요청해 주세요.', { email: SUPPORT_EMAIL }));
       } else {
-        setError('계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.');
+        setError(t('계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.'));
       }
       setDeleting(false);
       return;
@@ -80,9 +86,9 @@ export default function DeleteAccountScreen() {
   };
 
   const confirmRemove = () =>
-    Alert.alert('계정을 삭제할까요?', '평가와 레퍼토리가 모두 지워지고 되돌릴 수 없어요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => void remove() },
+    Alert.alert(t('계정을 삭제할까요?'), t('평가와 레퍼토리가 모두 지워지고 되돌릴 수 없어요.'), [
+      { text: t('취소'), style: 'cancel' },
+      { text: t('삭제'), style: 'destructive', onPress: () => void remove() },
     ]);
 
   if (!loading && !isSignedIn) {
@@ -90,16 +96,18 @@ export default function DeleteAccountScreen() {
   }
 
   return (
-    <SubPage title="계정 삭제" description="계정을 지우면 별점, 레퍼토리, 공개 프로필이 모두 사라지고 되돌릴 수 없어요.">
+    <SubPage title={t('계정 삭제')} description={t('계정을 지우면 별점, 레퍼토리, 공개 프로필이 모두 사라지고 되돌릴 수 없어요.')}>
       <View className="gap-4">
         <View className="gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
-          <Text className="text-body-sm font-semibold text-destructive">지워지는 것</Text>
+          <Text className="text-body-sm font-semibold text-destructive">{t('지워지는 것')}</Text>
           <Text variant="bodySm" className="text-foreground-muted">
-            {`로그인 계정(${email || '이메일'}), 남긴 별점, 레퍼토리, 공개 프로필 설정, 취향 답과 들은 기록`}
+            {t('로그인 계정({email}), 남긴 별점, 레퍼토리, 공개 프로필 설정, 취향 답과 들은 기록', {
+              email: email || t('이메일'),
+            })}
           </Text>
         </View>
         <View className="gap-1.5">
-          <Label nativeID="confirmWord">{`확인을 위해 "${CONFIRM_WORD}"를 입력해 주세요`}</Label>
+          <Label nativeID="confirmWord">{t('확인을 위해 "{word}"를 입력해 주세요', { word: confirmWord() })}</Label>
           <Input aria-labelledby="confirmWord" value={typed} onChangeText={setTyped} editable={!deleting} autoCapitalize="none" />
         </View>
         <FieldMessage error={error} />
@@ -107,12 +115,12 @@ export default function DeleteAccountScreen() {
           <Button
             variant="destructive"
             className="rounded-full px-6"
-            disabled={typed.trim() !== CONFIRM_WORD || deleting}
+            disabled={typed.trim().toLowerCase() !== confirmWord().toLowerCase() || deleting}
             onPress={confirmRemove}>
-            <Text>{deleting ? '삭제 중…' : '계정 삭제'}</Text>
+            <Text>{deleting ? t('삭제 중…') : t('계정 삭제')}</Text>
           </Button>
           <Button variant="outline" className="rounded-full" onPress={openMail}>
-            <Text>메일로 삭제 요청</Text>
+            <Text>{t('메일로 삭제 요청')}</Text>
           </Button>
         </View>
       </View>

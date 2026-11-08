@@ -151,3 +151,275 @@
     }
   }
 }
+
+/* 카드·커버 움직임 (2026-11-07 스포티파이 느낌). 웹에만 걸린다.
+   ease-settle: 빠르게 시작해 부드럽게 멈춘다. ease-pop: 살짝 넘쳤다 돌아온다.
+   호버는 마우스가 있는 화면에서만, 움직임 줄이기 설정이면 끝 상태만 보인다. */
+@layer components {
+  :root {
+    --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* 카드 바탕: 호버하면 표면색이 밝아지고, 누르는 동안 살짝 눌린다 */
+  .cm-card {
+    transition:
+      background-color 200ms var(--ease-settle),
+      transform 140ms var(--ease-settle);
+  }
+  .cm-card:active {
+    transform: scale(0.985);
+  }
+
+
+  /* 재생 버튼: 평소엔 숨어 있다가 카드 호버·포커스에 아래에서 올라온다 */
+  /* 그림자는 컴포넌트의 web:shadow-lg 로 준다. box-shadow 를 여기 쓰면 NativeWind 네이티브 변환이 깨져 앱 번들이 안 만들어졌다 */
+  .cm-play-fab {
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 200ms var(--ease-settle),
+      transform 260ms var(--ease-settle);
+  }
+  .group:focus-visible .cm-play-fab,
+  .cm-play-fab-on {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 시대·장르 타일: 호버하면 색이 한 톤 살아난다 */
+  .cm-tile {
+    transition:
+      filter 220ms var(--ease-settle),
+      transform 140ms var(--ease-settle);
+  }
+  .cm-tile:active {
+    transform: scale(0.98);
+  }
+
+  @media (hover: hover) {
+    .group:hover .cm-play-fab {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cm-play-fab:hover {
+      transform: translateY(0) scale(1.06);
+    }
+    .cm-tile:hover {
+      filter: brightness(1.1) saturate(1.08);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-card,
+    .cm-play-fab,
+    .cm-tile {
+      transition: none;
+    }
+    .cm-card:active,
+    .cm-tile:active {
+      transform: none;
+    }
+    .cm-play-fab,
+    .group:hover .cm-play-fab,
+    .cm-play-fab:hover {
+      transform: none;
+    }
+  }
+}
+
+
+/* 재생 중 막대 (equalizer.tsx), 담기 버튼 톡 튐 (favorite-button.tsx), 이미지 나타남 */
+@layer components {
+  .cm-eq > * {
+    transform-origin: bottom;
+    animation: cm-eq 900ms ease-in-out infinite;
+  }
+  .cm-eq > *:nth-child(2) {
+    animation-duration: 720ms;
+    animation-delay: -240ms;
+  }
+  .cm-eq > *:nth-child(3) {
+    animation-duration: 1040ms;
+    animation-delay: -520ms;
+  }
+  @keyframes cm-eq {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  .cm-pop {
+    animation: cm-pop 460ms var(--ease-pop);
+  }
+  @keyframes cm-pop {
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(0.8);
+    }
+    65% {
+      transform: scale(1.24);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .cm-img-fade {
+    transition: opacity 260ms var(--ease-settle);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-eq > *,
+    .cm-pop {
+      animation: none;
+    }
+    .cm-img-fade {
+      transition: none;
+    }
+  }
+}
+
+/* 하단 플레이바가 나타날 때 아래에서 올라온다 */
+@layer components {
+  .cm-rise {
+    animation: cm-rise 280ms var(--ease-settle);
+  }
+  @keyframes cm-rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cm-rise {
+      animation: none;
+    }
+  }
+}
+
+/* ───────── 화면 전환 ─────────
+   공모전헌터 모션 원칙: ease-settle(cubic-bezier(0.22, 1, 0.36, 1)), 들어오기는 짧게, 나가기는 더 짧게,
+   transform·opacity 만 움직이고 움직임 줄이기면 모두 끈다. 이동 자체는 lib/navigation/view-transition.web.ts
+   클래스가 아닌 규칙(속성 선택자·::view-transition)은 Tailwind 가 걸러 내지 않게 @layer 밖에 둔다 */
+
+/* 데스크톱 셸 본문 자리(page-container.web). 이 자리만 따로 찍혀 사이드바·상단바는 가만히 있다 */
+[data-cm-page] {
+  view-transition-name: cm-page;
+}
+
+/* root: 크롬이 바뀐 곳(사이드바 선택 표시 등)만 같은 길이로 엇갈려 바뀐다. 같은 픽셀은 그대로 보인다 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 본문: 이전 화면은 120ms 에 사라지고, 새 화면은 8px 아래에서 220ms 에 올라온다 */
+::view-transition-group(cm-page),
+::view-transition-group(cm-route-progress) {
+  animation: none;
+}
+::view-transition-old(cm-page) {
+  animation: cm-page-out 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+::view-transition-new(cm-page) {
+  animation: cm-page-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes cm-page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes cm-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes cm-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cm-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes cm-layer-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes cm-layer-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@layer components {
+  /* 스켈레톤 자리에 내용이 들어올 때 160ms 에 나타난다 */
+  .cm-fade-in {
+    animation: cm-fade-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* 화면 안에서 값만 바뀔 때(구간·필터) 새 결과가 올 때까지 이전 결과를 60% 로 남긴다 */
+  .cm-settle {
+    transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cm-stale {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* 떠 있는 층(커맨드 팔레트): 0.98배에서 커지며 나타나고(120ms), 닫을 때는 거꾸로(80ms) */
+  .cm-layer-in {
+    animation: cm-layer-in 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .cm-layer-out {
+    animation: cm-layer-out 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    pointer-events: none;
+  }
+  .cm-scrim-in {
+    animation: cm-fade-in 120ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .cm-scrim-out {
+    animation: cm-fade-out 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-fade-in,
+    .cm-layer-in,
+    .cm-layer-out,
+    .cm-scrim-in,
+    .cm-scrim-out {
+      animation: none;
+    }
+    .cm-settle {
+      transition: none;
+    }
+  }
+}

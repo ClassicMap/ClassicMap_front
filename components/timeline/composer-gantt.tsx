@@ -3,6 +3,7 @@ import { Text } from '@/components/ui/text';
 import { getEraFill, getEraForeground } from '@/lib/design/era-palette';
 import type { PlacedLabeledSpan } from '@/lib/design/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
+import { t, useLocale } from '@/lib/i18n';
 import type { Composer, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -80,6 +81,7 @@ export function ComposerGantt({
   onSelect,
   onOverflowPress,
 }: ComposerGanttProps) {
+  useLocale();
   const height = ganttHeight(laneCount, overflowGroups.length > 0);
   const focusEra = eras.find((era) => era.id === focusEraId);
   const overflowTop = GANTT_LANES_TOP + Math.max(1, laneCount) * GANTT_ROW_HEIGHT + 8;
@@ -132,7 +134,7 @@ export function ComposerGantt({
               opacity: dimmed ? 0.4 : 1,
             }}>
             <Text numberOfLines={1} className="text-micro" style={{ color, lineHeight: ERA_ROW_HEIGHT }}>
-              {focusEra?.id === era.id ? `${era.name} ${era.startYear}–${era.endYear}` : era.name}
+              {focusEra?.id === era.id ? `${t(era.name)} ${era.startYear}–${era.endYear}` : t(era.name)}
             </Text>
             <View className="ml-1.5 h-0.5 min-w-0 flex-1 rounded-full" style={{ backgroundColor: color, opacity: 0.7 }} />
           </View>
@@ -157,13 +159,13 @@ export function ComposerGantt({
           <Pressable
             key={group.eraId}
             accessibilityRole="button"
-            accessibilityLabel={`${group.eraName} 작곡가 ${group.count}명 더 보기`}
+            accessibilityLabel={t('{era} 작곡가 {count}명 더 보기', { era: t(group.eraName), count: group.count })}
             onPress={() => onOverflowPress(group)}
             className="absolute h-[22px] flex-row items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2 web:hover:bg-surface-3"
             style={{ left: group.left, top: overflowTop, width: group.width }}>
             <View className="size-1.5 rounded-full" style={{ backgroundColor: color }} />
             <Text numberOfLines={1} className="text-caption font-semibold text-foreground-muted">
-              {`${group.eraName} +${group.count}`}
+              {`${t(group.eraName)} +${group.count}`}
             </Text>
           </Pressable>
         );
@@ -187,6 +189,7 @@ function GanttRowBase({
   scheme: ColorScheme;
   onSelect: (id: number) => void;
 }) {
+  useLocale();
   const { item, lane, startX, endX, labelX, labelWidth } = span;
   const left = Math.min(startX, labelX);
   const right = Math.max(endX, labelX + labelWidth);

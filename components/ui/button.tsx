@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -93,6 +94,7 @@ type ButtonProps = React.ComponentProps<typeof Pressable> &
   VariantProps<typeof buttonVariants>;
 
 function Button({ className, variant, size, ...props }: ButtonProps) {
+  useLocale();
   return (
     <TextClassContext.Provider value={buttonTextVariants({ variant, size })}>
       <Pressable

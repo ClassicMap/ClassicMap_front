@@ -3,6 +3,7 @@ import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/pl
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { relocalize, t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { useRouter, useSegments } from 'expo-router';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
@@ -16,10 +17,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * 왼쪽 작은 자리에 재생 중인 영상이 그대로 옮겨 와 뜬다 (웹은 셸 영상, 네이티브는 루트의 YouTube).
  */
 export function MiniPlayerBar() {
+  const { locale } = useLocale();
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
-  const current = useComparePlayer((state) => state.current);
+  const stored = useComparePlayer((state) => state.current);
+  // 저장해 둔 곡 이름을 지금 언어로(언어를 바꿔도 재생 중인 곡이 그대로 보이게)
+  const current = React.useMemo(() => (stored ? relocalize(stored) : stored), [stored, locale]);
   const playing = useComparePlayer((state) => state.playing);
   const restored = useComparePlayer((state) => state.restored);
   const surface = useComparePlayer((state) => state.surface);
@@ -46,7 +50,7 @@ export function MiniPlayerBar() {
           <Pressable
             onPress={goToCompare}
             accessibilityRole="link"
-            accessibilityLabel={`${current.artistName} 비교 화면으로`}
+            accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}
             className="min-w-0 flex-1 flex-row items-center gap-3">
             {current.videoId || Platform.OS === 'web' ? (
               <MiniVideoTarget width={80} height={45} />
@@ -58,7 +62,7 @@ export function MiniPlayerBar() {
                 {current.artistName}
               </Text>
               <Text variant="caption" numberOfLines={1}>
-                {restored ? `이어 듣기 · ${current.sectorName}` : `${current.sectorName} · ${current.pieceTitle}`}
+                {restored ? t('이어 듣기 · {sector}', { sector: current.sectorName }) : `${current.sectorName} · ${current.pieceTitle}`}
               </Text>
             </View>
           </Pressable>
@@ -66,13 +70,13 @@ export function MiniPlayerBar() {
             onPress={() => {
               if (!canToggle || !comparePlayer.togglePlay()) goToCompare();
             }}
-            accessibilityLabel={playing ? '일시정지' : restored ? '이어 듣기' : '재생'}
+            accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             className="size-11 items-center justify-center rounded-full">
             <Icon as={playing ? PauseIcon : PlayIcon} size={20} className="fill-foreground text-foreground" />
           </Pressable>
           <Pressable
             onPress={() => comparePlayer.close()}
-            accessibilityLabel="플레이어 닫기"
+            accessibilityLabel={t('플레이어 닫기')}
             className="size-10 items-center justify-center rounded-full">
             <Icon as={XIcon} size={18} className="text-foreground-muted" />
           </Pressable>

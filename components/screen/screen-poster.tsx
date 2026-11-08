@@ -1,6 +1,7 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import type { ScreenThumbs } from '@/lib/types/models';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
@@ -27,6 +28,7 @@ interface ScreenPosterProps {
  * 그것도 없으면 제목을 적은 슬레이트 카드로 대신한다
  */
 export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, coverThumbs, width }: ScreenPosterProps) {
+  useLocale();
   const height = Math.round(width * POSTER_ASPECT);
   const radius = Math.max(4, Math.round(width * 0.06));
   const [posterFailed, setPosterFailed] = React.useState(false);
@@ -38,7 +40,7 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
         uri={tmdbPoster}
         fallbackComponent={slate}
         resizeMode="cover"
-        accessibilityLabel={`${title} 포스터`}
+        accessibilityLabel={t('{title} 포스터', { title })}
         style={{ width, height, borderRadius: radius, overflow: 'hidden' }}
       />
     );
@@ -57,7 +59,7 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
       <YoutubeThumb
         videoId={coverVideoId}
         thumbs={coverThumbs}
-        accessibilityLabel={`${title} 공식 클립 장면`}
+        accessibilityLabel={t('{title} 공식 클립 장면', { title })}
         fallback={slate}
       />
     </View>
@@ -69,6 +71,7 @@ const shownPosters = new Set<string>();
 
 /** 받는 동안 쉬머를 깔고, 다 받으면 서서히 드러낸다 */
 function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onError: () => void }) {
+  useLocale();
   const seen = shownPosters.has(uri);
   const [revealed, setRevealed] = React.useState(seen);
   const opacity = React.useRef(new Animated.Value(seen ? 1 : 0)).current;
@@ -87,7 +90,7 @@ function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onE
       {revealed ? null : <Skeleton className="absolute inset-0 rounded-none bg-surface-3" />}
       <Animated.Image
         source={{ uri }}
-        accessibilityLabel={`${title} 포스터`}
+        accessibilityLabel={t('{title} 포스터', { title })}
         resizeMode="cover"
         onLoad={onLoad}
         onError={onError}
@@ -98,6 +101,7 @@ function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onE
 }
 
 function PosterSlate({ title, width, height, radius }: { title: string; width: number; height: number; radius: number }) {
+  useLocale();
   const small = width < 70;
   return (
     <View

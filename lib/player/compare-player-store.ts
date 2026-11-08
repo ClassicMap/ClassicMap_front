@@ -1,3 +1,4 @@
+import { type NameSidecar } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
 import type { ClipAlignment } from '@/lib/types/models';
@@ -33,6 +34,8 @@ export interface ComparePlayerTrack {
   endMs: number;
   /** 같은 구간 기준 연주에 맞춘 정렬 지도. 있으면 같은 지점 전환이 같은 마디로 간다 */
   alignment?: ClipAlignment | null;
+  /** 제목·연주자 이름의 한국어·영어. 그릴 때 relocalize 로 지금 언어를 고른다 */
+  names?: NameSidecar;
 }
 
 /**

@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as SeparatorPrimitive from '@rn-primitives/separator';
 
@@ -7,6 +8,7 @@ function Separator({
   decorative = true,
   ...props
 }: SeparatorPrimitive.RootProps & React.RefAttributes<SeparatorPrimitive.RootRef>) {
+  useLocale();
   return (
     <SeparatorPrimitive.Root
       decorative={decorative}

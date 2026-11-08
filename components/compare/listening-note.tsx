@@ -2,6 +2,7 @@ import { type Performer, PerformerMark, performerOf } from '@/components/compare
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
+import { t, useLocale } from '@/lib/i18n';
 import type {
   ComparisonPerformance,
   FeaturedPair,
@@ -32,13 +33,18 @@ export function MomentChip({
   performer?: Performer;
   onPress?: () => void;
 }) {
+  useLocale();
   const clock = clipClock(moment.offsetMs);
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${performer ? `${performer.name} ` : ''}${clock} ${moment.label}부터 듣기`}
+      accessibilityLabel={
+        performer
+          ? t('{name} {clock} {label}부터 듣기', { name: performer.name, clock, label: moment.label })
+          : t('{clock} {label}부터 듣기', { clock, label: moment.label })
+      }
       className={cn(
         'h-7 flex-row items-center gap-1.5 self-start rounded-full border px-2.5',
         TONE_BORDER[tone],
@@ -81,6 +87,7 @@ export function PerformanceNote({
   curve,
   className,
 }: PerformanceNoteProps) {
+  useLocale();
   return (
     <View className={cn('gap-1.5', className)}>
       <Text className="text-[16px] font-bold leading-[22px] tracking-tight text-foreground">
@@ -139,6 +146,7 @@ export function FeaturedPairLink({
   compact?: boolean;
   onOpen: () => void;
 }) {
+  useLocale();
   const performerA = performerOf(a);
   const performerB = performerOf(b);
   const nameA = performerA.name;
@@ -147,9 +155,9 @@ export function FeaturedPairLink({
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={`추천 비교 ${nameA}와 ${nameB}, ${pair.title}. 1:1로 듣기`}
+      accessibilityLabel={t('추천 비교 {a}와 {b}, {title}. 1:1로 듣기', { a: nameA, b: nameB, title: pair.title })}
       className="group mt-2 flex-row flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2.5">
-      <Text className="text-micro text-primary">추천 비교</Text>
+      <Text className="text-micro text-primary">{t('추천 비교')}</Text>
       <View className="flex-row items-center gap-1.5">
         <PerformerMark performer={performerA} tone="a" size={20} />
         <Text className="text-body-sm font-semibold text-foreground">{nameA}</Text>
@@ -161,7 +169,7 @@ export function FeaturedPairLink({
       <View className="ml-auto flex-row items-center gap-0.5">
         {compact ? null : (
           <Text className="text-label font-semibold text-primary group-hover:underline">
-            1:1로 듣기
+            {t('1:1로 듣기')}
           </Text>
         )}
         <Icon as={ChevronRightIcon} size={15} className="text-primary" />
@@ -185,12 +193,13 @@ export function FeaturedPairNote({
   imageOf?: (performance: ComparisonPerformance) => string | null;
   onMoment: (side: NoteTone, offsetMs: number) => void;
 }) {
+  useLocale();
   const sideOf = (performanceId: number): NoteTone | null =>
     performanceId === a.id ? 'a' : performanceId === b.id ? 'b' : null;
   return (
     // 본문은 72자에서 줄을 바꾸니 상자도 내용만큼만 둔다. 넓은 화면에서 오른쪽이 빈 띠로 남지 않게
     <View className="max-w-full gap-2 self-start rounded-lg bg-surface-2 px-4 py-3.5">
-      <Text className="text-micro text-primary">추천 비교</Text>
+      <Text className="text-micro text-primary">{t('추천 비교')}</Text>
       <Text className="text-[18px] font-bold leading-[24px] tracking-tight text-foreground">
         {pair.title}
       </Text>

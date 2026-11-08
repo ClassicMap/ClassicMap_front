@@ -21,7 +21,9 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { ConcertAPI } from '@/lib/api/client';
+import { areaName } from '@/lib/data/areas';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { formatNumber, t, useLocale } from '@/lib/i18n';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
 import type { TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -33,6 +35,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConcertDetailScreen() {
+  useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const concertId = Number(id);
   const router = useRouter();
@@ -65,13 +68,13 @@ export default function ConcertDetailScreen() {
 
   const askWatched = () => {
     if (!isSignedIn) {
-      Alert.alert('로그인이 필요해요', '별점은 로그인한 뒤 남길 수 있어요.');
+      Alert.alert(t('로그인이 필요해요'), t('별점은 로그인한 뒤 남길 수 있어요.'));
       return;
     }
     if (!hasWatched) {
-      Alert.alert('공연을 보셨나요?', '별점은 공연을 본 뒤에 남기는 점수예요.', [
-        { text: '취소', style: 'cancel' },
-        { text: '네, 봤어요', onPress: () => setHasWatched(true) },
+      Alert.alert(t('공연을 보셨나요?'), t('별점은 공연을 본 뒤에 남기는 점수예요.'), [
+        { text: t('취소'), style: 'cancel' },
+        { text: t('네, 봤어요'), onPress: () => setHasWatched(true) },
       ]);
     }
   };
@@ -86,7 +89,7 @@ export default function ConcertDetailScreen() {
       await ConcertAPI.submitRating(concertId, rating);
       void refetch();
     } catch {
-      Alert.alert('별점을 남기지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('별점을 남기지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     }
   };
 
@@ -108,7 +111,7 @@ export default function ConcertDetailScreen() {
       setVendors(await ConcertAPI.getTicketVendors(concert.id));
       setShowVendorsModal(true);
     } catch {
-      Alert.alert('예매처를 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('예매처를 불러오지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setLoadingVendors(false);
     }
@@ -116,17 +119,17 @@ export default function ConcertDetailScreen() {
 
   const deleteConcert = () => {
     if (!concert) return;
-    Alert.alert('공연 삭제', `${concert.title}을(를) 삭제할까요?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('공연 삭제'), t('{title}을(를) 삭제할까요?', { title: concert.title }), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminConcertAPI.delete(concert.id);
             router.back();
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
           }
         },
       },
@@ -152,9 +155,9 @@ export default function ConcertDetailScreen() {
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="공연 정보를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => refetch() }}
+          title={t('공연 정보를 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => refetch() }}
         />
       </View>
     );
@@ -169,32 +172,38 @@ export default function ConcertDetailScreen() {
   const ranking = concert.boxofficeRanking;
   const time = concertClock(concert.concertTime);
   const multiDay = concert.endDate && concert.endDate !== concert.startDate;
+  const sourceName =
+    concert.dataSource === 'KOPIS' || concert.kopisId ? t('KOPIS 공연예술통합전산망') : 'ClassicMap';
 
   const facts: { label: string; value: string; sub?: string }[] = [
     {
-      label: '일시',
+      label: t('일시'),
       value: `${formatDay(concert.startDate)}${time ? ` ${time}` : ''}`,
       sub: multiDay ? `~ ${formatDay(concert.endDate)}` : undefined,
     },
-    { label: '장소', value: concert.facilityName ?? '공연장 정보 없음', sub: concert.area },
-    ...(concert.runtime ? [{ label: '관람 시간', value: concert.runtime }] : []),
-    ...(concert.ageRestriction ? [{ label: '관람 연령', value: concert.ageRestriction }] : []),
+    {
+      label: t('장소'),
+      value: concert.facilityName ?? t('공연장 정보 없음'),
+      sub: concert.area ? areaName(concert.area) : undefined,
+    },
+    ...(concert.runtime ? [{ label: t('관람 시간'), value: concert.runtime }] : []),
+    ...(concert.ageRestriction ? [{ label: t('관람 연령'), value: concert.ageRestriction }] : []),
   ];
 
   const bookButton = bookable ? (
     <View className="gap-1.5">
       <Button size="lg" className="h-12 rounded-full" onPress={openTickets} disabled={loadingVendors}>
         <Text className="text-base font-bold text-primary-foreground">
-          {loadingVendors ? '불러오는 중…' : '예매하기'}
+          {loadingVendors ? t('불러오는 중…') : t('예매하기')}
         </Text>
         <Icon as={ExternalLinkIcon} size={16} className="text-primary-foreground" />
       </Button>
       <Text variant="caption" className="text-center">
         {knownVendors.length > 1
-          ? `${firstVendor} 등 예매처 ${knownVendors.length}곳 중에서 골라요`
+          ? t('{vendor} 등 예매처 {count}곳 중에서 골라요', { vendor: firstVendor ?? '', count: knownVendors.length })
           : firstVendor
-            ? `${firstVendor} 예매 페이지가 새 창으로 열려요`
-            : '예매처로 이동해요'}
+            ? t('{vendor} 예매 페이지가 새 창으로 열려요', { vendor: firstVendor })
+            : t('예매처로 이동해요')}
       </Text>
     </View>
   ) : null;
@@ -203,7 +212,13 @@ export default function ConcertDetailScreen() {
     <View className="flex-row flex-wrap gap-1.5">
       <Badge tone={status.tone} label={status.label} />
       {ranking && ranking.ranking <= 10 ? (
-        <Badge label={`${ranking.areaName ?? ''} 예매 ${ranking.ranking}위`.trim()} />
+        <Badge
+          label={
+            ranking.areaName
+              ? t('{area} 예매 {rank}위', { area: areaName(ranking.areaName), rank: ranking.ranking })
+              : t('예매 {rank}위', { rank: ranking.ranking })
+          }
+        />
       ) : null}
     </View>
   );
@@ -214,7 +229,7 @@ export default function ConcertDetailScreen() {
         {prices.length > 0 ? (
           <View className={cn(wide ? 'flex-1' : 'mb-10')}>
             <Text variant="headline" className="mb-1">
-              좌석별 가격
+              {t('좌석별 가격')}
             </Text>
             {prices.map((price, index) => (
               <View
@@ -237,7 +252,7 @@ export default function ConcertDetailScreen() {
       {concert.program ? (
         <View className="max-w-[680px]">
           <Text variant="headline" className="mb-2">
-            프로그램
+            {t('프로그램')}
           </Text>
           <Text variant="body">{concert.program}</Text>
         </View>
@@ -246,7 +261,7 @@ export default function ConcertDetailScreen() {
       {concert.synopsis ? (
         <View className="max-w-[680px]">
           <Text variant="headline" className="mb-2">
-            소개
+            {t('소개')}
           </Text>
           <Text variant="body">{concert.synopsis}</Text>
         </View>
@@ -256,18 +271,25 @@ export default function ConcertDetailScreen() {
 
       <View>
         <Text variant="headline" className="mb-3">
-          별점
+          {t('별점')}
         </Text>
         <View className="gap-3 rounded-lg border border-dashed border-border-strong p-4">
           <Text variant="bodySm" className="text-foreground-muted">
             {concert.rating != null && Number(concert.rating) > 0
-              ? `평균 ${Number(concert.rating).toFixed(1)} · ${concert.ratingCount ?? 0}명`
-              : '아직 남긴 사람이 없어요.'}
+              ? t('평균 {avg} · {count}명', {
+                  avg: Number(concert.rating).toFixed(1),
+                  count: concert.ratingCount ?? 0,
+                })
+              : t('아직 남긴 사람이 없어요.')}
           </Text>
           <Pressable onPress={askWatched} disabled={hasWatched} className="flex-row items-center gap-3">
             <StarRating rating={userRating} onRatingChange={hasWatched ? submitRating : undefined} size={24} />
             <Text variant="caption">
-              {!isSignedIn ? '로그인하면 별점을 남길 수 있어요' : hasWatched ? '내 별점' : '공연을 봤다면 눌러서 남겨요'}
+              {!isSignedIn
+                ? t('로그인하면 별점을 남길 수 있어요')
+                : hasWatched
+                  ? t('내 별점')
+                  : t('공연을 봤다면 눌러서 남겨요')}
             </Text>
           </Pressable>
         </View>
@@ -277,19 +299,19 @@ export default function ConcertDetailScreen() {
         <View className="flex-row gap-2">
           <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
             <Icon as={EditIcon} size={14} className="text-foreground" />
-            <Text>공연 수정</Text>
+            <Text>{t('공연 수정')}</Text>
           </Button>
           <Button variant="outline" size="sm" onPress={deleteConcert}>
             <Icon as={TrashIcon} size={14} className="text-destructive" />
-            <Text className="text-destructive">공연 삭제</Text>
+            <Text className="text-destructive">{t('공연 삭제')}</Text>
           </Button>
         </View>
       ) : null}
 
       <Text variant="caption" className="text-foreground-subtle">
-        {`공연 정보 출처: ${concert.dataSource === 'KOPIS' || concert.kopisId ? 'KOPIS 공연예술통합전산망' : 'ClassicMap'}${
-          concert.kopisId ? ` · 공연 ID ${concert.kopisId}` : ''
-        }`}
+        {concert.kopisId
+          ? t('공연 정보 출처: {source} · 공연 ID {id}', { source: sourceName, id: concert.kopisId })
+          : t('공연 정보 출처: {source}', { source: sourceName })}
       </Text>
     </View>
   );
@@ -337,7 +359,7 @@ export default function ConcertDetailScreen() {
           <>
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.push('/concerts'))}
-              accessibilityLabel="뒤로"
+              accessibilityLabel={t('뒤로')}
               style={{ marginTop: insets.top + 4 }}
               className="mb-2 size-11 items-center justify-center">
               <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
@@ -417,6 +439,7 @@ function priceSummary(prices: { seat: string; price: string }[]): string | undef
   if (amounts.length === 0) return undefined;
   const min = Math.min(...amounts);
   const max = Math.max(...amounts);
-  const won = (amount: number) => amount.toLocaleString('ko-KR');
-  return min === max ? `${won(min)}원` : `${won(min)}–${won(max)}원`;
+  return min === max
+    ? t('{amount}원', { amount: formatNumber(min) })
+    : t('{min}–{max}원', { min: formatNumber(min), max: formatNumber(max) });
 }

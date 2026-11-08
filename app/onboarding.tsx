@@ -2,6 +2,7 @@ import { type OnboardingResult, TasteOnboarding } from '@/components/onboarding/
 import { EmptyState } from '@/components/ui/empty-state';
 import { MyPageAPI } from '@/lib/api/client';
 import { useTaste } from '@/lib/hooks/useTaste';
+import { t, useLocale } from '@/lib/i18n';
 import { MY_PAGE_QUERY_KEYS } from '@/lib/query/hooks/useMyPage';
 import type { OnboardingStatus } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
@@ -17,6 +18,7 @@ function unique(ids: number[]): number[] {
 
 /** 취향 묻기. 가입 직후 홈이 한 번 열고, 설정의 '아는 곡부터 다시 고르기'로도 연다 */
 export default function OnboardingScreen() {
+  useLocale();
   const router = useRouter();
   const taste = useTaste();
   const queryClient = useQueryClient();
@@ -52,8 +54,8 @@ export default function OnboardingScreen() {
       leave();
     } catch {
       Alert.alert(
-        '취향을 저장하지 못했어요',
-        '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.'
+        t('취향을 저장하지 못했어요'),
+        t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.')
       );
     }
   };
@@ -64,9 +66,9 @@ export default function OnboardingScreen() {
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="취향을 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 나중에 설정에서 골라 주세요."
-          action={{ label: '다시 시도', onPress: taste.retry }}
+          title={t('취향을 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 나중에 설정에서 골라 주세요.')}
+          action={{ label: t('다시 시도'), onPress: taste.retry }}
         />
       </View>
     );

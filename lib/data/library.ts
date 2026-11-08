@@ -1,5 +1,6 @@
 import type { FavoriteGroups } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { msg, t } from '@/lib/i18n';
 
 export type LibraryKind = 'composer' | 'artist' | 'piece' | 'album' | 'concert';
 
@@ -20,15 +21,16 @@ export interface LibraryEntry {
 }
 
 const KIND_LABEL: Record<LibraryKind, string> = {
-  composer: '작곡가',
-  artist: '연주자',
-  piece: '작품',
-  album: '앨범',
-  concert: '공연',
+  composer: msg('작곡가'),
+  artist: msg('연주자'),
+  piece: msg('작품'),
+  album: msg('앨범'),
+  concert: msg('공연'),
 };
 
+/** 종류 이름(복수형 표기). 묶음 제목 `section.label` 은 한국어 원문 그대로 두고 쓰는 쪽에서 t() 로 옮긴다 */
 export function libraryKindLabel(kind: LibraryKind): string {
-  return KIND_LABEL[kind];
+  return t(KIND_LABEL[kind]);
 }
 
 function shortDate(date: string): string {
@@ -55,7 +57,7 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
       kind: 'composer' as const,
       title: item.name,
       // 종류는 묶음 제목이 알려 주니 부제에는 시대를 적는다
-      subtitle: item.period || '작곡가',
+      subtitle: item.period ? t(item.period) : t('kind::작곡가'),
       image: item.avatarUrl,
       shape: 'circle' as const,
       href: `/composer/${item.composerId}`,

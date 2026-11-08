@@ -1,3 +1,4 @@
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -57,6 +58,7 @@ function isShown(element: HTMLElement): boolean {
  * 요소를 새로 만들지 않으니 화면을 오가도 재생이 끊기지 않는다.
  */
 export function ComparePlayerHost() {
+  useLocale();
   const current = useComparePlayer((state) => state.current);
   const focus = useComparePlayer((state) => state.focus);
   const fullscreen = useComparePlayer((state) => state.fullscreen);
@@ -260,7 +262,7 @@ export function ComparePlayerHost() {
             fontSize: 14,
             pointerEvents: 'auto',
           }}>
-          <span>영상 구간을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.</span>
+          <span>{t('영상 구간을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.')}</span>
           <button
             type="button"
             onClick={() => {
@@ -276,7 +278,7 @@ export function ComparePlayerHost() {
               fontWeight: 600,
               cursor: 'pointer',
             }}>
-            다시 시도
+            {t('다시 시도')}
           </button>
         </div>
       ) : null}

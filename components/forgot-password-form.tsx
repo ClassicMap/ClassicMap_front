@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router/build/hooks';
@@ -11,6 +12,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 
 export function ForgotPasswordForm() {
+  useLocale();
   const { email: emailParam = '' } = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = React.useState(emailParam);
   const { signIn, isLoaded } = useSignIn();
@@ -18,7 +20,7 @@ export function ForgotPasswordForm() {
 
   const onSubmit = async () => {
     if (!email) {
-      setError({ email: '이메일을 입력해주세요' });
+      setError({ email: t('이메일을 입력해주세요') });
       return;
     }
     if (!isLoaded) {
@@ -53,12 +55,12 @@ export function ForgotPasswordForm() {
   return (
     <View>
       <AuthHeading
-        title="비밀번호 찾기"
-        description="가입한 이메일로 인증 코드를 보내 드려요. 코드를 넣으면 새 비밀번호를 정할 수 있어요."
+        title={t('비밀번호 찾기')}
+        description={t('가입한 이메일로 인증 코드를 보내 드려요. 코드를 넣으면 새 비밀번호를 정할 수 있어요.')}
       />
       <View className="gap-4">
         <View className="gap-1.5">
-          <Label htmlFor="email">이메일</Label>
+          <Label htmlFor="email">{t('이메일')}</Label>
           <Input
             id="email"
             defaultValue={email}
@@ -75,7 +77,7 @@ export function ForgotPasswordForm() {
           <FieldError message={error.email} />
         </View>
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
-          <Text className="font-bold">인증 코드 받기</Text>
+          <Text className="font-bold">{t('인증 코드 받기')}</Text>
         </Button>
       </View>
     </View>

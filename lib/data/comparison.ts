@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import type {
   ComparisonPerformance,
   ComparisonPiece,
@@ -23,7 +24,7 @@ export function primaryCredit(performance: ComparisonPerformance): PerformanceCr
 export function supportingCredits(performance: ComparisonPerformance): string {
   return performance.credits
     .filter((credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra'))
-    .map((credit) => (credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName))
+    .map((credit) => (credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName))
     .join(' · ');
 }
 
@@ -102,4 +103,11 @@ export function pickDailyPiece(
     Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) / 86_400_000
   );
   return pool[dayNumber % pool.length];
+}
+
+/** 목록 줄 부제: 연주자 이름 셋까지, 나머지는 '외 n명' (스포티파이 곡 목록의 아티스트 줄) */
+export function performerNamesLine(performers: readonly { artistName: string }[], total: number): string {
+  const names = performers.slice(0, 3).map((performer) => performer.artistName);
+  const rest = Math.max(0, total - names.length);
+  return rest > 0 ? t('{names} 외 {count}명', { names: names.join(', '), count: rest }) : names.join(', ');
 }

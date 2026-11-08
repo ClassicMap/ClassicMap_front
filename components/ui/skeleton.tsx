@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { THEME } from '@/lib/theme';
@@ -19,6 +20,7 @@ import Animated, {
  * 네이티브는 은은하게 숨 쉬듯 밝아졌다 어두워진다. 움직임 줄이기 설정이면 둘 다 멈춘다.
  */
 function Skeleton({ className, ...props }: React.ComponentProps<typeof View>) {
+  useLocale();
   if (Platform.OS === 'web') {
     return <View aria-hidden className={cn('cm-shimmer rounded-md', className)} {...props} />;
   }
@@ -26,6 +28,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<typeof View>) {
 }
 
 function NativeSkeleton({ className, children, ...props }: React.ComponentProps<typeof View>) {
+  useLocale();
   const reduceMotion = useReducedMotion();
   const { colorScheme } = useColorScheme();
   const opacity = useSharedValue(0);
@@ -55,6 +58,7 @@ function NativeSkeleton({ className, children, ...props }: React.ComponentProps<
 
 /** 여러 줄 텍스트. 마지막 줄은 짧게 끝난다. */
 function SkeletonText({ lines = 2, className }: { lines?: number; className?: string }) {
+  useLocale();
   return (
     <View className={cn('gap-2', className)}>
       {Array.from({ length: lines }, (_, index) => (
@@ -75,6 +79,7 @@ function SkeletonRow({
   avatar?: 'circle' | 'square' | 'none';
   className?: string;
 }) {
+  useLocale();
   return (
     <View className={cn('h-16 flex-row items-center gap-3', className)}>
       {avatar !== 'none' && (
@@ -98,6 +103,7 @@ function SkeletonList({
   avatar?: 'circle' | 'square' | 'none';
   className?: string;
 }) {
+  useLocale();
   return (
     <View className={className}>
       {Array.from({ length: rows }, (_, index) => (
@@ -109,6 +115,7 @@ function SkeletonList({
 
 /** 포스터·커버가 위에 오는 카드 */
 function SkeletonCard({ aspect = 'square', className }: { aspect?: 'square' | 'poster'; className?: string }) {
+  useLocale();
   return (
     <View className={cn('gap-2', className)}>
       <Skeleton className={cn('w-full rounded-lg', aspect === 'square' ? 'aspect-square' : 'aspect-[3/4]')} />
@@ -123,6 +130,7 @@ function SkeletonCard({ aspect = 'square', className }: { aspect?: 'square' | 'p
  * 무엇이 올지 미리 보여 준다.
  */
 function SkeletonMedia({ performers = 3, className }: { performers?: number; className?: string }) {
+  useLocale();
   return (
     <Skeleton className={cn('w-full items-center justify-center rounded-xl', className)}>
       <View className="size-14 items-center justify-center rounded-full bg-background/40">

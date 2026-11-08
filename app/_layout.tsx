@@ -19,6 +19,8 @@ import { RootChrome } from '@/components/navigation/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
 import { useTasteSync } from '@/lib/hooks/useTaste';
+import { installRouteTransitions } from '@/lib/navigation/view-transition';
+import { LocaleProvider, t, useLocale } from '@/lib/i18n';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -34,6 +36,7 @@ if (!publishableKey) {
 }
 
 export default function RootLayout() {
+  useLocale();
   const { colorScheme } = useColorScheme();
   // 악보 글리프(Bravura)는 화면을 막지 않고 불러온다. 로드 전에는 글리프 자리만 빈다
   useFonts({ Bravura: require('@/assets/fonts/Bravura.otf') });
@@ -49,8 +52,10 @@ export default function RootLayout() {
             </Head>
           ) : null}
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-          <Routes />
-          <PortalHost />
+          <LocaleProvider>
+            <Routes />
+            <PortalHost />
+          </LocaleProvider>
         </ThemeProvider>
       </ClerkProvider>
     </QueryClientProvider>
@@ -58,8 +63,11 @@ export default function RootLayout() {
 }
 
 SplashScreen.preventAutoHideAsync();
+// 웹: 앱 안 이동을 화면 전환으로 감싼다 (네이티브는 아무것도 하지 않는다)
+installRouteTransitions();
 
 function Routes() {
+  useLocale();
   const { isLoaded, userId, getToken } = useAuth();
   const client = useQueryClient();
 
@@ -114,7 +122,7 @@ function Routes() {
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="delete-account" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="compare-admin" options={{ title: '구간·연주 관리' }} />
+        <Stack.Screen name="compare-admin" options={{ title: t('구간·연주 관리') }} />
 
         {/* Screens accessible to everyone */}
         <Stack.Screen name="help" options={{ headerShown: false }} />

@@ -3,20 +3,24 @@ import { BookmarkIcon, CompassIcon, HomeIcon, MoonStarIcon, SunIcon } from 'luci
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/components/user-menu';
 import { THEME } from '@/lib/theme';
 import { withAlpha } from '@/lib/design/tokens';
+import { t, useLocale } from '@/lib/i18n';
 import { useColorScheme } from 'nativewind';
 import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_CHROME_TRANSLUCENT } from '@/components/navigation/tab-chrome';
+import { runRouteTransition } from '@/lib/navigation/view-transition';
 
 /**
  * 모바일 탭 구성: 홈 · 둘러보기 · 비교 · 공연 · 레퍼토리.
  * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
+  const { locale, setLocale } = useLocale();
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = THEME[scheme];
@@ -31,8 +35,19 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       size="icon"
       variant="ghost"
       className="rounded-full"
-      accessibilityLabel={scheme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
+      accessibilityLabel={scheme === 'dark' ? t('라이트 모드로 전환') : t('다크 모드로 전환')}>
       <Icon as={scheme === 'dark' ? SunIcon : MoonStarIcon} className="size-6" />
+    </Button>
+  );
+  // 로그인하지 않아도 언어를 바꿀 수 있게(설정 화면은 로그인해야 열린다). 바꿀 언어의 이름을 보인다
+  const LanguageToggle = () => (
+    <Button
+      onPress={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
+      size="icon"
+      variant="ghost"
+      className="rounded-full"
+      accessibilityLabel={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}>
+      <Text className="text-[13px] font-semibold text-foreground-muted">{locale === 'ko' ? 'EN' : '한'}</Text>
     </Button>
   );
 
@@ -40,6 +55,18 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
     <Tabs
       // 데스크톱 웹은 셸(SideNav·TopBar)이 크롬을 맡으므로 탭바·헤더를 숨긴다.
       tabBar={hideChrome ? () => null : undefined}
+      // 모바일 웹: 탭바 이동은 expo-router 를 거치지 않으므로 여기서 화면 전환으로 감싼다
+      screenListeners={
+        Platform.OS === 'web'
+          ? ({ navigation, route }) => ({
+              tabPress: (event) => {
+                if (navigation.isFocused()) return;
+                event.preventDefault();
+                runRouteTransition(() => navigation.navigate(route.name, route.params));
+              },
+            })
+          : undefined
+      }
       screenOptions={{
         headerShown: !hideChrome,
         sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
@@ -57,8 +84,9 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
             )
           : undefined,
         headerLeft: () => (
-          <View className="mb-2 ml-4">
+          <View className="mb-2 ml-4 flex-row items-center">
             <ThemeToggle />
+            <LanguageToggle />
           </View>
         ),
         headerRight: () => (
@@ -92,7 +120,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       <Tabs.Screen
         name="home"
         options={{
-          title: '홈',
+          title: t('홈'),
           tabBarIcon: ({ color }) => <Icon as={HomeIcon} color={color} size={24} />,
         }}
       />
@@ -100,35 +128,35 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         name="search"
         options={{
           // 탭바 5칸을 지키려고 검색 탭이 아티스트·시대·앨범 입구를 겸한다 (기획 C)
-          title: '둘러보기',
+          title: t('둘러보기'),
           tabBarIcon: ({ color }) => <Icon as={CompassIcon} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="compare"
         options={{
-          title: '비교',
+          title: t('비교'),
           tabBarIcon: ({ color }) => <CompareIcon color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="concerts"
         options={{
-          title: '공연',
+          title: t('공연'),
           tabBarIcon: ({ color }) => <TicketIcon color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="library"
         options={{
-          title: '레퍼토리',
+          title: t('레퍼토리'),
           tabBarIcon: ({ color }) => <Icon as={BookmarkIcon} color={color} size={24} />,
         }}
       />
       {/* 탭바에는 없고 둘러보기·사이드바에서 들어가는 화면 */}
-      <Tabs.Screen name="artists" options={{ href: null, title: '아티스트' }} />
-      <Tabs.Screen name="timeline" options={{ href: null, title: '타임라인' }} />
-      <Tabs.Screen name="albums" options={{ href: null, title: '앨범' }} />
+      <Tabs.Screen name="artists" options={{ href: null, title: t('아티스트') }} />
+      <Tabs.Screen name="timeline" options={{ href: null, title: t('타임라인') }} />
+      <Tabs.Screen name="albums" options={{ href: null, title: t('앨범') }} />
     </Tabs>
   );
 }

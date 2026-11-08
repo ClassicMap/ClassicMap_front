@@ -1,5 +1,5 @@
 import { ScrollShelf } from '@/components/home/shelf';
-import { SCREEN_KIND_LABELS, shortTitleMeta, titleMeta } from '@/components/screen/labels';
+import { shortTitleMeta, titleMeta } from '@/components/screen/labels';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { ScreenWorksList } from '@/components/screen/screen-works-list';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { msg, t, useLocale } from '@/lib/i18n';
 import {
   useFeaturedScreenCues,
   usePrefetchScreenTitle,
@@ -31,15 +32,15 @@ type KindFilter = ScreenTitleKind | 'all';
 type BrowseView = 'titles' | 'works';
 
 const VIEW_OPTIONS: { value: BrowseView; label: string }[] = [
-  { value: 'titles', label: '작품' },
-  { value: 'works', label: '곡' },
+  { value: 'titles', label: msg('film::작품') },
+  { value: 'works', label: msg('film::곡') },
 ];
 
 const KIND_CHIPS: { key: KindFilter; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'MOVIE', label: SCREEN_KIND_LABELS.MOVIE },
-  { key: 'SERIES', label: SCREEN_KIND_LABELS.SERIES },
-  { key: 'ANIME', label: SCREEN_KIND_LABELS.ANIME },
+  { key: 'all', label: msg('전체') },
+  { key: 'MOVIE', label: msg('chip::영화') },
+  { key: 'SERIES', label: msg('chip::드라마·시리즈') },
+  { key: 'ANIME', label: msg('chip::애니') },
 ];
 
 const MAX_CONTENT_WIDTH = 880;
@@ -49,6 +50,7 @@ const FEATURED_POSTER = 64;
 const GRID_GAP = 12;
 
 export default function FilmsScreen() {
+  useLocale();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { layout } = useBreakpoint();
@@ -83,15 +85,15 @@ export default function FilmsScreen() {
       contentContainerClassName={cn('px-4 pb-24', wide && 'mx-auto w-full max-w-[880px] px-6')}>
       <Pressable
         onPress={() => (router.canGoBack() ? router.back() : router.push('/search' as Href))}
-        accessibilityLabel="뒤로"
+        accessibilityLabel={t('뒤로')}
         style={{ marginTop: insets.top + 4 }}
         className="mb-1 size-11 items-center justify-center">
         <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
       </Pressable>
 
-      <Text variant="title1">영화 속 클래식</Text>
+      <Text variant="title1">{t('영화 속 클래식')}</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
-        영화·드라마·애니에서 들은 그 곡을 찾고, 나온 대목을 여러 연주로 들어 봐요.
+        {t('영화·드라마·애니에서 들은 그 곡을 찾고, 나온 대목을 여러 연주로 들어 봐요.')}
       </Text>
 
       <View className="mt-5 h-11 flex-row items-center gap-2.5 rounded-full border border-border-strong bg-surface-2 px-4">
@@ -99,15 +101,15 @@ export default function FilmsScreen() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="작품 제목이나 곡 이름"
+          placeholder={t('작품 제목이나 곡 이름')}
           placeholderTextColor="hsl(33 6% 46%)"
           returnKeyType="search"
           autoCorrect={false}
-          accessibilityLabel="영화·드라마 검색어"
+          accessibilityLabel={t('영화·드라마 검색어')}
           className="flex-1 text-base text-foreground web:outline-none"
         />
         {query ? (
-          <Pressable accessibilityLabel="검색어 지우기" hitSlop={10} onPress={() => setQuery('')}>
+          <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => setQuery('')}>
             <Icon as={XIcon} size={16} className="text-foreground-subtle" />
           </Pressable>
         ) : null}
@@ -118,12 +120,12 @@ export default function FilmsScreen() {
           <ViewToggle value={view} onChange={setView} />
           {showWorks ? (
             <Text variant="caption" className="min-w-0 flex-1">
-              작곡가별로 영화에 나온 곡을 모았어요.
+              {t('작곡가별로 영화에 나온 곡을 모았어요.')}
             </Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="gap-2">
               {KIND_CHIPS.map((chip) => (
-                <Chip key={chip.key} label={chip.label} selected={kind === chip.key} onPress={() => setKind(chip.key)} />
+                <Chip key={chip.key} label={t(chip.label)} selected={kind === chip.key} onPress={() => setKind(chip.key)} />
               ))}
             </ScrollView>
           )}
@@ -160,9 +162,9 @@ export default function FilmsScreen() {
       {!showWorks && !searching && kind === 'all' && (featured.data?.length ?? 0) > 0 ? (
         <View className="mt-7 gap-3">
           <View>
-            <Text variant="headline">그 대목 바로 듣기</Text>
+            <Text variant="headline">{t('그 대목 바로 듣기')}</Text>
             <Text variant="caption" className="mt-0.5">
-              영화에 나온 대목을 그대로 비교할 수 있어요.
+              {t('영화에 나온 대목을 그대로 비교할 수 있어요.')}
             </Text>
           </View>
           <ScrollShelf gap={12}>
@@ -176,7 +178,7 @@ export default function FilmsScreen() {
       {showWorks ? null : (
         <View className="mt-7">
           <Text variant="headline" className="mb-3">
-            {searching ? `“${debounced}” 검색 결과` : '작품'}
+            {searching ? t('“{query}” 검색 결과', { query: debounced }) : t('film::작품')}
           </Text>
           {loading ? (
             <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
@@ -193,10 +195,10 @@ export default function FilmsScreen() {
               icon={AlertCircleIcon}
               tone="error"
               compact
-              title="작품을 불러오지 못했어요"
-              description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
+              title={t('작품을 불러오지 못했어요')}
+              description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
               action={{
-                label: '다시 시도',
+                label: t('다시 시도'),
                 onPress: () => void (searching ? search.refetch() : titles.refetch()),
               }}
             />
@@ -204,8 +206,8 @@ export default function FilmsScreen() {
             <EmptyState
               icon={ClapperboardIcon}
               compact
-              title={searching ? `“${debounced}”가 나온 작품을 아직 못 찾았어요` : '아직 정리한 작품이 없어요'}
-              description={searching ? '다른 제목이나 곡 이름으로 찾아보세요.' : '근거를 확인한 작품부터 하나씩 채우고 있어요.'}
+              title={searching ? t('“{query}”가 나온 작품을 아직 못 찾았어요', { query: debounced }) : t('아직 정리한 작품이 없어요')}
+              description={searching ? t('다른 제목이나 곡 이름으로 찾아보세요.') : t('근거를 확인한 작품부터 하나씩 채우고 있어요.')}
             />
           ) : (
             <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
@@ -220,7 +222,7 @@ export default function FilmsScreen() {
               className="mt-6 h-11 self-center rounded-full px-6"
               disabled={paging.isFetchingNextPage}
               onPress={() => void paging.fetchNextPage()}>
-              <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? '불러오는 중…' : '작품 더 보기'}</Text>
+              <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? t('불러오는 중…') : t('작품 더 보기')}</Text>
             </Button>
           ) : null}
         </View>
@@ -230,10 +232,10 @@ export default function FilmsScreen() {
       {showWorks ? null : (
         <View className="mt-12 gap-3">
           {items.some((item) => item.posterUrl) ? (
-            <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
+            <Text variant="micro">{t('포스터는 한국영상자료원 KMDb에서 가져와요.')}</Text>
           ) : null}
           <Text variant="micro">
-            포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.
+            {t('포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.')}
           </Text>
           {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
         </View>
@@ -243,8 +245,9 @@ export default function FilmsScreen() {
 }
 
 function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: BrowseView) => void }) {
+  useLocale();
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel="찾는 방법" className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
+    <View accessibilityRole="radiogroup" accessibilityLabel={t('찾는 방법')} className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
       {VIEW_OPTIONS.map((option) => {
         const selected = option.value === value;
         return (
@@ -256,7 +259,7 @@ function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: 
             style={selected ? SELECTED_SHADOW : undefined}
             className={cn('h-8 items-center justify-center rounded-full px-4', selected && 'bg-surface-1')}>
             <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
-              {option.label}
+              {t(option.label)}
             </Text>
           </Pressable>
         );
@@ -266,6 +269,7 @@ function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: 
 }
 
 function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number }) {
+  useLocale();
   const router = useRouter();
   const prefetch = usePrefetchScreenTitle();
   return (
@@ -274,7 +278,11 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
       onPressIn={() => prefetch(item.id)}
       onPress={() => router.push(`/film/${item.id}` as Href)}
       accessibilityRole="link"
-      accessibilityLabel={`${item.titleKo}, ${titleMeta(item.kind, item.releaseYear)}, 클래식 ${item.cueCount}곡`}
+      accessibilityLabel={t('{title}, {meta}, 클래식 {count}곡', {
+        title: item.titleKo,
+        meta: titleMeta(item.kind, item.releaseYear),
+        count: item.cueCount,
+      })}
       style={{ width }}
       className="gap-1.5">
       <ScreenPoster
@@ -289,13 +297,14 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
         {item.titleKo}
       </Text>
       <Text variant="micro" numberOfLines={1}>
-        {shortTitleMeta(item.kind, item.releaseYear)} · {item.cueCount}곡
+        {shortTitleMeta(item.kind, item.releaseYear)} · {t('film::{count}곡', { count: item.cueCount })}
       </Text>
     </Pressable>
   );
 }
 
 function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
+  useLocale();
   const router = useRouter();
   const open = () => {
     const params = new URLSearchParams({
@@ -309,7 +318,11 @@ function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
     <Pressable
       onPress={open}
       accessibilityRole="button"
-      accessibilityLabel={`${cue.titleKo}에 나온 ${cue.composerName} ${cue.workTitle} 비교해 듣기`}
+      accessibilityLabel={t('{title}에 나온 {composer} {work} 비교해 듣기', {
+        title: cue.titleKo,
+        composer: cue.composerName,
+        work: cue.workTitle,
+      })}
       style={{ width: FEATURED_WIDTH }}
       className="flex-row items-center gap-3 rounded-lg bg-surface-2 p-2.5 active:bg-surface-3 web:hover:bg-surface-3">
       <ScreenPoster

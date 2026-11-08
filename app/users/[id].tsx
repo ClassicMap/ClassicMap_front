@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount } from '@/lib/data/library';
 import { usePublicProfile } from '@/lib/query/hooks/useMyPage';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, EyeOffIcon, UserXIcon } from 'lucide-react-native';
@@ -24,6 +25,7 @@ function parseUserId(id: string | string[] | undefined): number | undefined {
 
 /** 공개 프로필: 마이페이지와 같은 틀, 본인이 공개한 것만 보인다 */
 export default function PublicProfileScreen() {
+  useLocale();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const userId = parseUserId(id);
@@ -34,12 +36,12 @@ export default function PublicProfileScreen() {
   const [sort, setSort] = React.useState<RatingSortKey>('recent');
 
   const profile = query.data;
-  const displayName = profile?.displayName || (userId ? `사용자 #${userId}` : '사용자');
+  const displayName = profile?.displayName || (userId ? t('사용자 #{id}', { id: userId }) : t('사용자'));
 
   const back = (
     <Pressable
       onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
-      accessibilityLabel="뒤로"
+      accessibilityLabel={t('뒤로')}
       className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
       <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
     </Pressable>
@@ -66,28 +68,28 @@ export default function PublicProfileScreen() {
         <EmptyState
           icon={query.isError ? AlertCircleIcon : UserXIcon}
           tone={query.isError ? 'error' : 'empty'}
-          title={query.isError ? '프로필을 불러오지 못했어요' : '프로필을 찾을 수 없어요'}
+          title={query.isError ? t('프로필을 불러오지 못했어요') : t('프로필을 찾을 수 없어요')}
           description={
-            query.isError ? '연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.' : '주소가 맞는지 확인해 주세요.'
+            query.isError ? t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.') : t('주소가 맞는지 확인해 주세요.')
           }
-          action={query.isError ? { label: '다시 시도', onPress: () => query.refetch() } : undefined}
+          action={query.isError ? { label: t('다시 시도'), onPress: () => query.refetch() } : undefined}
         />
       </View>
     );
   }
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'ratings', label: '평가한 공연', count: profile.ratings?.length },
-    { key: 'repertoire', label: '레퍼토리', count: profile.favorites ? getFavoriteCount(profile.favorites) : undefined },
-    { key: 'collections', label: '컬렉션', count: profile.collections?.length },
+    { key: 'ratings', label: t('평가한 공연'), count: profile.ratings?.length },
+    { key: 'repertoire', label: t('레퍼토리'), count: profile.favorites ? getFavoriteCount(profile.favorites) : undefined },
+    { key: 'collections', label: t('컬렉션'), count: profile.collections?.length },
   ];
 
   const content =
     tab === 'ratings' ? (
       !profile.ratings ? (
-        <PrivateState label="평가한 공연" />
+        <PrivateState description={t('이 사용자가 평가한 공연 목록을 공개하지 않았어요.')} />
       ) : profile.ratings.length === 0 ? (
-        <EmptyState compact icon={EyeOffIcon} title="아직 평가한 공연이 없어요" />
+        <EmptyState compact icon={EyeOffIcon} title={t('아직 평가한 공연이 없어요')} />
       ) : (
         <RatingGrid
           ratings={profile.ratings}
@@ -99,20 +101,20 @@ export default function PublicProfileScreen() {
       )
     ) : tab === 'repertoire' ? (
       !profile.favorites ? (
-        <PrivateState label="레퍼토리" />
+        <PrivateState description={t('이 사용자가 레퍼토리 목록을 공개하지 않았어요.')} />
       ) : getFavoriteCount(profile.favorites) === 0 ? (
-        <EmptyState compact icon={EyeOffIcon} title="아직 레퍼토리가 비어 있어요" />
+        <EmptyState compact icon={EyeOffIcon} title={t('profile::아직 레퍼토리가 비어 있어요')} />
       ) : (
         <RepertoireList favorites={profile.favorites} />
       )
     ) : !profile.collections ? (
-      <PrivateState label="컬렉션" />
+      <PrivateState description={t('이 사용자가 컬렉션 목록을 공개하지 않았어요.')} />
     ) : (
       <View className="flex-row flex-wrap gap-2">
         {profile.collections.map((collection) => (
           <View key={collection.id} className="min-w-[160px] grow rounded-lg bg-surface-2 px-4 py-3">
             <Text className="text-[22px] font-bold tabular-nums text-foreground">{collection.count}</Text>
-            <Text variant="caption">{collection.title}</Text>
+            <Text variant="caption">{t(collection.title)}</Text>
           </View>
         ))}
       </View>
@@ -131,7 +133,7 @@ export default function PublicProfileScreen() {
               <ProfileAvatar name={displayName} uri={profile.avatarUrl} size={wide ? 112 : 64} />
               <View className={cn('min-w-0', !wide && 'flex-1')}>
                 <Text variant="micro" className="uppercase tracking-widest">
-                  공개 프로필
+                  {t('공개 프로필')}
                 </Text>
                 <Text className={cn('mt-1 font-bold text-foreground', wide ? 'text-[28px] leading-9' : 'text-title-3')}>
                   {displayName}
@@ -146,25 +148,25 @@ export default function PublicProfileScreen() {
             {profile.summary ? (
               <View className="flex-row flex-wrap gap-2">
                 <View className="w-[47%] grow">
-                  <StatTile value={String(profile.summary.ratingsCount)} label="평가한 공연" />
+                  <StatTile value={String(profile.summary.ratingsCount)} label={t('평가한 공연')} />
                 </View>
                 <View className="w-[47%] grow">
                   <StatTile
                     value={profile.summary.ratingsCount > 0 ? profile.summary.averageRating.toFixed(1) : '–'}
-                    label="평균 별점"
+                    label={t('평균 별점')}
                     accent
                   />
                 </View>
                 <View className="w-[47%] grow">
-                  <StatTile value={String(profile.summary.favoritesCount)} label="레퍼토리" />
+                  <StatTile value={String(profile.summary.favoritesCount)} label={t('레퍼토리')} />
                 </View>
                 <View className="w-[47%] grow">
-                  <StatTile value={String(profile.summary.collectionsCount)} label="컬렉션" />
+                  <StatTile value={String(profile.summary.collectionsCount)} label={t('컬렉션')} />
                 </View>
               </View>
             ) : (
               <Text variant="caption" className="text-foreground-subtle">
-                활동 요약은 비공개예요.
+                {t('활동 요약은 비공개예요.')}
               </Text>
             )}
           </View>
@@ -200,6 +202,7 @@ export default function PublicProfileScreen() {
   );
 }
 
-function PrivateState({ label }: { label: string }) {
-  return <EmptyState compact icon={EyeOffIcon} title="비공개예요" description={`이 사용자가 ${label} 목록을 공개하지 않았어요.`} />;
+function PrivateState({ description }: { description: string }) {
+  useLocale();
+  return <EmptyState compact icon={EyeOffIcon} title={t('비공개예요')} description={description} />;
 }

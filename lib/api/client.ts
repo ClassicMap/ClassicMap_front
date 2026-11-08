@@ -3,6 +3,7 @@
  * 현재는 목 데이터를 반환하지만, 나중에 실제 API 호출로 쉽게 대체 가능
  */
 
+import { pick } from '@/lib/i18n';
 import {
   COMPOSERS,
   PIECES,
@@ -17,8 +18,12 @@ import {
   getComposersByPeriod,
 } from '../data';
 
+import { isPieceGenre } from '../design/genre-palette';
 import type {
   Composer,
+  ComposerCatalog,
+  ComposerPiece,
+  ComposerPieceFilter,
   Piece,
   PiecePart,
   PiecePartKind,
@@ -38,6 +43,7 @@ import type {
   ConcertImage,
   TicketVendor,
   BoxofficeRanking,
+  ArtistBanner,
   ImageCredit,
 } from '../types/models';
 
@@ -67,6 +73,7 @@ interface APIPiece {
   title: string;
   titleEn?: string;
   description?: string;
+  descriptionEn?: string | null;
   opusNumber?: string;
   compositionYear?: number;
   difficultyLevel?: number;
@@ -76,6 +83,16 @@ interface APIPiece {
   youtubeMusicUrl?: string;
   partCount?: number;
   partKind?: PiecePartKind | null;
+  genre?: string | null;
+  formKey?: string | null;
+  notable?: boolean;
+  catalogueSystem?: string | null;
+  catalogueNumber?: string | null;
+}
+
+interface APIComposerPiece extends APIPiece {
+  notableParts?: number[];
+  matchedPart?: { sequenceNumber: number; name: string } | null;
 }
 
 interface APIPiecePart {
@@ -93,10 +110,14 @@ interface APIPiecePart {
     spotifyUrl: string | null;
     appleMusicUrl: string | null;
   } | null;
+  notable?: boolean;
+  appleMusicUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
 interface APIPieceSearchResult extends APIPiece {
   composerName: string;
+  composerNameEn?: string | null;
   composerAvatarUrl?: string | null;
 }
 
@@ -105,6 +126,7 @@ interface APIArtistAward {
   artistId: number;
   year: string;
   awardName: string;
+  awardNameEn?: string | null;
   displayOrder: number;
 }
 
@@ -120,12 +142,23 @@ interface APIArtist {
   birthYear?: string;
   nationality: string;
   bio?: string;
+  bioEn?: string | null;
+  styleEn?: string | null;
   style?: string;
   awards?: APIArtistAward[];
   concertCount: number;
   countryCount: number;
   albumCount: number;
   imageCredit?: {
+    creditLine?: string | null;
+    author?: string | null;
+    license?: string | null;
+    licenseUrl?: string | null;
+    sourceUrl?: string | null;
+  } | null;
+  banner?: {
+    url?: string | null;
+    focalPoint?: string | null;
     creditLine?: string | null;
     author?: string | null;
     license?: string | null;
@@ -241,7 +274,7 @@ const COMPOSER_TIERS: ReadonlySet<unknown> = new Set(['S', 'A', 'B', 'C']);
 const mapComposer = (api: any): Composer => {
   const mapped = {
     id: api.id,
-    name: api.name,
+    name: pick(api.name, api.englishName),
     fullName: api.fullName,
     englishName: api.englishName,
     period: api.period as '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대',
@@ -251,11 +284,12 @@ const mapComposer = (api: any): Composer => {
     imageUrl: api.imageUrl ? api.imageUrl : undefined,
     avatarUrl: api.avatarUrl ? api.avatarUrl : undefined,
     coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
-    bio: api.bio,
-    style: api.style,
-    influence: api.influence,
+    bio: pick(api.bio, api.bioEn),
+    style: pick(api.style, api.styleEn),
+    influence: pick(api.influence, api.influenceEn),
     pieceCount: api.pieceCount,
     tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
+    banner: mapBanner(api.banner),
   };
   return mapped;
 };
@@ -263,11 +297,13 @@ const mapComposer = (api: any): Composer => {
 const mapPiece = (api: APIPiece): Piece => ({
   id: api.id,
   composerId: api.composerId,
-  title: api.title,
+  title: pick(api.title, api.titleEn),
   titleEn: api.titleEn,
   type: 'song', // 기본값
-  description: api.description,
+  description: pick(api.description, api.descriptionEn) ?? undefined,
   opusNumber: api.opusNumber,
+  catalogueSystem: api.catalogueSystem ?? null,
+  catalogueNumber: api.catalogueNumber ?? null,
   compositionYear: api.compositionYear,
   difficultyLevel: api.difficultyLevel,
   durationMinutes: api.durationMinutes,
@@ -276,6 +312,24 @@ const mapPiece = (api: APIPiece): Piece => ({
   youtubeMusicUrl: api.youtubeMusicUrl,
   partCount: api.partCount,
   partKind: api.partKind,
+  genre: isPieceGenre(api.genre) ? api.genre : null,
+  formKey: api.formKey ?? null,
+  notable: api.notable === true,
+});
+
+const mapComposerPiece = (api: APIComposerPiece): ComposerPiece => ({
+  ...mapPiece(api),
+  notableParts: api.notableParts ?? [],
+  matchedPart: api.matchedPart ?? null,
+});
+
+const mapCatalog = (api: ComposerCatalog): ComposerCatalog => ({
+  total: api.total,
+  notableTotal: api.notableTotal,
+  genres: api.genres.map((genre) => ({
+    ...genre,
+    genre: isPieceGenre(genre.genre) ? genre.genre : null,
+  })),
 });
 
 const mapPiecePart = (api: APIPiecePart): PiecePart => ({
@@ -283,9 +337,12 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
   parentPartId: api.parentPartId,
   sequenceNumber: api.sequenceNumber,
   movementNumber: api.movementNumber,
-  name: api.name,
+  name: pick(api.name, api.nameEn),
   nameKo: api.nameKo,
   nameEn: api.nameEn,
+  notable: api.notable === true,
+  appleMusicUrl: api.appleMusicUrl ?? null,
+  spotifyUrl: api.spotifyUrl ?? null,
   linkedPiece: api.linkedPiece
     ? {
         id: api.linkedPiece.id,
@@ -299,7 +356,7 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
 
 const mapArtist = (api: APIArtist): Artist => ({
   id: api.id,
-  name: api.name,
+  name: pick(api.name, api.englishName),
   englishName: api.englishName,
   category: api.category,
   tier: api.tier,
@@ -308,20 +365,30 @@ const mapArtist = (api: APIArtist): Artist => ({
   coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
   birthYear: api.birthYear,
   nationality: api.nationality,
-  bio: api.bio,
-  style: api.style,
+  bio: pick(api.bio, api.bioEn) ?? undefined,
+  style: pick(api.style, api.styleEn) ?? undefined,
   awards: api.awards?.map((award) => ({
     id: award.id,
     artistId: award.artistId,
     year: award.year,
-    awardName: award.awardName,
+    awardName: pick(award.awardName, award.awardNameEn),
     displayOrder: award.displayOrder,
   })),
   concertCount: api.concertCount,
   countryCount: api.countryCount,
   albumCount: api.albumCount,
   imageCredit: mapImageCredit(api.imageCredit),
+  banner: mapBanner(api.banner),
 });
+
+/** 배너는 그림 주소와 출처가 다 있을 때만 쓴다(출처를 밝히지 못하는 그림은 띄우지 않는다) */
+function mapBanner(banner: APIArtist['banner']): ArtistBanner | null {
+  const url = banner?.url?.trim();
+  const credit = mapImageCredit(banner);
+  if (!url || !/^https?:\/\//.test(url) || !credit) return null;
+  const focal = banner?.focalPoint?.trim();
+  return { url, focalPoint: focal && /^\d{1,3}% \d{1,3}%$/.test(focal) ? focal : undefined, credit };
+}
 
 /** 출처 주소가 없으면 밝힐 것이 없으므로 버린다. 빈 문자열은 없는 값으로 본다 */
 function mapImageCredit(credit: APIArtist['imageCredit']): ImageCredit | null {
@@ -514,6 +581,7 @@ export interface FavoritePieceItem {
   titleEn?: string | null;
   composerId: number;
   composerName: string;
+  composerNameEn?: string | null;
   composerAvatarUrl?: string | null;
   createdAt: string;
 }
@@ -766,8 +834,9 @@ export const ComposerAPI = {
     if (USE_REAL_API) {
       const response = await authenticatedFetch(`${API_BASE_URL}/pieces/${id}`);
       if (!response.ok) throw new Error('Failed to fetch piece');
-      const pieceData: APIPiece = await response.json();
-      return pieceData;
+      const pieceData: APIPiece | null = await response.json();
+      if (!pieceData) return null;
+      return { ...pieceData, genre: isPieceGenre(pieceData.genre) ? pieceData.genre : null };
     }
     return Promise.resolve(getPieceById(id) ?? null);
   },
@@ -900,7 +969,7 @@ export const PieceAPI = {
       const data: APIPieceSearchResult[] = await response.json();
       return data.map((item) => ({
         ...mapPiece(item),
-        composerName: item.composerName,
+        composerName: pick(item.composerName, item.composerNameEn),
         composerAvatarUrl: item.composerAvatarUrl ?? null,
       }));
     }
@@ -908,24 +977,42 @@ export const PieceAPI = {
   },
 
   /**
-   * 작곡가의 작품 한 페이지. 스트리밍 링크·설명이 있는 작품이 앞에 온다
+   * 작곡가의 작품 한 페이지. 거르기가 없으면 손본 작품이 앞에 온다(listening).
+   * genre·form·notable 로 거르고, sort 로 작품번호순·연도순·대표곡 먼저를 고른다
    */
   async getPageByComposer(
     composerId: number,
-    params: { offset: number; limit: number }
-  ): Promise<Piece[]> {
+    params: { offset: number; limit: number } & ComposerPieceFilter
+  ): Promise<ComposerPiece[]> {
     if (USE_REAL_API) {
       const query = new URLSearchParams({ offset: String(params.offset), limit: String(params.limit) });
+      if (params.genre) query.append('genre', params.genre);
+      if (params.form) query.append('form', params.form);
+      if (params.sort) query.append('sort', params.sort);
+      if (params.q?.trim()) query.append('q', params.q.trim());
+      if (params.notable) query.append('notable', '1');
       const response = await authenticatedFetch(
         `${API_BASE_URL}/composers/${composerId}/pieces?${query.toString()}`
       );
       if (!response.ok) throw new Error('Failed to fetch pieces');
-      const data: APIPiece[] = await response.json();
-      return data.map(mapPiece);
+      const data: APIComposerPiece[] = await response.json();
+      return data.map(mapComposerPiece);
     }
     return Promise.resolve(
-      PIECES.filter((p) => p.composerId === composerId).slice(params.offset, params.offset + params.limit)
+      PIECES.filter((p) => p.composerId === composerId)
+        .slice(params.offset, params.offset + params.limit)
+        .map((piece) => ({ ...piece, notableParts: [], matchedPart: null }))
     );
+  },
+
+  /**
+   * 작곡가 작품의 갈래·형식별 개수. 작곡가 화면의 갈래 칩과 형식 머리를 그린다
+   */
+  /** q 가 있으면 그 검색에 걸린 작품만 갈래·형식별로 센다(검색 중 갈래 칩의 결과 수) */
+  async getCatalog(composerId: number, q?: string): Promise<ComposerCatalog> {
+    const query = q ? `?q=${encodeURIComponent(q)}` : '';
+    const data = await requestJson<ComposerCatalog>(`/composers/${composerId}/catalog${query}`);
+    return mapCatalog(data);
   },
 
   /**

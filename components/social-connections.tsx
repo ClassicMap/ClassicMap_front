@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useSSO, type StartSSOFlowParams } from '@clerk/clerk-expo';
 import * as AuthSession from 'expo-auth-session';
@@ -22,13 +23,13 @@ const SOCIAL_CONNECTION_STRATEGIES: {
 }[] = [
   {
     type: 'oauth_apple',
-    label: 'Apple로 계속하기',
+    label: msg('Apple로 계속하기'),
     source: { uri: 'https://img.clerk.com/static/apple.png?width=160' },
     useTint: true,
   },
   {
     type: 'oauth_google',
-    label: 'Google로 계속하기',
+    label: msg('Google로 계속하기'),
     source: { uri: 'https://img.clerk.com/static/google.png?width=160' },
     useTint: false,
   },
@@ -46,6 +47,7 @@ function webRedirectUrl(): string {
 }
 
 export function SocialConnections() {
+  useLocale();
   useWarmUpBrowser();
   const { colorScheme } = useColorScheme();
   const { startSSOFlow } = useSSO();
@@ -91,7 +93,7 @@ export function SocialConnections() {
               })}
               source={strategy.source}
             />
-            <Text className="text-body-sm font-semibold text-foreground">{strategy.label}</Text>
+            <Text className="text-body-sm font-semibold text-foreground">{t(strategy.label)}</Text>
           </Pressable>
         );
       })}

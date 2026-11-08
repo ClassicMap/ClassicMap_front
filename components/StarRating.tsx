@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { View, TouchableOpacity } from 'react-native';
 import { Icon } from '@/components/ui/icon';
 import { StarIcon } from 'lucide-react-native';
@@ -11,6 +12,7 @@ interface StarRatingProps {
 }
 
 export function StarRating({ rating, onRatingChange, readonly = false, size = 32 }: StarRatingProps) {
+  useLocale();
   const [hoverRating, setHoverRating] = React.useState(0);
 
   const getStarFill = (starIndex: number) => {

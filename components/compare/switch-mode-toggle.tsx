@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, type SwitchMode, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -15,16 +16,17 @@ export const SELECTED_SHADOW = {
 
 /** 연주자를 바꿀 때 어디서 이어 들을지 */
 export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
+  useLocale();
   const mode = useComparePlayer((state) => state.switchMode);
   const options: { value: SwitchMode; label: string; hint: string }[] = [
-    { value: 'resume', label: '이어서', hint: '연주자마다 듣던 곳에서 이어요' },
-    { value: 'align', label: '같은 지점', hint: '지금 듣던 대목에서 바로 넘어가요' },
+    { value: 'resume', label: t('이어서'), hint: t('연주자마다 듣던 곳에서 이어요') },
+    { value: 'align', label: t('같은 지점'), hint: t('지금 듣던 대목에서 바로 넘어가요') },
   ];
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel="연주자 전환 방식" className="flex-row items-center gap-2">
+    <View accessibilityRole="radiogroup" accessibilityLabel={t('연주자 전환 방식')} className="flex-row items-center gap-2">
       {!compact ? (
         <Text variant="caption" className="text-foreground-subtle">
-          전환
+          {t('전환')}
         </Text>
       ) : null}
       <View className="h-8 flex-row rounded-full bg-surface-2 p-0.5">

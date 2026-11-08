@@ -2,6 +2,7 @@ import { type Performer, PerformerMark } from '@/components/compare/performer-ma
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
 import { THEME, withAlpha } from '@/lib/design/tokens';
+import { t, useLocale } from '@/lib/i18n';
 import type { LoudnessProfile } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
@@ -195,6 +196,7 @@ export function LoudnessSparkline({
   label?: string;
   className?: string;
 }) {
+  const { locale } = useLocale();
   const [width, onLayout] = useWidth();
   const colors = useCurveColors();
   const clipId = `spark-${React.useId().replace(/:/g, '')}`;
@@ -212,14 +214,14 @@ export function LoudnessSparkline({
     () => (width > 0 ? curvePath(loudness, plot, false) : ''),
     // 경로는 폭·눈금·곡선이 바뀔 때만 다시 만든다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loudness, width, height, plot.floor]
+    [loudness, width, height, plot.floor, locale]
   );
   const area = React.useMemo(
     () => (width > 0 ? curvePath(loudness, plot, true) : ''),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loudness, width, height, plot.floor]
+    [loudness, width, height, plot.floor, locale]
   );
-  const describe = flat ? '처음부터 끝까지 거의 평평해요' : `가장 센 곳 ${clipClock(loudness.peakMs)}`;
+  const describe = flat ? t('처음부터 끝까지 거의 평평해요') : t('가장 센 곳 {clock}', { clock: clipClock(loudness.peakMs) });
   const head = shownHead !== undefined && Number.isFinite(shownHead) ? Math.min(1, Math.max(0, shownHead)) : undefined;
   const headX = head !== undefined ? plot.left + head * plot.width : 0;
   const headY = head !== undefined ? yOf(plot, valueAt(loudness, head * span)) : 0;
@@ -303,14 +305,13 @@ export function LoudnessSparkline({
       </Svg>
     ) : null;
 
-  const name = label ? `${label} ` : '';
   if (!onSeek) {
     return (
       <View
         onLayout={onLayout}
         accessible
         accessibilityRole="image"
-        accessibilityLabel={`${name}음량 곡선. ${describe}`}
+        accessibilityLabel={label ? t('{name} 음량 곡선. {describe}', { name: label, describe }) : t('음량 곡선. {describe}', { describe })}
         className={cn('w-full', className)}
         style={{ height }}>
         {svg}
@@ -326,7 +327,11 @@ export function LoudnessSparkline({
         onSeek(Math.max(0, Math.min(1, (x - plot.left) / plot.width)));
       }}
       accessibilityRole="adjustable"
-      accessibilityLabel={`${name}재생 위치. 음량 곡선, ${describe}. 누른 자리부터 들어요`}
+      accessibilityLabel={
+        label
+          ? t('{name} 재생 위치. 음량 곡선, {describe}. 누른 자리부터 들어요', { name: label, describe })
+          : t('재생 위치. 음량 곡선, {describe}. 누른 자리부터 들어요', { describe })
+      }
       accessibilityValue={head !== undefined ? { text: clipClock(head * span) } : undefined}
       className={cn('w-full web:cursor-pointer', className)}
       style={{ height }}>
@@ -362,6 +367,7 @@ export function LoudnessOverlay({
   playing?: boolean;
   height?: number;
 }) {
+  useLocale();
   const [width, onLayout] = useWidth();
   const colors = useCurveColors();
   const clipBase = `overlay-${React.useId().replace(/:/g, '')}`;
@@ -388,7 +394,7 @@ export function LoudnessOverlay({
       onLayout={onLayout}
       accessible
       accessibilityRole="image"
-      accessibilityLabel="두 연주의 음량 곡선을 같은 진행률 축에 겹친 그래프. 지금 듣는 연주가 진하게 보여요"
+      accessibilityLabel={t('두 연주의 음량 곡선을 같은 진행률 축에 겹친 그래프. 지금 듣는 연주가 진하게 보여요')}
       className="w-full"
       style={{ height }}>
       {width > 0 ? (
@@ -518,7 +524,7 @@ function measuredCells(
   if (!loudness || isFlatLoudness(loudness)) return null;
   const start = loudness.startRelDb;
   return {
-    start: start >= -0.05 ? '최고점과 같음' : `최고점 −${Math.abs(start).toFixed(1)}dB`,
+    start: start >= -0.05 ? t('최고점과 같음') : t('최고점 −{db}dB', { db: Math.abs(start).toFixed(1) }),
     peak: clipClock(loudness.peakMs),
     peakRatio: `${Math.round(loudness.peakRatio * 100)}%`,
   };
@@ -536,6 +542,7 @@ export function LoudnessMeasures({
   performerA: Performer;
   performerB: Performer;
 }) {
+  useLocale();
   const nameA = performerA.name;
   const nameB = performerB.name;
   const cellsA = measuredCells(a);
@@ -545,20 +552,20 @@ export function LoudnessMeasures({
     b.loudness && !cellsB ? nameB : null,
   ].filter((name): name is string => name !== null);
   const rows = [
-    { label: '처음 5초', a: cellsA?.start, b: cellsB?.start },
+    { label: t('처음 5초'), a: cellsA?.start, b: cellsB?.start },
     {
-      label: '가장 센 곳',
+      label: t('가장 센 곳'),
       a: cellsA ? `${cellsA.peak} · ${cellsA.peakRatio}` : undefined,
       b: cellsB ? `${cellsB.peak} · ${cellsB.peakRatio}` : undefined,
     },
-    { label: '길이', a: clipClock(a.durationMs), b: clipClock(b.durationMs) },
+    { label: t('길이'), a: clipClock(a.durationMs), b: clipClock(b.durationMs) },
   ];
 
   return (
     <View className="gap-2">
       <View className="flex-row border-b border-border pb-1.5">
         <Text variant="caption" className="w-24 font-semibold text-foreground-subtle">
-          잰 값
+          {t('잰 값')}
         </Text>
         <MeasureHead performer={performerA} tone="a" />
         <MeasureHead performer={performerB} tone="b" />
@@ -578,8 +585,8 @@ export function LoudnessMeasures({
       ))}
       <Text variant="caption" className="mt-1 text-foreground-subtle">
         {flatNames.length > 0
-          ? `${flatNames.join('·')} 연주는 곡선 폭이 2dB보다 좁아 잰 값을 비웠어요. 녹음이 압축됐을 수 있어요.`
-          : '각 연주에서 가장 센 곳을 0dB로 맞춘 값이에요. 녹음마다 크기가 달라 두 연주의 세기를 견주지는 않아요.'}
+          ? t('{names} 연주는 곡선 폭이 2dB보다 좁아 잰 값을 비웠어요. 녹음이 압축됐을 수 있어요.', { names: flatNames.join('·') })
+          : t('각 연주에서 가장 센 곳을 0dB로 맞춘 값이에요. 녹음마다 크기가 달라 두 연주의 세기를 견주지는 않아요.')}
       </Text>
     </View>
   );
@@ -587,6 +594,7 @@ export function LoudnessMeasures({
 
 /** 잰 값 표 머리: 곡선과 같은 색 테두리의 얼굴, 그 색 이름 */
 function MeasureHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  useLocale();
   return (
     <View className="min-w-0 flex-1 flex-row items-center gap-1.5">
       <PerformerMark performer={performer} tone={tone} size={18} />

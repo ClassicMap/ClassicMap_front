@@ -10,6 +10,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { t, useLocale } from '@/lib/i18n';
 import { useCachedScreenTitleSummary, useScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { ScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FilmTitleScreen() {
+  useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const titleId = Number(id);
   const router = useRouter();
@@ -36,7 +38,7 @@ export default function FilmTitleScreen() {
   const backButton = (
     <Pressable
       onPress={goBack}
-      accessibilityLabel="뒤로"
+      accessibilityLabel={t('뒤로')}
       style={{ top: insets.top + 4 }}
       className="absolute left-2 z-10 size-11 items-center justify-center rounded-full bg-background/70">
       <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
@@ -62,16 +64,16 @@ export default function FilmTitleScreen() {
           <EmptyState
             icon={AlertCircleIcon}
             tone="error"
-            title="작품을 불러오지 못했어요"
-            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-            action={{ label: '다시 시도', onPress: () => void refetch() }}
+            title={t('작품을 불러오지 못했어요')}
+            description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+            action={{ label: t('다시 시도'), onPress: () => void refetch() }}
           />
         ) : (
           <EmptyState
             icon={ClapperboardIcon}
-            title="찾는 작품이 없어요"
-            description="목록에서 다른 작품을 골라 주세요."
-            action={{ label: '영화 속 클래식 보기', onPress: () => router.push('/films' as Href) }}
+            title={t('찾는 작품이 없어요')}
+            description={t('목록에서 다른 작품을 골라 주세요.')}
+            action={{ label: t('영화 속 클래식 보기'), onPress: () => router.push('/films' as Href) }}
           />
         )}
       </View>
@@ -98,7 +100,7 @@ export default function FilmTitleScreen() {
             <OptimizedImage
               uri={tmdbBackdrop}
               resizeMode="cover"
-              accessibilityLabel={`${head.titleKo} 스틸`}
+              accessibilityLabel={t('{title} 스틸', { title: head.titleKo })}
               style={{ width: '100%', height: '100%' }}
             />
             <Scrim from="bottom" color="#000" opacity={0.55} extent={60} />
@@ -136,7 +138,7 @@ export default function FilmTitleScreen() {
           ) : null}
 
           <Text variant="headline" className="mb-3 mt-8">
-            나온 클래식 {title ? title.cues.length : head.cueCount}곡
+            {t('나온 클래식 {count}곡', { count: title ? title.cues.length : head.cueCount })}
           </Text>
           {title ? (
             <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
@@ -153,14 +155,16 @@ export default function FilmTitleScreen() {
 
           <View className="mt-10 gap-2">
             {hasComparison ? (
-              <Text variant="micro">비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.</Text>
+              <Text variant="micro">{t('비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.')}</Text>
             ) : null}
             {head.posterUrl ? (
-              <Text variant="micro">포스터는 한국영상자료원 KMDb에서 가져와요.</Text>
+              <Text variant="micro">{t('포스터는 한국영상자료원 KMDb에서 가져와요.')}</Text>
             ) : null}
-            {usesKmdb ? <Text variant="micro">곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.</Text> : null}
+            {usesKmdb ? <Text variant="micro">{t('곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.')}</Text> : null}
             {head.coverVideoId || cues.some((cue) => cue.officialClip) ? (
-              <Text variant="micro">장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.</Text>
+              <Text variant="micro">
+                {t("장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.")}
+              </Text>
             ) : null}
           </View>
           {head.posterPath || head.backdropPath || cues.some((cue) => cue.stillPath) ? (
@@ -174,6 +178,7 @@ export default function FilmTitleScreen() {
 
 /** 작품 페이지 모양 그대로의 자리. 포스터와 제목 → 곡 카드 */
 function FilmTitleSkeleton({ wide }: { wide: boolean }) {
+  useLocale();
   const insets = useSafeAreaInsets();
   const posterWidth = wide ? 152 : 112;
   return (
@@ -197,6 +202,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
 
 /** 곡 카드 자리. 장면 사진 → 쓰임 줄·곡 이름 → 설명 → 듣기 버튼 → 근거 */
 function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
+  useLocale();
   return (
     <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
       {Array.from({ length: Math.max(count, 1) }, (_, index) => (

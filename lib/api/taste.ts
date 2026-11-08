@@ -1,5 +1,6 @@
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import { parsePiece } from '@/lib/api/comparisons';
+import { bilingual, getLocale, pick } from '@/lib/i18n';
 import type {
   HomeRecommendations,
   ListeningEvent,
@@ -94,15 +95,27 @@ function parseProfile(value: unknown): TasteProfile {
 
 function parseRecommended(value: unknown): RecommendedPiece {
   if (!isRecord(value)) throw new Error('추천 작품 응답 형식이 올바르지 않습니다.');
+  const piece = parsePiece(value);
   return {
-    ...parsePiece(value),
+    ...piece,
+    names: {
+      ...piece.names,
+      ...(typeof value.sectorName === 'string' && value.sectorName !== ''
+        ? { sectorName: bilingual(value.sectorName, typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null) }
+        : {}),
+    },
     sectorId:
       Number.isInteger(value.sectorId) && Number(value.sectorId) > 0
         ? Number(value.sectorId)
         : null,
     sectorName:
-      typeof value.sectorName === 'string' && value.sectorName !== '' ? value.sectorName : null,
-    reasons: strings(value.reasons),
+      typeof value.sectorName === 'string' && value.sectorName !== ''
+        ? pick(value.sectorName, typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null)
+        : null,
+    // 영어판이면 서버가 같이 만든 영어 이유를 쓴다
+    reasons:
+      getLocale() === 'en' && strings(value.reasonsEn).length > 0 ? strings(value.reasonsEn) : strings(value.reasons),
+    reasonsByLocale: { ko: strings(value.reasons), en: strings(value.reasonsEn) },
   };
 }
 
@@ -181,9 +194,12 @@ export const TasteAPI = {
     if (!Array.isArray(payload)) throw new Error('온보딩 곡 응답 형식이 올바르지 않습니다.');
     return payload.filter(isRecord).map((item) => ({
       pieceId: Number(item.pieceId),
-      pieceTitle: String(item.pieceTitle ?? ''),
+      pieceTitle: pick(String(item.pieceTitle ?? ''), typeof item.pieceTitleEn === 'string' ? item.pieceTitleEn : null),
       composerId: Number(item.composerId),
-      composerName: String(item.composerName ?? ''),
+      composerName: pick(
+        String(item.composerName ?? ''),
+        typeof item.composerNameEn === 'string' ? item.composerNameEn : null
+      ),
       composerAvatarUrl: typeof item.composerAvatarUrl === 'string' ? item.composerAvatarUrl : null,
       leadSound: String(item.leadSound ?? ''),
     }));

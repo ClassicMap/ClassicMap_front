@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { AdminArtistAPI } from '@/lib/api/admin';
+import { t, useLocale } from '@/lib/i18n';
 import type { Artist } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -41,6 +42,7 @@ interface AwardInput {
 type ArtistField = 'name' | 'englishName' | 'category' | 'nationality';
 
 export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistFormModalProps) {
+  useLocale();
   const [name, setName] = React.useState('');
   const [englishName, setEnglishName] = React.useState('');
   const [category, setCategory] = React.useState('');
@@ -115,10 +117,10 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   }, [artist, visible]);
 
   const errors: FieldErrors<ArtistField> = {
-    name: name ? undefined : '이름을 입력해 주세요.',
-    englishName: englishName ? undefined : '영문 이름을 입력해 주세요.',
-    category: category ? undefined : '카테고리를 입력해 주세요.',
-    nationality: nationality ? undefined : '국적을 입력해 주세요.',
+    name: name ? undefined : t('form::이름을 입력해 주세요.'),
+    englishName: englishName ? undefined : t('영문 이름을 입력해 주세요.'),
+    category: category ? undefined : t('카테고리를 입력해 주세요.'),
+    nationality: nationality ? undefined : t('국적을 입력해 주세요.'),
   };
   const shown: FieldErrors<ArtistField> = attempted ? errors : {};
 
@@ -227,12 +229,12 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
         }
       }
 
-      Alert.alert(artist ? '아티스트를 수정했어요' : '아티스트를 추가했어요');
+      Alert.alert(artist ? t('아티스트를 수정했어요') : t('아티스트를 추가했어요'));
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save artist:', error);
-      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('저장하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -245,23 +247,23 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
   return (
     <FormModal
       visible={visible}
-      title={artist ? '아티스트 수정' : '아티스트 추가'}
+      title={artist ? t('아티스트 수정') : t('아티스트 추가')}
       subtitle={artist?.name}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
-      <FormSection title="기본 정보">
+      <FormSection title={t('기본 정보')}>
         <TextField
-          label="이름"
+          label={t('form::이름')}
           required
           value={name}
           onChangeText={setName}
-          placeholder="조성진"
+          placeholder={t('조성진')}
           error={shown.name}
         />
         <TextField
-          label="영문 이름"
+          label={t('영문 이름')}
           required
           value={englishName}
           onChangeText={setEnglishName}
@@ -269,31 +271,31 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
           error={shown.englishName}
         />
         <TextField
-          label="카테고리"
+          label={t('카테고리')}
           required
           value={category}
           onChangeText={setCategory}
-          placeholder="피아니스트"
+          placeholder={t('피아니스트')}
           error={shown.category}
         />
         <TextField
-          label="국적"
+          label={t('국적')}
           required
           value={nationality}
           onChangeText={setNationality}
-          placeholder="대한민국"
+          placeholder={t('대한민국')}
           error={shown.nationality}
         />
         <FormRow>
           <TextField
-            label="출생 연도"
+            label={t('출생 연도')}
             value={birthYear}
             onChangeText={setBirthYear}
             placeholder="1994"
             keyboardType="numeric"
           />
           <TextField
-            label="평점"
+            label={t('평점')}
             value={rating}
             onChangeText={setRating}
             placeholder="4.5"
@@ -302,16 +304,16 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
         </FormRow>
       </FormSection>
 
-      <FormSection title="이미지">
+      <FormSection title={t('form::이미지')}>
         <ImageUrlField
-          label="프로필 이미지 URL"
+          label={t('프로필 이미지 URL')}
           value={imageUrl}
           onChangeText={setImageUrl}
           placeholder="https://example.com/image.jpg"
           shape="square"
         />
         <ImageUrlField
-          label="커버 이미지 URL"
+          label={t('커버 이미지 URL')}
           value={coverImageUrl}
           onChangeText={setCoverImageUrl}
           placeholder="https://example.com/cover.jpg"
@@ -319,24 +321,24 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
         />
       </FormSection>
 
-      <FormSection title="설명">
+      <FormSection title={t('설명')}>
         <TextAreaField
-          label="소개"
+          label={t('소개')}
           value={bio}
           onChangeText={setBio}
-          placeholder="어떤 아티스트인지 적어 주세요"
+          placeholder={t('어떤 아티스트인지 적어 주세요')}
         />
         <TextField
-          label="스타일"
+          label={t('스타일')}
           value={style}
           onChangeText={setStyle}
-          placeholder="섬세하고 시적인 표현…"
+          placeholder={t('섬세하고 시적인 표현…')}
         />
       </FormSection>
 
       <FormSection
-        title="수상 경력"
-        description="추가하거나 지운 수상 경력은 저장을 눌러야 반영돼요.">
+        title={t('수상 경력')}
+        description={t('추가하거나 지운 수상 경력은 저장을 눌러야 반영돼요.')}>
         {visibleAwards.length > 0 ? (
           <View className="overflow-hidden rounded-lg border border-border">
             {visibleAwards.map(({ award, index }, position) => (
@@ -352,12 +354,12 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
                 <Text numberOfLines={2} className="min-w-0 flex-1 text-body-sm text-foreground">
                   {award.awardName}
                 </Text>
-                {award.isNew ? <Badge tone="accent" label="새로 추가" className="self-center" /> : null}
+                {award.isNew ? <Badge tone="accent" label={t('새로 추가')} className="self-center" /> : null}
                 <Button
                   variant="ghost"
                   size="icon"
                   onPress={() => handleDeleteAward(index)}
-                  accessibilityLabel={`${award.awardName} 삭제`}>
+                  accessibilityLabel={t('{name} 삭제', { name: award.awardName })}>
                   <Icon as={TrashIcon} size={16} className="text-destructive" />
                 </Button>
               </View>
@@ -365,17 +367,17 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
           </View>
         ) : (
           <Text variant="bodySm" className="text-foreground-muted">
-            아직 등록한 수상 경력이 없어요.
+            {t('아직 등록한 수상 경력이 없어요.')}
           </Text>
         )}
 
         <View className="gap-3 rounded-lg border border-dashed border-border-strong p-3">
           <Text variant="label" className="text-foreground">
-            새 수상 경력
+            {t('새 수상 경력')}
           </Text>
           <View className="flex-row gap-3">
             <TextField
-              label="수상 연도"
+              label={t('수상 연도')}
               value={newAwardYear}
               onChangeText={setNewAwardYear}
               placeholder="2015"
@@ -384,37 +386,37 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
               className="w-24"
             />
             <TextField
-              label="수상 내역"
+              label={t('수상 내역')}
               value={newAwardName}
               onChangeText={setNewAwardName}
-              placeholder="쇼팽 국제 피아노 콩쿠르 1위"
+              placeholder={t('쇼팽 국제 피아노 콩쿠르 1위')}
               inputClassName={awardNameMissing ? 'border-destructive' : undefined}
               className="min-w-0 flex-1"
             />
           </View>
           {awardYearMissing || awardNameMissing ? (
             <Text variant="caption" role="alert" className="text-destructive">
-              수상 연도와 내역을 모두 입력해 주세요.
+              {t('수상 연도와 내역을 모두 입력해 주세요.')}
             </Text>
           ) : null}
           <Button variant="outline" size="sm" onPress={handleAddAward} className="self-start">
             <Icon as={PlusIcon} size={14} className="text-foreground" />
-            <Text>목록에 추가</Text>
+            <Text>{t('목록에 추가')}</Text>
           </Button>
         </View>
       </FormSection>
 
-      <FormSection title="활동 수치">
+      <FormSection title={t('활동 수치')}>
         <FormRow>
           <TextField
-            label="공연 수"
+            label={t('공연 수')}
             value={concertCount}
             onChangeText={setConcertCount}
             placeholder="0"
             keyboardType="numeric"
           />
           <TextField
-            label="음반 수"
+            label={t('음반 수')}
             value={albumCount}
             onChangeText={setAlbumCount}
             placeholder="0"

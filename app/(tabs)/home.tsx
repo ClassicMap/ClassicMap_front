@@ -2,6 +2,10 @@ import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/compo
 import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
+import { useGenreShelves } from '@/components/compare/genre-browse';
+import { Chip } from '@/components/ui/chip';
+import { usePinnedToday } from '@/hooks/use-pinned-today';
+import type { PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -15,9 +19,10 @@ import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/dat
 import { TasteAPI } from '@/lib/api/taste';
 import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
-import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
+import { useComparisonPieces, useGenrePieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
-import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import { useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
+import { DEFAULT_CONCERT_FILTER, periodRange } from '@/lib/data/concert-filters';
 import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import type {
@@ -28,6 +33,7 @@ import type {
   RecommendationShelfKey,
   TasteSound,
 } from '@/lib/types/models';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -41,9 +47,9 @@ import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 let onboardingOpened = false;
 
 const SHELF_TITLES: Record<RecommendationShelfKey, string> = {
-  taste: '취향에 맞춘 비교',
-  known: '아는 곡, 다르게 듣기',
-  starter: '처음 듣기 좋은 비교',
+  taste: msg('취향에 맞춘 비교'),
+  known: msg('아는 곡, 다르게 듣기'),
+  starter: msg('처음 듣기 좋은 비교'),
 };
 
 const SHELF_ARTISTS = 12;
@@ -52,10 +58,10 @@ const WEEK_DAYS = 7;
 
 function greeting(now: Date): string {
   const hour = now.getHours();
-  if (hour >= 5 && hour < 11) return '좋은 아침이에요';
-  if (hour >= 11 && hour < 17) return '좋은 오후예요';
-  if (hour >= 17 && hour < 22) return '좋은 저녁이에요';
-  return '편안한 밤이에요';
+  if (hour >= 5 && hour < 11) return t('좋은 아침이에요');
+  if (hour >= 11 && hour < 17) return t('좋은 오후예요');
+  if (hour >= 17 && hour < 22) return t('좋은 저녁이에요');
+  return t('편안한 밤이에요');
 }
 
 /**
@@ -106,6 +112,7 @@ function weekConcerts(concerts: readonly Concert[]): { items: Concert[]; thisWee
 }
 
 export default function HomeScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { layout } = useBreakpoint();
@@ -124,16 +131,31 @@ export default function HomeScreen() {
   const catalog = useComparisonPieces();
   const composersQuery = useRecommendedComposers();
   const artistsQuery = useArtists();
-  const concertsQuery = useConcerts();
+  // 공연 탭과 같은 기본 필터(클래식, 오늘 이후). 필터 없는 목록은 뮤지컬·국악이 섞여 홈에 어린이 뮤지컬이 먼저 떴다
+  const concertRange = React.useMemo(() => periodRange('all'), [locale]);
+  const { query: concertsQuery } = useFilteredConcerts(DEFAULT_CONCERT_FILTER, concertRange);
   const recentPieces = useRecentPieces().data ?? [];
 
   const reco = useHomeRecommendations();
-  const recoToday = reco.data?.today ?? null;
-  const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
+  // 오늘의 비교는 하루 동안 고정한다. 작품을 보고 돌아올 때마다 추천이 다시 계산돼 곡이 바뀌었다
+  // 추천을 바꾸는 답만 본다(로그인하면 answers 에 온보딩 상태·기록 설정까지 실려 와서 골라 담는다)
+  const { listeningLevel, sounds, instrument, favoritePeriods: periods, seedPieceIds } = taste.answers;
+  const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify([
+    listeningLevel,
+    sounds,
+    instrument,
+    periods,
+    seedPieceIds,
+  ])}`;
+  const recoToday = usePinnedToday(reco.data?.today ?? null, todayContext, {
+    updatedAt: reco.dataUpdatedAt,
+    placeholder: reco.isPlaceholderData,
+  });
+  const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data, locale]);
   const favorites = useMyFavorites(taste.signedIn);
 
-  const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data]);
-  const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data]);
+  const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data, locale]);
+  const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data, locale]);
 
   const today = React.useMemo(() => {
     // 좋아하는 시대가 있으면 그 시대 작곡가의 작품 중에서 고른다
@@ -142,13 +164,21 @@ export default function HomeScreen() {
     );
     const preferred = pieces.filter((piece) => preferredIds.has(piece.composerId));
     return pickDailyPiece(preferred.length > 0 ? preferred : pieces, new Date());
-  }, [composers, favoritePeriods, pieces]);
+  }, [composers, favoritePeriods, pieces, locale]);
 
   // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
   const todayPiece = recoToday ?? today;
-  const shelfPieces = React.useMemo(
+
+  // '비교할 수 있는 작품' 줄의 장르 칩. 고르면 그 장르 첫 쪽으로 줄을 바꾼다
+  const [shelfGenre, setShelfGenre] = React.useState<PieceGenre | null>(null);
+  const genreQuery = useGenrePieces(shelfGenre ?? 'symphony', shelfGenre !== null);
+  const allShelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
-    [pieces, todayPiece?.pieceId]
+    [pieces, todayPiece?.pieceId, locale]
+  );
+  const shelfPieces = React.useMemo(
+    () => (shelfGenre ? (genreQuery.data?.pages[0] ?? []) : allShelfPieces),
+    [allShelfPieces, genreQuery.data, shelfGenre, locale]
   );
 
   const favoriteArtistIds = React.useMemo(
@@ -156,7 +186,7 @@ export default function HomeScreen() {
       new Set(
         taste.signedIn ? (favorites.data?.artists ?? []).map((item) => item.artistId) : taste.guest.favoriteArtistIds
       ),
-    [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn]
+    [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn, locale]
   );
   const preferredComposerIds = React.useMemo(() => {
     const favoriteComposers = taste.signedIn
@@ -164,21 +194,22 @@ export default function HomeScreen() {
       : taste.guest.favoriteComposerIds;
     const known = recoShelves.find((shelf) => shelf.key === 'known')?.items.map((item) => item.composerId) ?? [];
     return new Set([...favoriteComposers, ...known]);
-  }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn]);
+  }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn, locale]);
 
   const artists = React.useMemo(
     () => curateArtists(artistsQuery.data?.pages[0] ?? [], favoriteArtistIds, taste.answers.sounds),
-    [artistsQuery.data, favoriteArtistIds, taste.answers.sounds]
+    [artistsQuery.data, favoriteArtistIds, taste.answers.sounds, locale]
   );
   const featuredComposers = React.useMemo(
     () => curateComposers(composers, favoritePeriods, preferredComposerIds),
-    [composers, favoritePeriods, preferredComposerIds]
+    [composers, favoritePeriods, preferredComposerIds, locale]
   );
   const soundMeta = taste.answers.sounds
     .map((sound) => SOUND_OPTIONS.find((option) => option.key === sound)?.label)
-    .filter(Boolean)
+    .filter((label): label is string => Boolean(label))
+    .map((label) => t(label))
     .join(' · ');
-  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data]);
+  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data, locale]);
   const eras = React.useMemo(
     () =>
       PERIODS.filter((era) => (PREFERENCE_ERAS as readonly string[]).includes(era.name)).map((era) => ({
@@ -186,7 +217,7 @@ export default function HomeScreen() {
         // 시대 대표 초상: 추천 순에서 그 시대 첫 작곡가
         portrait: composers.find((composer) => composer.period === era.name && composer.avatarUrl),
       })),
-    [composers]
+    [composers, locale]
   );
 
   const refreshing =
@@ -227,7 +258,7 @@ export default function HomeScreen() {
         .then(() => queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations }))
         .catch(() => {
           void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
-          Alert.alert('추천에서 빼지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.');
+          Alert.alert(t('추천에서 빼지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.'));
         });
     } else {
       void taste.updateGuest((current) => ({
@@ -237,6 +268,7 @@ export default function HomeScreen() {
     }
   };
   const openRecent = (item: RecentPiece) => openPiece(item);
+  const genreShelves = useGenreShelves();
 
   const gap = wide ? 20 : 12;
 
@@ -248,7 +280,7 @@ export default function HomeScreen() {
       />
     ) : null;
 
-  const todaySection = catalog.isLoading || reco.isLoading ? (
+  const todaySection = catalog.isLoading || (reco.isLoading && !recoToday) || recoToday === undefined ? (
     <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
   ) : catalog.isError ? (
     <View className="rounded-xl border border-border">
@@ -256,9 +288,9 @@ export default function HomeScreen() {
         compact
         icon={AlertCircleIcon}
         tone="error"
-        title="비교할 작품을 불러오지 못했어요"
-        description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-        action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
+        title={t('비교할 작품을 불러오지 못했어요')}
+        description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+        action={{ label: t('다시 시도'), onPress: () => catalog.refetch() }}
       />
     </View>
   ) : todayPiece ? (
@@ -299,7 +331,7 @@ export default function HomeScreen() {
       {/* 최근 본 작품: 데스크톱은 첫 줄 바로가기, 모바일은 2열 타일 */}
       {recentPieces.length > 0 ? (
         <View className={wide ? 'mt-6' : 'mt-5'}>
-          {!wide ? <ShelfHeader title="최근 본 작품" wide={false} /> : null}
+          {!wide ? <ShelfHeader title={t('최근 본 작품')} wide={false} /> : null}
           {/* 칸 폭을 고정한다. 늘려 채우면 홀수 개일 때 마지막 칸만 한 줄을 다 차지한다 */}
           <Grid
             items={recentPieces.slice(0, wide ? 6 : 4)}
@@ -307,7 +339,9 @@ export default function HomeScreen() {
             gap={wide ? 12 : 8}
             rowGap={wide ? 12 : 8}
             keyOf={(item) => item.pieceId}
-            renderItem={(item) => <RecentTile item={item} onPress={() => openRecent(item)} />}
+            renderItem={(item) => (
+              <RecentTile item={item} onPress={() => openRecent(item)} />
+            )}
           />
         </View>
       ) : null}
@@ -317,7 +351,7 @@ export default function HomeScreen() {
         <View className="min-w-0 flex-[2]">{todaySection}</View>
         {wide ? (
           <View className="w-[320px]">
-            <ShelfHeader title="시대로 듣기" wide onAction={() => router.push('/timeline' as Href)} actionLabel="타임라인" />
+            <ShelfHeader title={t('시대로 듣기')} wide onAction={() => router.push('/timeline' as Href)} actionLabel={t('타임라인')} />
             {eraGrid}
           </View>
         ) : null}
@@ -327,7 +361,7 @@ export default function HomeScreen() {
         <Section
           key={shelf.key}
           wide={wide}
-          title={SHELF_TITLES[shelf.key]}
+          title={t(SHELF_TITLES[shelf.key])}
           meta={shelf.key === 'taste' && soundMeta ? soundMeta : undefined}>
           {wide ? (
             <ShelfRow
@@ -365,8 +399,25 @@ export default function HomeScreen() {
         </Section>
       ))}
 
-      <Section wide={wide} title="비교할 수 있는 작품" onAction={() => router.push('/compare' as Href)}>
-        {catalog.isLoading ? (
+      <Section
+        wide={wide}
+        title={t('비교할 수 있는 작품')}
+        onAction={() => router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)}>
+        {/* 장르 칩: 이 줄만 그 장르로 걸러 본다 (스포티파이 홈 칩) */}
+        {genreShelves.shelves.length > 0 ? (
+          <ScrollShelf gap={8} className="mb-4">
+            <Chip label={t('전체')} selected={shelfGenre === null} onPress={() => setShelfGenre(null)} />
+            {genreShelves.shelves.map((shelf) => (
+              <Chip
+                key={shelf.genre}
+                label={t(shelf.style.label)}
+                selected={shelfGenre === shelf.genre}
+                onPress={() => setShelfGenre(shelfGenre === shelf.genre ? null : shelf.genre)}
+              />
+            ))}
+          </ScrollShelf>
+        ) : null}
+        {catalog.isLoading || (shelfGenre !== null && genreQuery.isLoading) ? (
           <CardSkeletonRow wide={wide} shape="square" />
         ) : shelfPieces.length === 0 ? null : wide ? (
           <ShelfRow
@@ -387,11 +438,11 @@ export default function HomeScreen() {
         )}
       </Section>
 
-      <Section wide={wide} title="연주자" onAction={() => router.push('/artists?type=artist' as Href)}>
+      <Section wide={wide} title={t('연주자')} onAction={() => router.push('/artists?type=artist' as Href)}>
         {artistsQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="circle" />
         ) : artistsQuery.isError ? (
-          <InlineError label="연주자를" onRetry={() => artistsQuery.refetch()} />
+          <InlineError message={t('연주자를 불러오지 못했어요.')} onRetry={() => artistsQuery.refetch()} />
         ) : wide ? (
           <ShelfRow
             items={artists}
@@ -405,6 +456,7 @@ export default function HomeScreen() {
                 caption={getArtistCategoryLabel(artist.category)}
                 width={width}
                 onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
               />
             )}
           />
@@ -417,6 +469,7 @@ export default function HomeScreen() {
                   image={artist.imageUrl}
                   width={76}
                   onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
                 />
               </View>
             ))}
@@ -426,13 +479,17 @@ export default function HomeScreen() {
 
       <Section
         wide={wide}
-        title="작곡가"
-        meta={favoritePeriods.length > 0 ? `${favoritePeriods.join('·')} 먼저` : undefined}
+        title={t('작곡가')}
+        meta={
+          favoritePeriods.length > 0
+            ? t('{periods} 먼저', { periods: favoritePeriods.map((period) => t(period)).join('·') })
+            : undefined
+        }
         onAction={() => router.push('/timeline' as Href)}>
         {composersQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="circle" />
         ) : composersQuery.isError ? (
-          <InlineError label="작곡가를" onRetry={() => composersQuery.refetch()} />
+          <InlineError message={t('작곡가를 불러오지 못했어요.')} onRetry={() => composersQuery.refetch()} />
         ) : wide ? (
           <ShelfRow
             items={featuredComposers}
@@ -443,9 +500,10 @@ export default function HomeScreen() {
               <PersonCard
                 name={composer.name}
                 image={composer.avatarUrl}
-                caption={composer.period}
+                caption={t(composer.period)}
                 width={width}
                 onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
               />
             )}
           />
@@ -458,6 +516,7 @@ export default function HomeScreen() {
                   image={composer.avatarUrl}
                   width={76}
                   onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
                 />
               </View>
             ))}
@@ -466,22 +525,26 @@ export default function HomeScreen() {
       </Section>
 
       {!wide ? (
-        <Section wide={false} title="시대로 듣기" onAction={() => router.push('/timeline' as Href)} actionLabel="타임라인">
+        <Section
+          wide={false}
+          title={t('시대로 듣기')}
+          onAction={() => router.push('/timeline' as Href)}
+          actionLabel={t('타임라인')}>
           {eraGrid}
         </Section>
       ) : null}
 
       <Section
         wide={wide}
-        title={concerts.thisWeek ? '이번 주 공연' : '다가오는 공연'}
+        title={concerts.thisWeek ? t('이번 주 공연') : t('다가오는 공연')}
         onAction={() => router.push('/concerts' as Href)}>
         {concertsQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="poster" />
         ) : concertsQuery.isError ? (
-          <InlineError label="공연을" onRetry={() => concertsQuery.refetch()} />
+          <InlineError message={t('공연을 불러오지 못했어요.')} onRetry={() => concertsQuery.refetch()} />
         ) : concerts.items.length === 0 ? (
           <Text variant="bodySm" className="text-foreground-muted">
-            예정된 공연이 없어요. 공연 탭에서 지역을 바꿔 보세요.
+            {t('예정된 공연이 없어요. 공연 탭에서 지역을 바꿔 보세요.')}
           </Text>
         ) : wide ? (
           <ShelfRow
@@ -524,6 +587,7 @@ function Section({
   onAction?: () => void;
   children: React.ReactNode;
 }) {
+  useLocale();
   return (
     <View className={wide ? 'mt-11' : 'mt-9'}>
       <ShelfHeader title={title} meta={meta} actionLabel={actionLabel} onAction={onAction} wide={wide} />
@@ -532,15 +596,16 @@ function Section({
   );
 }
 
-function InlineError({ label, onRetry }: { label: string; onRetry: () => void }) {
+function InlineError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
       <Text variant="bodySm" className="flex-1 text-foreground-muted">
-        {`${label} 불러오지 못했어요.`}
+        {message}
       </Text>
       <Pressable onPress={onRetry} accessibilityRole="button" hitSlop={8}>
         <Text variant="label" className="text-primary">
-          다시 시도
+          {t('다시 시도')}
         </Text>
       </Pressable>
     </View>
@@ -548,6 +613,7 @@ function InlineError({ label, onRetry }: { label: string; onRetry: () => void })
 }
 
 function CardSkeletonRow({ wide, shape }: { wide: boolean; shape: 'square' | 'circle' | 'poster' }) {
+  useLocale();
   const count = wide ? 6 : shape === 'circle' ? 4 : 3;
   return (
     <View className="flex-row gap-4 overflow-hidden">

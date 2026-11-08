@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -17,6 +18,7 @@ interface ScrimProps {
  * NativeWind 그라디언트 클래스는 웹에서만 동작해서 SVG로 그린다.
  */
 export function Scrim({ from = 'bottom', color = '#000', opacity = 0.72, extent = 60, style }: ScrimProps) {
+  useLocale();
   const id = React.useId().replace(/:/g, '');
   const vector =
     from === 'bottom'

@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -14,7 +15,8 @@ interface ShelfHeaderProps {
   wide: boolean;
 }
 
-export function ShelfHeader({ title, meta, actionLabel = '전체 보기', onAction, wide }: ShelfHeaderProps) {
+export function ShelfHeader({ title, meta, actionLabel = t('전체 보기'), onAction, wide }: ShelfHeaderProps) {
+  useLocale();
   return (
     <View className="mb-3.5 flex-row items-end justify-between gap-3">
       <View className="min-w-0 flex-1 flex-row items-baseline gap-2">
@@ -55,6 +57,7 @@ interface ShelfRowProps<T> {
  * 칸 폭은 남는 폭을 나눠 늘린다. 그리드 칸이 콘텐츠에 밀리지 않게 폭을 직접 계산한다 (부록 D-1).
  */
 export function ShelfRow<T>({ items, minItemWidth, gap = 20, keyOf, renderItem, initialColumns = 5 }: ShelfRowProps<T>) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
   const columns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minItemWidth + gap))) : initialColumns;
@@ -82,6 +85,7 @@ interface GridProps<T> {
 
 /** 모바일 n열 그리드. 칸 폭을 계산해 넘긴다. */
 export function Grid<T>({ items, columns, gap = 12, rowGap, keyOf, renderItem }: GridProps<T>) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const itemWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
   return (
@@ -105,12 +109,14 @@ export function Grid<T>({ items, columns, gap = 12, rowGap, keyOf, renderItem }:
  * 더 있다는 게 보이게 한다 (설계 문서 7.1).
  */
 export function ScrollShelf({ children, gap = 14, className }: { children: React.ReactNode; gap?: number; className?: string }) {
+  useLocale();
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      className={cn('-mx-4', className)}
-      contentContainerStyle={{ paddingHorizontal: 16, gap }}>
+      // 카드 눌림 바탕(-m-1.5 p-1.5)이 위아래로 잘리지 않게 여유를 두고 그만큼 바깥 여백을 당긴다
+      className={cn('-mx-4 -my-1.5', className)}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
   );

@@ -1,5 +1,6 @@
+import { useLocale } from '@/lib/i18n';
 import React from 'react';
-import { Image, ImageProps, View } from 'react-native';
+import { Image, ImageProps, Platform, View } from 'react-native';
 import { getImageCandidates } from '@/lib/utils/image';
 
 interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
@@ -15,11 +16,12 @@ const OptimizedImageComponent = ({
   style,
   ...props
 }: OptimizedImageProps) => {
+  const { locale } = useLocale();
   // 앞에서부터 시도하고 실패하면 다음 주소로 (위키미디어 썸네일 → 원본 → fallbackUri)
   const candidates = React.useMemo(() => {
     const urls = getImageCandidates(uri);
     return fallbackUri ? [...urls, fallbackUri] : urls;
-  }, [uri, fallbackUri]);
+  }, [uri, fallbackUri, locale]);
 
   const [attempt, setAttempt] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
@@ -55,6 +57,8 @@ const OptimizedImageComponent = ({
       <Image
         {...props}
         source={{ uri: imageUrl }}
+        // 웹은 다 받은 이미지가 툭 나타나지 않고 짧게 페이드인한다
+        className={Platform.OS === 'web' ? 'cm-img-fade' : undefined}
         style={[style, { opacity: loading ? 0 : 1 }]}
         onLoad={() => {
           setLoading(false);

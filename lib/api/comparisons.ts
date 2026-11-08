@@ -1,5 +1,8 @@
+import { bilingual, getLocale, pick, t } from '@/lib/i18n';
+import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
+  ComparisonGenreSummary,
   ClipAlignment,
   ClipStatus,
   ComparisonPerformance,
@@ -102,9 +105,11 @@ function parseCredit(value: unknown): PerformanceCredit {
     throw new Error('비교영상 응답의 credits.isPrimary 값이 올바르지 않습니다.');
   }
 
+  const artistName = bilingual(requireString(value.artistName, 'credits.artistName'), optionalString(value.artistNameEn));
   return {
+    names: { artistName },
     artistId: requireInteger(value.artistId, 'credits.artistId'),
-    artistName: requireString(value.artistName, 'credits.artistName'),
+    artistName: pick(artistName.ko, artistName.en),
     imageUrl: optionalString(value.imageUrl),
     displayOrder: requireNumber(value.displayOrder, 'credits.displayOrder'),
     isPrimary: value.isPrimary,
@@ -117,7 +122,8 @@ function parseMoment(value: unknown): ListeningMoment | null {
   const label = optionalString(value.label);
   const offsetMs = value.offsetMs;
   if (!label || typeof offsetMs !== 'number' || !Number.isFinite(offsetMs) || offsetMs < 0) return null;
-  return { offsetMs, label };
+  // 들을 곳 이름(절정·가장 여린 곳 …)은 정해진 낱말이라 사전으로 옮긴다
+  return { offsetMs, label: t(`moment::${label}`) };
 }
 
 /**
@@ -126,8 +132,8 @@ function parseMoment(value: unknown): ListeningMoment | null {
  */
 function parseNote(value: unknown): PerformanceListeningNote | null {
   if (!isRecord(value)) return null;
-  const headline = optionalString(value.headline);
-  const body = optionalString(value.body);
+  const headline = pick(optionalString(value.headline), optionalString(value.headlineEn));
+  const body = pick(optionalString(value.body), optionalString(value.bodyEn));
   if (!headline || !body) return null;
   return {
     headline,
@@ -135,10 +141,19 @@ function parseNote(value: unknown): PerformanceListeningNote | null {
     moments: (Array.isArray(value.moments) ? value.moments : [])
       .map(parseMoment)
       .filter((moment): moment is ListeningMoment => moment !== null),
-    facts: (Array.isArray(value.facts) ? value.facts : []).filter(
-      (fact): fact is string => typeof fact === 'string' && fact.trim() !== ''
-    ),
+    facts: noteFacts(value),
   };
+}
+
+/** 사실 태그. 영어판이면 영어 태그(factsEn, 한국어와 같은 수일 때만)를 쓴다 */
+function noteFacts(value: Record<string, unknown>): string[] {
+  const clean = (list: unknown): string[] =>
+    (Array.isArray(list) ? list : []).filter(
+      (fact): fact is string => typeof fact === 'string' && fact.trim() !== ''
+    );
+  const facts = clean(value.facts);
+  const factsEn = clean(value.factsEn);
+  return getLocale() === 'en' && factsEn.length === facts.length && factsEn.length > 0 ? factsEn : facts;
 }
 
 function finiteNumber(value: unknown): number | null {
@@ -190,8 +205,8 @@ function parseAlignment(value: unknown): ClipAlignment | null {
 function parseFeaturedPair(value: unknown): FeaturedPair | null {
   if (!isRecord(value) || !Array.isArray(value.performanceIds) || value.performanceIds.length !== 2) return null;
   const [a, b] = value.performanceIds;
-  const title = optionalString(value.title);
-  const note = optionalString(value.note);
+  const title = pick(optionalString(value.title), optionalString(value.titleEn));
+  const note = pick(optionalString(value.note), optionalString(value.noteEn));
   if (!Number.isInteger(a) || !Number.isInteger(b) || a === b || !title || !note) return null;
   const ids: [number, number] = [Number(a), Number(b)];
   const moments = (Array.isArray(value.moments) ? value.moments : []).flatMap((item): FeaturedPairMoment[] => {
@@ -231,13 +246,19 @@ function parseComparison(value: unknown): ComparisonPerformance {
     throw new Error('비교영상 응답의 videoId 값이 올바르지 않습니다.');
   }
 
+  const names = {
+    pieceTitle: bilingual(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    composerName: bilingual(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+    sectorName: bilingual(requireString(value.sectorName, 'sectorName'), optionalString(value.sectorNameEn)),
+  };
   return {
+    names,
     alignment: parseAlignment(value.alignment),
     clipStatus: clipStatus as ClipStatus,
     clipUrl:
       typeof value.clipUrl === 'string' && value.clipUrl.trim() !== '' ? value.clipUrl : undefined,
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: requireString(value.composerName, 'composerName'),
+    composerName: pick(names.composerName.ko, names.composerName.en),
     credits: value.credits
       .map(parseCredit)
       .sort((left, right) => left.displayOrder - right.displayOrder),
@@ -246,9 +267,9 @@ function parseComparison(value: unknown): ComparisonPerformance {
     loudness: parseLoudness(value.loudness),
     note: parseNote(value.note),
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
+    pieceTitle: pick(names.pieceTitle.ko, names.pieceTitle.en),
     sectorId: requireInteger(value.sectorId, 'sectorId'),
-    sectorName: requireString(value.sectorName, 'sectorName'),
+    sectorName: pick(names.sectorName.ko, names.sectorName.en),
     sourceId: requireInteger(value.sourceId, 'sourceId'),
     startMs,
     videoId: typeof value.videoId === 'string' ? value.videoId : undefined,
@@ -286,13 +307,15 @@ function parseSector(value: unknown): ComparisonSector {
   if (!isRecord(value)) {
     throw new Error('비교 섹터 응답이 객체가 아닙니다.');
   }
+  const sectorName = bilingual(requireString(value.sectorName, 'sector.sectorName'), optionalString(value.sectorNameEn));
   return {
+    names: { sectorName },
     id: requireInteger(value.id, 'sector.id'),
     pieceId: requireInteger(value.pieceId, 'sector.pieceId'),
-    sectorName: requireString(value.sectorName, 'sector.sectorName'),
+    sectorName: pick(sectorName.ko, sectorName.en),
     sectorNameEn: optionalString(value.sectorNameEn),
     sectorType: optionalString(value.sectorType),
-    description: optionalString(value.description),
+    description: pick(optionalString(value.description), optionalString(value.descriptionEn)) ?? null,
     displayOrder: typeof value.displayOrder === 'number' ? value.displayOrder : null,
     measureStart: optionalString(value.measureStart),
     measureEnd: optionalString(value.measureEnd),
@@ -307,31 +330,73 @@ export function parsePiece(value: unknown): ComparisonPiece {
     throw new Error('비교 작품 응답이 객체가 아닙니다.');
   }
   const performers = Array.isArray(value.performers) ? value.performers : [];
+  const names = {
+    pieceTitle: bilingual(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    composerName: bilingual(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+  };
   return {
+    names,
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
+    pieceTitle: pick(names.pieceTitle.ko, names.pieceTitle.en),
     opusNumber: optionalString(value.opusNumber),
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: requireString(value.composerName, 'composerName'),
+    composerName: pick(names.composerName.ko, names.composerName.en),
     composerAvatarUrl: optionalString(value.composerAvatarUrl),
     sectorCount: requireNumber(value.sectorCount, 'sectorCount'),
     performerCount: requireNumber(value.performerCount, 'performerCount'),
-    performers: performers.filter(isRecord).map((performer) => ({
-      artistId: requireInteger(performer.artistId, 'performers.artistId'),
-      artistName: requireString(performer.artistName, 'performers.artistName'),
-      imageUrl: optionalString(performer.imageUrl),
-    })),
+    performers: performers.filter(isRecord).map((performer) => {
+      const artistName = bilingual(requireString(performer.artistName, 'performers.artistName'), optionalString(performer.artistNameEn));
+      return {
+        names: { artistName },
+        artistId: requireInteger(performer.artistId, 'performers.artistId'),
+        artistName: pick(artistName.ko, artistName.en),
+        imageUrl: optionalString(performer.imageUrl),
+      };
+    }),
+    genre: isPieceGenre(value.genre) ? value.genre : null,
+    coverVideoId: optionalString(value.coverVideoId),
+  };
+}
+
+function parseGenreSummary(value: unknown): ComparisonGenreSummary | null {
+  if (!isRecord(value) || !isPieceGenre(value.genre)) return null;
+  const portraits = Array.isArray(value.portraits) ? value.portraits.filter(isRecord) : [];
+  return {
+    genre: value.genre,
+    pieceCount: requireNumber(value.pieceCount, 'genre.pieceCount'),
+    portraits: portraits.flatMap((portrait) =>
+      typeof portrait.avatarUrl === 'string' && portrait.avatarUrl
+        ? [{ composerId: requireInteger(portrait.composerId, 'genre.portraits.composerId'), avatarUrl: portrait.avatarUrl }]
+        : []
+    ),
   };
 }
 
 export const ComparisonAPI = {
+  /** 장르마다 공개 비교 작품 수와 대표 초상. 모르는 장르 키는 건너뛴다 */
+  async getGenreSummaries(): Promise<ComparisonGenreSummary[]> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/comparison-genres`);
+    if (!response.ok) {
+      throw new Error(`장르 목록을 불러오지 못했습니다. (${response.status})`);
+    }
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) throw new Error('장르 목록 응답 형식이 올바르지 않습니다.');
+    return payload.flatMap((item) => {
+      const summary = parseGenreSummary(item);
+      return summary ? [summary] : [];
+    });
+  },
+
   /** 비교할 수 있는 작품. 연주자가 많은 작품부터 온다. */
-  async getPieces(options: { composerId?: number; offset?: number; limit?: number } = {}): Promise<ComparisonPiece[]> {
+  async getPieces(
+    options: { composerId?: number; genre?: PieceGenre; offset?: number; limit?: number } = {}
+  ): Promise<ComparisonPiece[]> {
     const params = new URLSearchParams({
       offset: String(options.offset ?? 0),
       limit: String(options.limit ?? 20),
     });
     if (options.composerId) params.set('composer', String(options.composerId));
+    if (options.genre) params.set('genre', options.genre);
     const response = await authenticatedFetch(`${API_BASE_URL}/comparison-pieces?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`비교할 수 있는 작품을 불러오지 못했습니다. (${response.status})`);

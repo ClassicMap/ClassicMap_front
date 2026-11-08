@@ -18,6 +18,7 @@ import {
 } from '@/lib/data/concert-filters';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { t, useLocale } from '@/lib/i18n';
 import { useConcertArtistOptions } from '@/lib/query/hooks/useConcerts';
 import { cn } from '@/lib/utils';
 import { CheckIcon, HeartIcon, SearchIcon, XIcon } from 'lucide-react-native';
@@ -40,6 +41,7 @@ function OptionRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -61,12 +63,13 @@ function OptionRow({
 }
 
 export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSelect: (key: ConcertGenreKey) => void }) {
+  useLocale();
   return (
     <View className="gap-0.5">
       {CONCERT_GENRES.map((genre) => (
         <OptionRow
           key={genre.key}
-          label={genre.label}
+          label={t(genre.label)}
           selected={value === genre.key}
           onPress={() => onSelect(genre.key)}
         />
@@ -77,14 +80,15 @@ export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSele
 
 /** 기간 프리셋. 오른쪽에 실제 날짜를 붙여 '이번 주'가 언제까지인지 바로 보이게 한다 */
 export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSelect: (key: ConcertPeriodKey) => void }) {
+  useLocale();
   const now = new Date();
   return (
     <View className="gap-0.5">
       {CONCERT_PERIODS.map((period) => (
         <OptionRow
           key={period.key}
-          label={period.label}
-          detail={period.key === 'all' ? '오늘부터' : formatRange(periodRange(period.key, now))}
+          label={t(period.label)}
+          detail={period.key === 'all' ? t('오늘부터') : formatRange(periodRange(period.key, now))}
           selected={value === period.key}
           onPress={() => onSelect(period.key)}
         />
@@ -94,6 +98,7 @@ export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSe
 }
 
 function AreaPill({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -122,21 +127,22 @@ export function AreaPanel({
   value?: string;
   onSelect: (value: string | undefined) => void;
 }) {
+  useLocale();
   const byValue = new Map(areas.map((area) => [area.value, area]));
   const grouped = new Set(AREA_REGIONS.flatMap((region) => region.areas));
   const others = areas.filter((area) => !grouped.has(area.value));
   const regions = [
     ...AREA_REGIONS.map((region) => ({
-      label: region.label,
+      label: t(region.label),
       areas: region.areas.map((value) => byValue.get(value)).filter((area): area is AreaOption => Boolean(area)),
     })),
-    { label: '그 밖', areas: others },
+    { label: t('그 밖'), areas: others },
   ].filter((region) => region.areas.length > 0);
 
   return (
     <View className="gap-3.5">
       <View className="flex-row">
-        <AreaPill label="전국" selected={!value} onPress={() => onSelect(undefined)} />
+        <AreaPill label={t('전국')} selected={!value} onPress={() => onSelect(undefined)} />
       </View>
       {regions.map((region) => (
         <View key={region.label} className="gap-1.5">
@@ -174,6 +180,7 @@ export function InstrumentPanel({
   columns?: number;
   onSelect: (key: ConcertInstrumentKey | undefined) => void;
 }) {
+  useLocale();
   return (
     <View className="gap-2.5">
       <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
@@ -186,7 +193,7 @@ export function InstrumentPanel({
                 onPress={() => onSelect(selected ? undefined : instrument.key)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: selected }}
-                accessibilityLabel={`${instrument.label}, ${instrument.hint}`}
+                accessibilityLabel={`${t(instrument.label)}, ${t(instrument.hint)}`}
                 className={cn(
                   'gap-2 rounded-lg border p-3',
                   selected
@@ -208,9 +215,9 @@ export function InstrumentPanel({
                   ) : null}
                 </View>
                 <View>
-                  <Text className="text-body-sm font-semibold text-foreground">{instrument.label}</Text>
+                  <Text className="text-body-sm font-semibold text-foreground">{t(instrument.label)}</Text>
                   <Text variant="micro" numberOfLines={1} className="mt-0.5">
-                    {instrument.hint}
+                    {t(instrument.hint)}
                   </Text>
                 </View>
               </Pressable>
@@ -219,7 +226,7 @@ export function InstrumentPanel({
         })}
       </View>
       {counts ? (
-        <Text variant="micro">숫자는 지금 불러온 공연 기준이에요. 공연 제목으로 나눠 조금 다를 수 있어요.</Text>
+        <Text variant="micro">{t('숫자는 지금 불러온 공연 기준이에요. 공연 제목으로 나눠 조금 다를 수 있어요.')}</Text>
       ) : null}
     </View>
   );
@@ -242,6 +249,7 @@ function ArtistRow({
   favorite: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   const meta = [option.category ? getArtistCategoryLabel(option.category) : null, option.englishName]
     .filter(Boolean)
     .join(' · ');
@@ -270,7 +278,7 @@ function ArtistRow({
       </View>
       {option.concertCount !== undefined ? (
         <Text variant="caption" className="tabular-nums text-foreground-subtle">
-          공연 {option.concertCount}
+          {t('공연 {count}', { count: option.concertCount })}
         </Text>
       ) : null}
       <View className="w-4">{selected ? <Icon as={CheckIcon} size={16} className="text-primary" /> : null}</View>
@@ -293,6 +301,7 @@ export function ArtistPanel({
   onSelect: (artist: ArtistChoice | undefined) => void;
   autoFocus?: boolean;
 }) {
+  useLocale();
   const [search, setSearch] = React.useState('');
   const debounced = useDebounce(search, 250);
   const { options, hasCounts, isLoading, isError, refetch } = useConcertArtistOptions(debounced);
@@ -319,15 +328,15 @@ export function ArtistPanel({
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="연주자 이름"
+          placeholder={t('연주자 이름')}
           placeholderTextColor="hsl(33 6% 46%)"
           autoFocus={autoFocus && Platform.OS === 'web'}
           autoCorrect={false}
-          accessibilityLabel="연주자 이름으로 찾기"
+          accessibilityLabel={t('연주자 이름으로 찾기')}
           className="min-w-0 flex-1 text-body-sm text-foreground web:outline-none"
         />
         {search ? (
-          <Pressable accessibilityLabel="이름 지우기" hitSlop={10} onPress={() => setSearch('')}>
+          <Pressable accessibilityLabel={t('이름 지우기')} hitSlop={10} onPress={() => setSearch('')}>
             <Icon as={XIcon} size={14} className="text-foreground-subtle" />
           </Pressable>
         ) : null}
@@ -336,7 +345,7 @@ export function ArtistPanel({
       {favoriteOptions.length > 0 ? (
         <View>
           <Text variant="micro" className="mb-1 mt-1 px-2 uppercase tracking-wider">
-            찜한 연주자
+            {t('찜한 연주자')}
           </Text>
           {favoriteOptions.map((option) => (
             <ArtistRow
@@ -353,7 +362,7 @@ export function ArtistPanel({
       <View>
         {hasCounts || needle ? (
           <Text variant="micro" className="mb-1 mt-1 px-2 uppercase tracking-wider">
-            {needle ? '검색 결과' : '공연이 많은 연주자'}
+            {needle ? t('검색 결과') : t('공연이 많은 연주자')}
           </Text>
         ) : null}
         {isLoading ? (
@@ -367,18 +376,20 @@ export function ArtistPanel({
           </View>
         ) : isError ? (
           <View className="flex-row items-center gap-2 px-2 py-2">
-            <Text variant="caption">연주자 목록을 불러오지 못했어요.</Text>
+            <Text variant="caption">{t('연주자 목록을 불러오지 못했어요.')}</Text>
             <Pressable onPress={refetch} accessibilityRole="button" hitSlop={8}>
-              <Text className="text-caption font-semibold text-primary">다시 시도</Text>
+              <Text className="text-caption font-semibold text-primary">{t('다시 시도')}</Text>
             </Pressable>
           </View>
         ) : !hasCounts && !needle ? (
           <Text variant="caption" className="px-2 py-2">
-            찾을 연주자 이름을 입력해 주세요.
+            {t('찾을 연주자 이름을 입력해 주세요.')}
           </Text>
         ) : rest.length === 0 ? (
           <Text variant="caption" className="px-2 py-2">
-            {needle ? `'${debounced.trim()}' 이름의 연주자가 없어요. 철자를 바꿔 보세요.` : '앞으로 공연이 잡힌 연주자가 아직 없어요.'}
+            {needle
+              ? t("'{name}' 이름의 연주자가 없어요. 철자를 바꿔 보세요.", { name: debounced.trim() })
+              : t('앞으로 공연이 잡힌 연주자가 아직 없어요.')}
           </Text>
         ) : (
           rest.map((option) => (
@@ -408,6 +419,7 @@ export function ToggleRow({
   value: boolean;
   onChange: (next: boolean) => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={() => onChange(!value)}

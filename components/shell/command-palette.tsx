@@ -4,7 +4,10 @@ import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { type PrefetchTarget, prefetchTarget } from '@/lib/navigation/prefetch';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { CornerDownLeftIcon, MoonStarIcon, SearchIcon, type LucideIcon } from 'lucide-react-native';
@@ -18,6 +21,10 @@ import { titleMeta } from '@/components/screen/labels';
 import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 
 const GROUP_LIMIT = 5;
+/** 고른 줄에 이만큼 머물면 그 화면 데이터를 미리 받는다 (화살표로 훑을 때는 부르지 않는다) */
+const PREFETCH_DELAY_MS = 120;
+/** 닫는 움직임 길이 (global.css .cm-layer-out) */
+const CLOSE_MS = 80;
 
 type ResultKind = 'composer' | 'piece' | 'artist' | 'concert' | 'screen' | 'action';
 
@@ -32,6 +39,8 @@ interface PaletteItem {
   /** 사람은 원, 콘텐츠는 사각 */
   shape: 'circle' | 'square';
   icon?: LucideIcon;
+  /** 이 줄을 고르고 있으면 미리 받을 화면 데이터 */
+  prefetch?: PrefetchTarget;
   run: () => void;
 }
 
@@ -41,16 +50,21 @@ interface PaletteGroup {
 }
 
 const GROUP_LABELS: Record<Exclude<ResultKind, 'action'>, string> = {
-  composer: '작곡가',
-  piece: '작품',
-  artist: '아티스트',
-  concert: '공연',
-  screen: '영화·드라마',
+  composer: msg('작곡가'),
+  piece: msg('작품'),
+  artist: msg('아티스트'),
+  concert: msg('공연'),
+  screen: msg('영화·드라마'),
 };
 
 export function CommandPalette() {
+  const { locale } = useLocale();
   const { open, setOpen } = useCommandPalette();
+  const queryClient = useQueryClient();
   const router = useRouter();
+  // 닫을 때도 잠깐(80ms) 그려 두고 0.98배로 줄며 사라지게 한다
+  const [closing, setClosing] = React.useState(false);
+  const wasOpen = React.useRef(open);
   const { toggleColorScheme } = useColorScheme();
   const [query, setQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -59,9 +73,23 @@ export function CommandPalette() {
 
   const close = React.useCallback(() => {
     setOpen(false);
-    setQuery('');
-    setActiveIndex(0);
   }, [setOpen]);
+
+  React.useEffect(() => {
+    if (open) {
+      setClosing(false);
+    } else if (wasOpen.current) {
+      setClosing(true);
+      const timer = setTimeout(() => {
+        setClosing(false);
+        setQuery('');
+        setActiveIndex(0);
+      }, CLOSE_MS);
+      wasOpen.current = open;
+      return () => clearTimeout(timer);
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   const go = React.useCallback(
     (href: Href) => {
@@ -78,11 +106,12 @@ export function CommandPalette() {
         key: `composer-${composer.id}`,
         kind: 'composer',
         title: composer.name,
-        meta: [composer.period, composer.birthYear ? `${composer.birthYear}–${composer.deathYear ?? ''}` : '']
+        meta: [t(composer.period), composer.birthYear ? `${composer.birthYear}–${composer.deathYear ?? ''}` : '']
           .filter(Boolean)
           .join(' · '),
         image: composer.avatarUrl,
         shape: 'circle',
+        prefetch: { kind: 'composer', composerId: composer.id },
         run: () => go(`/composer/${composer.id}`),
       }));
       const pieces: PaletteItem[] = result.pieces.map((piece) => ({
@@ -93,6 +122,7 @@ export function CommandPalette() {
         image: piece.composerAvatarUrl,
         composerId: piece.composerId,
         shape: 'square',
+        prefetch: { kind: 'piece', pieceId: piece.id, composerId: piece.composerId },
         run: () => go(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`),
       }));
       const artists: PaletteItem[] = result.artists.map((artist) => ({
@@ -102,6 +132,7 @@ export function CommandPalette() {
         meta: getArtistCategoryLabel(artist.category),
         image: artist.imageUrl,
         shape: 'circle',
+        prefetch: { kind: 'artist', artistId: artist.id },
         run: () => go(`/artist/${artist.id}`),
       }));
       const concerts: PaletteItem[] = result.concerts.map((concert) => ({
@@ -133,12 +164,12 @@ export function CommandPalette() {
       }
     }
     list.push({
-      label: '액션',
+      label: msg('액션'),
       items: [
         {
           key: 'action-theme',
           kind: 'action',
-          title: '다크 모드 전환',
+          title: t('다크 모드 전환'),
           shape: 'square',
           icon: MoonStarIcon,
           run: () => {
@@ -159,13 +190,20 @@ export function CommandPalette() {
     go,
     toggleColorScheme,
     close,
-  ]);
+   locale,]);
 
-  const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups, locale]);
 
   React.useEffect(() => {
     setActiveIndex(0);
   }, [debounced]);
+
+  const activePrefetch = open ? flat[activeIndex]?.prefetch : undefined;
+  React.useEffect(() => {
+    if (!activePrefetch) return;
+    const timer = setTimeout(() => void prefetchTarget(queryClient, activePrefetch), PREFETCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [activePrefetch, queryClient]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -193,7 +231,7 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [open, flat, activeIndex, close]);
 
-  if (!open) return null;
+  if (!open && !closing) return null;
 
   const trimmed = debounced.trim();
   const hasResults = groups.length > 1;
@@ -202,24 +240,27 @@ export function CommandPalette() {
   return (
     <View className="absolute inset-0 z-50" style={{ position: 'fixed' as 'absolute' }}>
       <Pressable
-        accessibilityLabel="검색 닫기"
-        className="absolute inset-0 bg-black/50"
+        accessibilityLabel={t('검색 닫기')}
+        className={cn('absolute inset-0 bg-black/50', closing ? 'cm-scrim-out' : 'cm-scrim-in')}
         onPress={close}
       />
       <View
         accessibilityRole="search"
-        className="mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2"
-        style={{ maxHeight: 480, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)' } as object}>
+        className={cn(
+          'mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2',
+          closing ? 'cm-layer-out' : 'cm-layer-in'
+        )}
+        style={{ maxHeight: 480, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)', transformOrigin: '50% 0' } as object}>
         <View className="h-12 flex-row items-center gap-3 border-b border-border px-4">
           <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
           <TextInput
             autoFocus
             value={query}
             onChangeText={setQuery}
-            placeholder="작곡가, 작품, 아티스트, 공연 검색"
+            placeholder={t('작곡가, 작품, 아티스트, 공연 검색')}
             placeholderTextColor="hsl(var(--foreground-faint))"
             className="flex-1 font-sans text-body text-foreground outline-none"
-            accessibilityLabel="검색어"
+            accessibilityLabel={t('검색어')}
           />
           <Kbd>esc</Kbd>
         </View>
@@ -227,21 +268,21 @@ export function CommandPalette() {
           {trimmed && !hasResults && !result.isFetching ? (
             <View className="items-center px-6 py-10">
               <Text variant="bodySm" className="text-foreground-muted">
-                “{trimmed}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.
+                {t('“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.', { q: trimmed })}
               </Text>
             </View>
           ) : null}
           {result.failedCount > 0 ? (
             <View className="px-4 pt-3">
               <Text variant="caption" className="text-destructive">
-                일부 검색이 실패했어요. 잠시 뒤 다시 입력해 보세요.
+                {t('일부 검색이 실패했어요. 잠시 뒤 다시 입력해 보세요.')}
               </Text>
             </View>
           ) : null}
           {groups.map((group) => (
             <View key={group.label} className="py-1.5">
               <Text variant="micro" className="px-4 pb-1 pt-2 uppercase">
-                {group.label}
+                {t(group.label)}
               </Text>
               {group.items.map((item) => {
                 running += 1;
@@ -278,11 +319,11 @@ export function CommandPalette() {
           <Kbd>↑</Kbd>
           <Kbd>↓</Kbd>
           <Text variant="caption" className="text-foreground-subtle">
-            이동
+            {t('이동')}
           </Text>
           <Kbd>↵</Kbd>
           <Text variant="caption" className="text-foreground-subtle">
-            열기
+            {t('열기')}
           </Text>
         </View>
       </View>
@@ -291,6 +332,7 @@ export function CommandPalette() {
 }
 
 function PaletteThumb({ item }: { item: PaletteItem }) {
+  useLocale();
   const image = useComposerAvatar(item.composerId, item.image);
   if (item.icon) {
     return (
