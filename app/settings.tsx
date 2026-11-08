@@ -25,6 +25,7 @@ import { type Href, Redirect, useRouter } from 'expo-router';
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { LOCALES, type Locale, t, useLocale } from '@/lib/i18n';
 import { type LayoutChangeEvent, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
 type SectionKey = 'profile' | 'visibility' | 'taste' | 'display' | 'account' | 'info';
@@ -174,6 +175,9 @@ export default function SettingsScreen() {
             <View onLayout={track('display')}>
               <Group title="화면" description="시스템을 고르면 기기 설정을 따라가요.">
                 <ThemeSelector />
+              </Group>
+              <Group title={t('언어')} description={t('처음에는 기기 언어를 따라가요. 여기서 고르면 그 언어로 고정돼요.')}>
+                <LanguageSelector />
               </Group>
             </View>
 
@@ -613,6 +617,30 @@ function ThemeSelector() {
           className={cn('h-8 min-w-[84px] items-center justify-center rounded-full px-4', choice === item.key && 'bg-surface-3')}>
           <Text className={cn('text-label font-semibold', choice === item.key ? 'text-foreground' : 'text-foreground-muted')}>
             {item.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/** 언어 이름은 그 언어로 쓴다(영어판에서도 「한국어」). */
+const LANGUAGE_NAMES: Record<Locale, string> = { ko: '한국어', en: 'English' };
+
+function LanguageSelector() {
+  const { locale, setLocale } = useLocale();
+
+  return (
+    <View className="flex-row self-start rounded-full bg-surface-2 p-[3px]" accessibilityRole="radiogroup">
+      {LOCALES.map((key) => (
+        <Pressable
+          key={key}
+          onPress={() => setLocale(key)}
+          accessibilityRole="radio"
+          accessibilityState={{ checked: locale === key }}
+          className={cn('h-8 min-w-[84px] items-center justify-center rounded-full px-4', locale === key && 'bg-surface-3')}>
+          <Text className={cn('text-label font-semibold', locale === key ? 'text-foreground' : 'text-foreground-muted')}>
+            {LANGUAGE_NAMES[key]}
           </Text>
         </Pressable>
       ))}

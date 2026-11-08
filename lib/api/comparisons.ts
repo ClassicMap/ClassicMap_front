@@ -1,3 +1,4 @@
+import { pick } from '@/lib/i18n';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
@@ -106,7 +107,7 @@ function parseCredit(value: unknown): PerformanceCredit {
 
   return {
     artistId: requireInteger(value.artistId, 'credits.artistId'),
-    artistName: requireString(value.artistName, 'credits.artistName'),
+    artistName: pick(requireString(value.artistName, 'credits.artistName'), optionalString(value.artistNameEn)),
     imageUrl: optionalString(value.imageUrl),
     displayOrder: requireNumber(value.displayOrder, 'credits.displayOrder'),
     isPrimary: value.isPrimary,
@@ -239,7 +240,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
     clipUrl:
       typeof value.clipUrl === 'string' && value.clipUrl.trim() !== '' ? value.clipUrl : undefined,
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: requireString(value.composerName, 'composerName'),
+    composerName: pick(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
     credits: value.credits
       .map(parseCredit)
       .sort((left, right) => left.displayOrder - right.displayOrder),
@@ -248,7 +249,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
     loudness: parseLoudness(value.loudness),
     note: parseNote(value.note),
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
+    pieceTitle: pick(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
     sectorId: requireInteger(value.sectorId, 'sectorId'),
     sectorName: requireString(value.sectorName, 'sectorName'),
     sourceId: requireInteger(value.sourceId, 'sourceId'),
@@ -311,16 +312,16 @@ export function parsePiece(value: unknown): ComparisonPiece {
   const performers = Array.isArray(value.performers) ? value.performers : [];
   return {
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: requireString(value.pieceTitle, 'pieceTitle'),
+    pieceTitle: pick(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
     opusNumber: optionalString(value.opusNumber),
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: requireString(value.composerName, 'composerName'),
+    composerName: pick(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
     composerAvatarUrl: optionalString(value.composerAvatarUrl),
     sectorCount: requireNumber(value.sectorCount, 'sectorCount'),
     performerCount: requireNumber(value.performerCount, 'performerCount'),
     performers: performers.filter(isRecord).map((performer) => ({
       artistId: requireInteger(performer.artistId, 'performers.artistId'),
-      artistName: requireString(performer.artistName, 'performers.artistName'),
+      artistName: pick(requireString(performer.artistName, 'performers.artistName'), optionalString(performer.artistNameEn)),
       imageUrl: optionalString(performer.imageUrl),
     })),
     genre: isPieceGenre(value.genre) ? value.genre : null,

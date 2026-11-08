@@ -3,6 +3,7 @@
  * 현재는 목 데이터를 반환하지만, 나중에 실제 API 호출로 쉽게 대체 가능
  */
 
+import { pick } from '@/lib/i18n';
 import {
   COMPOSERS,
   PIECES,
@@ -268,7 +269,7 @@ const COMPOSER_TIERS: ReadonlySet<unknown> = new Set(['S', 'A', 'B', 'C']);
 const mapComposer = (api: any): Composer => {
   const mapped = {
     id: api.id,
-    name: api.name,
+    name: pick(api.name, api.englishName),
     fullName: api.fullName,
     englishName: api.englishName,
     period: api.period as '중세' | '르네상스' | '바로크' | '고전주의' | '낭만주의' | '근현대',
@@ -291,7 +292,7 @@ const mapComposer = (api: any): Composer => {
 const mapPiece = (api: APIPiece): Piece => ({
   id: api.id,
   composerId: api.composerId,
-  title: api.title,
+  title: pick(api.title, api.titleEn),
   titleEn: api.titleEn,
   type: 'song', // 기본값
   description: api.description,
@@ -331,7 +332,7 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
   parentPartId: api.parentPartId,
   sequenceNumber: api.sequenceNumber,
   movementNumber: api.movementNumber,
-  name: api.name,
+  name: pick(api.name, api.nameEn),
   nameKo: api.nameKo,
   nameEn: api.nameEn,
   notable: api.notable === true,
@@ -350,7 +351,7 @@ const mapPiecePart = (api: APIPiecePart): PiecePart => ({
 
 const mapArtist = (api: APIArtist): Artist => ({
   id: api.id,
-  name: api.name,
+  name: pick(api.name, api.englishName),
   englishName: api.englishName,
   category: api.category,
   tier: api.tier,

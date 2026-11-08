@@ -20,6 +20,7 @@ import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
 import { useTasteSync } from '@/lib/hooks/useTaste';
 import { installRouteTransitions } from '@/lib/navigation/view-transition';
+import { LocaleProvider, t } from '@/lib/i18n';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -50,8 +51,10 @@ export default function RootLayout() {
             </Head>
           ) : null}
           <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-          <Routes />
-          <PortalHost />
+          <LocaleProvider>
+            <Routes />
+            <PortalHost />
+          </LocaleProvider>
         </ThemeProvider>
       </ClerkProvider>
     </QueryClientProvider>
@@ -117,7 +120,7 @@ function Routes() {
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="delete-account" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-        <Stack.Screen name="compare-admin" options={{ title: '구간·연주 관리' }} />
+        <Stack.Screen name="compare-admin" options={{ title: t('구간·연주 관리') }} />
 
         {/* Screens accessible to everyone */}
         <Stack.Screen name="help" options={{ headerShown: false }} />
