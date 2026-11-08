@@ -1,3 +1,4 @@
+import { sectorNames } from '@/lib/data/legacy-names';
 import { type NameSidecar } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
@@ -357,6 +358,27 @@ function getState(): ComparePlayerState {
   return state;
 }
 
+/** 영어판 전에 저장한 재생 곡은 두 언어 이름(names)이 없다. 구간 연주에서 받아 채우고 다시 저장한다 */
+function fillLegacyNames() {
+  const track = state.current;
+  if (!track || track.names) return;
+  void sectorNames(track.sectorId).then((names) => {
+    const current = state.current;
+    if (!names || !current || current.performanceId !== track.performanceId || current.names) return;
+    setState({
+      current: {
+        ...current,
+        names: {
+          pieceTitle: names.pieceTitle,
+          sectorName: names.sectorName,
+          artistName: names.artistByPerformance.get(current.performanceId),
+        },
+      },
+    });
+    scheduleSave();
+  });
+}
+
 // 네이티브는 저장소가 비동기라 켜진 뒤 되살린다. 그 사이에 고른 연주가 있으면 위치만 합친다
 if (Platform.OS !== 'web') {
   void AsyncStorage.getItem(SESSION_KEY)
@@ -366,12 +388,14 @@ if (Platform.OS !== 'web') {
       const merged = { ...patch.positions, ...state.positions };
       if (state.current) setState({ positions: merged });
       else setState({ ...patch, positions: merged });
+      fillLegacyNames();
     })
     .catch(() => undefined);
   AppState.addEventListener('change', (next) => {
     if (next !== 'active') flushSession();
   });
 } else if (typeof window !== 'undefined') {
+  fillLegacyNames();
   window.addEventListener('pagehide', flushSession);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushSession();
