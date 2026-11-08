@@ -1,4 +1,4 @@
-import { getLocale, pick, t } from '@/lib/i18n';
+import { bilingual, getLocale, pick, t } from '@/lib/i18n';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
@@ -105,9 +105,11 @@ function parseCredit(value: unknown): PerformanceCredit {
     throw new Error('비교영상 응답의 credits.isPrimary 값이 올바르지 않습니다.');
   }
 
+  const artistName = bilingual(requireString(value.artistName, 'credits.artistName'), optionalString(value.artistNameEn));
   return {
+    names: { artistName },
     artistId: requireInteger(value.artistId, 'credits.artistId'),
-    artistName: pick(requireString(value.artistName, 'credits.artistName'), optionalString(value.artistNameEn)),
+    artistName: pick(artistName.ko, artistName.en),
     imageUrl: optionalString(value.imageUrl),
     displayOrder: requireNumber(value.displayOrder, 'credits.displayOrder'),
     isPrimary: value.isPrimary,
@@ -244,13 +246,19 @@ function parseComparison(value: unknown): ComparisonPerformance {
     throw new Error('비교영상 응답의 videoId 값이 올바르지 않습니다.');
   }
 
+  const names = {
+    pieceTitle: bilingual(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    composerName: bilingual(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+    sectorName: bilingual(requireString(value.sectorName, 'sectorName'), optionalString(value.sectorNameEn)),
+  };
   return {
+    names,
     alignment: parseAlignment(value.alignment),
     clipStatus: clipStatus as ClipStatus,
     clipUrl:
       typeof value.clipUrl === 'string' && value.clipUrl.trim() !== '' ? value.clipUrl : undefined,
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: pick(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+    composerName: pick(names.composerName.ko, names.composerName.en),
     credits: value.credits
       .map(parseCredit)
       .sort((left, right) => left.displayOrder - right.displayOrder),
@@ -259,9 +267,9 @@ function parseComparison(value: unknown): ComparisonPerformance {
     loudness: parseLoudness(value.loudness),
     note: parseNote(value.note),
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: pick(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    pieceTitle: pick(names.pieceTitle.ko, names.pieceTitle.en),
     sectorId: requireInteger(value.sectorId, 'sectorId'),
-    sectorName: pick(requireString(value.sectorName, 'sectorName'), optionalString(value.sectorNameEn)),
+    sectorName: pick(names.sectorName.ko, names.sectorName.en),
     sourceId: requireInteger(value.sourceId, 'sourceId'),
     startMs,
     videoId: typeof value.videoId === 'string' ? value.videoId : undefined,
@@ -299,10 +307,12 @@ function parseSector(value: unknown): ComparisonSector {
   if (!isRecord(value)) {
     throw new Error('비교 섹터 응답이 객체가 아닙니다.');
   }
+  const sectorName = bilingual(requireString(value.sectorName, 'sector.sectorName'), optionalString(value.sectorNameEn));
   return {
+    names: { sectorName },
     id: requireInteger(value.id, 'sector.id'),
     pieceId: requireInteger(value.pieceId, 'sector.pieceId'),
-    sectorName: pick(requireString(value.sectorName, 'sector.sectorName'), optionalString(value.sectorNameEn)),
+    sectorName: pick(sectorName.ko, sectorName.en),
     sectorNameEn: optionalString(value.sectorNameEn),
     sectorType: optionalString(value.sectorType),
     description: pick(optionalString(value.description), optionalString(value.descriptionEn)) ?? null,
@@ -320,20 +330,29 @@ export function parsePiece(value: unknown): ComparisonPiece {
     throw new Error('비교 작품 응답이 객체가 아닙니다.');
   }
   const performers = Array.isArray(value.performers) ? value.performers : [];
+  const names = {
+    pieceTitle: bilingual(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    composerName: bilingual(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+  };
   return {
+    names,
     pieceId: requireInteger(value.pieceId, 'pieceId'),
-    pieceTitle: pick(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
+    pieceTitle: pick(names.pieceTitle.ko, names.pieceTitle.en),
     opusNumber: optionalString(value.opusNumber),
     composerId: requireInteger(value.composerId, 'composerId'),
-    composerName: pick(requireString(value.composerName, 'composerName'), optionalString(value.composerNameEn)),
+    composerName: pick(names.composerName.ko, names.composerName.en),
     composerAvatarUrl: optionalString(value.composerAvatarUrl),
     sectorCount: requireNumber(value.sectorCount, 'sectorCount'),
     performerCount: requireNumber(value.performerCount, 'performerCount'),
-    performers: performers.filter(isRecord).map((performer) => ({
-      artistId: requireInteger(performer.artistId, 'performers.artistId'),
-      artistName: pick(requireString(performer.artistName, 'performers.artistName'), optionalString(performer.artistNameEn)),
-      imageUrl: optionalString(performer.imageUrl),
-    })),
+    performers: performers.filter(isRecord).map((performer) => {
+      const artistName = bilingual(requireString(performer.artistName, 'performers.artistName'), optionalString(performer.artistNameEn));
+      return {
+        names: { artistName },
+        artistId: requireInteger(performer.artistId, 'performers.artistId'),
+        artistName: pick(artistName.ko, artistName.en),
+        imageUrl: optionalString(performer.imageUrl),
+      };
+    }),
     genre: isPieceGenre(value.genre) ? value.genre : null,
     coverVideoId: optionalString(value.coverVideoId),
   };

@@ -54,6 +54,26 @@ export function t(text: string, params?: Params): string {
   return fill(template, params);
 }
 
+/** 한 칸의 두 언어 값. 영어가 없으면 null */
+export type Bilingual = { ko: string; en: string | null };
+
+/** 칸 이름 → 두 언어 값. 응답을 고를 때 같이 남겨 두면, 기기에 저장한 사본도 나중에 언어를 바꿔 보일 수 있다 */
+export type NameSidecar = Partial<Record<string, Bilingual>>;
+
+export function bilingual(ko: string, en: string | null | undefined): Bilingual {
+  return { ko, en: en && en.trim() ? en : null };
+}
+
+/** names 에 남겨 둔 칸을 지금 언어로 다시 고른다(저장해 둔 오늘의 비교·최근 본 작품·재생 중인 곡) */
+export function relocalize<T extends { names?: NameSidecar }>(value: T): T {
+  if (!value.names) return value;
+  const next: Record<string, unknown> = { ...value };
+  for (const [key, pair] of Object.entries(value.names)) {
+    if (pair && typeof pair.ko === 'string') next[key] = pick(pair.ko, pair.en);
+  }
+  return next as T;
+}
+
 /** 숫자를 지금 언어 표기로(1,234). */
 export function formatNumber(value: number): string {
   return value.toLocaleString(current === 'en' ? 'en-US' : 'ko-KR');

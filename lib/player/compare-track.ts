@@ -27,5 +27,10 @@ export function trackFromPerformance(performance: ComparisonPerformance, imageUr
     startMs: performance.startMs,
     endMs: performance.endMs,
     alignment: performance.alignment,
+    names: {
+      pieceTitle: performance.names?.pieceTitle,
+      sectorName: performance.names?.sectorName,
+      artistName: credit?.names?.artistName,
+    },
   };
 }

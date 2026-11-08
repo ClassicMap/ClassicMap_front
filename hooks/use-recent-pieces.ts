@@ -1,3 +1,4 @@
+import { relocalize, type NameSidecar } from '@/lib/i18n';
 import { recordListeningEvent } from '@/lib/data/listening-events';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +21,8 @@ export interface RecentPiece {
   genre?: PieceGenre | null;
   /** 카드 그림(대표 연주 영상). 붙기 전에 저장한 항목에는 없다 */
   coverVideoId?: string | null;
+  /** 제목·작곡가·구간 이름의 한국어·영어. 읽을 때 지금 언어로 고른다(붙기 전 항목에는 없다) */
+  names?: NameSidecar;
   viewedAt: number;
 }
 
@@ -47,11 +50,13 @@ async function readRecentPieces(): Promise<RecentPiece[]> {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter(isRecentPiece).map((item) => ({
-          ...item,
-          genre: isPieceGenre(item.genre) ? item.genre : null,
-          coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
-        }))
+      ? parsed.filter(isRecentPiece).map((item) =>
+          relocalize({
+            ...item,
+            genre: isPieceGenre(item.genre) ? item.genre : null,
+            coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
+          })
+        )
       : [];
   } catch {
     return [];

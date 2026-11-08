@@ -1,3 +1,4 @@
+import { getLocale, relocalize, useLocale } from '@/lib/i18n';
 import type { RecommendedPiece } from '@/lib/types/models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
@@ -93,6 +94,20 @@ export function usePinnedToday(
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => undefined);
   }, [candidate, context, day, pinnable, pinned, stored]);
 
+  const { locale } = useLocale();
+  const shown = pinned ?? candidate;
+  // 고정해 둔 곡은 고를 때 언어로 이름이 저장돼 있다. 남겨 둔 두 언어 값으로 지금 언어를 다시 고른다
+  const localized = React.useMemo(() => (shown ? relocalizeRecommended(shown) : shown), [shown, locale]);
   if (stored === undefined) return undefined;
-  return pinned ?? candidate;
+  return localized;
+}
+
+function relocalizeRecommended(piece: RecommendedPiece): RecommendedPiece {
+  const base = relocalize(piece);
+  const reasons = piece.reasonsByLocale;
+  return {
+    ...base,
+    performers: base.performers.map((performer) => relocalize(performer)),
+    reasons: reasons ? (getLocale() === 'en' && reasons.en.length > 0 ? reasons.en : reasons.ko) : piece.reasons,
+  };
 }

@@ -436,6 +436,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       sectorName: activeSector.sectorName,
       genre: pieceInfo?.genre ?? null,
       coverVideoId: pieceInfo?.coverVideoId ?? null,
+      names: {
+        pieceTitle: first.names?.pieceTitle,
+        composerName: first.names?.composerName,
+        sectorName: activeSector.names?.sectorName,
+      },
     });
   }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent]);
 

@@ -7,7 +7,7 @@ import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
-import { t, useLocale } from '@/lib/i18n';
+import { relocalize, t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
@@ -20,9 +20,11 @@ import { Pressable, View } from 'react-native';
  * 연주자·제목을 누르면 그 비교 화면으로 돌아가 같은 자리에서 이어진다.
  */
 export function GlobalPlayerBar() {
-  useLocale();
+  const { locale } = useLocale();
   const router = useRouter();
-  const current = useComparePlayer((state) => state.current);
+  const stored = useComparePlayer((state) => state.current);
+  // 저장해 둔 곡 이름을 지금 언어로(언어를 바꿔도 재생 중인 곡이 그대로 보이게)
+  const current = React.useMemo(() => (stored ? relocalize(stored) : stored), [stored, locale]);
   const playing = useComparePlayer((state) => state.playing);
   const restored = useComparePlayer((state) => state.restored);
   const surface = useComparePlayer((state) => state.surface);

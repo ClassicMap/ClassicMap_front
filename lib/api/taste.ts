@@ -1,6 +1,6 @@
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import { parsePiece } from '@/lib/api/comparisons';
-import { getLocale, pick } from '@/lib/i18n';
+import { bilingual, getLocale, pick } from '@/lib/i18n';
 import type {
   HomeRecommendations,
   ListeningEvent,
@@ -95,8 +95,15 @@ function parseProfile(value: unknown): TasteProfile {
 
 function parseRecommended(value: unknown): RecommendedPiece {
   if (!isRecord(value)) throw new Error('추천 작품 응답 형식이 올바르지 않습니다.');
+  const piece = parsePiece(value);
   return {
-    ...parsePiece(value),
+    ...piece,
+    names: {
+      ...piece.names,
+      ...(typeof value.sectorName === 'string' && value.sectorName !== ''
+        ? { sectorName: bilingual(value.sectorName, typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null) }
+        : {}),
+    },
     sectorId:
       Number.isInteger(value.sectorId) && Number(value.sectorId) > 0
         ? Number(value.sectorId)
@@ -108,6 +115,7 @@ function parseRecommended(value: unknown): RecommendedPiece {
     // 영어판이면 서버가 같이 만든 영어 이유를 쓴다
     reasons:
       getLocale() === 'en' && strings(value.reasonsEn).length > 0 ? strings(value.reasonsEn) : strings(value.reasons),
+    reasonsByLocale: { ko: strings(value.reasons), en: strings(value.reasonsEn) },
   };
 }
 

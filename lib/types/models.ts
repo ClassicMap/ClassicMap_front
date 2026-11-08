@@ -1,3 +1,4 @@
+import type { NameSidecar } from '@/lib/i18n';
 import type { PieceGenre } from '@/lib/design/genre-palette';
 // ============================================
 // Database Models (데이터베이스 스키마와 동일)
@@ -271,6 +272,8 @@ export interface PerformanceCredit {
   role: PerformanceCreditRole;
   isPrimary: boolean;
   displayOrder: number;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 export interface ComparisonPerformance {
@@ -294,6 +297,8 @@ export interface ComparisonPerformance {
   loudness: LoudnessProfile | null;
   /** 같은 구간 기준 연주에 맞춘 정렬 지도. 없거나 덜 맞으면 null(같은 지점은 비율로 맞춘다) */
   alignment: ClipAlignment | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 /**
@@ -368,12 +373,16 @@ export interface ComparisonSector {
   primaryArtistCount: number;
   /** 확정된 추천 비교. 없으면 null */
   featuredPair: FeaturedPair | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 export interface ComparisonPiecePerformer {
   artistId: number;
   artistName: string;
   imageUrl: string | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 /** `/comparison-pieces`: 공개 섹터가 하나 이상 있는 작품 */
@@ -391,6 +400,8 @@ export interface ComparisonPiece {
   genre?: PieceGenre | null;
   /** 카드 그림으로 쓸 대표 연주 영상(YouTube id). 썸네일 가운데가 대개 음반 표지다 */
   coverVideoId?: string | null;
+  /** 이름 칸의 한국어·영어(relocalize 로 다시 고른다) */
+  names?: NameSidecar;
 }
 
 /** `/comparison-genres`: 장르마다 공개 비교 작품 수와 대표 작곡가 초상(겹치지 않게 최대 3명) */
@@ -646,6 +657,8 @@ export interface RecommendedPiece extends ComparisonPiece {
   sectorId: number | null;
   sectorName: string | null;
   reasons: string[];
+  /** 추천 이유의 한국어·영어 */
+  reasonsByLocale?: { ko: string[]; en: string[] };
 }
 
 export type RecommendationShelfKey = 'taste' | 'known' | 'starter';
