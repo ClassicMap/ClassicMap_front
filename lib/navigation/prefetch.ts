@@ -11,7 +11,7 @@ import {
   sectorPerformancesQueryOptions,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import { composerQueryOptions } from '@/lib/query/hooks/useComposers';
-import { composerPiecesQueryOptions } from '@/lib/query/hooks/usePieces';
+import { composerCatalogQueryOptions } from '@/lib/query/hooks/usePieces';
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Platform } from 'react-native';
@@ -80,7 +80,7 @@ export function prefetchTarget(queryClient: QueryClient, target: PrefetchTarget)
         await Promise.all([
           queryClient.prefetchQuery(composerQueryOptions(target.composerId)),
           queryClient.prefetchInfiniteQuery(comparisonPiecesQueryOptions(target.composerId)),
-          queryClient.prefetchInfiniteQuery(composerPiecesQueryOptions(target.composerId)),
+          queryClient.prefetchQuery(composerCatalogQueryOptions(target.composerId)),
         ]);
         return;
       case 'compare-catalog':

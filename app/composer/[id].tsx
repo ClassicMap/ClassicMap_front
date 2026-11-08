@@ -26,7 +26,10 @@ import { ComposerAPI } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
-import { useComposerPieces, usePieceParts } from '@/lib/query/hooks/usePieces';
+import { PIECE_QUERY_KEYS } from '@/lib/query/hooks/usePieces';
+import { ComposerWorks } from '@/components/composer/composer-works';
+import { MoreLink } from '@/components/ui/more-link';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ComparisonPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -42,7 +45,6 @@ import {
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
-import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -73,68 +75,6 @@ function collectPerformers(pieces: readonly ComparisonPiece[]): PerformerSummary
   );
 }
 
-interface ListenLink {
-  label: string;
-  url: string;
-}
-
-interface ListenUrls {
-  appleMusicUrl?: string | null;
-  spotifyUrl?: string | null;
-  youtubeMusicUrl?: string | null;
-}
-
-function listenLinks(urls: ListenUrls): ListenLink[] {
-  return [
-    urls.appleMusicUrl ? { label: 'Apple Music', url: urls.appleMusicUrl } : null,
-    urls.spotifyUrl ? { label: 'Spotify', url: urls.spotifyUrl } : null,
-    urls.youtubeMusicUrl ? { label: 'YouTube Music', url: urls.youtubeMusicUrl } : null,
-  ].filter((link): link is ListenLink => link !== null);
-}
-
-/** 묶음 안 곡을 세는 단위. 악장으로 나뉜 작품만 악장이고 나머지는 곡이다 */
-function partUnit(kind: PiecePartKind | null | undefined): string {
-  return kind === 'movement' ? '악장' : '곡';
-}
-
-interface OrderedPart {
-  part: PiecePart;
-  depth: number;
-}
-
-/**
- * 안의 곡을 순서대로 펴고, 하위 곡은 부모 바로 아래에 한 단계 들여 놓는다.
- * 목록에 없는 부모를 가리키면 맨 위로 올리고, 맨 위에 닿지 않는 곡(부모끼리 고리)도 버리지 않고 뒤에 붙인다
- */
-function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
-  const ids = new Set(parts.map((part) => part.id));
-  const childrenOf = new Map<number | null, PiecePart[]>();
-  for (const part of parts) {
-    const parentId =
-      part.parentPartId !== null && part.parentPartId !== part.id && ids.has(part.parentPartId)
-        ? part.parentPartId
-        : null;
-    const siblings = childrenOf.get(parentId) ?? [];
-    siblings.push(part);
-    childrenOf.set(parentId, siblings);
-  }
-  const bySequence = (a: PiecePart, b: PiecePart) => a.sequenceNumber - b.sequenceNumber || a.id - b.id;
-  const ordered: OrderedPart[] = [];
-  const placed = new Set<number>();
-  const visit = (parentId: number | null, depth: number) => {
-    for (const part of (childrenOf.get(parentId) ?? []).sort(bySequence)) {
-      ordered.push({ part, depth });
-      placed.add(part.id);
-      visit(part.id, depth + 1);
-    }
-  };
-  visit(null, 0);
-  for (const part of parts.filter((item) => !placed.has(item.id)).sort(bySequence)) {
-    ordered.push({ part, depth: 0 });
-  }
-  return ordered;
-}
-
 export default function ComposerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const composerId = Number(id);
@@ -148,6 +88,9 @@ export default function ComposerDetailScreen() {
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
+  const scrollRef = React.useRef<ScrollView>(null);
+  const comparableRef = React.useRef<View>(null);
+  const [comparableOpen, setComparableOpen] = React.useState(false);
 
   const [editVisible, setEditVisible] = React.useState(false);
   const [pieceFormVisible, setPieceFormVisible] = React.useState(false);
@@ -156,17 +99,41 @@ export default function ComposerDetailScreen() {
   const composerQuery = useComposer(Number.isFinite(composerId) ? composerId : undefined);
   const composer = composerQuery.data;
   const comparableQuery = useComparisonPieces(composerId, Boolean(composer));
-  const piecesQuery = useComposerPieces(composer ? composerId : undefined);
+  const refreshPieces = () => queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
 
   const comparable = React.useMemo(() => comparableQuery.data?.pages.flat() ?? [], [comparableQuery.data]);
+  const comparableFoldable =
+    comparable.length > COMPARABLE_PREVIEW || Boolean(comparableQuery.hasNextPage);
+  const shownComparable = comparableOpen ? comparable : comparable.slice(0, COMPARABLE_PREVIEW);
+  // 긴 목록 끝에서 접으면 이 칸 머리가 화면 위로 지나가 있어 다른 곳이 보인다.
+  // 머리로 스크롤을 옮기고 같이 접는다
+  const collapseComparable = () => {
+    const scroll = scrollRef.current;
+    const viewport = scroll?.getNativeScrollRef();
+    const section = comparableRef.current;
+    const collapse = () => setComparableOpen(false);
+    if (!scroll || !viewport || !section) return collapse();
+    section.measureInWindow((_x, sectionTop) => {
+      viewport.measureInWindow((_vx, viewportTop) => {
+        if (sectionTop >= viewportTop) return collapse();
+        section.measureLayout(
+          scroll.getInnerViewNode(),
+          (_lx, y) => {
+            scroll.scrollTo({ y: Math.max(0, y - 16), animated: false });
+            collapse();
+          },
+          collapse
+        );
+      });
+    });
+  };
   const comparableIds = React.useMemo(() => new Set(comparable.map((piece) => piece.pieceId)), [comparable]);
   const performers = React.useMemo(() => collectPerformers(comparable), [comparable]);
-  const pieces = React.useMemo(() => piecesQuery.data?.pages.flat() ?? [], [piecesQuery.data]);
 
   const refresh = () => {
     void composerQuery.refetch();
     void comparableQuery.refetch();
-    void piecesQuery.refetch();
+    void refreshPieces();
   };
 
   const openCompare = (pieceId: number) =>
@@ -210,7 +177,7 @@ export default function ComposerDetailScreen() {
         onPress: async () => {
           try {
             await AdminPieceAPI.delete(piece.id);
-            void piecesQuery.refetch();
+            void refreshPieces();
           } catch {
             Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
           }
@@ -309,6 +276,7 @@ export default function ComposerDetailScreen() {
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
@@ -352,8 +320,8 @@ export default function ComposerDetailScreen() {
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
           <View className="min-w-0 flex-1 gap-11">
-            {/* 비교할 수 있는 작품 (1차 시안: 번호 행) */}
-            <View>
+            {/* 비교할 수 있는 작품 (1차 시안: 번호 행). 많으면 5곡만 보이고 펼친다 */}
+            <View ref={comparableRef}>
               <SectionTitle title="비교할 수 있는 작품" meta={comparable.length > 0 ? `${comparable.length}곡` : undefined} />
               {comparableQuery.isLoading ? (
                 <View className="gap-2">
@@ -367,7 +335,7 @@ export default function ComposerDetailScreen() {
                 </Text>
               ) : (
                 <View>
-                  {comparable.map((piece, index) => (
+                  {shownComparable.map((piece, index) => (
                     <ComparableRow
                       key={piece.pieceId}
                       index={index}
@@ -381,62 +349,65 @@ export default function ComposerDetailScreen() {
                       }
                     />
                   ))}
-                  {comparableQuery.hasNextPage ? (
-                    <Pressable
-                      onPress={() => comparableQuery.fetchNextPage()}
-                      disabled={comparableQuery.isFetchingNextPage}
-                      className="mt-2 self-start px-2 py-1">
-                      <Text variant="label" className="text-foreground-muted">
-                        {comparableQuery.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
+                  <View className="mt-1 flex-row gap-4">
+                    {!comparableOpen && comparableFoldable ? (
+                      <MoreLink
+                        label={
+                          comparableQuery.hasNextPage
+                            ? '더 보기'
+                            : `${comparable.length.toLocaleString('ko-KR')}곡 모두 보기`
+                        }
+                        onPress={() => setComparableOpen(true)}
+                      />
+                    ) : null}
+                    {comparableOpen && comparableQuery.hasNextPage ? (
+                      <MoreLink
+                        label={comparableQuery.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+                        onPress={() => comparableQuery.fetchNextPage()}
+                        disabled={comparableQuery.isFetchingNextPage}
+                      />
+                    ) : null}
+                    {comparableOpen ? (
+                      <MoreLink label="접기" collapse onPress={collapseComparable} />
+                    ) : null}
+                  </View>
                 </View>
               )}
             </View>
 
-            {/* 이 작품들을 연주한 사람: 사람은 원형 */}
-            {performers.length > 0 ? (
+            {/* 이 작품들을 연주한 사람: 넓은 화면은 오른쪽 칸, 좁은 화면은 가로 띠 */}
+            {!wide && performers.length > 0 ? (
               <View>
                 <SectionTitle title="이 작품들을 연주한 사람" meta={`${performers.length}명`} />
-                {wide ? (
-                  <View className="flex-row flex-wrap gap-x-4 gap-y-5">
-                    {performers.slice(0, 12).map((performer) => (
-                      <PerformerTile
-                        key={performer.artistId}
-                        performer={performer}
-                        onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
-                      />
-                    ))}
-                  </View>
-                ) : (
-                  <ScrollShelf>
-                    {performers.map((performer) => (
-                      <PerformerTile
-                        key={performer.artistId}
-                        performer={performer}
-                        onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
-                      />
-                    ))}
-                  </ScrollShelf>
-                )}
+                <ScrollShelf>
+                  {performers.map((performer) => (
+                    <PerformerTile
+                      key={performer.artistId}
+                      performer={performer}
+                      onPress={() => router.push(`/artist/${performer.artistId}` as Href)}
+                    />
+                  ))}
+                </ScrollShelf>
               </View>
             ) : null}
 
             {!wide && about ? about : null}
 
-            {/* 작품 전체: 페이지로 받는다 */}
-            <View>
-              <View className="flex-row items-center justify-between">
-                <SectionTitle
-                  title="작품"
-                  meta={composer.pieceCount ? `${composer.pieceCount.toLocaleString('ko-KR')}곡` : undefined}
-                />
-                {canEdit ? (
+            {/* 작품 전체: 갈래·형식 묶음과 작곡가 안 검색. 목록은 갈래·형식마다 페이지로 받는다 */}
+            <ComposerWorks
+              composerId={composer.id}
+              composerName={composer.name}
+              comparableIds={comparableIds}
+              canEdit={canEdit}
+              onCompare={openCompare}
+              onEdit={handleEditPiece}
+              onDelete={handleDeletePiece}
+              scrollRef={scrollRef}
+              headerAction={
+                canEdit ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="-mt-3"
                     onPress={() => {
                       setEditingPiece(undefined);
                       setPieceFormVisible(true);
@@ -444,63 +415,22 @@ export default function ComposerDetailScreen() {
                     <Icon as={PlusIcon} size={14} className="text-foreground" />
                     <Text>작품 추가</Text>
                   </Button>
-                ) : null}
-              </View>
-              {piecesQuery.isLoading ? (
-                <View className="gap-2">
-                  {Array.from({ length: 5 }, (_, index) => (
-                    <Skeleton key={index} className="h-12 w-full rounded-lg" />
-                  ))}
-                </View>
-              ) : piecesQuery.isError ? (
-                <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
-                  <Text variant="bodySm" className="flex-1 text-foreground-muted">
-                    작품 목록을 불러오지 못했어요.
-                  </Text>
-                  <Pressable onPress={() => piecesQuery.refetch()} hitSlop={8}>
-                    <Text variant="label" className="text-primary">
-                      다시 시도
-                    </Text>
-                  </Pressable>
-                </View>
-              ) : pieces.length === 0 ? (
-                <Text variant="bodySm" className="text-foreground-muted">
-                  아직 등록된 작품이 없어요.
-                </Text>
-              ) : (
-                <View className="border-t border-border">
-                  {pieces.map((piece) => (
-                    <PieceRow
-                      key={piece.id}
-                      piece={piece}
-                      comparable={comparableIds.has(piece.id)}
-                      canEdit={canEdit}
-                      onCompare={() => openCompare(piece.id)}
-                      onComparePart={openCompare}
-                      onEdit={() => handleEditPiece(piece)}
-                      onDelete={() => handleDeletePiece(piece)}
-                    />
-                  ))}
-                  {piecesQuery.hasNextPage ? (
-                    <View className="mt-4 items-center">
-                      <Button
-                        variant="outline"
-                        onPress={() => piecesQuery.fetchNextPage()}
-                        disabled={piecesQuery.isFetchingNextPage}>
-                        <Text>
-                          {piecesQuery.isFetchingNextPage
-                            ? '불러오는 중…'
-                            : composer.pieceCount ? `작품 더 보기 (${pieces.length}/${composer.pieceCount.toLocaleString('ko-KR')})` : '작품 더 보기'}
-                        </Text>
-                      </Button>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-            </View>
+                ) : undefined
+              }
+            />
           </View>
 
-          {wide && about ? <View className="w-[340px]">{about}</View> : null}
+          {wide && (about || performers.length > 0) ? (
+            <View className="w-[340px] gap-10">
+              {about}
+              {performers.length > 0 ? (
+                <PerformerSidebar
+                  performers={performers}
+                  onOpen={(artistId) => router.push(`/artist/${artistId}` as Href)}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -522,12 +452,15 @@ export default function ComposerDetailScreen() {
             setPieceFormVisible(false);
             setEditingPiece(undefined);
           }}
-          onSuccess={() => void piecesQuery.refetch()}
+          onSuccess={() => void refreshPieces()}
         />
       ) : null}
     </View>
   );
 }
+
+/** 비교할 수 있는 작품을 접어 둘 때 보이는 수(스포티파이 아티스트 '인기' 칸처럼 5곡) */
+const COMPARABLE_PREVIEW = 5;
 
 function SectionTitle({ title, meta }: { title: string; meta?: string }) {
   return (
@@ -610,189 +543,56 @@ function PerformerTile({ performer, onPress }: { performer: PerformerSummary; on
   );
 }
 
-function PieceRow({
-  piece,
-  comparable,
-  canEdit,
-  onCompare,
-  onComparePart,
-  onEdit,
-  onDelete,
+const SIDEBAR_PERFORMERS = 8;
+
+/** 넓은 화면 오른쪽 칸의 연주자 목록. 여러 작품을 친 사람이 앞에 온다 */
+function PerformerSidebar({
+  performers,
+  onOpen,
 }: {
-  piece: Piece;
-  comparable: boolean;
-  canEdit: boolean;
-  onCompare: () => void;
-  onComparePart: (pieceId: number) => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  performers: PerformerSummary[];
+  onOpen: (artistId: number) => void;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const partCount = piece.partCount ?? 0;
-  const unit = partUnit(piece.partKind);
-  const partsQuery = usePieceParts(piece.id, expanded);
-  const links = listenLinks(piece);
-  const detail = [piece.opusNumber, piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean).join(' · ');
+  const [all, setAll] = React.useState(false);
+  const shown = all ? performers : performers.slice(0, SIDEBAR_PERFORMERS);
   return (
-    <View className="border-b border-border">
-      <View className="flex-row items-center gap-3 py-3">
-        <View className="min-w-0 flex-1">
-          <View className="flex-row items-center gap-2">
-            <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
-              {piece.title}
-            </Text>
-            {partCount > 0 ? (
-              <Pressable
-                onPress={() => setExpanded((value) => !value)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded }}
-                accessibilityLabel={`${piece.title} 안의 ${unit} ${partCount}개 ${expanded ? '접기' : '펼치기'}`}
-                hitSlop={8}
-                className="shrink-0 flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
-                <Text variant="caption" className="tabular-nums">
-                  {`${partCount}${unit}`}
+    <View>
+      <View className="mb-2.5 flex-row items-baseline gap-2">
+        <Text variant="headline">이 작품들을 연주한 사람</Text>
+        <Text variant="caption">{`${performers.length}명`}</Text>
+      </View>
+      <View className="gap-1">
+        {shown.map((performer) => {
+          const caption =
+            performer.pieces.length > 1
+              ? `${performer.pieces[0]} 외 ${performer.pieces.length - 1}곡`
+              : performer.pieces[0];
+          return (
+            <Pressable
+              key={performer.artistId}
+              onPress={() => onOpen(performer.artistId)}
+              accessibilityRole="link"
+              accessibilityLabel={`${performer.artistName}, ${caption}`}
+              className="flex-row items-center gap-3 rounded-lg px-1.5 py-1.5 active:bg-surface-2 web:transition-colors web:hover:bg-surface-2">
+              <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={40} />
+              <View className="min-w-0 flex-1">
+                <Text numberOfLines={1} className="text-label font-semibold text-foreground">
+                  {performer.artistName}
                 </Text>
-                <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
-              </Pressable>
-            ) : null}
-          </View>
-          {detail || piece.titleEn ? (
-            <Text variant="caption" numberOfLines={1} className="mt-0.5">
-              {[detail, piece.titleEn].filter(Boolean).join(' · ')}
-            </Text>
-          ) : null}
-          {links.length > 0 ? <ListenLinks name={piece.title} links={links} /> : null}
-        </View>
-        {comparable ? (
-          <Chip size="sm" label="비교 듣기" onPress={onCompare} accessibilityLabel={`${piece.title} 비교 듣기`} />
-        ) : null}
-        <FavoriteButton kind="pieces" id={piece.id} name={piece.title} />
-        {canEdit ? (
-          <View className="flex-row">
-            <Pressable onPress={onEdit} accessibilityLabel={`${piece.title} 수정`} hitSlop={6} className="size-8 items-center justify-center">
-              <Icon as={EditIcon} size={15} className="text-foreground-muted" />
+                <Text numberOfLines={1} className="text-caption text-foreground-muted">
+                  {caption}
+                </Text>
+              </View>
             </Pressable>
-            <Pressable onPress={onDelete} accessibilityLabel={`${piece.title} 삭제`} hitSlop={6} className="size-8 items-center justify-center">
-              <Icon as={TrashIcon} size={15} className="text-destructive" />
-            </Pressable>
-          </View>
-        ) : null}
+          );
+        })}
       </View>
-      {expanded ? (
-        <PiecePartList query={partsQuery} partCount={partCount} partKind={piece.partKind} onCompare={onComparePart} />
-      ) : null}
-    </View>
-  );
-}
-
-function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
-  return (
-    <View className="mt-1.5 flex-row flex-wrap gap-3">
-      {links.map((link) => (
-        <Pressable
-          key={link.label}
-          onPress={() => Linking.openURL(link.url)}
-          accessibilityRole="link"
-          accessibilityLabel={`${name} ${link.label}에서 듣기`}
-          hitSlop={6}
-          className="flex-row items-center gap-1">
-          <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
-          <Text className="text-micro text-foreground-subtle">{link.label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function PiecePartList({
-  query,
-  partCount,
-  partKind,
-  onCompare,
-}: {
-  query: UseQueryResult<PiecePart[]>;
-  partCount: number;
-  partKind: PiecePartKind | null | undefined;
-  onCompare: (pieceId: number) => void;
-}) {
-  const unit = partUnit(partKind);
-  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data]);
-
-  if (query.isLoading) {
-    return (
-      <View className="mb-3 ml-1 gap-2 border-l border-border pl-3">
-        {Array.from({ length: Math.min(partCount, 3) }, (_, index) => (
-          <Skeleton key={index} className="h-8 w-full rounded-md" />
-        ))}
-      </View>
-    );
-  }
-
-  if (query.isError) {
-    return (
-      <View className="mb-3 flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
-        <Text variant="bodySm" className="flex-1 text-foreground-muted">
-          {`안의 ${unit}을 불러오지 못했어요.`}
-        </Text>
-        <Pressable onPress={() => query.refetch()} disabled={query.isFetching} hitSlop={8}>
-          <Text variant="label" className="text-primary">
-            {query.isFetching ? '불러오는 중…' : '다시 시도'}
+      {performers.length > SIDEBAR_PERFORMERS ? (
+        <Pressable onPress={() => setAll((value) => !value)} hitSlop={6} className="mt-2 self-start px-1.5 py-1">
+          <Text variant="label" className="text-foreground-muted">
+            {all ? '접기' : `${performers.length}명 모두 보기`}
           </Text>
         </Pressable>
-      </View>
-    );
-  }
-
-  if (ordered.length === 0) {
-    return (
-      <View className="mb-3 ml-1 border-l border-border py-1 pl-3">
-        <Text variant="caption">{`안의 ${unit} 정보가 아직 없어요.`}</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View className="mb-3 ml-1 border-l border-border pl-3">
-      {ordered.map(({ part, depth }) => (
-        <PiecePartRow key={part.id} part={part} depth={depth} partKind={partKind} onCompare={onCompare} />
-      ))}
-    </View>
-  );
-}
-
-function PiecePartRow({
-  part,
-  depth,
-  partKind,
-  onCompare,
-}: {
-  part: PiecePart;
-  depth: number;
-  partKind: PiecePartKind | null | undefined;
-  onCompare: (pieceId: number) => void;
-}) {
-  // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
-  const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
-  const linked = part.linkedPiece;
-  const links = linked && !linked.comparable ? listenLinks(linked) : [];
-  return (
-    <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
-      <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
-        {movement ? `${part.sequenceNumber}악장` : `${part.sequenceNumber}.`}
-      </Text>
-      <View className="min-w-0 flex-1">
-        <Text numberOfLines={2} className="text-body-sm text-foreground">
-          {part.name}
-        </Text>
-        {links.length > 0 ? <ListenLinks name={part.name} links={links} /> : null}
-      </View>
-      {linked?.comparable ? (
-        <Chip
-          size="sm"
-          label="비교 듣기"
-          onPress={() => onCompare(linked.id)}
-          accessibilityLabel={`${part.name} 비교 듣기`}
-        />
       ) : null}
     </View>
   );
