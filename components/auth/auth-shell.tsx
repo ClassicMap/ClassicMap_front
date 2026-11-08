@@ -2,6 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -27,7 +28,7 @@ export function AuthShell({ children, onClose }: AuthShellProps) {
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="닫기"
+          accessibilityLabel={t('닫기')}
           hitSlop={8}
           className={cn('mb-4 size-11 items-center justify-center rounded-full', wide ? 'self-end bg-surface-2' : '-ml-2.5')}>
           <Icon as={XIcon} size={20} className="text-foreground" />

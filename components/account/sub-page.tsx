@@ -1,6 +1,7 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { ArrowLeftIcon } from 'lucide-react-native';
@@ -30,7 +31,7 @@ export function SubPage({ title, description, fallbackHref = '/settings', childr
         {!wide ? (
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace(fallbackHref as Href))}
-            accessibilityLabel="뒤로"
+            accessibilityLabel={t('뒤로')}
             className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
             <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
           </Pressable>

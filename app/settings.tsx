@@ -25,33 +25,33 @@ import { type Href, Redirect, useRouter } from 'expo-router';
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { LOCALES, type Locale, t, useLocale } from '@/lib/i18n';
+import { LOCALES, type Locale, msg, t, useLocale } from '@/lib/i18n';
 import { type LayoutChangeEvent, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
 type SectionKey = 'profile' | 'visibility' | 'taste' | 'display' | 'account' | 'info';
 
 const SECTIONS: { key: SectionKey; label: string }[] = [
-  { key: 'profile', label: '프로필' },
-  { key: 'visibility', label: '공개 범위' },
-  { key: 'taste', label: '취향' },
-  { key: 'display', label: '화면' },
-  { key: 'account', label: '계정' },
-  { key: 'info', label: '정보' },
+  { key: 'profile', label: msg('프로필') },
+  { key: 'visibility', label: msg('공개 범위') },
+  { key: 'taste', label: msg('취향') },
+  { key: 'display', label: msg('화면') },
+  { key: 'account', label: msg('계정') },
+  { key: 'info', label: msg('정보') },
 ];
 
 type VisibilityKey = 'summaryPublic' | 'ratingsPublic' | 'favoritesPublic' | 'collectionsPublic';
 
 const VISIBILITY_ROWS: { key: VisibilityKey; title: string; description: string }[] = [
-  { key: 'summaryPublic', title: '활동 요약', description: '평가 수 · 평균 별점 · 레퍼토리 수' },
-  { key: 'ratingsPublic', title: '평가한 공연', description: '별점과 공연 목록' },
-  { key: 'favoritesPublic', title: '레퍼토리', description: '담아 둔 작곡가·연주자·작품·공연' },
-  { key: 'collectionsPublic', title: '컬렉션', description: '별점 5점 공연처럼 자동으로 묶인 목록' },
+  { key: 'summaryPublic', title: msg('활동 요약'), description: msg('평가 수 · 평균 별점 · 레퍼토리 수') },
+  { key: 'ratingsPublic', title: msg('평가한 공연'), description: msg('별점과 공연 목록') },
+  { key: 'favoritesPublic', title: msg('레퍼토리'), description: msg('담아 둔 작곡가·연주자·작품·공연') },
+  { key: 'collectionsPublic', title: msg('컬렉션'), description: msg('별점 5점 공연처럼 자동으로 묶인 목록') },
 ];
 
 const THEMES: { key: 'system' | 'light' | 'dark'; label: string }[] = [
-  { key: 'system', label: '시스템' },
-  { key: 'light', label: '라이트' },
-  { key: 'dark', label: '다크' },
+  { key: 'system', label: msg('시스템') },
+  { key: 'light', label: msg('라이트') },
+  { key: 'dark', label: msg('다크') },
 ];
 
 const BIO_MAX = 80;
@@ -83,10 +83,10 @@ export default function SettingsScreen() {
   };
 
   const confirmSignOut = () =>
-    Alert.alert('로그아웃할까요?', '레퍼토리와 별점은 계정에 남아 있어요.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('로그아웃할까요?'), t('레퍼토리와 별점은 계정에 남아 있어요.'), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('로그아웃'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -101,16 +101,16 @@ export default function SettingsScreen() {
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView ref={scrollRef} className="flex-1" contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
         {wide ? (
-          <Text variant="display">설정</Text>
+          <Text variant="display">{t('설정')}</Text>
         ) : (
           <View className="mt-12 flex-row items-center gap-3">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.push('/my-page' as Href))}
-              accessibilityLabel="뒤로"
+              accessibilityLabel={t('뒤로')}
               className="size-11 items-center justify-center rounded-full bg-surface-2">
               <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
             </Pressable>
-            <Text variant="title2">설정</Text>
+            <Text variant="title2">{t('설정')}</Text>
           </View>
         )}
 
@@ -132,7 +132,7 @@ export default function SettingsScreen() {
                       'text-label font-semibold',
                       active === section.key ? 'text-foreground' : 'text-foreground-muted'
                     )}>
-                    {section.label}
+                    {t(section.label)}
                   </Text>
                 </Pressable>
               ))}
@@ -141,13 +141,13 @@ export default function SettingsScreen() {
 
           <View className="min-w-0 max-w-[700px] flex-1 gap-5">
             <View onLayout={track('profile')}>
-              <Group title="프로필" description="공개 프로필과 마이페이지에 보이는 정보예요.">
+              <Group title={t('프로필')} description={t('공개 프로필과 마이페이지에 보이는 정보예요.')}>
                 {visibilityQuery.isLoading ? (
                   <Skeleton className="h-48 w-full rounded-lg" />
                 ) : (
                   <ProfileForm
                     profile={visibilityQuery.data}
-                    defaultName={user?.fullName || user?.emailAddresses[0]?.emailAddress || '사용자'}
+                    defaultName={user?.fullName || user?.emailAddresses[0]?.emailAddress || t('사용자')}
                     defaultAvatar={user?.imageUrl}
                   />
                 )}
@@ -155,11 +155,11 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('visibility')}>
-              <Group title="공개 범위" description="공개 프로필은 누구나 볼 수 있어요. 괜찮은 것만 켜 두세요.">
+              <Group title={t('공개 범위')} description={t('공개 프로필은 누구나 볼 수 있어요. 괜찮은 것만 켜 두세요.')}>
                 {visibilityQuery.isLoading ? (
                   <Skeleton className="h-40 w-full rounded-lg" />
                 ) : visibilityQuery.isError ? (
-                  <RetryLine label="공개 범위를" onRetry={() => visibilityQuery.refetch()} />
+                  <RetryLine message={t('공개 범위를 불러오지 못했어요.')} onRetry={() => visibilityQuery.refetch()} />
                 ) : (
                   <VisibilityToggles profile={visibilityQuery.data} />
                 )}
@@ -167,13 +167,13 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('taste')}>
-              <Group title="취향" description="홈의 오늘의 비교와 추천 셸프가 고른 답 쪽으로 기울어요.">
+              <Group title={t('취향')} description={t('홈의 오늘의 비교와 추천 셸프가 고른 답 쪽으로 기울어요.')}>
                 <TastePreferences />
               </Group>
             </View>
 
             <View onLayout={track('display')}>
-              <Group title="화면" description="시스템을 고르면 기기 설정을 따라가요.">
+              <Group title={t('화면')} description={t('시스템을 고르면 기기 설정을 따라가요.')}>
                 <ThemeSelector />
               </Group>
               <Group title={t('언어')} description={t('처음에는 기기 언어를 따라가요. 여기서 고르면 그 언어로 고정돼요.')}>
@@ -182,15 +182,15 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('account')}>
-              <Group title="계정">
-                <LinkRow label="계정 이름" value={user?.fullName ?? undefined} onPress={() => router.push('/edit-profile' as Href)} />
+              <Group title={t('계정')}>
+                <LinkRow label={t('계정 이름')} value={user?.fullName ?? undefined} onPress={() => router.push('/edit-profile' as Href)} />
                 {user?.passwordEnabled ? (
-                  <LinkRow label="비밀번호 변경" onPress={() => router.push('/change-password' as Href)} />
+                  <LinkRow label={t('비밀번호 변경')} onPress={() => router.push('/change-password' as Href)} />
                 ) : null}
-                <LinkRow label="로그아웃" onPress={confirmSignOut} chevron={false} />
+                <LinkRow label={t('로그아웃')} onPress={confirmSignOut} chevron={false} />
                 <LinkRow
-                  label="계정 삭제"
-                  value="평가·레퍼토리가 모두 지워져요"
+                  label={t('계정 삭제')}
+                  value={t('평가·레퍼토리가 모두 지워져요')}
                   destructive
                   onPress={() => router.push('/delete-account' as Href)}
                 />
@@ -198,11 +198,11 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('info')}>
-              <Group title="정보">
-                <LinkRow label="도움말" onPress={() => router.push('/help' as Href)} />
-                <LinkRow label="이용약관" onPress={() => router.push('/terms-of-service' as Href)} />
-                <LinkRow label="개인정보 처리방침" onPress={() => router.push('/privacy-policy' as Href)} />
-                {version ? <LinkRow label="버전" value={version} chevron={false} mono /> : null}
+              <Group title={t('정보')}>
+                <LinkRow label={t('도움말')} onPress={() => router.push('/help' as Href)} />
+                <LinkRow label={t('이용약관')} onPress={() => router.push('/terms-of-service' as Href)} />
+                <LinkRow label={t('개인정보 처리방침')} onPress={() => router.push('/privacy-policy' as Href)} />
+                {version ? <LinkRow label={t('버전')} value={version} chevron={false} mono /> : null}
               </Group>
             </View>
           </View>
@@ -228,13 +228,13 @@ function Group({ title, description, children }: { title: string; description?: 
   );
 }
 
-function RetryLine({ label, onRetry }: { label: string; onRetry: () => void }) {
+function RetryLine({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
-      <Text variant="bodySm" className="flex-1 text-foreground-muted">{`${label} 불러오지 못했어요.`}</Text>
+      <Text variant="bodySm" className="flex-1 text-foreground-muted">{message}</Text>
       <Pressable onPress={onRetry} hitSlop={8} accessibilityRole="button">
         <Text variant="label" className="text-primary">
-          다시 시도
+          {t('다시 시도')}
         </Text>
       </Pressable>
     </View>
@@ -279,11 +279,11 @@ function ProfileForm({
   const save = () => {
     const avatarUrl = draft.avatarUrl.trim();
     if (!draft.displayName.trim()) {
-      setError('표시 이름을 입력해 주세요.');
+      setError(t('표시 이름을 입력해 주세요.'));
       return;
     }
     if (avatarUrl && !/^https:\/\//.test(avatarUrl)) {
-      setError('사진 주소는 https:// 로 시작해야 해요.');
+      setError(t('사진 주소는 https:// 로 시작해야 해요.'));
       return;
     }
     setError(null);
@@ -292,7 +292,7 @@ function ProfileForm({
       { displayName: draft.displayName.trim(), bio: draft.bio.trim(), avatarUrl },
       {
         onError: () =>
-          setError('저장하지 못했어요. 연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 저장해 주세요.'),
+          setError(t('저장하지 못했어요. 연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 저장해 주세요.')),
       }
     );
   };
@@ -302,22 +302,22 @@ function ProfileForm({
       <View className="flex-row items-center gap-4">
         <ProfileAvatar name={draft.displayName || defaultName} uri={draft.avatarUrl || defaultAvatar} size={64} />
         <View className="flex-1 gap-1.5">
-          <Label htmlFor="avatarUrl">프로필 사진 주소</Label>
+          <Label htmlFor="avatarUrl">{t('프로필 사진 주소')}</Label>
           <Input
             id="avatarUrl"
             value={draft.avatarUrl}
             onChangeText={(avatarUrl) => setDraft((current) => ({ ...current, avatarUrl }))}
-            placeholder="https:// 로 시작하는 이미지 주소"
+            placeholder={t('https:// 로 시작하는 이미지 주소')}
             autoCapitalize="none"
             keyboardType="url"
           />
           <Text variant="caption" className="text-foreground-subtle">
-            비워 두면 로그인 계정의 사진을 써요.
+            {t('비워 두면 로그인 계정의 사진을 써요.')}
           </Text>
         </View>
       </View>
       <View className="gap-1.5">
-        <Label htmlFor="displayName">표시 이름</Label>
+        <Label htmlFor="displayName">{t('표시 이름')}</Label>
         <Input
           id="displayName"
           value={draft.displayName}
@@ -326,13 +326,13 @@ function ProfileForm({
         />
       </View>
       <View className="gap-1.5">
-        <Label htmlFor="bio">한 줄 소개</Label>
+        <Label htmlFor="bio">{t('한 줄 소개')}</Label>
         <Input
           id="bio"
           value={draft.bio}
           onChangeText={(bio) => setDraft((current) => ({ ...current, bio }))}
           maxLength={BIO_MAX}
-          placeholder="예: 라흐마니노프 협주곡을 연주자별로 모으고 있어요"
+          placeholder={t('예: 라흐마니노프 협주곡을 연주자별로 모으고 있어요')}
         />
         <Text variant="caption" className="self-end tabular-nums text-foreground-subtle">
           {`${draft.bio.length} / ${BIO_MAX}`}
@@ -344,15 +344,15 @@ function ProfileForm({
         </Text>
       ) : update.isSuccess && !dirty ? (
         <Text variant="caption" className="text-success">
-          저장했어요.
+          {t('저장했어요.')}
         </Text>
       ) : null}
       <View className="flex-row justify-end gap-2">
         <Button variant="outline" size="sm" className="rounded-full" disabled={!dirty || update.isPending} onPress={() => setDraft(initial)}>
-          <Text>되돌리기</Text>
+          <Text>{t('되돌리기')}</Text>
         </Button>
         <Button size="sm" className="rounded-full px-5" disabled={!dirty || update.isPending} onPress={save}>
-          <Text>{update.isPending ? '저장 중…' : '저장'}</Text>
+          <Text>{update.isPending ? t('저장 중…') : t('저장')}</Text>
         </Button>
       </View>
     </View>
@@ -378,7 +378,7 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
     update.mutate(input, {
       onError: () => {
         setValues((current) => ({ ...current, [key]: previous }));
-        Alert.alert('공개 범위를 바꾸지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.');
+        Alert.alert(t('공개 범위를 바꾸지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
       },
     });
   };
@@ -388,15 +388,15 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
       {VISIBILITY_ROWS.map((row, index) => (
         <View key={row.key} className={cn('flex-row items-center gap-4 py-3', index > 0 && 'border-t border-border')}>
           <View className="min-w-0 flex-1">
-            <Text className="text-body-sm font-semibold text-foreground">{row.title}</Text>
+            <Text className="text-body-sm font-semibold text-foreground">{t(row.title)}</Text>
             <Text variant="caption" className="mt-0.5">
-              {row.description}
+              {t(row.description)}
             </Text>
           </View>
           <Switch
             value={values[row.key]}
             onValueChange={(next) => toggle(row.key, next)}
-            accessibilityLabel={`${row.title} 공개`}
+            accessibilityLabel={t('{title} 공개', { title: t(row.title) })}
             trackColor={{ false: colors.surface3, true: colors.primary }}
             thumbColor={values[row.key] ? colors.primaryForeground : colors.foregroundMuted}
             // 웹(RNW)은 켜진 손잡이 색을 activeThumbColor로만 받는다. 없으면 기본 청록이 나온다
@@ -417,13 +417,13 @@ function TastePreferences() {
 
   const save = (next: TasteAnswers) => {
     taste.save(next).catch(() => {
-      Alert.alert('취향을 저장하지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 골라 주세요.');
+      Alert.alert(t('취향을 저장하지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 골라 주세요.'));
     });
   };
   const toggle = <T extends string>(list: readonly T[], value: T): T[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
-  if (taste.failed) return <RetryLine label="취향을" onRetry={taste.retry} />;
+  if (taste.failed) return <RetryLine message={t('취향을 불러오지 못했어요.')} onRetry={taste.retry} />;
   if (!taste.loaded) return <Skeleton className="h-40 w-full rounded-lg" />;
 
   const answered = taste.onboardingStatus === 'completed';
@@ -434,26 +434,26 @@ function TastePreferences() {
       {!answered ? (
         <View className="gap-3 rounded-xl border border-border bg-surface-2 p-4">
           <View className="gap-1">
-            <Text className="text-body-sm font-semibold text-foreground">아직 취향을 알려 주지 않았어요</Text>
+            <Text className="text-body-sm font-semibold text-foreground">{t('아직 취향을 알려 주지 않았어요')}</Text>
             <Text variant="caption">
-              질문 네 개, 30초면 끝나요. 아는 곡과 좋아하는 연주자까지 고르면 홈 추천이 그쪽으로 맞춰져요.
+              {t('질문 네 개, 30초면 끝나요. 아는 곡과 좋아하는 연주자까지 고르면 홈 추천이 그쪽으로 맞춰져요.')}
             </Text>
           </View>
           <Button size="sm" className="self-start" onPress={() => router.push('/onboarding' as Href)}>
-            <Text>취향 알려 주기</Text>
+            <Text>{t('취향 알려 주기')}</Text>
           </Button>
         </View>
       ) : null}
 
       <View className="gap-2.5">
         <Text variant="label" className="text-foreground-muted">
-          클래식을 얼마나 들어요
+          {t('클래식을 얼마나 들어요')}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {LEVEL_OPTIONS.map((option) => (
             <Chip
               key={option.key}
-              label={option.short}
+              label={t(option.short)}
               selected={answers.listeningLevel === option.key}
               onPress={() =>
                 save({
@@ -470,7 +470,7 @@ function TastePreferences() {
             {INSTRUMENT_OPTIONS.map((option) => (
               <Chip
                 key={option.key}
-                label={option.label}
+                label={t(option.label)}
                 selected={answers.instrument === option.key}
                 onPress={() =>
                   save({ ...answers, instrument: answers.instrument === option.key ? null : option.key })
@@ -483,13 +483,13 @@ function TastePreferences() {
 
       <View className="gap-2.5">
         <Text variant="label" className="text-foreground-muted">
-          끌리는 소리
+          {t('끌리는 소리')}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {SOUND_OPTIONS.map((option) => (
             <Chip
               key={option.key}
-              label={option.label}
+              label={t(option.label)}
               selected={answers.sounds.includes(option.key)}
               onPress={() => save({ ...answers, sounds: toggle(answers.sounds, option.key) })}
             />
@@ -499,7 +499,7 @@ function TastePreferences() {
 
       <View className="gap-2.5">
         <Text variant="label" className="text-foreground-muted">
-          좋아하는 시대
+          {t('좋아하는 시대')}
         </Text>
         <View className="flex-row flex-wrap gap-2">
           {PREFERENCE_ERAS.map((era) => {
@@ -507,7 +507,7 @@ function TastePreferences() {
             return (
               <Chip
                 key={era}
-                label={era}
+                label={t(era)}
                 selected={answers.favoritePeriods.includes(era)}
                 onPress={() => save({ ...answers, favoritePeriods: toggle(answers.favoritePeriods, era) })}
                 leading={color ? <ChipDot color={color} /> : undefined}
@@ -520,7 +520,7 @@ function TastePreferences() {
       {answered ? (
         <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
           <Text variant="label" className="text-primary">
-            아는 곡부터 다시 고르기
+            {t('아는 곡부터 다시 고르기')}
           </Text>
         </Pressable>
       ) : null}
@@ -540,23 +540,23 @@ function ListeningHistory() {
 
   const toggle = (next: boolean) => {
     taste.save(taste.answers, { historyEnabled: next }).catch(() => {
-      Alert.alert('기록 설정을 바꾸지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.');
+      Alert.alert(t('기록 설정을 바꾸지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
     });
   };
   const clear = () =>
-    Alert.alert('들은 기록을 지울까요?', '열어 본 곡, 끝까지 들은 곡, 관심 없음으로 뺀 곡이 모두 지워져요.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('들은 기록을 지울까요?'), t('열어 본 곡, 끝까지 들은 곡, 관심 없음으로 뺀 곡이 모두 지워져요.'), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '지우기',
+        text: t('지우기'),
         style: 'destructive',
         onPress: () => {
           setClearing(true);
           TasteAPI.deleteEvents()
             .then(() => {
               void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
-              Alert.alert('들은 기록을 지웠어요', '홈 추천이 고른 답만으로 다시 골라져요.');
+              Alert.alert(t('들은 기록을 지웠어요'), t('홈 추천이 고른 답만으로 다시 골라져요.'));
             })
-            .catch(() => Alert.alert('기록을 지우지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.'))
+            .catch(() => Alert.alert(t('기록을 지우지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.')))
             .finally(() => setClearing(false));
         },
       },
@@ -566,15 +566,15 @@ function ListeningHistory() {
     <View className="gap-1 border-t border-border pt-4">
       <View className="flex-row items-center gap-4">
         <View className="min-w-0 flex-1">
-          <Text className="text-body-sm font-semibold text-foreground">들은 기록으로 추천 고치기</Text>
+          <Text className="text-body-sm font-semibold text-foreground">{t('들은 기록으로 추천 고치기')}</Text>
           <Text variant="caption" className="mt-0.5">
-            열어 본 곡, 끝까지 들은 곡, 금방 넘긴 곡을 추천에 써요. 끄면 관심 없음만 기억해요.
+            {t('열어 본 곡, 끝까지 들은 곡, 금방 넘긴 곡을 추천에 써요. 끄면 관심 없음만 기억해요.')}
           </Text>
         </View>
         <Switch
           value={taste.historyEnabled}
           onValueChange={toggle}
-          accessibilityLabel="들은 기록으로 추천 고치기"
+          accessibilityLabel={t('들은 기록으로 추천 고치기')}
           trackColor={{ false: colors.surface3, true: colors.primary }}
           thumbColor={taste.historyEnabled ? colors.primaryForeground : colors.foregroundMuted}
           {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.primaryForeground } as object) : null)}
@@ -582,7 +582,7 @@ function ListeningHistory() {
       </View>
       <Pressable onPress={clear} disabled={clearing} accessibilityRole="button" className="mt-2 self-start" hitSlop={6}>
         <Text variant="label" className="text-destructive">
-          {clearing ? '지우는 중…' : '들은 기록 지우기'}
+          {clearing ? t('지우는 중…') : t('들은 기록 지우기')}
         </Text>
       </Pressable>
     </View>
@@ -616,7 +616,7 @@ function ThemeSelector() {
           accessibilityState={{ checked: choice === item.key }}
           className={cn('h-8 min-w-[84px] items-center justify-center rounded-full px-4', choice === item.key && 'bg-surface-3')}>
           <Text className={cn('text-label font-semibold', choice === item.key ? 'text-foreground' : 'text-foreground-muted')}>
-            {item.label}
+            {t(item.label)}
           </Text>
         </Pressable>
       ))}

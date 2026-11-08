@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { t } from '@/lib/i18n';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
 import { View } from 'react-native';
@@ -15,7 +16,7 @@ function clerkMessage(error: unknown): string {
     const list = (error as { errors?: { message?: string }[] }).errors;
     if (list?.[0]?.message) return translateClerkError(list[0].message);
   }
-  return '비밀번호를 바꾸지 못했어요. 현재 비밀번호를 확인한 뒤 다시 시도해 주세요.';
+  return t('비밀번호를 바꾸지 못했어요. 현재 비밀번호를 확인한 뒤 다시 시도해 주세요.');
 }
 
 export default function ChangePasswordScreen() {
@@ -29,15 +30,15 @@ export default function ChangePasswordScreen() {
 
   const save = async () => {
     if (!current || !next || !confirm) {
-      setError('세 칸을 모두 입력해 주세요.');
+      setError(t('세 칸을 모두 입력해 주세요.'));
       return;
     }
     if (next.length < MIN_LENGTH) {
-      setError(`새 비밀번호는 ${MIN_LENGTH}자 이상으로 정해 주세요.`);
+      setError(t('새 비밀번호는 {min}자 이상으로 정해 주세요.', { min: MIN_LENGTH }));
       return;
     }
     if (next !== confirm) {
-      setError('새 비밀번호 두 칸이 달라요. 다시 입력해 주세요.');
+      setError(t('새 비밀번호 두 칸이 달라요. 다시 입력해 주세요.'));
       return;
     }
     setSaving(true);
@@ -57,31 +58,31 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <SubPage title="비밀번호 변경" description="이메일로 가입한 계정의 비밀번호를 바꿔요.">
+    <SubPage title={t('비밀번호 변경')} description={t('이메일로 가입한 계정의 비밀번호를 바꿔요.')}>
       <View className="gap-4">
         <View className="gap-1.5">
-          <Label nativeID="current">현재 비밀번호</Label>
+          <Label nativeID="current">{t('현재 비밀번호')}</Label>
           <Input aria-labelledby="current" secureTextEntry autoComplete="current-password" value={current} onChangeText={setCurrent} editable={!saving} />
         </View>
         <View className="gap-1.5">
-          <Label nativeID="next">새 비밀번호</Label>
+          <Label nativeID="next">{t('새 비밀번호')}</Label>
           <Input
             aria-labelledby="next"
             secureTextEntry
             autoComplete="new-password"
-            placeholder={`${MIN_LENGTH}자 이상`}
+            placeholder={t('{min}자 이상', { min: MIN_LENGTH })}
             value={next}
             onChangeText={setNext}
             editable={!saving}
           />
         </View>
         <View className="gap-1.5">
-          <Label nativeID="confirm">새 비밀번호 확인</Label>
+          <Label nativeID="confirm">{t('새 비밀번호 확인')}</Label>
           <Input aria-labelledby="confirm" secureTextEntry autoComplete="new-password" value={confirm} onChangeText={setConfirm} editable={!saving} />
         </View>
-        <FieldMessage error={error} success={saved ? '비밀번호를 바꿨어요.' : null} />
+        <FieldMessage error={error} success={saved ? t('비밀번호를 바꿨어요.') : null} />
         <Button className="self-start rounded-full px-6" onPress={save} disabled={saving}>
-          <Text>{saving ? '바꾸는 중…' : '비밀번호 바꾸기'}</Text>
+          <Text>{saving ? t('바꾸는 중…') : t('비밀번호 바꾸기')}</Text>
         </Button>
       </View>
     </SubPage>

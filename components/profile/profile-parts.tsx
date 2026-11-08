@@ -4,6 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { RatedConcertListItem } from '@/lib/api/client';
+import { msg, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { StarIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -12,10 +13,10 @@ import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-nativ
 export type RatingSortKey = 'recent' | 'highest' | 'lowest' | 'concertDate';
 
 export const RATING_SORTS: { key: RatingSortKey; label: string }[] = [
-  { key: 'recent', label: '최근 평가순' },
-  { key: 'highest', label: '높은 별점순' },
-  { key: 'lowest', label: '낮은 별점순' },
-  { key: 'concertDate', label: '공연일순' },
+  { key: 'recent', label: msg('최근 평가순') },
+  { key: 'highest', label: msg('높은 별점순') },
+  { key: 'lowest', label: msg('낮은 별점순') },
+  { key: 'concertDate', label: msg('공연일순') },
 ];
 
 export function sortRatings(ratings: readonly RatedConcertListItem[], key: RatingSortKey): RatedConcertListItem[] {
@@ -67,7 +68,7 @@ export function StatTile({ value, label, accent = false }: { value: string; labe
 export function RatingStars({ value, size = 13 }: { value: number; size?: number }) {
   const rounded = Math.round(value);
   return (
-    <View className="flex-row gap-px" accessibilityLabel={`별점 ${value}점`}>
+    <View className="flex-row gap-px" accessibilityLabel={t('별점 {count}점', { count: value })}>
       {Array.from({ length: 5 }, (_, index) => (
         <Icon
           key={index}
@@ -103,7 +104,7 @@ export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidt
         {RATING_SORTS.map((option) => (
           <Chip
             key={option.key}
-            label={option.label}
+            label={t(option.label)}
             selected={sortKey === option.key}
             onPress={() => onSortChange(option.key)}
           />
@@ -119,7 +120,7 @@ export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidt
                 key={rating.concertId}
                 onPress={() => onOpen(rating.concertId)}
                 accessibilityRole="link"
-                accessibilityLabel={`${rating.title} 별점 ${rating.myRating}점`}
+                accessibilityLabel={t('{title} 별점 {count}점', { title: rating.title, count: rating.myRating })}
                 style={{ width: itemWidth }}
                 className="web:hover:opacity-90">
                 <EntityThumb name={rating.title} image={rating.posterUrl} shape="square" size={itemWidth} aspect={4 / 3} />

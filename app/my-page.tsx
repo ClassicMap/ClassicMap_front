@@ -9,6 +9,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount } from '@/lib/data/library';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useMyFavorites, useMyRatings, useProfileVisibility } from '@/lib/query/hooks/useMyPage';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
@@ -55,7 +56,7 @@ export default function MyPageScreen() {
   const favoriteCount = favorites ? getFavoriteCount(favorites) : 0;
   const email = user?.emailAddresses[0]?.emailAddress;
   const visibility = visibilityQuery.data;
-  const displayName = visibility?.displayName || user?.fullName || email || '사용자';
+  const displayName = visibility?.displayName || user?.fullName || email || t('사용자');
   const avatarUrl = visibility?.avatarUrl || user?.imageUrl;
 
   const refreshing = ratingsQuery.isRefetching || favoritesQuery.isRefetching || visibilityQuery.isRefetching;
@@ -66,10 +67,10 @@ export default function MyPageScreen() {
   };
 
   const confirmSignOut = () =>
-    Alert.alert('로그아웃할까요?', '레퍼토리와 별점은 계정에 남아 있어요.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('로그아웃할까요?'), t('레퍼토리와 별점은 계정에 남아 있어요.'), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('로그아웃'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -106,17 +107,17 @@ export default function MyPageScreen() {
   ) : (
     <View className={cn('gap-2', wide ? 'flex-row flex-wrap' : 'flex-row')}>
       <View className={wide ? 'w-[48%] grow' : 'flex-1'}>
-        <StatTile value={String(stats.count)} label="평가한 공연" />
+        <StatTile value={String(stats.count)} label={t('평가한 공연')} />
       </View>
       <View className={wide ? 'w-[48%] grow' : 'flex-1'}>
-        <StatTile value={stats.count > 0 ? stats.average.toFixed(1) : '–'} label="평균 별점" accent />
+        <StatTile value={stats.count > 0 ? stats.average.toFixed(1) : '–'} label={t('평균 별점')} accent />
       </View>
       <View className={wide ? 'w-[48%] grow' : 'flex-1'}>
-        <StatTile value={String(favoriteCount)} label="레퍼토리" />
+        <StatTile value={String(favoriteCount)} label={t('레퍼토리')} />
       </View>
       {wide ? (
         <View className="w-[48%] grow">
-          <StatTile value={String(stats.fiveStars)} label="별점 5점 공연" />
+          <StatTile value={String(stats.fiveStars)} label={t('별점 5점 공연')} />
         </View>
       ) : null}
     </View>
@@ -126,8 +127,8 @@ export default function MyPageScreen() {
     <View className="flex-row gap-7 border-b border-border" accessibilityRole="tablist">
       {(
         [
-          { key: 'ratings', label: '평가한 공연', count: stats.count },
-          { key: 'repertoire', label: '레퍼토리', count: favoriteCount },
+          { key: 'ratings', label: t('평가한 공연'), count: stats.count },
+          { key: 'repertoire', label: t('레퍼토리'), count: favoriteCount },
         ] as const
       ).map((item) => (
         <Pressable
@@ -160,17 +161,17 @@ export default function MyPageScreen() {
           compact
           icon={AlertCircleIcon}
           tone="error"
-          title="평가한 공연을 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => ratingsQuery.refetch() }}
+          title={t('평가한 공연을 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => ratingsQuery.refetch() }}
         />
       ) : ratings.length === 0 ? (
         <EmptyState
           compact
           icon={StarIcon}
-          title="아직 평가한 공연이 없어요"
-          description="다녀온 공연의 상세 화면에서 별점을 남기면 여기에 모여요."
-          action={{ label: '공연 보러 가기', onPress: () => router.push('/concerts' as Href) }}
+          title={t('아직 평가한 공연이 없어요')}
+          description={t('다녀온 공연의 상세 화면에서 별점을 남기면 여기에 모여요.')}
+          action={{ label: t('공연 보러 가기'), onPress: () => router.push('/concerts' as Href) }}
         />
       ) : (
         <View className="mt-5">
@@ -190,17 +191,17 @@ export default function MyPageScreen() {
         compact
         icon={AlertCircleIcon}
         tone="error"
-        title="레퍼토리를 불러오지 못했어요"
-        description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-        action={{ label: '다시 시도', onPress: () => favoritesQuery.refetch() }}
+        title={t('레퍼토리를 불러오지 못했어요')}
+        description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+        action={{ label: t('다시 시도'), onPress: () => favoritesQuery.refetch() }}
       />
     ) : !favorites || favoriteCount === 0 ? (
       <EmptyState
         compact
         icon={BookmarkIcon}
-        title="아직 레퍼토리가 비어 있어요"
-        description="작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
-        action={{ label: '비교할 수 있는 작품 보기', onPress: () => router.push('/compare' as Href) }}
+        title={t('아직 레퍼토리가 비어 있어요')}
+        description={t('작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
+        action={{ label: t('비교할 수 있는 작품 보기'), onPress: () => router.push('/compare' as Href) }}
       />
     ) : (
       <View className="mt-5">
@@ -218,14 +219,14 @@ export default function MyPageScreen() {
           <View className="mt-12 flex-row items-center justify-between">
             <Pressable
               onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
-              accessibilityLabel="뒤로"
+              accessibilityLabel={t('뒤로')}
               className="size-11 items-center justify-center rounded-full bg-surface-2">
               <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
             </Pressable>
-            <Text variant="headline">마이페이지</Text>
+            <Text variant="headline">{t('마이페이지')}</Text>
             <Pressable
               onPress={() => router.push('/settings' as Href)}
-              accessibilityLabel="설정"
+              accessibilityLabel={t('설정')}
               className="size-11 items-center justify-center rounded-full bg-surface-2">
               <Icon as={SettingsIcon} size={19} className="text-foreground" />
             </Pressable>
@@ -240,12 +241,12 @@ export default function MyPageScreen() {
                 {openPublicProfile ? (
                   <Button variant="outline" size="sm" className="rounded-full" onPress={openPublicProfile}>
                     <Icon as={EyeIcon} size={14} className="text-foreground" />
-                    <Text>공개 프로필 보기</Text>
+                    <Text>{t('공개 프로필 보기')}</Text>
                   </Button>
                 ) : null}
                 <Button variant="outline" size="sm" className="rounded-full" onPress={() => router.push('/settings' as Href)}>
                   <Icon as={SettingsIcon} size={14} className="text-foreground" />
-                  <Text>설정</Text>
+                  <Text>{t('설정')}</Text>
                 </Button>
               </View>
             ) : null}
@@ -253,13 +254,13 @@ export default function MyPageScreen() {
             {!wide && openPublicProfile ? (
               <Button variant="outline" className="h-11 rounded-full" onPress={openPublicProfile}>
                 <Icon as={EyeIcon} size={15} className="text-foreground" />
-                <Text>공개 프로필 보기</Text>
+                <Text>{t('공개 프로필 보기')}</Text>
               </Button>
             ) : null}
             {wide ? (
               <View className="-mx-2.5 border-t border-border pt-3">
-                <MenuRow icon={CircleHelpIcon} label="도움말" onPress={() => router.push('/help' as Href)} chevron />
-                <MenuRow icon={LogOutIcon} label="로그아웃" onPress={confirmSignOut} />
+                <MenuRow icon={CircleHelpIcon} label={t('도움말')} onPress={() => router.push('/help' as Href)} chevron />
+                <MenuRow icon={LogOutIcon} label={t('로그아웃')} onPress={confirmSignOut} />
               </View>
             ) : null}
           </View>

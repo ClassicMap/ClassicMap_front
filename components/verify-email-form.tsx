@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { t } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
@@ -38,7 +39,7 @@ export function VerifyEmailForm() {
         router.replace('/home' as Href);
         return;
       }
-      setError('인증을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.');
+      setError(t('인증을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.'));
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 
@@ -84,12 +85,14 @@ export function VerifyEmailForm() {
   return (
     <View>
       <AuthHeading
-        title="이메일 인증"
-        description={`${email || '입력한 이메일'}로 보낸 인증 코드를 입력해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.`}
+        title={t('이메일 인증')}
+        description={t('{email}로 보낸 인증 코드를 입력해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.', {
+          email: email || t('입력한 이메일'),
+        })}
       />
       <View className="gap-4">
         <View className="gap-1.5">
-          <Label htmlFor="code">인증 코드</Label>
+          <Label htmlFor="code">{t('인증 코드')}</Label>
           <Input
             id="code"
             autoCapitalize="none"
@@ -105,21 +108,21 @@ export function VerifyEmailForm() {
           <FieldError message={error} />
         </View>
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
-          <Text className="font-bold">인증하고 시작하기</Text>
+          <Text className="font-bold">{t('인증하고 시작하기')}</Text>
         </Button>
         <View className="flex-row items-center justify-center gap-4">
           <Button variant="link" size="sm" disabled={countdown > 0} onPress={onResendCode}>
             <Text className="text-caption">
-              코드 다시 받기{' '}
+              {t('코드 다시 받기')}{' '}
               {countdown > 0 ? (
                 <Text className="text-caption" style={TABULAR_NUMBERS_STYLE}>
-                  ({countdown}초)
+                  {t('({n}초)', { n: countdown })}
                 </Text>
               ) : null}
             </Text>
           </Button>
           <Button variant="link" size="sm" onPress={router.back}>
-            <Text className="text-caption text-foreground-muted">취소</Text>
+            <Text className="text-caption text-foreground-muted">{t('취소')}</Text>
           </Button>
         </View>
       </View>

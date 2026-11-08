@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { t } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { Link } from 'expo-router';
 import * as React from 'react';
@@ -75,12 +76,12 @@ export function SignInForm() {
 
   return (
     <View>
-      <AuthHeading title="로그인" description="레퍼토리와 별점을 어느 기기에서든 이어서 봐요." />
+      <AuthHeading title={t('로그인')} description={t('레퍼토리와 별점을 어느 기기에서든 이어서 봐요.')} />
       <SocialConnections />
-      <AuthDivider label="또는 이메일로" />
+      <AuthDivider label={t('또는 이메일로')} />
       <View className="gap-4">
         <View className="gap-1.5">
-          <Label htmlFor="email">이메일</Label>
+          <Label htmlFor="email">{t('이메일')}</Label>
           <Input
             id="email"
             placeholder="name@example.com"
@@ -98,15 +99,15 @@ export function SignInForm() {
         </View>
         <View className="gap-1.5">
           <View className="flex-row items-baseline justify-between">
-            <Label htmlFor="password">비밀번호</Label>
+            <Label htmlFor="password">{t('비밀번호')}</Label>
             <Link href="/(auth)/forgot-password" className="text-caption text-foreground-muted">
-              비밀번호를 잊었어요
+              {t('비밀번호를 잊었어요')}
             </Link>
           </View>
           <Input
             ref={passwordInputRef}
             id="password"
-            placeholder="비밀번호"
+            placeholder={t('비밀번호')}
             secureTextEntry
             autoComplete="current-password"
             aria-invalid={Boolean(error.password)}
@@ -118,18 +119,18 @@ export function SignInForm() {
           <FieldError message={error.password} />
         </View>
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
-          <Text className="font-bold">로그인</Text>
+          <Text className="font-bold">{t('로그인')}</Text>
         </Button>
       </View>
       <Text variant="bodySm" className="mt-5 text-center text-foreground-muted">
-        처음이에요?{' '}
+        {t('처음이에요?')}{' '}
         <Link href="/(auth)/sign-up" className="font-semibold text-foreground">
-          회원가입
+          {t('회원가입')}
         </Link>
       </Text>
       <View className="mt-6 h-px bg-border" />
       <Text variant="caption" className="mt-4 text-center text-foreground-subtle">
-        로그인 없이도 비교·검색·공연은 모두 볼 수 있어요.
+        {t('로그인 없이도 비교·검색·공연은 모두 볼 수 있어요.')}
       </Text>
     </View>
   );
