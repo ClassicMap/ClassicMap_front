@@ -1,6 +1,7 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { YoutubeThumb } from '@/components/screen/youtube-thumb';
 import type { ScreenThumbs } from '@/lib/types/models';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
@@ -38,7 +39,7 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
         uri={tmdbPoster}
         fallbackComponent={slate}
         resizeMode="cover"
-        accessibilityLabel={`${title} 포스터`}
+        accessibilityLabel={t('{title} 포스터', { title })}
         style={{ width, height, borderRadius: radius, overflow: 'hidden' }}
       />
     );
@@ -57,7 +58,7 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
       <YoutubeThumb
         videoId={coverVideoId}
         thumbs={coverThumbs}
-        accessibilityLabel={`${title} 공식 클립 장면`}
+        accessibilityLabel={t('{title} 공식 클립 장면', { title })}
         fallback={slate}
       />
     </View>
@@ -87,7 +88,7 @@ function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onE
       {revealed ? null : <Skeleton className="absolute inset-0 rounded-none bg-surface-3" />}
       <Animated.Image
         source={{ uri }}
-        accessibilityLabel={`${title} 포스터`}
+        accessibilityLabel={t('{title} 포스터', { title })}
         resizeMode="cover"
         onLoad={onLoad}
         onError={onError}

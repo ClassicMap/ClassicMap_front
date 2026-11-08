@@ -3,6 +3,7 @@ import { SCREEN_KIND_LABELS, shortTitleMeta } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { usePieceScreenCues, usePrefetchScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { PieceScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -51,14 +52,14 @@ export function PieceScreenStrip({
   return (
     <View className={cn('gap-3', className)}>
       <View className="flex-row items-center justify-between">
-        <Text variant="headline">영화 속 클래식</Text>
+        <Text variant="headline">{t('영화 속 클래식')}</Text>
         <Pressable
           onPress={() => router.push('/films' as Href)}
           accessibilityRole="link"
-          accessibilityLabel="영화 속 클래식 모두 보기"
+          accessibilityLabel={t('영화 속 클래식 모두 보기')}
           hitSlop={8}
           className="flex-row items-center gap-0.5 rounded-full px-2 py-1 active:bg-surface-2 web:hover:bg-surface-2">
-          <Text className="text-label font-semibold text-foreground-muted">모두 보기</Text>
+          <Text className="text-label font-semibold text-foreground-muted">{t('strip::모두 보기')}</Text>
           <Icon as={ChevronRightIcon} size={14} className="text-foreground-muted" />
         </Pressable>
       </View>
@@ -70,7 +71,9 @@ export function PieceScreenStrip({
             onPressIn={() => prefetch(cue.titleId)}
             onPress={() => router.push(`/film/${cue.titleId}` as Href)}
             accessibilityRole="link"
-            accessibilityLabel={`${cue.titleKo}, ${SCREEN_KIND_LABELS[cue.kind]}${sameSector ? ', 지금 구간이 나와요' : ''}`}
+            accessibilityLabel={[cue.titleKo, t(SCREEN_KIND_LABELS[cue.kind]), sameSector ? t('지금 구간이 나와요') : null]
+              .filter(Boolean)
+              .join(', ')}
             style={{ width: cardWidth }}
             className="gap-1.5">
             <View>
@@ -84,7 +87,7 @@ export function PieceScreenStrip({
               />
               {sameSector ? (
                 <View className="absolute bottom-2 left-2 rounded-full bg-primary px-2.5 py-0.5">
-                  <Text className="text-[11px] font-bold text-primary-foreground">이 구간</Text>
+                  <Text className="text-[11px] font-bold text-primary-foreground">{t('이 구간')}</Text>
                 </View>
               ) : null}
             </View>
@@ -98,7 +101,7 @@ export function PieceScreenStrip({
         ))}
       </ScrollShelf>
       {items.some(({ cue }) => cue.posterUrl) ? (
-        <Text variant="micro">포스터: 한국영상자료원 KMDb</Text>
+        <Text variant="micro">{t('포스터: 한국영상자료원 KMDb')}</Text>
       ) : null}
     </View>
   );
