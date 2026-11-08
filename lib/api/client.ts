@@ -654,6 +654,28 @@ export interface PublicProfileResponse {
 
 export type FavoriteTargetType = 'concerts' | 'artists' | 'composers' | 'pieces' | 'recordings';
 
+/** 담아 둔 목록의 이름을 지금 언어로 고른다(서버는 한국어 칸과 영어 칸을 같이 보낸다) */
+function localizeFavoriteArtist(item: FavoriteArtistItem): FavoriteArtistItem {
+  return { ...item, name: pick(item.name, item.englishName) };
+}
+
+function localizeFavoriteComposer(item: FavoriteComposerItem): FavoriteComposerItem {
+  return { ...item, name: pick(item.name, item.englishName), fullName: pick(item.fullName, item.englishName) };
+}
+
+function localizeFavoritePiece(item: FavoritePieceItem): FavoritePieceItem {
+  return { ...item, title: pick(item.title, item.titleEn), composerName: pick(item.composerName, item.composerNameEn) };
+}
+
+function localizeFavoriteGroups(groups: FavoriteGroups): FavoriteGroups {
+  return {
+    ...groups,
+    artists: groups.artists.map(localizeFavoriteArtist),
+    composers: groups.composers.map(localizeFavoriteComposer),
+    pieces: groups.pieces.map(localizeFavoritePiece),
+  };
+}
+
 export const emptyFavoriteGroups = (): FavoriteGroups => ({
   concerts: [],
   artists: [],
@@ -686,7 +708,7 @@ export const MyPageAPI = {
   },
 
   async getFavoriteArtists(): Promise<FavoriteArtistItem[]> {
-    return requestJson<FavoriteArtistItem[]>('/me/favorites/artists');
+    return (await requestJson<FavoriteArtistItem[]>('/me/favorites/artists')).map(localizeFavoriteArtist);
   },
 
   async addFavoriteArtist(artistId: number): Promise<void> {
@@ -701,7 +723,7 @@ export const MyPageAPI = {
   },
 
   async getFavoriteComposers(): Promise<FavoriteComposerItem[]> {
-    return requestJson<FavoriteComposerItem[]>('/me/favorites/composers');
+    return (await requestJson<FavoriteComposerItem[]>('/me/favorites/composers')).map(localizeFavoriteComposer);
   },
 
   async addFavoriteComposer(composerId: number): Promise<void> {
@@ -716,7 +738,7 @@ export const MyPageAPI = {
   },
 
   async getFavoritePieces(): Promise<FavoritePieceItem[]> {
-    return requestJson<FavoritePieceItem[]>('/me/favorites/pieces');
+    return (await requestJson<FavoritePieceItem[]>('/me/favorites/pieces')).map(localizeFavoritePiece);
   },
 
   async addFavoritePiece(pieceId: number): Promise<void> {
@@ -769,7 +791,8 @@ export const MyPageAPI = {
   },
 
   async getPublicProfile(userId: number): Promise<PublicProfileResponse | null> {
-    return requestJson<PublicProfileResponse | null>(`/users/${userId}/public-profile`);
+    const profile = await requestJson<PublicProfileResponse | null>(`/users/${userId}/public-profile`);
+    return profile?.favorites ? { ...profile, favorites: localizeFavoriteGroups(profile.favorites) } : profile;
   },
 };
 
