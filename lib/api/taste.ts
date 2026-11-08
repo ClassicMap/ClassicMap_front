@@ -1,5 +1,6 @@
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import { parsePiece } from '@/lib/api/comparisons';
+import { getLocale, pick } from '@/lib/i18n';
 import type {
   HomeRecommendations,
   ListeningEvent,
@@ -101,8 +102,12 @@ function parseRecommended(value: unknown): RecommendedPiece {
         ? Number(value.sectorId)
         : null,
     sectorName:
-      typeof value.sectorName === 'string' && value.sectorName !== '' ? value.sectorName : null,
-    reasons: strings(value.reasons),
+      typeof value.sectorName === 'string' && value.sectorName !== ''
+        ? pick(value.sectorName, typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null)
+        : null,
+    // 영어판이면 서버가 같이 만든 영어 이유를 쓴다
+    reasons:
+      getLocale() === 'en' && strings(value.reasonsEn).length > 0 ? strings(value.reasonsEn) : strings(value.reasons),
   };
 }
 
@@ -181,9 +186,12 @@ export const TasteAPI = {
     if (!Array.isArray(payload)) throw new Error('온보딩 곡 응답 형식이 올바르지 않습니다.');
     return payload.filter(isRecord).map((item) => ({
       pieceId: Number(item.pieceId),
-      pieceTitle: String(item.pieceTitle ?? ''),
+      pieceTitle: pick(String(item.pieceTitle ?? ''), typeof item.pieceTitleEn === 'string' ? item.pieceTitleEn : null),
       composerId: Number(item.composerId),
-      composerName: String(item.composerName ?? ''),
+      composerName: pick(
+        String(item.composerName ?? ''),
+        typeof item.composerNameEn === 'string' ? item.composerNameEn : null
+      ),
       composerAvatarUrl: typeof item.composerAvatarUrl === 'string' ? item.composerAvatarUrl : null,
       leadSound: String(item.leadSound ?? ''),
     }));

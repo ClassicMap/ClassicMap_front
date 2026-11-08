@@ -117,6 +117,7 @@ interface APIPiecePart {
 
 interface APIPieceSearchResult extends APIPiece {
   composerName: string;
+  composerNameEn?: string | null;
   composerAvatarUrl?: string | null;
 }
 
@@ -579,6 +580,7 @@ export interface FavoritePieceItem {
   titleEn?: string | null;
   composerId: number;
   composerName: string;
+  composerNameEn?: string | null;
   composerAvatarUrl?: string | null;
   createdAt: string;
 }
@@ -966,7 +968,7 @@ export const PieceAPI = {
       const data: APIPieceSearchResult[] = await response.json();
       return data.map((item) => ({
         ...mapPiece(item),
-        composerName: item.composerName,
+        composerName: pick(item.composerName, item.composerNameEn),
         composerAvatarUrl: item.composerAvatarUrl ?? null,
       }));
     }
