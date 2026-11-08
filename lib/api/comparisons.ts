@@ -1,4 +1,4 @@
-import { getLocale, pick } from '@/lib/i18n';
+import { getLocale, pick, t } from '@/lib/i18n';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
@@ -120,7 +120,8 @@ function parseMoment(value: unknown): ListeningMoment | null {
   const label = optionalString(value.label);
   const offsetMs = value.offsetMs;
   if (!label || typeof offsetMs !== 'number' || !Number.isFinite(offsetMs) || offsetMs < 0) return null;
-  return { offsetMs, label };
+  // 들을 곳 이름(절정·가장 여린 곳 …)은 정해진 낱말이라 사전으로 옮긴다
+  return { offsetMs, label: t(`moment::${label}`) };
 }
 
 /**

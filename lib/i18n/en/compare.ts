@@ -181,4 +181,19 @@ export const COMPARE: Readonly<Record<string, string>> = {
   섹터: 'Section',
   // 목록 줄 부제
   '{names} 외 {count}명': '{names} and {count} more',
+  // 듣기 노트·추천 비교의 들을 곳 이름(API 가 한국어로 준다)
+  'moment::절정': 'Climax',
+  'moment::첫 절정': 'First climax',
+  'moment::두 번째 절정': 'Second climax',
+  'moment::세 번째 절정': 'Third climax',
+  'moment::마지막 절정': 'Final climax',
+  'moment::가장 여린 곳': 'Softest point',
+  'moment::거의 최대': 'Near full volume',
+  'moment::커지기 시작': 'Starts to build',
+  'moment::다시 커지기 시작': 'Builds again',
+  'moment::여려지기 시작': 'Starts to soften',
+  'moment::물러서는 곳': 'Pulls back',
+  'moment::첫 소리': 'First note',
+  'moment::놀람 화음': 'The surprise chord',
+  'moment::서주': 'Introduction',
 };
