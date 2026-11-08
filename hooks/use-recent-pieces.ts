@@ -1,4 +1,5 @@
 import { recordListeningEvent } from '@/lib/data/listening-events';
+import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
@@ -15,6 +16,10 @@ export interface RecentPiece {
   composerAvatarUrl: string | null;
   sectorId: number | null;
   sectorName: string | null;
+  /** 커버 색. 장르가 붙기 전에 저장한 항목에는 없다 */
+  genre?: PieceGenre | null;
+  /** 카드 그림(대표 연주 영상). 붙기 전에 저장한 항목에는 없다 */
+  coverVideoId?: string | null;
   viewedAt: number;
 }
 
@@ -41,7 +46,13 @@ async function readRecentPieces(): Promise<RecentPiece[]> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isRecentPiece) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(isRecentPiece).map((item) => ({
+          ...item,
+          genre: isPieceGenre(item.genre) ? item.genre : null,
+          coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
+        }))
+      : [];
   } catch {
     return [];
   }

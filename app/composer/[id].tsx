@@ -7,6 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
+import { PhotoCredit } from '@/components/hero/photo-credit';
+import { playPiece } from '@/lib/player/play-piece';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { PieceArt } from '@/components/piece/piece-art';
+import { TrackIndex } from '@/components/piece/track-index';
+import { GenreLink } from '@/components/piece/genre-link';
+import { performerNamesLine } from '@/lib/data/comparison';
+import { genreStyle } from '@/lib/design/genre-palette';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,7 +23,6 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminComposerAPI, AdminPieceAPI } from '@/lib/api/admin';
 import { ComposerAPI } from '@/lib/api/client';
-import { getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
@@ -26,17 +34,15 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircleIcon,
-  ArrowLeftIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   ChevronUpIcon,
   EditIcon,
   ExternalLinkIcon,
-  PlayIcon,
   PlusIcon,
   TrashIcon,
 } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
+import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -133,11 +139,15 @@ export default function ComposerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const composerId = Number(id);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [starting, setStarting] = React.useState(false);
+  // 이 작곡가 곡이 지금 플레이어에 있으면 큰 버튼이 재생·일시정지를 바꾼다
+  const playerHere = useComparePlayer((state) => state.current?.composerId === composerId);
+  const playingHere = useComparePlayer((state) => state.playing && state.current?.composerId === composerId);
+  const pausedHere = playerHere && !playingHere;
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
-  const { colorScheme } = useColorScheme();
-  const scheme = colorScheme === 'dark' ? 'dark' : 'light';
 
   const [editVisible, setEditVisible] = React.useState(false);
   const [pieceFormVisible, setPieceFormVisible] = React.useState(false);
@@ -238,7 +248,6 @@ export default function ComposerDetailScreen() {
     );
   }
 
-  const eraColor = getEraForeground(composer.period, scheme);
   const years = `${composer.birthYear}–${composer.deathYear ?? ''}`;
   const meta = [
     years,
@@ -251,6 +260,15 @@ export default function ComposerDetailScreen() {
     .map((keyword) => keyword.trim())
     .filter(Boolean);
   const firstComparable = comparable[0];
+  // 머리 재생: 첫 비교 작품을 그 자리에서 튼다. 틀 연주가 없으면 비교 화면으로 간다
+  const playFirst = () => {
+    if (!firstComparable) return;
+    setStarting(true);
+    playPiece(queryClient, { pieceId: firstComparable.pieceId })
+      .then((played) => !played && openCompare(firstComparable.pieceId))
+      .catch(() => openCompare(firstComparable.pieceId))
+      .finally(() => setStarting(false));
+  };
 
   const about =
     composer.bio || styleKeywords.length > 0 || composer.influence ? (
@@ -294,51 +312,25 @@ export default function ComposerDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
-        {!wide ? (
-          <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
-            accessibilityLabel="뒤로"
-            className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
-            <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-          </Pressable>
-        ) : null}
+        {/* 배너 전용 가로 그림이 있으면 그걸, 없으면 초상을 폭으로 깐다 */}
+        <HeroBanner
+          image={composer.banner?.url ?? composer.avatarUrl}
+          focalPoint={composer.banner?.focalPoint}
+          title={composer.name}
+          meta={[composer.period, ...meta]}
+          wide={wide}
+          onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
+        />
 
-        {/* 머리: 사람은 원형 */}
-        <View className={cn('gap-6', wide ? 'mt-6 flex-row items-end gap-8' : 'mt-2 items-center')}>
-          <EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={wide ? 208 : 148} />
-          <View className={cn('min-w-0', wide ? 'flex-1 pb-2' : 'items-center')}>
-            {wide ? (
-              <Text variant="micro" className="uppercase tracking-widest">
-                작곡가
-              </Text>
-            ) : null}
-            <Text
-              className={cn(
-                'font-extrabold tracking-tight text-foreground',
-                wide ? 'mt-2 text-[64px] leading-[66px]' : 'text-[34px] leading-10'
-              )}>
-              {composer.name}
-            </Text>
-            <Text variant="bodySm" className={cn('mt-3 text-foreground-muted', !wide && 'text-center')}>
-              <Text className="font-semibold" style={eraColor ? { color: eraColor } : undefined}>
-                {composer.period}
-              </Text>
-              {meta.map((part) => `  ·  ${part}`).join('')}
-            </Text>
-          </View>
-        </View>
-
-        {/* 행동: 바로 듣기가 먼저, 담기는 그다음 */}
-        <View className={cn('mt-6 flex-row flex-wrap items-center gap-2.5', !wide && 'justify-center')}>
+        {/* 행동: 재생(첫 비교 작품을 그 자리에서) → 담기 → 관리 */}
+        <View className="mt-6 flex-row flex-wrap items-center gap-4">
           {firstComparable ? (
-            <Pressable
-              onPress={() => openCompare(firstComparable.pieceId)}
-              accessibilityRole="button"
-              accessibilityLabel={`${firstComparable.pieceTitle} 비교 듣기`}
-              className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-5 web:transition-opacity web:hover:opacity-90">
-              <Icon as={PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
-              <Text className="text-label font-bold text-primary-foreground">비교 듣기</Text>
-            </Pressable>
+            <HeroPlayButton
+              label={`${firstComparable.pieceTitle} 바로 듣기`}
+              busy={starting}
+              playing={playingHere}
+              onPress={playingHere || pausedHere ? () => comparePlayer.togglePlay() : playFirst}
+            />
           ) : null}
           <FavoriteButton kind="composers" id={composer.id} name={composer.name} variant="labeled" />
           {canEdit ? (
@@ -354,6 +346,9 @@ export default function ComposerDetailScreen() {
             </>
           ) : null}
         </View>
+        {composer.banner ? (
+          <PhotoCredit imageUrl={composer.banner.url} credit={composer.banner.credit} centered={false} />
+        ) : null}
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
           <View className="min-w-0 flex-1 gap-11">
@@ -379,6 +374,11 @@ export default function ComposerDetailScreen() {
                       piece={piece}
                       wide={wide}
                       onPress={() => openCompare(piece.pieceId)}
+                      onPlay={() =>
+                        void playPiece(queryClient, { pieceId: piece.pieceId })
+                          .then((played) => !played && openCompare(piece.pieceId))
+                          .catch(() => openCompare(piece.pieceId))
+                      }
                     />
                   ))}
                   {comparableQuery.hasNextPage ? (
@@ -543,43 +543,45 @@ function ComparableRow({
   piece,
   wide,
   onPress,
+  onPlay,
 }: {
   index: number;
   piece: ComparisonPiece;
   wide: boolean;
   onPress: () => void;
+  /** 번호 칸을 누르면 그 자리에서 바로 튼다 */
+  onPlay: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`${piece.pieceTitle} 비교하기`}
-      className="-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
-      <Text variant="mono" className="w-6 text-center text-foreground-subtle">
-        {index + 1}
-      </Text>
+      className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
+      <TrackIndex index={index + 1} pieceId={piece.pieceId} onPlay={onPlay} />
+      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}
         </Text>
         <Text variant="caption" numberOfLines={1} className="mt-0.5">
-          {[piece.opusNumber, `구간 ${piece.sectorCount}`].filter(Boolean).join(' · ')}
+          {performerNamesLine(piece.performers, piece.performerCount)}
         </Text>
       </View>
-      {/* 사람은 원형. 작품마다 다른 얼굴이 이 목록의 차이다 */}
-      <View className="flex-row">
-        {piece.performers.slice(0, wide ? 4 : 3).map((performer, position) => (
-          <View
-            key={performer.artistId}
-            className="rounded-full border-2 border-background web:border-surface-1"
-            style={{ marginLeft: position === 0 ? 0 : -8 }}>
-            <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={24} />
-          </View>
-        ))}
-      </View>
+      {/* 넓으면 가운데 칸에 장르·작품번호 (스포티파이 앨범 칸 자리) */}
       {wide ? (
-        <Text variant="caption" className="w-16 text-right tabular-nums">
-          {`연주자 ${piece.performerCount}`}
+        <View className="w-[200px]">
+          <GenreLink genre={piece.genre} />
+          {piece.opusNumber ? (
+            <Text variant="caption" numberOfLines={1}>
+              {piece.opusNumber}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      {wide ? (
+        <Text variant="caption" className="w-14 text-right tabular-nums">
+          {`구간 ${piece.sectorCount}`}
         </Text>
       ) : null}
       <FavoriteButton kind="pieces" id={piece.pieceId} name={piece.pieceTitle} />

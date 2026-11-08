@@ -109,8 +109,9 @@ export function ScrollShelf({ children, gap = 14, className }: { children: React
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      className={cn('-mx-4', className)}
-      contentContainerStyle={{ paddingHorizontal: 16, gap }}>
+      // 카드 눌림 바탕(-m-1.5 p-1.5)이 위아래로 잘리지 않게 여유를 두고 그만큼 바깥 여백을 당긴다
+      className={cn('-mx-4 -my-1.5', className)}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 6, gap }}>
       {children}
     </ScrollView>
   );

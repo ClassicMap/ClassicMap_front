@@ -12,15 +12,17 @@ export interface EraColor {
   onLight: string;
   /** 채움 배경 알파 (다크 / 라이트) */
   fillAlpha: { dark: number; light: number };
+  /** 시대 타일 단색 (장르 타일과 같은 눌린 채도) */
+  tile: string;
 }
 
 export const ERA_PALETTE: Record<string, EraColor> = {
-  중세: { base: '#b45309', onDark: '#E0954A', onLight: '#8A3F07', fillAlpha: { dark: 0.14, light: 0.1 } },
-  르네상스: { base: '#0f766e', onDark: '#3FB5AA', onLight: '#0B5A54', fillAlpha: { dark: 0.16, light: 0.1 } },
-  바로크: { base: '#9333ea', onDark: '#B77BF0', onLight: '#7726BE', fillAlpha: { dark: 0.16, light: 0.1 } },
-  고전주의: { base: '#3b82f6', onDark: '#7BAAF9', onLight: '#2A64C7', fillAlpha: { dark: 0.16, light: 0.1 } },
-  낭만주의: { base: '#ec4899', onDark: '#F281BC', onLight: '#C22B75', fillAlpha: { dark: 0.16, light: 0.1 } },
-  근현대: { base: '#22c55e', onDark: '#5FD98D', onLight: '#177F3C', fillAlpha: { dark: 0.16, light: 0.1 } },
+  중세: { base: '#b45309', onDark: '#E0954A', onLight: '#8A3F07', fillAlpha: { dark: 0.14, light: 0.1 }, tile: '#8A5A2E' },
+  르네상스: { base: '#0f766e', onDark: '#3FB5AA', onLight: '#0B5A54', fillAlpha: { dark: 0.16, light: 0.1 }, tile: '#2F6E66' },
+  바로크: { base: '#9333ea', onDark: '#B77BF0', onLight: '#7726BE', fillAlpha: { dark: 0.16, light: 0.1 }, tile: '#6A4C8C' },
+  고전주의: { base: '#3b82f6', onDark: '#7BAAF9', onLight: '#2A64C7', fillAlpha: { dark: 0.16, light: 0.1 }, tile: '#3F6A9A' },
+  낭만주의: { base: '#ec4899', onDark: '#F281BC', onLight: '#C22B75', fillAlpha: { dark: 0.16, light: 0.1 }, tile: '#8C4062' },
+  근현대: { base: '#22c55e', onDark: '#5FD98D', onLight: '#177F3C', fillAlpha: { dark: 0.16, light: 0.1 }, tile: '#3F7F5C' },
 };
 
 /** 과도기 표기는 뒤 시대 색을 따른다 (기존 ERA_COLORS 동작 유지). */

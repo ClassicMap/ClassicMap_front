@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComposerAPI } from '@/lib/api/client';
 import { AdminComposerAPI } from '@/lib/api/admin';
 import type { Composer } from '@/lib/types/models';
@@ -108,12 +108,16 @@ export function useBrowseComposers(period: string | undefined, query: string) {
  * - id가 없으면 쿼리 비활성화
  * - 작곡가 상세 정보 캐싱
  */
-export function useComposer(id: number | undefined) {
-  return useQuery({
-    queryKey: COMPOSER_QUERY_KEYS.detail(id!),
-    queryFn: () => ComposerAPI.getById(id!),
-    enabled: !!id && id > 0,
+/** 작곡가 상세 쿼리 설정. 화면 훅과 미리 부르기(lib/navigation/prefetch)가 같이 쓴다 */
+export function composerQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: COMPOSER_QUERY_KEYS.detail(id),
+    queryFn: () => ComposerAPI.getById(id),
   });
+}
+
+export function useComposer(id: number | undefined) {
+  return useQuery({ ...composerQueryOptions(id ?? 0), enabled: !!id && id > 0 });
 }
 
 /**

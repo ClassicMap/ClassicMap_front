@@ -115,7 +115,8 @@ function GroupHeader({ group }: { group: PieceGroup }) {
   const piece = useComparisonPiece(group.pieceId, group.composerId).data;
   return (
     <View className="flex-row items-center gap-3 py-2">
-      <EntityThumb name={group.composerName} image={piece?.composerAvatarUrl} shape="circle" size={36} />
+      {/* 이 사람 화면이라 작품은 작곡가 초상으로 알아보게 한다 */}
+      <EntityThumb name={group.composerName} image={piece?.composerAvatarUrl} shape="square" size={40} />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body font-bold text-foreground">
           {group.pieceTitle}

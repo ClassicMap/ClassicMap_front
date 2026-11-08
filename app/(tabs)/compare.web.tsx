@@ -1,9 +1,11 @@
 import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
 import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
+import { CompareGenrePieces } from '@/components/compare/genre-browse';
 import { CompareCatalog, CompareComposerPieces } from '@/components/shell/compare/compare-catalog';
 import { ComparePieceView } from '@/components/shell/compare/compare-piece-view';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { isPieceGenre } from '@/lib/design/genre-palette';
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { View } from 'react-native';
 
@@ -20,7 +22,14 @@ function toId(value: string | string[] | undefined): number | undefined {
 export default function CompareScreenWeb() {
   const { nav } = useBreakpoint();
   const router = useRouter();
-  const params = useLocalSearchParams<{ pieceId?: string; sectorId?: string; composerId?: string; focus?: string }>();
+  const params = useLocalSearchParams<{
+    pieceId?: string;
+    sectorId?: string;
+    composerId?: string;
+    focus?: string;
+    genre?: string;
+  }>();
+  const genre = isPieceGenre(params.genre) ? params.genre : undefined;
   const pieceId = toId(params.pieceId);
   const sectorId = toId(params.sectorId);
   const composerId = toId(params.composerId);
@@ -55,6 +64,15 @@ export default function CompareScreenWeb() {
           onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
           onFocus={(a, b) => router.setParams({ sectorId: sectorId ? String(sectorId) : undefined, focus: `${a},${b}` })}
         />
+      ) : genre ? (
+        <CompareGenrePieces
+          genre={genre}
+          wide
+          onBack={() => router.setParams({ genre: undefined })}
+          onSelectGenre={(key) => router.setParams({ genre: key })}
+          // 장르에서 연 작품은 새 기록으로 쌓아 브라우저 뒤로가 장르 목록으로 돌아오게 한다
+          onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
+        />
       ) : composerId ? (
         <CompareComposerPieces
           composerId={composerId}
@@ -63,6 +81,7 @@ export default function CompareScreenWeb() {
         />
       ) : (
         <CompareCatalog
+          onOpenGenre={(key) => router.push(`/compare?genre=${key}` as Href)}
           onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
           onOpenPiece={(piece) =>
             router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })

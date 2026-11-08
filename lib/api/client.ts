@@ -38,6 +38,7 @@ import type {
   ConcertImage,
   TicketVendor,
   BoxofficeRanking,
+  ArtistBanner,
   ImageCredit,
 } from '../types/models';
 
@@ -126,6 +127,15 @@ interface APIArtist {
   countryCount: number;
   albumCount: number;
   imageCredit?: {
+    creditLine?: string | null;
+    author?: string | null;
+    license?: string | null;
+    licenseUrl?: string | null;
+    sourceUrl?: string | null;
+  } | null;
+  banner?: {
+    url?: string | null;
+    focalPoint?: string | null;
     creditLine?: string | null;
     author?: string | null;
     license?: string | null;
@@ -256,6 +266,7 @@ const mapComposer = (api: any): Composer => {
     influence: api.influence,
     pieceCount: api.pieceCount,
     tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
+    banner: mapBanner(api.banner),
   };
   return mapped;
 };
@@ -321,7 +332,17 @@ const mapArtist = (api: APIArtist): Artist => ({
   countryCount: api.countryCount,
   albumCount: api.albumCount,
   imageCredit: mapImageCredit(api.imageCredit),
+  banner: mapBanner(api.banner),
 });
+
+/** 배너는 그림 주소와 출처가 다 있을 때만 쓴다(출처를 밝히지 못하는 그림은 띄우지 않는다) */
+function mapBanner(banner: APIArtist['banner']): ArtistBanner | null {
+  const url = banner?.url?.trim();
+  const credit = mapImageCredit(banner);
+  if (!url || !/^https?:\/\//.test(url) || !credit) return null;
+  const focal = banner?.focalPoint?.trim();
+  return { url, focalPoint: focal && /^\d{1,3}% \d{1,3}%$/.test(focal) ? focal : undefined, credit };
+}
 
 /** 출처 주소가 없으면 밝힐 것이 없으므로 버린다. 빈 문자열은 없는 값으로 본다 */
 function mapImageCredit(credit: APIArtist['imageCredit']): ImageCredit | null {

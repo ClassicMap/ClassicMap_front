@@ -1,3 +1,4 @@
+import type { PieceGenre } from '@/lib/design/genre-palette';
 // ============================================
 // Database Models (데이터베이스 스키마와 동일)
 // ============================================
@@ -18,6 +19,8 @@ export interface Composer {
   style?: string;
   influence?: string;
   pieceCount?: number;
+  /** 화면 머리 배너용 가로 그림. 상세 응답에 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -110,8 +113,17 @@ export interface Artist {
   topAwardId?: number;
   /** 지금 사진의 출처. 공개된 출처 기록이 있을 때만 온다 */
   imageCredit?: ImageCredit | null;
+  /** 화면 머리 배너용 가로 사진. 공개된 배너가 있을 때만 온다 */
+  banner?: ArtistBanner | null;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+/** 아티스트 화면 머리 배너: 가로 사진, 얼굴 초점(CSS object-position), 출처 */
+export interface ArtistBanner {
+  url: string;
+  focalPoint?: string;
+  credit: ImageCredit;
 }
 
 /** 사진 출처. 위키미디어 사진은 작가·라이선스, 보도용 사진은 출처 이름이다 */
@@ -320,6 +332,17 @@ export interface ComparisonPiece {
   sectorCount: number;
   performerCount: number;
   performers: ComparisonPiecePerformer[];
+  /** 장르 7종. 서버가 아직 분류하지 않은 작품은 null */
+  genre?: PieceGenre | null;
+  /** 카드 그림으로 쓸 대표 연주 영상(YouTube id). 썸네일 가운데가 대개 음반 표지다 */
+  coverVideoId?: string | null;
+}
+
+/** `/comparison-genres`: 장르마다 공개 비교 작품 수와 대표 작곡가 초상(겹치지 않게 최대 3명) */
+export interface ComparisonGenreSummary {
+  genre: PieceGenre;
+  pieceCount: number;
+  portraits: { composerId: number; avatarUrl: string }[];
 }
 
 export interface ComparisonPerformancePage {

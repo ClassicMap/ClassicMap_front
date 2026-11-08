@@ -2,6 +2,10 @@ import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/compo
 import { TasteInviteCard } from '@/components/home/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
+import { useGenreShelves } from '@/components/compare/genre-browse';
+import { Chip } from '@/components/ui/chip';
+import { usePinnedToday } from '@/hooks/use-pinned-today';
+import type { PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -15,9 +19,10 @@ import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/dat
 import { TasteAPI } from '@/lib/api/taste';
 import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
 import { useArtists } from '@/lib/query/hooks/useArtists';
-import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
+import { useComparisonPieces, useGenrePieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
-import { useConcerts } from '@/lib/query/hooks/useConcerts';
+import { useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
+import { DEFAULT_CONCERT_FILTER, periodRange } from '@/lib/data/concert-filters';
 import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import type {
@@ -124,11 +129,26 @@ export default function HomeScreen() {
   const catalog = useComparisonPieces();
   const composersQuery = useRecommendedComposers();
   const artistsQuery = useArtists();
-  const concertsQuery = useConcerts();
+  // 공연 탭과 같은 기본 필터(클래식, 오늘 이후). 필터 없는 목록은 뮤지컬·국악이 섞여 홈에 어린이 뮤지컬이 먼저 떴다
+  const concertRange = React.useMemo(() => periodRange('all'), []);
+  const { query: concertsQuery } = useFilteredConcerts(DEFAULT_CONCERT_FILTER, concertRange);
   const recentPieces = useRecentPieces().data ?? [];
 
   const reco = useHomeRecommendations();
-  const recoToday = reco.data?.today ?? null;
+  // 오늘의 비교는 하루 동안 고정한다. 작품을 보고 돌아올 때마다 추천이 다시 계산돼 곡이 바뀌었다
+  // 추천을 바꾸는 답만 본다(로그인하면 answers 에 온보딩 상태·기록 설정까지 실려 와서 골라 담는다)
+  const { listeningLevel, sounds, instrument, favoritePeriods: periods, seedPieceIds } = taste.answers;
+  const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify([
+    listeningLevel,
+    sounds,
+    instrument,
+    periods,
+    seedPieceIds,
+  ])}`;
+  const recoToday = usePinnedToday(reco.data?.today ?? null, todayContext, {
+    updatedAt: reco.dataUpdatedAt,
+    placeholder: reco.isPlaceholderData,
+  });
   const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
   const favorites = useMyFavorites(taste.signedIn);
 
@@ -146,9 +166,17 @@ export default function HomeScreen() {
 
   // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
   const todayPiece = recoToday ?? today;
-  const shelfPieces = React.useMemo(
+
+  // '비교할 수 있는 작품' 줄의 장르 칩. 고르면 그 장르 첫 쪽으로 줄을 바꾼다
+  const [shelfGenre, setShelfGenre] = React.useState<PieceGenre | null>(null);
+  const genreQuery = useGenrePieces(shelfGenre ?? 'symphony', shelfGenre !== null);
+  const allShelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
     [pieces, todayPiece?.pieceId]
+  );
+  const shelfPieces = React.useMemo(
+    () => (shelfGenre ? (genreQuery.data?.pages[0] ?? []) : allShelfPieces),
+    [allShelfPieces, genreQuery.data, shelfGenre]
   );
 
   const favoriteArtistIds = React.useMemo(
@@ -237,6 +265,7 @@ export default function HomeScreen() {
     }
   };
   const openRecent = (item: RecentPiece) => openPiece(item);
+  const genreShelves = useGenreShelves();
 
   const gap = wide ? 20 : 12;
 
@@ -248,7 +277,7 @@ export default function HomeScreen() {
       />
     ) : null;
 
-  const todaySection = catalog.isLoading || reco.isLoading ? (
+  const todaySection = catalog.isLoading || (reco.isLoading && !recoToday) || recoToday === undefined ? (
     <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
   ) : catalog.isError ? (
     <View className="rounded-xl border border-border">
@@ -307,7 +336,9 @@ export default function HomeScreen() {
             gap={wide ? 12 : 8}
             rowGap={wide ? 12 : 8}
             keyOf={(item) => item.pieceId}
-            renderItem={(item) => <RecentTile item={item} onPress={() => openRecent(item)} />}
+            renderItem={(item) => (
+              <RecentTile item={item} onPress={() => openRecent(item)} />
+            )}
           />
         </View>
       ) : null}
@@ -365,8 +396,25 @@ export default function HomeScreen() {
         </Section>
       ))}
 
-      <Section wide={wide} title="비교할 수 있는 작품" onAction={() => router.push('/compare' as Href)}>
-        {catalog.isLoading ? (
+      <Section
+        wide={wide}
+        title="비교할 수 있는 작품"
+        onAction={() => router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)}>
+        {/* 장르 칩: 이 줄만 그 장르로 걸러 본다 (스포티파이 홈 칩) */}
+        {genreShelves.shelves.length > 0 ? (
+          <ScrollShelf gap={8} className="mb-4">
+            <Chip label="전체" selected={shelfGenre === null} onPress={() => setShelfGenre(null)} />
+            {genreShelves.shelves.map((shelf) => (
+              <Chip
+                key={shelf.genre}
+                label={shelf.style.label}
+                selected={shelfGenre === shelf.genre}
+                onPress={() => setShelfGenre(shelfGenre === shelf.genre ? null : shelf.genre)}
+              />
+            ))}
+          </ScrollShelf>
+        ) : null}
+        {catalog.isLoading || (shelfGenre !== null && genreQuery.isLoading) ? (
           <CardSkeletonRow wide={wide} shape="square" />
         ) : shelfPieces.length === 0 ? null : wide ? (
           <ShelfRow
@@ -405,6 +453,7 @@ export default function HomeScreen() {
                 caption={getArtistCategoryLabel(artist.category)}
                 width={width}
                 onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
               />
             )}
           />
@@ -417,6 +466,7 @@ export default function HomeScreen() {
                   image={artist.imageUrl}
                   width={76}
                   onPress={() => router.push(`/artist/${artist.id}` as Href)}
+                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
                 />
               </View>
             ))}
@@ -446,6 +496,7 @@ export default function HomeScreen() {
                 caption={composer.period}
                 width={width}
                 onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
               />
             )}
           />
@@ -458,6 +509,7 @@ export default function HomeScreen() {
                   image={composer.avatarUrl}
                   width={76}
                   onPress={() => router.push(`/composer/${composer.id}` as Href)}
+                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
                 />
               </View>
             ))}

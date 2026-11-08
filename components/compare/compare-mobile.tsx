@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { GenreLink } from '@/components/piece/genre-link';
+import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { OptimizedImage } from '@/components/optimized-image';
@@ -60,18 +62,22 @@ import {
   PlayIcon,
   SettingsIcon,
 } from 'lucide-react-native';
+import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
 
 interface CompareMobileCatalogProps {
+  onOpenGenre: (genre: PieceGenre) => void;
   onOpenComposer: (composerId: number) => void;
   onOpenPiece: (piece: ComparisonPiece) => void;
 }
 
 /** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로. 위 검색 칸으로 바로 찾는다 */
-export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
+export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
   const scrollInsets = useTabScrollInsets();
+  const genreCount = useGenreShelves().shelves.length;
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
@@ -143,7 +149,16 @@ export function CompareMobileCatalog({ onOpenComposer, onOpenPiece }: CompareMob
           description="연주자 세 명 이상의 영상이 모이면 여기에 나와요."
         />
       ) : (
-        <View className="mt-4">
+        <View className="mt-6">
+          {genreCount > 0 ? (
+            <>
+              <Text variant="headline">장르로 찾기</Text>
+              <GenreTiles wide={false} onOpen={onOpenGenre} className="mb-8 mt-3" />
+            </>
+          ) : null}
+          <Text variant="headline" className="mb-1">
+            작곡가로 찾기
+          </Text>
           {composers.map((composer) => {
             const inRepertoire = repertoire.composers.has(composer.composerId);
             const repertoirePieceCount = repertoirePieces.get(composer.composerId) ?? 0;
@@ -273,6 +288,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               accessibilityRole="link"
               accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
+              <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={48} />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-1.5">
                   <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">
@@ -281,7 +297,7 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
                   {repertoire.pieces.has(piece.pieceId) ? <RepertoireMark /> : null}
                 </View>
                 <Text variant="caption" numberOfLines={1} className="mt-1">
-                  {[piece.opusNumber, `연주자 ${piece.performerCount}`, `구간 ${piece.sectorCount}`]
+                  {[genreStyle(piece.genre)?.label, piece.opusNumber, `연주자 ${piece.performerCount}`, `구간 ${piece.sectorCount}`]
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
@@ -401,8 +417,10 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       composerAvatarUrl: pieceInfo?.composerAvatarUrl ?? null,
       sectorId: activeSector.id,
       sectorName: activeSector.sectorName,
+      genre: pieceInfo?.genre ?? null,
+      coverVideoId: pieceInfo?.coverVideoId ?? null,
     });
-  }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, recordRecent]);
+  }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent]);
 
   const active = performances.find((performance) => performance.id === activeId);
   const preview = active ?? performances.find((performance) => performance.clipStatus === 'ready');
@@ -410,6 +428,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   // 이 구간의 곡선은 모두 같은 눈금으로 그린다
   const curveFloor = sharedFloorDb(performances.map((performance) => performance.loudness));
   const title = first?.pieceTitle ?? pieceInfo?.pieceTitle;
+  const composerIdForLink = first?.composerId ?? pieceInfo?.composerId ?? composerId;
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -452,19 +471,37 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {/* 머리: 작품은 사각. 음반 연결이 없어 작곡가 초상을 쓴다 */}
       <View className="mt-3 flex-row items-end gap-4">
         {title ? (
-          <EntityThumb name={title} image={pieceInfo?.composerAvatarUrl} shape="square" size={88} />
+          <PieceArt
+            coverVideoId={pieceInfo?.coverVideoId}
+            fallbackImage={pieceInfo?.composerAvatarUrl}
+            fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
+            size={88}
+          />
         ) : (
           <Skeleton className="size-[88px] rounded-md" />
         )}
         <View className="min-w-0 flex-1">
           {title ? (
             <>
+              <GenreLink genre={pieceInfo?.genre} className="mb-1" />
               <Text className="text-title-2 font-bold text-foreground">{title}</Text>
-              <Text variant="caption" numberOfLines={1} className="mt-1">
-                {[first?.composerName ?? pieceInfo?.composerName, pieceInfo ? `연주자 ${pieceInfo.performerCount}` : null]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
+              {/* 작곡가 이름을 누르면 작곡가 화면으로 간다 */}
+              <View className="mt-1 flex-row items-center">
+                {composerIdForLink && (first?.composerName ?? pieceInfo?.composerName) ? (
+                  <Pressable
+                    onPress={() => router.push(`/composer/${composerIdForLink}` as Href)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`${first?.composerName ?? pieceInfo?.composerName} 작곡가 화면으로`}
+                    hitSlop={8}>
+                    <Text variant="caption" className="font-semibold text-foreground underline">
+                      {first?.composerName ?? pieceInfo?.composerName}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Text variant="caption">{first?.composerName ?? pieceInfo?.composerName ?? ''}</Text>
+                )}
+                {pieceInfo ? <Text variant="caption">{` · 연주자 ${pieceInfo.performerCount}`}</Text> : null}
+              </View>
             </>
           ) : (
             <Skeleton className="h-7 w-3/4" />

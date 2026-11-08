@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { OptimizedImage } from '@/components/optimized-image';
+import { GenreLink } from '@/components/piece/genre-link';
 import { Scrim } from '@/components/ui/scrim';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -173,13 +174,16 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
   }
 
   return (
-    <View className="flex-row gap-7 rounded-2xl border border-border bg-surface-2/60 p-5">
+    <View className="flex-row gap-7 rounded-2xl bg-surface-2 p-5">
       <View className="min-w-0 flex-[1.35]">{media}</View>
       <View className="min-w-0 flex-1 justify-between py-1">
         <View>
-          <Text variant="micro" className="uppercase tracking-widest text-primary">
-            오늘의 비교
-          </Text>
+          <View className="flex-row items-center gap-2.5">
+            <Text variant="label" className="font-semibold text-primary">
+              오늘의 비교
+            </Text>
+            <GenreLink genre={piece.genre} />
+          </View>
           <Text numberOfLines={2} className="mt-2 text-title-2 font-bold text-foreground">
             {piece.pieceTitle}
           </Text>

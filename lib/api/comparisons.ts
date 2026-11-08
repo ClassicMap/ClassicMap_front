@@ -1,5 +1,7 @@
+import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
+  ComparisonGenreSummary,
   ClipAlignment,
   ClipStatus,
   ComparisonPerformance,
@@ -321,17 +323,50 @@ export function parsePiece(value: unknown): ComparisonPiece {
       artistName: requireString(performer.artistName, 'performers.artistName'),
       imageUrl: optionalString(performer.imageUrl),
     })),
+    genre: isPieceGenre(value.genre) ? value.genre : null,
+    coverVideoId: optionalString(value.coverVideoId),
+  };
+}
+
+function parseGenreSummary(value: unknown): ComparisonGenreSummary | null {
+  if (!isRecord(value) || !isPieceGenre(value.genre)) return null;
+  const portraits = Array.isArray(value.portraits) ? value.portraits.filter(isRecord) : [];
+  return {
+    genre: value.genre,
+    pieceCount: requireNumber(value.pieceCount, 'genre.pieceCount'),
+    portraits: portraits.flatMap((portrait) =>
+      typeof portrait.avatarUrl === 'string' && portrait.avatarUrl
+        ? [{ composerId: requireInteger(portrait.composerId, 'genre.portraits.composerId'), avatarUrl: portrait.avatarUrl }]
+        : []
+    ),
   };
 }
 
 export const ComparisonAPI = {
+  /** 장르마다 공개 비교 작품 수와 대표 초상. 모르는 장르 키는 건너뛴다 */
+  async getGenreSummaries(): Promise<ComparisonGenreSummary[]> {
+    const response = await authenticatedFetch(`${API_BASE_URL}/comparison-genres`);
+    if (!response.ok) {
+      throw new Error(`장르 목록을 불러오지 못했습니다. (${response.status})`);
+    }
+    const payload: unknown = await response.json();
+    if (!Array.isArray(payload)) throw new Error('장르 목록 응답 형식이 올바르지 않습니다.');
+    return payload.flatMap((item) => {
+      const summary = parseGenreSummary(item);
+      return summary ? [summary] : [];
+    });
+  },
+
   /** 비교할 수 있는 작품. 연주자가 많은 작품부터 온다. */
-  async getPieces(options: { composerId?: number; offset?: number; limit?: number } = {}): Promise<ComparisonPiece[]> {
+  async getPieces(
+    options: { composerId?: number; genre?: PieceGenre; offset?: number; limit?: number } = {}
+  ): Promise<ComparisonPiece[]> {
     const params = new URLSearchParams({
       offset: String(options.offset ?? 0),
       limit: String(options.limit ?? 20),
     });
     if (options.composerId) params.set('composer', String(options.composerId));
+    if (options.genre) params.set('genre', options.genre);
     const response = await authenticatedFetch(`${API_BASE_URL}/comparison-pieces?${params.toString()}`);
     if (!response.ok) {
       throw new Error(`비교할 수 있는 작품을 불러오지 못했습니다. (${response.status})`);

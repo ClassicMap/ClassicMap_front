@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ClapperboardIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
@@ -417,10 +418,19 @@ function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide
 /** 검색어가 없을 때: 아티스트 · 시대 · 악기 · 더 둘러보기 입구 */
 function BrowseLanding({ isWide }: { isWide: boolean }) {
   const router = useRouter();
+  const genres = useGenreShelves();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   return (
     <View className="mt-4 gap-8">
+      {/* 스포티파이 '모두 둘러보기'처럼 장르 색 타일을 맨 위에 둔다 */}
+      {genres.isLoading || genres.shelves.length > 0 ? (
+        <View className="gap-3">
+          <Text variant="title3">장르로 찾기</Text>
+          <GenreTiles wide={isWide} onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)} />
+        </View>
+      ) : null}
+
       <View className="gap-3">
         <Text variant="title3">아티스트</Text>
         <BrowseTileRow tiles={PEOPLE_TILES} isWide={isWide} />

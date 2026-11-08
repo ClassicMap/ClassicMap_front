@@ -1,4 +1,5 @@
 import { isBarePath } from '@/components/navigation/bare-paths';
+import { RouteProgress } from '@/components/navigation/route-progress';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
 import { MiniPlayerBar } from '@/components/player/mini-player-bar';
 import { AppShell } from '@/components/shell/app-shell';
@@ -21,6 +22,7 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
         {nav === 'tabs' ? children : <AppShell nav={nav}>{children}</AppShell>}
       </React.Fragment>
       {nav === 'tabs' ? <MiniPlayerBar key="mini" /> : null}
+      {nav === 'tabs' ? <RouteProgress key="progress" placement="viewport" /> : null}
       <ComparePlayerHost key="host" />
     </>
   );

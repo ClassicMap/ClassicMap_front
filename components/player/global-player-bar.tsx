@@ -3,6 +3,7 @@ import { compareHrefFor, useSettled } from '@/components/player/player-bar-helpe
 import { VolumeControl } from '@/components/player/volume-control';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { EntityThumb } from '@/components/ui/entity-thumb';
+import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
@@ -35,7 +36,7 @@ export function GlobalPlayerBar() {
   const goToCompare = () => router.navigate(compareHrefFor(current));
 
   return (
-    <View className="h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
+    <View className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
       <View className="min-w-0 flex-1 flex-row items-center gap-3">
         <Pressable onPress={goToCompare} accessibilityRole="link" accessibilityLabel={`${current.artistName} 비교 화면으로`}>
           <MiniVideoTarget width={96} height={54} />
@@ -43,9 +44,12 @@ export function GlobalPlayerBar() {
         <Pressable onPress={goToCompare} accessibilityRole="link" className="min-w-0 flex-1 flex-row items-center gap-2.5">
           <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={32} />
           <View className="min-w-0 flex-1">
-            <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground web:hover:underline">
-              {current.artistName}
-            </Text>
+            <View className="flex-row items-center gap-1.5">
+              <Equalizer playing={playing} size={11} />
+              <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground web:hover:underline">
+                {current.artistName}
+              </Text>
+            </View>
             <Text variant="caption" numberOfLines={1}>
               {restored ? `이어 듣기 · ${current.sectorName} · ${current.pieceTitle}` : `${current.sectorName} · ${current.pieceTitle}`}
             </Text>
@@ -64,7 +68,7 @@ export function GlobalPlayerBar() {
           <Pressable
             accessibilityLabel={playing ? '일시정지' : restored ? '이어 듣기' : '재생'}
             onPress={() => comparePlayer.togglePlay()}
-            className="size-9 items-center justify-center rounded-full bg-foreground">
+            className="size-9 items-center justify-center rounded-full bg-foreground web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95">
             <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
           </Pressable>
           <Pressable

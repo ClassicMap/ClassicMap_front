@@ -1,4 +1,12 @@
+import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { Button } from '@/components/ui/button';
+import { PieceArt } from '@/components/piece/piece-art';
+import { TrackIndex } from '@/components/piece/track-index';
+import { GenreLink } from '@/components/piece/genre-link';
+import { performerNamesLine } from '@/lib/data/comparison';
+import { playPiece } from '@/lib/player/play-piece';
+import { useQueryClient } from '@tanstack/react-query';
+import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -27,12 +35,13 @@ import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 interface CompareCatalogProps {
+  onOpenGenre: (genre: PieceGenre) => void;
   onOpenComposer: (composerId: number) => void;
   onOpenPiece: (piece: ComparisonPiece) => void;
 }
 
 /** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
-export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogProps) {
+export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareCatalogProps) {
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
@@ -49,6 +58,7 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
     () => searchComparable(comparable.data, query, repertoire),
     [comparable.data, query, repertoire]
   );
+  const genreCount = useGenreShelves().shelves.length;
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
@@ -103,18 +113,31 @@ export function CompareCatalog({ onOpenComposer, onOpenPiece }: CompareCatalogPr
           description="연주자 세 명 이상의 영상이 모이면 여기에 나와요."
         />
       ) : (
-        <View className="mt-8 flex-row flex-wrap gap-x-5 gap-y-7">
-          {composers.map((composer) => (
-            <ComposerCard
-              key={composer.composerId}
-              composer={composer}
-              inRepertoire={repertoire.composers.has(composer.composerId)}
-              repertoirePieceCount={repertoirePieces.get(composer.composerId) ?? 0}
-              repertoireArtists={repertoire.artists}
-              onPress={() => onOpenComposer(composer.composerId)}
-            />
-          ))}
-        </View>
+        <>
+          {genreCount > 0 ? (
+            <>
+              <Text variant="title2" className="mt-9">
+                장르로 찾기
+              </Text>
+              <GenreTiles wide onOpen={onOpenGenre} className="mt-4" />
+            </>
+          ) : null}
+          <Text variant="title2" className={genreCount > 0 ? 'mt-11' : 'mt-9'}>
+            작곡가로 찾기
+          </Text>
+          <View className="mt-5 flex-row flex-wrap gap-x-5 gap-y-7">
+            {composers.map((composer) => (
+              <ComposerCard
+                key={composer.composerId}
+                composer={composer}
+                inRepertoire={repertoire.composers.has(composer.composerId)}
+                repertoirePieceCount={repertoirePieces.get(composer.composerId) ?? 0}
+                repertoireArtists={repertoire.artists}
+                onPress={() => onOpenComposer(composer.composerId)}
+              />
+            ))}
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -326,7 +349,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
       ) : (
         <>
           {/* 작곡가 초상은 머리에 한 번만. 작품은 음반 트랙 목록처럼 번호 행으로 */}
-          <View className="mt-7 max-w-[960px] border-t border-border">
+          <View className="mt-7 max-w-[960px]">
             {pieces.map((piece, index) => (
               <PieceRow
                 key={piece.pieceId}
@@ -367,15 +390,20 @@ function PieceRow({
   repertoireArtists: ReadonlySet<number>;
   onPress: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const playHere = () => {
+    playPiece(queryClient, { pieceId: piece.pieceId })
+      .then((played) => !played && onPress())
+      .catch(() => onPress());
+  };
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${inRepertoire ? ', 레퍼토리에 있어요' : ''} 비교하기`}
-      className="flex-row items-center gap-4 border-b border-border px-3 py-3.5 transition-colors duration-instant web:hover:bg-surface-2">
-      <Text variant="mono" className="w-6 text-right text-foreground-subtle">
-        {index}
-      </Text>
+      className="group flex-row items-center gap-4 rounded-md px-3 py-2.5 transition-colors duration-instant web:hover:bg-surface-2">
+      <TrackIndex index={index} pieceId={piece.pieceId} onPlay={playHere} />
+      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={44} />
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
@@ -383,15 +411,21 @@ function PieceRow({
           </Text>
           {inRepertoire ? <RepertoireMark /> : null}
         </View>
+        <Text variant="caption" numberOfLines={1} className="mt-0.5">
+          {performerNamesLine(piece.performers, piece.performerCount)}
+        </Text>
+      </View>
+      {/* 가운데 칸: 장르·작품번호 (스포티파이 앨범 칸 자리) */}
+      <View className="w-[200px]">
+        <GenreLink genre={piece.genre} />
         {piece.opusNumber ? (
-          <Text variant="caption" numberOfLines={1} className="mt-0.5">
+          <Text variant="caption" numberOfLines={1}>
             {piece.opusNumber}
           </Text>
         ) : null}
       </View>
-      <Faces performers={piece.performers} max={4} highlightIds={repertoireArtists} />
-      <Text variant="caption" className="w-[108px] text-foreground-subtle">
-        연주자 {piece.performerCount} · 구간 {piece.sectorCount}
+      <Text variant="caption" className="w-14 text-right tabular-nums text-foreground-subtle">
+        구간 {piece.sectorCount}
       </Text>
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />
     </Pressable>

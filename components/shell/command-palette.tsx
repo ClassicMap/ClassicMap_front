@@ -5,6 +5,8 @@ import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { type PrefetchTarget, prefetchTarget } from '@/lib/navigation/prefetch';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { CornerDownLeftIcon, MoonStarIcon, SearchIcon, type LucideIcon } from 'lucide-react-native';
@@ -18,6 +20,10 @@ import { titleMeta } from '@/components/screen/labels';
 import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 
 const GROUP_LIMIT = 5;
+/** 고른 줄에 이만큼 머물면 그 화면 데이터를 미리 받는다 (화살표로 훑을 때는 부르지 않는다) */
+const PREFETCH_DELAY_MS = 120;
+/** 닫는 움직임 길이 (global.css .cm-layer-out) */
+const CLOSE_MS = 80;
 
 type ResultKind = 'composer' | 'piece' | 'artist' | 'concert' | 'screen' | 'action';
 
@@ -32,6 +38,8 @@ interface PaletteItem {
   /** 사람은 원, 콘텐츠는 사각 */
   shape: 'circle' | 'square';
   icon?: LucideIcon;
+  /** 이 줄을 고르고 있으면 미리 받을 화면 데이터 */
+  prefetch?: PrefetchTarget;
   run: () => void;
 }
 
@@ -50,7 +58,11 @@ const GROUP_LABELS: Record<Exclude<ResultKind, 'action'>, string> = {
 
 export function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
+  const queryClient = useQueryClient();
   const router = useRouter();
+  // 닫을 때도 잠깐(80ms) 그려 두고 0.98배로 줄며 사라지게 한다
+  const [closing, setClosing] = React.useState(false);
+  const wasOpen = React.useRef(open);
   const { toggleColorScheme } = useColorScheme();
   const [query, setQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -59,9 +71,23 @@ export function CommandPalette() {
 
   const close = React.useCallback(() => {
     setOpen(false);
-    setQuery('');
-    setActiveIndex(0);
   }, [setOpen]);
+
+  React.useEffect(() => {
+    if (open) {
+      setClosing(false);
+    } else if (wasOpen.current) {
+      setClosing(true);
+      const timer = setTimeout(() => {
+        setClosing(false);
+        setQuery('');
+        setActiveIndex(0);
+      }, CLOSE_MS);
+      wasOpen.current = open;
+      return () => clearTimeout(timer);
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   const go = React.useCallback(
     (href: Href) => {
@@ -83,6 +109,7 @@ export function CommandPalette() {
           .join(' · '),
         image: composer.avatarUrl,
         shape: 'circle',
+        prefetch: { kind: 'composer', composerId: composer.id },
         run: () => go(`/composer/${composer.id}`),
       }));
       const pieces: PaletteItem[] = result.pieces.map((piece) => ({
@@ -93,6 +120,7 @@ export function CommandPalette() {
         image: piece.composerAvatarUrl,
         composerId: piece.composerId,
         shape: 'square',
+        prefetch: { kind: 'piece', pieceId: piece.id, composerId: piece.composerId },
         run: () => go(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`),
       }));
       const artists: PaletteItem[] = result.artists.map((artist) => ({
@@ -102,6 +130,7 @@ export function CommandPalette() {
         meta: getArtistCategoryLabel(artist.category),
         image: artist.imageUrl,
         shape: 'circle',
+        prefetch: { kind: 'artist', artistId: artist.id },
         run: () => go(`/artist/${artist.id}`),
       }));
       const concerts: PaletteItem[] = result.concerts.map((concert) => ({
@@ -167,6 +196,13 @@ export function CommandPalette() {
     setActiveIndex(0);
   }, [debounced]);
 
+  const activePrefetch = open ? flat[activeIndex]?.prefetch : undefined;
+  React.useEffect(() => {
+    if (!activePrefetch) return;
+    const timer = setTimeout(() => void prefetchTarget(queryClient, activePrefetch), PREFETCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [activePrefetch, queryClient]);
+
   React.useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -193,7 +229,7 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [open, flat, activeIndex, close]);
 
-  if (!open) return null;
+  if (!open && !closing) return null;
 
   const trimmed = debounced.trim();
   const hasResults = groups.length > 1;
@@ -203,13 +239,16 @@ export function CommandPalette() {
     <View className="absolute inset-0 z-50" style={{ position: 'fixed' as 'absolute' }}>
       <Pressable
         accessibilityLabel="검색 닫기"
-        className="absolute inset-0 bg-black/50"
+        className={cn('absolute inset-0 bg-black/50', closing ? 'cm-scrim-out' : 'cm-scrim-in')}
         onPress={close}
       />
       <View
         accessibilityRole="search"
-        className="mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2"
-        style={{ maxHeight: 480, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)' } as object}>
+        className={cn(
+          'mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2',
+          closing ? 'cm-layer-out' : 'cm-layer-in'
+        )}
+        style={{ maxHeight: 480, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)', transformOrigin: '50% 0' } as object}>
         <View className="h-12 flex-row items-center gap-3 border-b border-border px-4">
           <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
           <TextInput
