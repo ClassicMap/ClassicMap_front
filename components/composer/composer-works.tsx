@@ -22,12 +22,14 @@ import type {
   Piece,
 } from '@/lib/types/models';
 import { SearchIcon, XIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/lib/theme';
 import { useIsFetching } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { formatNumber, msg, t, useLocale } from '@/lib/i18n';
+import { scrollInnerView } from '@/lib/utils/scroll-inner-view';
 import { searchWords, wordVariants } from '@/lib/utils/search-terms';
 import {
   ActivityIndicator,
@@ -122,6 +124,9 @@ export function ComposerWorks(props: ComposerWorksProps) {
   const { layout } = useBreakpoint();
   const narrow = layout !== 'desktop' && layout !== 'wide';
   const { height: windowHeight } = useWindowDimensions();
+  // 앱은 화면이 상태 표시줄 밑까지 그려지므로 검색 칸을 그만큼 아래에 세운다(웹은 위에 붙는다)
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === 'web' ? 0 : insets.top;
   const headerRef = React.useRef<View>(null);
   const catalogQuery = useComposerCatalog(composerId);
   const catalog = catalogQuery.data;
@@ -162,19 +167,20 @@ export function ComposerWorks(props: ComposerWorksProps) {
       const header = headerRef.current;
       const viewport = scroll?.getNativeScrollRef();
       if (!scroll || !header || !viewport) return;
-      header.measureLayout(scroll.getInnerViewNode(), (_x, headerY, _width, headerHeight) => {
+      header.measureLayout(scrollInnerView(scroll), (_x, headerY, _width, headerHeight) => {
         // 검색 칸의 제자리(스크롤 안 위치). 붙어 있어도 머리 줄은 제자리에 있어서 머리 줄로 잰다
-        const homeY = headerY + headerHeight + SECTION_GAP - STICKY_PAD;
+        const homeY = headerY + headerHeight + SECTION_GAP - STICKY_PAD - topInset;
         header.measureInWindow((_hx, headerTop) => {
           viewport.measureInWindow((_vx, viewportTop, _vw, viewportHeight) => {
-            const screenY = headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop;
+            const screenY =
+              headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop - topInset;
             const move = mode === 'focus' ? screenY > viewportHeight * 0.3 : screenY < 0;
-            if (move) scroll.scrollTo({ y: homeY, animated: mode === 'focus' });
+            if (move) scroll.scrollTo({ y: Math.max(0, homeY), animated: mode === 'focus' });
           });
         });
       });
     },
-    [scrollRef]
+    [scrollRef, topInset]
   );
 
   // 검색어·갈래가 바뀐 그 렌더부터 빈자리를 잡고(holding), 입력이 멈추고 받을 것이 없으면 거둔다

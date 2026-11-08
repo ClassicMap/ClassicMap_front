@@ -47,6 +47,7 @@ import {
 } from 'lucide-react-native';
 import * as React from 'react';
 import { formatNumber, t, useLocale } from '@/lib/i18n';
+import { scrollInnerView } from '@/lib/utils/scroll-inner-view';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 interface PerformerSummary {
@@ -119,7 +120,7 @@ export default function ComposerDetailScreen() {
       viewport.measureInWindow((_vx, viewportTop) => {
         if (sectionTop >= viewportTop) return collapse();
         section.measureLayout(
-          scroll.getInnerViewNode(),
+          scrollInnerView(scroll),
           (_lx, y) => {
             scroll.scrollTo({ y: Math.max(0, y - 16), animated: false });
             collapse();
