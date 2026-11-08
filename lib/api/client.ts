@@ -73,6 +73,7 @@ interface APIPiece {
   title: string;
   titleEn?: string;
   description?: string;
+  descriptionEn?: string | null;
   opusNumber?: string;
   compositionYear?: number;
   difficultyLevel?: number;
@@ -139,6 +140,8 @@ interface APIArtist {
   birthYear?: string;
   nationality: string;
   bio?: string;
+  bioEn?: string | null;
+  styleEn?: string | null;
   style?: string;
   awards?: APIArtistAward[];
   concertCount: number;
@@ -279,9 +282,9 @@ const mapComposer = (api: any): Composer => {
     imageUrl: api.imageUrl ? api.imageUrl : undefined,
     avatarUrl: api.avatarUrl ? api.avatarUrl : undefined,
     coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
-    bio: api.bio,
-    style: api.style,
-    influence: api.influence,
+    bio: pick(api.bio, api.bioEn),
+    style: pick(api.style, api.styleEn),
+    influence: pick(api.influence, api.influenceEn),
     pieceCount: api.pieceCount,
     tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
     banner: mapBanner(api.banner),
@@ -295,7 +298,7 @@ const mapPiece = (api: APIPiece): Piece => ({
   title: pick(api.title, api.titleEn),
   titleEn: api.titleEn,
   type: 'song', // 기본값
-  description: api.description,
+  description: pick(api.description, api.descriptionEn) ?? undefined,
   opusNumber: api.opusNumber,
   catalogueSystem: api.catalogueSystem ?? null,
   catalogueNumber: api.catalogueNumber ?? null,
@@ -360,8 +363,8 @@ const mapArtist = (api: APIArtist): Artist => ({
   coverImageUrl: api.coverImageUrl ? api.coverImageUrl : undefined,
   birthYear: api.birthYear,
   nationality: api.nationality,
-  bio: api.bio,
-  style: api.style,
+  bio: pick(api.bio, api.bioEn) ?? undefined,
+  style: pick(api.style, api.styleEn) ?? undefined,
   awards: api.awards?.map((award) => ({
     id: award.id,
     artistId: award.artistId,
