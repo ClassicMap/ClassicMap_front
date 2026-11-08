@@ -1,4 +1,4 @@
-import { pick } from '@/lib/i18n';
+import { getLocale, pick } from '@/lib/i18n';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import { API_BASE_URL, authenticatedFetch } from '@/lib/api/client';
 import type {
@@ -138,10 +138,19 @@ function parseNote(value: unknown): PerformanceListeningNote | null {
     moments: (Array.isArray(value.moments) ? value.moments : [])
       .map(parseMoment)
       .filter((moment): moment is ListeningMoment => moment !== null),
-    facts: (Array.isArray(value.facts) ? value.facts : []).filter(
-      (fact): fact is string => typeof fact === 'string' && fact.trim() !== ''
-    ),
+    facts: noteFacts(value),
   };
+}
+
+/** 사실 태그. 영어판이면 영어 태그(factsEn, 한국어와 같은 수일 때만)를 쓴다 */
+function noteFacts(value: Record<string, unknown>): string[] {
+  const clean = (list: unknown): string[] =>
+    (Array.isArray(list) ? list : []).filter(
+      (fact): fact is string => typeof fact === 'string' && fact.trim() !== ''
+    );
+  const facts = clean(value.facts);
+  const factsEn = clean(value.factsEn);
+  return getLocale() === 'en' && factsEn.length === facts.length && factsEn.length > 0 ? factsEn : facts;
 }
 
 function finiteNumber(value: unknown): number | null {
