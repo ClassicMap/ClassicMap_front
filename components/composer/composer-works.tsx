@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { formatNumber, msg, t, useLocale } from '@/lib/i18n';
+import { searchWords, wordVariants } from '@/lib/utils/search-terms';
 import {
   ActivityIndicator,
   Platform,
@@ -53,28 +54,15 @@ const SORTS: { key: ComposerPieceSort; label: string }[] = [
   { key: 'notable', label: msg('대표곡 먼저') },
 ];
 
-/** 검색어를 데이터 표기로도 한 번 더 강조한다(서버 검색의 별칭과 같다): 야상곡 → 녹턴, op 9 → Op. 9 */
-const SEARCH_ALIASES: [string, string][] = [
-  ['야상곡', '녹턴'],
-  ['에튀드', '연습곡'],
-  ['폴로네이즈', '폴로네즈'],
-  ['프렐류드', '전주곡'],
-  ['판타지', '환상곡'],
-  ['랩소디', '광시곡'],
-];
-
+/**
+ * 검색어를 데이터 표기로도 강조한다(서버 검색과 같은 낱말 묶음):
+ * 에튀드·Etude → 연습곡·Étude, 교향곡 → Symphony, 5번 → No. 5, op 9 → Op. 9
+ */
 function highlightTerms(q: string): string[] {
-  // 서버처럼 낱말마다 찾고, 작품번호 머리(Op.·K.·BWV)는 뒤 숫자와 붙여 한 낱말로 본다
-  const words = q.replace(/\b(op\.?|k\.?|kv|bwv|hob\.|rv)\s+(?=\d)/gi, '$1\u0001').split(/\s+/);
   const terms = new Set<string>();
-  for (const raw of words) {
-    const word = raw.replace(/\u0001/g, ' ').trim();
-    if (!word) continue;
-    terms.add(word);
-    let normalized = word.replace(/^op\.?\s*(\d)/i, 'Op. $1');
-    for (const [alias, canonical] of SEARCH_ALIASES)
-      normalized = normalized.split(alias).join(canonical);
-    terms.add(normalized);
+  for (const word of searchWords(q)) {
+    for (const variant of wordVariants(word)) terms.add(variant);
+    terms.add(word.replace(/^op\.?\s*(\d)/i, 'Op. $1'));
   }
   return [...terms];
 }

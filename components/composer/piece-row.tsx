@@ -12,6 +12,7 @@ import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, T
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
+import { termPattern } from '@/lib/utils/search-terms';
 import { Linking, Pressable, View } from 'react-native';
 
 interface ListenLink {
@@ -111,7 +112,7 @@ export function Highlighted({ text, terms }: { text: string; terms?: readonly st
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   if (words.length === 0) return <>{text}</>;
-  const pattern = new RegExp(`(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const pattern = new RegExp(`(${words.map(termPattern).join('|')})`, 'gi');
   const pieces = text.split(pattern);
   if (pieces.length === 1) return <>{text}</>;
   return (
