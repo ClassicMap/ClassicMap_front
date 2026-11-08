@@ -46,6 +46,7 @@ import {
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
+import { formatNumber, t } from '@/lib/i18n';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 interface PerformerSummary {
@@ -141,17 +142,17 @@ export default function ComposerDetailScreen() {
 
   const handleDeleteComposer = () => {
     if (!composer) return;
-    Alert.alert('작곡가 삭제', `${composer.name}을(를) 삭제할까요? 작품도 함께 삭제돼요.`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('작곡가 삭제'), t('{name}을(를) 삭제할까요? 작품도 함께 삭제돼요.', { name: composer.name }), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminComposerAPI.delete(composer.id);
             router.back();
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
           }
         },
       },
@@ -164,22 +165,22 @@ export default function ComposerDetailScreen() {
       setEditingPiece(full ?? piece);
       setPieceFormVisible(true);
     } catch {
-      Alert.alert('작품 정보를 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('작품 정보를 불러오지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     }
   };
 
   const handleDeletePiece = (piece: Piece) => {
-    Alert.alert('작품 삭제', `${piece.title}을(를) 삭제할까요?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('작품 삭제'), t('{name}을(를) 삭제할까요?', { name: piece.title }), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminPieceAPI.delete(piece.id);
             void refreshPieces();
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
           }
         },
       },
@@ -207,9 +208,9 @@ export default function ComposerDetailScreen() {
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="작곡가 정보를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => composerQuery.refetch() }}
+          title={t('작곡가 정보를 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => composerQuery.refetch() }}
         />
       </View>
     );
@@ -218,8 +219,8 @@ export default function ComposerDetailScreen() {
   const years = `${composer.birthYear}–${composer.deathYear ?? ''}`;
   const meta = [
     years,
-    composer.nationality,
-    composer.pieceCount ? `작품 ${composer.pieceCount.toLocaleString('ko-KR')}곡` : null,
+    composer.nationality ? t(composer.nationality) : null,
+    composer.pieceCount ? t('작품 {n}곡', { count: composer.pieceCount, n: formatNumber(composer.pieceCount) }) : null,
     composer.englishName,
   ].filter(Boolean);
   const styleKeywords = (composer.style ?? '')
@@ -243,7 +244,7 @@ export default function ComposerDetailScreen() {
         {composer.bio ? (
           <View>
             <Text variant="headline" className="mb-2.5">
-              소개
+              {t('소개')}
             </Text>
             <ExpandableText text={composer.bio} lines={5} variant="body" className="text-foreground" />
           </View>
@@ -251,7 +252,7 @@ export default function ComposerDetailScreen() {
         {styleKeywords.length > 0 ? (
           <View>
             <Text variant="headline" className="mb-2.5">
-              음악 스타일
+              {t('음악 스타일')}
             </Text>
             <View className="flex-row flex-wrap gap-1.5">
               {styleKeywords.map((keyword) => (
@@ -263,7 +264,7 @@ export default function ComposerDetailScreen() {
         {composer.influence ? (
           <View>
             <Text variant="headline" className="mb-2.5">
-              음악사적 영향
+              {t('음악사적 영향')}
             </Text>
             <Text variant="bodySm" className="text-foreground-muted">
               {composer.influence}
@@ -294,7 +295,7 @@ export default function ComposerDetailScreen() {
         <View className="mt-6 flex-row flex-wrap items-center gap-4">
           {firstComparable ? (
             <HeroPlayButton
-              label={`${firstComparable.pieceTitle} 바로 듣기`}
+              label={t('{title} 바로 듣기', { title: firstComparable.pieceTitle })}
               busy={starting}
               playing={playingHere}
               onPress={playingHere || pausedHere ? () => comparePlayer.togglePlay() : playFirst}
@@ -305,11 +306,11 @@ export default function ComposerDetailScreen() {
             <>
               <Button variant="outline" size="sm" onPress={() => setEditVisible(true)}>
                 <Icon as={EditIcon} size={14} className="text-foreground" />
-                <Text>수정</Text>
+                <Text>{t('수정')}</Text>
               </Button>
               <Button variant="outline" size="sm" onPress={handleDeleteComposer}>
                 <Icon as={TrashIcon} size={14} className="text-destructive" />
-                <Text className="text-destructive">삭제</Text>
+                <Text className="text-destructive">{t('삭제')}</Text>
               </Button>
             </>
           ) : null}
@@ -322,7 +323,7 @@ export default function ComposerDetailScreen() {
           <View className="min-w-0 flex-1 gap-11">
             {/* 비교할 수 있는 작품 (1차 시안: 번호 행). 많으면 5곡만 보이고 펼친다 */}
             <View ref={comparableRef}>
-              <SectionTitle title="비교할 수 있는 작품" meta={comparable.length > 0 ? `${comparable.length}곡` : undefined} />
+              <SectionTitle title={t('비교할 수 있는 작품')} meta={comparable.length > 0 ? t('{count}곡', { count: comparable.length }) : undefined} />
               {comparableQuery.isLoading ? (
                 <View className="gap-2">
                   {Array.from({ length: 3 }, (_, index) => (
@@ -331,7 +332,7 @@ export default function ComposerDetailScreen() {
                 </View>
               ) : comparable.length === 0 ? (
                 <Text variant="bodySm" className="text-foreground-muted">
-                  아직 연주자 세 명 이상이 모인 작품이 없어요. 영상이 모이면 여기에 나와요.
+                  {t('아직 연주자 세 명 이상이 모인 작품이 없어요. 영상이 모이면 여기에 나와요.')}
                 </Text>
               ) : (
                 <View>
@@ -354,21 +355,21 @@ export default function ComposerDetailScreen() {
                       <MoreLink
                         label={
                           comparableQuery.hasNextPage
-                            ? '더 보기'
-                            : `${comparable.length.toLocaleString('ko-KR')}곡 모두 보기`
+                            ? t('더 보기')
+                            : t('{n}곡 모두 보기', { count: comparable.length, n: formatNumber(comparable.length) })
                         }
                         onPress={() => setComparableOpen(true)}
                       />
                     ) : null}
                     {comparableOpen && comparableQuery.hasNextPage ? (
                       <MoreLink
-                        label={comparableQuery.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+                        label={comparableQuery.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}
                         onPress={() => comparableQuery.fetchNextPage()}
                         disabled={comparableQuery.isFetchingNextPage}
                       />
                     ) : null}
                     {comparableOpen ? (
-                      <MoreLink label="접기" collapse onPress={collapseComparable} />
+                      <MoreLink label={t('접기')} collapse onPress={collapseComparable} />
                     ) : null}
                   </View>
                 </View>
@@ -378,7 +379,7 @@ export default function ComposerDetailScreen() {
             {/* 이 작품들을 연주한 사람: 넓은 화면은 오른쪽 칸, 좁은 화면은 가로 띠 */}
             {!wide && performers.length > 0 ? (
               <View>
-                <SectionTitle title="이 작품들을 연주한 사람" meta={`${performers.length}명`} />
+                <SectionTitle title={t('이 작품들을 연주한 사람')} meta={t('{count}명', { count: performers.length })} />
                 <ScrollShelf>
                   {performers.map((performer) => (
                     <PerformerTile
@@ -413,7 +414,7 @@ export default function ComposerDetailScreen() {
                       setPieceFormVisible(true);
                     }}>
                     <Icon as={PlusIcon} size={14} className="text-foreground" />
-                    <Text>작품 추가</Text>
+                    <Text>{t('작품 추가')}</Text>
                   </Button>
                 ) : undefined
               }
@@ -489,7 +490,7 @@ function ComparableRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${piece.pieceTitle} 비교하기`}
+      accessibilityLabel={t('{title} 비교하기', { title: piece.pieceTitle })}
       className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index + 1} pieceId={piece.pieceId} onPlay={onPlay} />
       <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
@@ -514,7 +515,7 @@ function ComparableRow({
       ) : null}
       {wide ? (
         <Text variant="caption" className="w-14 text-right tabular-nums">
-          {`구간 ${piece.sectorCount}`}
+          {t('구간 {count}', { count: piece.sectorCount })}
         </Text>
       ) : null}
       <FavoriteButton kind="pieces" id={piece.pieceId} name={piece.pieceTitle} />
@@ -525,7 +526,9 @@ function ComparableRow({
 
 function PerformerTile({ performer, onPress }: { performer: PerformerSummary; onPress: () => void }) {
   const caption =
-    performer.pieces.length > 1 ? `${performer.pieces[0]} 외 ${performer.pieces.length - 1}곡` : performer.pieces[0];
+    performer.pieces.length > 1
+      ? t('{title} 외 {count}곡', { title: performer.pieces[0], count: performer.pieces.length - 1 })
+      : performer.pieces[0];
   return (
     <Pressable
       onPress={onPress}
@@ -558,14 +561,14 @@ function PerformerSidebar({
   return (
     <View>
       <View className="mb-2.5 flex-row items-baseline gap-2">
-        <Text variant="headline">이 작품들을 연주한 사람</Text>
-        <Text variant="caption">{`${performers.length}명`}</Text>
+        <Text variant="headline">{t('이 작품들을 연주한 사람')}</Text>
+        <Text variant="caption">{t('{count}명', { count: performers.length })}</Text>
       </View>
       <View className="gap-1">
         {shown.map((performer) => {
           const caption =
             performer.pieces.length > 1
-              ? `${performer.pieces[0]} 외 ${performer.pieces.length - 1}곡`
+              ? t('{title} 외 {count}곡', { title: performer.pieces[0], count: performer.pieces.length - 1 })
               : performer.pieces[0];
           return (
             <Pressable
@@ -590,7 +593,7 @@ function PerformerSidebar({
       {performers.length > SIDEBAR_PERFORMERS ? (
         <Pressable onPress={() => setAll((value) => !value)} hitSlop={6} className="mt-2 self-start px-1.5 py-1">
           <Text variant="label" className="text-foreground-muted">
-            {all ? '접기' : `${performers.length}명 모두 보기`}
+            {all ? t('접기') : t('{count}명 모두 보기', { count: performers.length })}
           </Text>
         </Pressable>
       ) : null}

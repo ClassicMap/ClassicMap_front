@@ -1,3 +1,4 @@
+import { msg } from '@/lib/i18n';
 /**
  * 작품 장르 7종 (2026-11-07 사용자 결정). 원곡 편성 기준으로 서버가 `genre` 로 준다.
  * 시대 색처럼 데이터 카테고리 전용이라 버튼·보더 같은 UI 크롬에는 쓰지 않는다.
@@ -23,13 +24,13 @@ export interface GenreStyle {
 }
 
 export const GENRE_STYLES: Record<PieceGenre, GenreStyle> = {
-  symphony: { key: 'symphony', label: '교향곡', color: '#4E4A8C' },
-  concerto: { key: 'concerto', label: '협주곡', color: '#A0603A' },
-  piano: { key: 'piano', label: '피아노', color: '#3F7F6A' },
-  chamber: { key: 'chamber', label: '실내악', color: '#8A7440' },
-  orchestral: { key: 'orchestral', label: '관현악', color: '#3F6F9A' },
-  stage: { key: 'stage', label: '오페라·발레', color: '#8C3F5A' },
-  vocal: { key: 'vocal', label: '성악', color: '#7466A8' },
+  symphony: { key: 'symphony', label: msg('교향곡'), color: '#4E4A8C' },
+  concerto: { key: 'concerto', label: msg('협주곡'), color: '#A0603A' },
+  piano: { key: 'piano', label: msg('피아노'), color: '#3F7F6A' },
+  chamber: { key: 'chamber', label: msg('실내악'), color: '#8A7440' },
+  orchestral: { key: 'orchestral', label: msg('관현악'), color: '#3F6F9A' },
+  stage: { key: 'stage', label: msg('오페라·발레'), color: '#8C3F5A' },
+  vocal: { key: 'vocal', label: msg('성악'), color: '#7466A8' },
 };
 
 export function isPieceGenre(value: unknown): value is PieceGenre {
