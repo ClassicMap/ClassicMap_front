@@ -7,6 +7,7 @@ import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
+import { t } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
@@ -38,7 +39,7 @@ export function GlobalPlayerBar() {
   return (
     <View className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
       <View className="min-w-0 flex-1 flex-row items-center gap-3">
-        <Pressable onPress={goToCompare} accessibilityRole="link" accessibilityLabel={`${current.artistName} 비교 화면으로`}>
+        <Pressable onPress={goToCompare} accessibilityRole="link" accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}>
           <MiniVideoTarget width={96} height={54} />
         </Pressable>
         <Pressable onPress={goToCompare} accessibilityRole="link" className="min-w-0 flex-1 flex-row items-center gap-2.5">
@@ -51,7 +52,9 @@ export function GlobalPlayerBar() {
               </Text>
             </View>
             <Text variant="caption" numberOfLines={1}>
-              {restored ? `이어 듣기 · ${current.sectorName} · ${current.pieceTitle}` : `${current.sectorName} · ${current.pieceTitle}`}
+              {restored
+                ? t('이어 듣기 · {sector} · {title}', { sector: current.sectorName, title: current.pieceTitle })
+                : `${current.sectorName} · ${current.pieceTitle}`}
             </Text>
           </View>
         </Pressable>
@@ -59,20 +62,20 @@ export function GlobalPlayerBar() {
       <View className="flex-[1.3] items-center gap-1.5">
         <View className="flex-row items-center gap-4">
           <Pressable
-            accessibilityLabel="이전 연주자"
+            accessibilityLabel={t('이전 연주자')}
             disabled={queueSize < 2}
             onPress={() => comparePlayer.step(-1)}
             className={cn('size-8 items-center justify-center rounded-full', queueSize < 2 && 'opacity-40')}>
             <Icon as={SkipBackIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
           </Pressable>
           <Pressable
-            accessibilityLabel={playing ? '일시정지' : restored ? '이어 듣기' : '재생'}
+            accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             onPress={() => comparePlayer.togglePlay()}
             className="size-9 items-center justify-center rounded-full bg-foreground web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95">
             <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
           </Pressable>
           <Pressable
-            accessibilityLabel="다음 연주자"
+            accessibilityLabel={t('다음 연주자')}
             disabled={queueSize < 2}
             onPress={() => comparePlayer.step(1)}
             className={cn('size-8 items-center justify-center rounded-full', queueSize < 2 && 'opacity-40')}>
@@ -90,7 +93,7 @@ export function GlobalPlayerBar() {
               setScrub(null);
               comparePlayer.seek(value * duration);
             }}
-            label="재생 위치"
+            label={t('재생 위치')}
             valueText={(value) => `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`}
             step={duration > 0 ? 5 / duration : 0.05}
             disabled={duration <= 0}
@@ -105,7 +108,7 @@ export function GlobalPlayerBar() {
         <VolumeControl />
         <Pressable
           onPress={() => comparePlayer.close()}
-          accessibilityLabel="플레이어 닫기"
+          accessibilityLabel={t('플레이어 닫기')}
           className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
           <Icon as={XIcon} size={16} className="text-foreground-muted" />
         </Pressable>

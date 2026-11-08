@@ -3,6 +3,7 @@ import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/pl
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { useRouter, useSegments } from 'expo-router';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
@@ -46,7 +47,7 @@ export function MiniPlayerBar() {
           <Pressable
             onPress={goToCompare}
             accessibilityRole="link"
-            accessibilityLabel={`${current.artistName} 비교 화면으로`}
+            accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}
             className="min-w-0 flex-1 flex-row items-center gap-3">
             {current.videoId || Platform.OS === 'web' ? (
               <MiniVideoTarget width={80} height={45} />
@@ -58,7 +59,7 @@ export function MiniPlayerBar() {
                 {current.artistName}
               </Text>
               <Text variant="caption" numberOfLines={1}>
-                {restored ? `이어 듣기 · ${current.sectorName}` : `${current.sectorName} · ${current.pieceTitle}`}
+                {restored ? t('이어 듣기 · {sector}', { sector: current.sectorName }) : `${current.sectorName} · ${current.pieceTitle}`}
               </Text>
             </View>
           </Pressable>
@@ -66,13 +67,13 @@ export function MiniPlayerBar() {
             onPress={() => {
               if (!canToggle || !comparePlayer.togglePlay()) goToCompare();
             }}
-            accessibilityLabel={playing ? '일시정지' : restored ? '이어 듣기' : '재생'}
+            accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             className="size-11 items-center justify-center rounded-full">
             <Icon as={playing ? PauseIcon : PlayIcon} size={20} className="fill-foreground text-foreground" />
           </Pressable>
           <Pressable
             onPress={() => comparePlayer.close()}
-            accessibilityLabel="플레이어 닫기"
+            accessibilityLabel={t('플레이어 닫기')}
             className="size-10 items-center justify-center rounded-full">
             <Icon as={XIcon} size={18} className="text-foreground-muted" />
           </Pressable>

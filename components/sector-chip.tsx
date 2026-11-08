@@ -5,6 +5,7 @@ import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
+import { t } from '@/lib/i18n';
 import type { PerformanceSectorWithCount } from '@/lib/types/models';
 
 interface SectorChipProps {
@@ -29,7 +30,7 @@ export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipPr
         onEdit && isSelected ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`${sector.sectorName} 섹터 편집`}
+            accessibilityLabel={t('{name} 섹터 편집', { name: sector.sectorName })}
             hitSlop={8}
             onPress={(e) => {
               e?.stopPropagation?.();
@@ -51,7 +52,7 @@ export function AddSectorChip({ onPress }: { onPress: () => void }) {
       className="h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border border-dashed border-border-strong px-3"
       onPress={onPress}>
       <Icon as={PlusIcon} size={14} className="text-foreground-muted" />
-      <Text className="text-label text-foreground-muted">섹터</Text>
+      <Text className="text-label text-foreground-muted">{t('섹터')}</Text>
     </Pressable>
   );
 }

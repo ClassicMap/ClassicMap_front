@@ -1,5 +1,6 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { primaryCredit } from '@/lib/data/comparison';
+import { t } from '@/lib/i18n';
 import type { ComparisonPerformance } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -26,7 +27,7 @@ export function performerOf(
 ): Performer {
   const credit = primaryCredit(performance);
   return {
-    name: credit?.artistName ?? '연주자 정보 없음',
+    name: credit?.artistName ?? t('연주자 정보 없음'),
     image: imageOf ? imageOf(performance) : credit?.imageUrl ?? null,
   };
 }

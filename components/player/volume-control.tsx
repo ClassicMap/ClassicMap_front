@@ -1,5 +1,6 @@
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Icon } from '@/components/ui/icon';
+import { t } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { Volume1Icon, Volume2Icon, VolumeXIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -14,7 +15,7 @@ export function VolumeControl({ width = 76 }: { width?: number }) {
     <View className="flex-row items-center gap-1.5">
       <Pressable
         onPress={() => comparePlayer.toggleMute()}
-        accessibilityLabel={muted ? '소리 켜기 (M)' : '음소거 (M)'}
+        accessibilityLabel={muted ? t('소리 켜기 (M)') : t('음소거 (M)')}
         className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
         <Icon
           as={level === 0 ? VolumeXIcon : level < 0.5 ? Volume1Icon : Volume2Icon}
@@ -27,7 +28,7 @@ export function VolumeControl({ width = 76 }: { width?: number }) {
           value={level}
           onScrub={(value) => comparePlayer.setVolume(value)}
           onCommit={(value) => comparePlayer.setVolume(value)}
-          label="볼륨"
+          label={t('볼륨')}
           valueText={(value) => `${Math.round(value * 100)}%`}
           step={0.1}
           fill="hsl(var(--foreground-muted))"
