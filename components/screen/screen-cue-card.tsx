@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { ServiceLogoFor } from '@/components/ui/service-logo';
 import {
   approxTimeText,
   episodeText,
@@ -199,6 +200,7 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
             onPress={() => openExternal(link.url)}
             accessibilityRole="link"
             className="flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 active:bg-surface-2 web:hover:bg-surface-2">
+            <ServiceLogoFor label={link.label} size={14} />
             <Text className="text-label font-semibold text-foreground">{t('{label}에서 듣기', { label: link.label })}</Text>
             <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
           </Pressable>
