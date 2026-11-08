@@ -15,6 +15,7 @@ import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/lib/types/models';
 import { titleMeta } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
+import { msg, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ClapperboardIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
@@ -27,12 +28,12 @@ import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
 type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert' | 'screen';
 
 const TYPE_CHIPS: { key: ResultType; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'composer', label: '작곡가' },
-  { key: 'piece', label: '작품' },
-  { key: 'artist', label: '연주자' },
-  { key: 'concert', label: '공연' },
-  { key: 'screen', label: '영화·드라마' },
+  { key: 'all', label: msg('전체') },
+  { key: 'composer', label: msg('작곡가') },
+  { key: 'piece', label: msg('작품') },
+  { key: 'artist', label: msg('연주자') },
+  { key: 'concert', label: msg('공연') },
+  { key: 'screen', label: msg('영화·드라마') },
 ];
 
 /** 한 종류만 볼 때는 더 많이 가져온다. */
@@ -48,14 +49,14 @@ interface BrowseTile {
 
 const PEOPLE_TILES: BrowseTile[] = [
   {
-    label: '작곡가',
-    description: '시대별로 추천 순',
+    label: msg('작곡가'),
+    description: msg('시대별로 추천 순'),
     href: '/artists',
     renderIcon: (className) => <ComposerKindIcon size={22} className={className} />,
   },
   {
-    label: '연주자',
-    description: '피아니스트부터 오케스트라까지',
+    label: msg('연주자'),
+    description: msg('피아니스트부터 오케스트라까지'),
     href: '/artists?type=artist',
     renderIcon: (className) => <PerformerKindIcon size={22} className={className} />,
   },
@@ -63,26 +64,26 @@ const PEOPLE_TILES: BrowseTile[] = [
 
 const MORE_TILES: BrowseTile[] = [
   {
-    label: '앨범',
-    description: '담은 연주자의 새 앨범과 레이블별 음반',
+    label: msg('앨범'),
+    description: msg('담은 연주자의 새 앨범과 레이블별 음반'),
     href: '/albums',
     renderIcon: (className) => <Icon as={DiscIcon} size={22} className={className} />,
   },
   {
-    label: '타임라인',
-    description: '작곡가들이 살았던 시간을 겹쳐 봐요',
+    label: msg('타임라인'),
+    description: msg('작곡가들이 살았던 시간을 겹쳐 봐요'),
     href: '/timeline',
     renderIcon: (className) => <EraIcon size={22} className={className} />,
   },
   {
-    label: '비교할 수 있는 작품',
-    description: '같은 구간을 연주자별로 들어 봐요',
+    label: msg('비교할 수 있는 작품'),
+    description: msg('같은 구간을 연주자별로 들어 봐요'),
     href: '/compare',
     renderIcon: (className) => <CompareIcon size={22} className={className} />,
   },
   {
-    label: '영화 속 클래식',
-    description: '영화·드라마·애니에서 들은 그 곡',
+    label: msg('영화 속 클래식'),
+    description: msg('영화·드라마·애니에서 들은 그 곡'),
     href: '/films' as Href,
     renderIcon: (className) => <Icon as={ClapperboardIcon} size={22} className={className} />,
   },
@@ -171,15 +172,15 @@ export default function SearchScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="작곡가, 작품, 연주자, 공연, 영화"
+            placeholder={t('작곡가, 작품, 연주자, 공연, 영화')}
             placeholderTextColor="hsl(33 6% 46%)"
             returnKeyType="search"
             autoCorrect={false}
-            accessibilityLabel="검색어"
+            accessibilityLabel={t('검색어')}
             className="flex-1 text-base text-foreground web:outline-none"
           />
           {query ? (
-            <Pressable accessibilityLabel="검색어 지우기" hitSlop={10} onPress={() => setQuery('')}>
+            <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => setQuery('')}>
               <Icon as={XIcon} size={16} className="text-foreground-subtle" />
             </Pressable>
           ) : null}
@@ -189,7 +190,7 @@ export default function SearchScreen() {
             {TYPE_CHIPS.map((chip) => (
               <Chip
                 key={chip.key}
-                label={chip.label}
+                label={t(chip.label)}
                 selected={type === chip.key}
                 onPress={() => setType(chip.key)}
               />
@@ -208,8 +209,8 @@ export default function SearchScreen() {
         ) : total === 0 && result.failedCount === 0 ? (
           <EmptyState
             icon={SearchIcon}
-            title={`“${result.query}”에 맞는 결과가 없어요`}
-            description="다른 표기나 영문 이름으로 찾아보세요."
+            title={t('“{q}”에 맞는 결과가 없어요', { q: result.query })}
+            description={t('다른 표기나 영문 이름으로 찾아보세요.')}
           />
         ) : (
           <View>
@@ -219,7 +220,7 @@ export default function SearchScreen() {
                 className="mt-3 flex-row items-center gap-2.5 rounded-lg bg-surface-2 p-3">
                 <Icon as={AlertCircleIcon} size={18} className="text-destructive" />
                 <Text variant="bodySm" className="flex-1 text-foreground-muted">
-                  일부 검색이 실패했어요. 눌러서 다시 시도해 주세요.
+                  {t('일부 검색이 실패했어요. 눌러서 다시 시도해 주세요.')}
                 </Text>
               </Pressable>
             ) : null}
@@ -244,7 +245,7 @@ export default function SearchScreen() {
                   <Text className="text-title-3">{topHit.item.name}</Text>
                   <Text variant="caption" className="mt-1">
                     {topHit.kind === 'composer'
-                      ? ['작곡가', formatLife(topHit.item)].filter(Boolean).join(' · ')
+                      ? [t('kind::작곡가'), formatLife(topHit.item)].filter(Boolean).join(' · ')
                       : getArtistCategoryLabel(topHit.item.category)}
                   </Text>
                 </View>
@@ -252,12 +253,12 @@ export default function SearchScreen() {
             ) : null}
 
             {show('composer') && composers.length > 0 ? (
-              <ResultGroup title="작곡가">
+              <ResultGroup title={t('작곡가')}>
                 {composers.map((composer) => (
                   <ResultRow
                     key={composer.id}
                     title={composer.name}
-                    subtitle={[composer.period, formatLife(composer)].filter(Boolean).join(' · ')}
+                    subtitle={[t(composer.period), formatLife(composer)].filter(Boolean).join(' · ')}
                     thumb={<EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={44} />}
                     onPress={() => router.push(`/composer/${composer.id}`)}
                   />
@@ -266,7 +267,7 @@ export default function SearchScreen() {
             ) : null}
 
             {show('piece') && result.pieces.length > 0 ? (
-              <ResultGroup title="작품">
+              <ResultGroup title={t('작품')}>
                 {result.pieces.map((piece: PieceSearchResult) => (
                   <ResultRow
                     key={piece.id}
@@ -282,7 +283,7 @@ export default function SearchScreen() {
             ) : null}
 
             {show('artist') && artists.length > 0 ? (
-              <ResultGroup title="연주자">
+              <ResultGroup title={t('연주자')}>
                 {artists.map((artist) => (
                   <ResultRow
                     key={artist.id}
@@ -296,12 +297,12 @@ export default function SearchScreen() {
             ) : null}
 
             {show('screen') && result.screenTitles.length > 0 ? (
-              <ResultGroup title="영화·드라마">
+              <ResultGroup title={t('영화·드라마')}>
                 {result.screenTitles.map((title: ScreenTitleSummary) => (
                   <ResultRow
                     key={title.id}
                     title={title.titleKo}
-                    subtitle={`${titleMeta(title.kind, title.releaseYear)} · 클래식 ${title.cueCount}곡`}
+                    subtitle={`${titleMeta(title.kind, title.releaseYear)} · ${t('클래식 {count}곡', { count: title.cueCount })}`}
                     thumb={
                       <ScreenPoster
                         title={title.titleKo}
@@ -319,7 +320,7 @@ export default function SearchScreen() {
             ) : null}
 
             {show('concert') && result.concerts.length > 0 ? (
-              <ResultGroup title="공연">
+              <ResultGroup title={t('공연')}>
                 {result.concerts.map((concert: Concert) => (
                   <ResultRow
                     key={concert.id}
@@ -404,9 +405,9 @@ function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide
           )}>
           <View className="size-11 items-center justify-center rounded-md bg-surface-3">{tile.renderIcon('text-primary')}</View>
           <View className="flex-1">
-            <Text variant="headline">{tile.label}</Text>
+            <Text variant="headline">{t(tile.label)}</Text>
             <Text variant="caption" className="mt-0.5">
-              {tile.description}
+              {t(tile.description)}
             </Text>
           </View>
         </Pressable>
@@ -426,25 +427,25 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       {/* 스포티파이 '모두 둘러보기'처럼 장르 색 타일을 맨 위에 둔다 */}
       {genres.isLoading || genres.shelves.length > 0 ? (
         <View className="gap-3">
-          <Text variant="title3">장르로 찾기</Text>
+          <Text variant="title3">{t('장르로 찾기')}</Text>
           <GenreTiles wide={isWide} onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)} />
         </View>
       ) : null}
 
       <View className="gap-3">
-        <Text variant="title3">아티스트</Text>
+        <Text variant="title3">{t('아티스트')}</Text>
         <BrowseTileRow tiles={PEOPLE_TILES} isWide={isWide} />
       </View>
 
       <View className="gap-3">
-        <Text variant="headline">시대로 찾기</Text>
+        <Text variant="headline">{t('시대로 찾기')}</Text>
         <View className="flex-row flex-wrap gap-2">
           {ERA_LINKS.map((era) => {
             const color = getEraForeground(era.name, scheme);
             return (
               <Chip
                 key={era.id}
-                label={era.name}
+                label={t(era.name)}
                 leading={color ? <ChipDot color={color} /> : undefined}
                 onPress={() => router.push(`/artists?period=${era.id}` as Href)}
               />
@@ -454,7 +455,7 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       </View>
 
       <View className="gap-3">
-        <Text variant="headline">악기·편성으로 찾기</Text>
+        <Text variant="headline">{t('악기·편성으로 찾기')}</Text>
         <View className="flex-row flex-wrap gap-2">
           {CATEGORY_LINKS.map((code) => (
             <Chip
@@ -467,7 +468,7 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       </View>
 
       <View className="gap-3">
-        <Text variant="headline">더 둘러보기</Text>
+        <Text variant="headline">{t('더 둘러보기')}</Text>
         <BrowseTileRow tiles={MORE_TILES} isWide={isWide} />
       </View>
     </View>

@@ -10,6 +10,7 @@ import {
   type LibraryEntry,
   type LibraryKind,
 } from '@/lib/data/library';
+import { getLocale, msg, t } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -27,10 +28,23 @@ const FAVORITE_KIND: Record<LibraryKind, FavoriteTargetType> = {
   concert: 'concerts',
 };
 
+/** 행 부제에 붙이는 종류 이름(단수형) */
+const ENTRY_KIND_LABEL: Record<LibraryKind, string> = {
+  composer: msg('kind::작곡가'),
+  artist: msg('kind::연주자'),
+  piece: msg('kind::작품'),
+  album: msg('kind::앨범'),
+  concert: msg('kind::공연'),
+};
+
 function addedDay(createdAt: string): string {
   const date = new Date(createdAt);
   if (Number.isNaN(date.getTime())) return '';
-  return `${date.getMonth() + 1}.${date.getDate()} 담음`;
+  const day =
+    getLocale() === 'en'
+      ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : `${date.getMonth() + 1}.${date.getDate()}`;
+  return t('{date} 담음', { date: day });
 }
 
 interface RepertoireListProps {
@@ -69,7 +83,7 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
         {FILTERS.filter((key) => key === 'all' || counts[key] > 0).map((key) => (
           <Chip
             key={key}
-            label={key === 'all' ? '전체' : libraryKindLabel(key)}
+            label={key === 'all' ? t('전체') : libraryKindLabel(key)}
             count={counts[key]}
             selected={filter === key}
             onPress={() => setFilter(key)}
@@ -82,9 +96,9 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
             <Pressable
               onPress={() => setFilter(section.kind)}
               accessibilityRole="button"
-              accessibilityLabel={`${section.label}만 보기`}
+              accessibilityLabel={t('{label}만 보기', { label: t(section.label) })}
               className="mb-1 flex-row items-baseline gap-2 self-start">
-              <Text className="text-body-sm font-semibold text-foreground">{section.label}</Text>
+              <Text className="text-body-sm font-semibold text-foreground">{t(section.label)}</Text>
               <Text variant="caption" className="text-foreground-subtle">
                 {counts[section.kind]}
               </Text>
@@ -115,7 +129,7 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
       {limit && filtered.length > limit && onShowAll ? (
         <Pressable onPress={onShowAll} accessibilityRole="link" className="mt-2 self-start px-1 py-1.5">
           <Text variant="label" className="text-foreground-muted">
-            {`${filtered.length}개 모두 보기`}
+            {t('{count}개 모두 보기', { count: filtered.length })}
           </Text>
         </Pressable>
       ) : null}
@@ -135,7 +149,7 @@ function RepertoireRow({ entry, editable, onPress, grouped = false }: Repertoire
   const meta =
     grouped || entry.kind === 'composer' || entry.kind === 'artist'
       ? entry.subtitle
-      : `${libraryKindLabel(entry.kind)} · ${entry.subtitle}`;
+      : `${t(ENTRY_KIND_LABEL[entry.kind])} · ${entry.subtitle}`;
   const image = useComposerAvatar(entry.composerId, entry.image);
   return (
     <Pressable

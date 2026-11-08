@@ -1,4 +1,5 @@
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View, type LayoutChangeEvent } from 'react-native';
@@ -55,7 +56,7 @@ export function ExpandableText({ text, lines, variant = 'body', className, toggl
           className="mt-2 self-start"
           hitSlop={8}>
           <Text variant="label" className={cn('text-foreground-muted', toggleClassName)}>
-            {expanded ? '접기' : '더 보기'}
+            {expanded ? t('접기') : t('더 보기')}
           </Text>
         </Pressable>
       ) : null}

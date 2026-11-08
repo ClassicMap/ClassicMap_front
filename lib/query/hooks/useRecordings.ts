@@ -11,6 +11,7 @@ import {
   type RecordingListItem,
   type RecordingSort,
 } from '@/lib/api/client';
+import { t } from '@/lib/i18n';
 import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/useMyPage';
 
 export const ALBUM_PAGE_SIZE = 24;
@@ -191,7 +192,7 @@ export function useAlbumById(id: number | undefined) {
         spotifyUrl: recording.spotifyUrl ?? null,
         youtubeMusicUrl: recording.youtubeMusicUrl ?? null,
         artistId: recording.artistId,
-        artistName: artist?.name ?? '연주자',
+        artistName: artist?.name ?? t('kind::연주자'),
         artistEnglishName: artist?.englishName ?? null,
         artistImageUrl: artist?.imageUrl ?? null,
         artistCategory: artist?.category ?? null,

@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
 import { genreStyle } from '@/lib/design/genre-palette';
+import { t } from '@/lib/i18n';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -47,9 +48,9 @@ export function PieceCard({
 }) {
   const confirmDismiss = onDismiss
     ? () =>
-        Alert.alert('이 곡을 추천에서 뺄까요?', '설정에서 들은 기록을 지우면 다시 보여요.', [
-          { text: '취소', style: 'cancel' },
-          { text: '관심 없음', style: 'destructive', onPress: onDismiss },
+        Alert.alert(t('이 곡을 추천에서 뺄까요?'), t('설정에서 들은 기록을 지우면 다시 보여요.'), [
+          { text: t('취소'), style: 'cancel' },
+          { text: t('관심 없음'), style: 'destructive', onPress: onDismiss },
         ])
     : undefined;
   const genre = genreStyle(piece.genre);
@@ -70,8 +71,10 @@ export function PieceCard({
       onPress={onPress}
       onLongPress={Platform.OS === 'web' ? undefined : confirmDismiss}
       accessibilityRole="link"
-      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${genre ? `, ${genre.label}` : ''} 비교하기`}
-      accessibilityActions={onDismiss ? [{ name: 'dismiss', label: '관심 없음' }] : undefined}
+      accessibilityLabel={t('{title} 비교하기', {
+        title: `${piece.composerName} ${piece.pieceTitle}${genre ? `, ${t(genre.label)}` : ''}`,
+      })}
+      accessibilityActions={onDismiss ? [{ name: 'dismiss', label: t('관심 없음') }] : undefined}
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
       className={cn(WEB_CARD, 'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <View>
@@ -86,11 +89,11 @@ export function PieceCard({
           <Pressable
             onPress={onDismiss}
             accessibilityRole="button"
-            accessibilityLabel={`${piece.pieceTitle} 관심 없음`}
+            accessibilityLabel={t('{title} 관심 없음', { title: piece.pieceTitle })}
             hitSlop={6}
             className="absolute right-2 top-2 h-7 flex-row items-center gap-1 rounded-full bg-black/60 px-2 opacity-0 web:transition-opacity web:duration-fast web:focus-visible:opacity-100 web:group-hover:opacity-100">
             <Icon as={XIcon} size={12} className="text-white" />
-            <Text className="text-micro font-semibold text-white">관심 없음</Text>
+            <Text className="text-micro font-semibold text-white">{t('관심 없음')}</Text>
           </Pressable>
         ) : null}
         {/* 데스크톱 호버에서 아래에서 올라오는 재생 버튼. 그 자리에서 바로 튼다.
@@ -99,7 +102,11 @@ export function PieceCard({
           <Pressable
             onPress={isCurrent ? () => comparePlayer.togglePlay() : playHere}
             accessibilityRole="button"
-            accessibilityLabel={playing ? `${piece.pieceTitle} 일시정지` : `${piece.pieceTitle} 바로 듣기`}
+            accessibilityLabel={
+              playing
+                ? t('{title} 일시정지', { title: piece.pieceTitle })
+                : t('{title} 바로 듣기', { title: piece.pieceTitle })
+            }
             className={cn(
               'cm-play-fab absolute bottom-2 right-2 size-11 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40',
               isCurrent && 'cm-play-fab-on'
@@ -116,7 +123,10 @@ export function PieceCard({
         {piece.pieceTitle}
       </Text>
       <Text variant="caption" numberOfLines={1} className="mt-0.5">
-        {[piece.composerName, (!hideGenre && genre?.label) || `연주자 ${piece.performerCount}`].join(' · ')}
+        {[
+          piece.composerName,
+          (!hideGenre && genre && t(genre.label)) || t('연주자 {count}', { count: piece.performerCount }),
+        ].join(' · ')}
       </Text>
       {reason ? (
         <Text numberOfLines={1} className="mt-0.5 text-caption font-semibold text-primary">
@@ -153,7 +163,7 @@ export function PersonCard({
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={inRepertoire ? `${name}, 레퍼토리에 있어요` : name}
+      accessibilityLabel={inRepertoire ? t('{name}, 레퍼토리에 있어요', { name }) : name}
       className={cn(WEB_CARD, '-m-1.5 items-center rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
       <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
         <EntityThumb name={name} image={image} shape="circle" size={width} />
@@ -213,7 +223,7 @@ export function EraTile({
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${era.name} 시대 타임라인 보기`}
+      accessibilityLabel={t('{name} 시대 타임라인 보기', { name: t(era.name) })}
       className={cn(WEB_TILE, 'overflow-hidden rounded-lg')}
       style={{ height, backgroundColor: color }}>
       {portrait ? (
@@ -234,7 +244,7 @@ export function EraTile({
         </View>
       ) : null}
       <View className="p-3">
-        <Text className="text-headline font-extrabold text-white">{era.name}</Text>
+        <Text className="text-headline font-extrabold text-white">{t(era.name)}</Text>
         <Text className="mt-0.5 text-caption font-semibold text-white/75">{`${era.startYear}–${era.endYear}`}</Text>
       </View>
     </Pressable>
@@ -265,7 +275,7 @@ export function RecentTile({
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${item.composerName} ${item.pieceTitle} 다시 보기`}
+      accessibilityLabel={t('{title} 다시 보기', { title: `${item.composerName} ${item.pieceTitle}` })}
       className={cn(
         WEB_CARD,
         'group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',

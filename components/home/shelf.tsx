@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -14,7 +15,7 @@ interface ShelfHeaderProps {
   wide: boolean;
 }
 
-export function ShelfHeader({ title, meta, actionLabel = '전체 보기', onAction, wide }: ShelfHeaderProps) {
+export function ShelfHeader({ title, meta, actionLabel = t('전체 보기'), onAction, wide }: ShelfHeaderProps) {
   return (
     <View className="mb-3.5 flex-row items-end justify-between gap-3">
       <View className="min-w-0 flex-1 flex-row items-baseline gap-2">

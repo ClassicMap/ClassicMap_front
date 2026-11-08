@@ -2,6 +2,7 @@ import { HeroImage, type HeroImageLayout } from '@/components/hero/hero-image';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -52,7 +53,7 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('뒤로')}
           className="absolute left-4 size-10 items-center justify-center rounded-full bg-black/40"
           style={{ top: insets.top + 10 }}>
           <Icon as={ArrowLeftIcon} size={20} className="text-white" />
@@ -101,7 +102,7 @@ export function HeroPlayButton({
       onPress={onPress}
       disabled={busy}
       accessibilityRole="button"
-      accessibilityLabel={playing ? '일시정지' : label}
+      accessibilityLabel={playing ? t('일시정지') : label}
       className={cn(
         'size-14 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40 web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95',
         busy && 'opacity-60'

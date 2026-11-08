@@ -20,4 +20,5 @@ export const SHELL: Readonly<Record<string, string>> = {
   '무엇을 들어볼까요': 'What do you want to hear?',
   '라이트 모드로 전환': 'Switch to light mode',
   '다크 모드로 전환': 'Switch to dark mode',
+  둘러보기: 'Browse',
 };

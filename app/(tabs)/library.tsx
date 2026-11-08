@@ -5,6 +5,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount, isLibraryKind } from '@/lib/data/library';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { t } from '@/lib/i18n';
 import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -32,9 +33,9 @@ export default function LibraryScreen() {
       <View className="flex-1 bg-background" style={{ paddingTop: headerInset }}>
         <EmptyState
           icon={LogInIcon}
-          title="로그인하면 레퍼토리를 모을 수 있어요"
-          description="작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
-          action={{ label: '로그인', onPress: () => router.push('/(auth)/sign-in') }}
+          title={t('로그인하면 레퍼토리를 모을 수 있어요')}
+          description={t('작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
+          action={{ label: t('로그인'), onPress: () => router.push('/(auth)/sign-in') }}
         />
       </View>
     );
@@ -49,7 +50,7 @@ export default function LibraryScreen() {
         <RefreshControl refreshing={favorites.isRefetching} onRefresh={() => favorites.refetch()} />
       }>
       <Text variant="title1" className="mt-4">
-        레퍼토리
+        {t('레퍼토리')}
       </Text>
 
       {favorites.isLoading || loading ? (
@@ -58,16 +59,16 @@ export default function LibraryScreen() {
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="레퍼토리를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => favorites.refetch() }}
+          title={t('레퍼토리를 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => favorites.refetch() }}
         />
       ) : !favorites.data || getFavoriteCount(favorites.data) === 0 ? (
         <EmptyState
           icon={BookmarkIcon}
-          title="아직 레퍼토리가 비어 있어요"
-          description="작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요."
-          action={{ label: '비교할 수 있는 작품 보기', onPress: () => router.push('/compare') }}
+          title={t('아직 레퍼토리가 비어 있어요')}
+          description={t('작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
+          action={{ label: t('비교할 수 있는 작품 보기'), onPress: () => router.push('/compare') }}
         />
       ) : (
         <View className="mt-4">

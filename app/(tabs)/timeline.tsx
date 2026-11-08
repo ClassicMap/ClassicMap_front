@@ -31,6 +31,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useAllComposers } from '@/lib/query/hooks/useComposers';
 import type { Composer, Period } from '@/lib/types/models';
+import { msg, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
@@ -49,9 +50,9 @@ import {
 type Scope = 'major' | 'comparable' | 'all';
 
 const SCOPES: { key: Scope; label: string }[] = [
-  { key: 'major', label: '주요 작곡가' },
-  { key: 'comparable', label: '비교 있는 작곡가' },
-  { key: 'all', label: '전체' },
+  { key: 'major', label: msg('주요 작곡가') },
+  { key: 'comparable', label: msg('비교 있는 작곡가') },
+  { key: 'all', label: msg('전체') },
 ];
 
 /**
@@ -96,7 +97,7 @@ function layoutOverflowGroups(
   for (const era of eras) {
     const count = counts.get(era.name) ?? 0;
     if (count === 0) continue;
-    const width = estimateLabelWidth(`${era.name} +${count}`, 12) + 30;
+    const width = estimateLabelWidth(`${t(era.name)} +${count}`, 12) + 30;
     const center = x((Math.max(era.startYear, fromYear) + Math.min(era.endYear, toYear)) / 2);
     groups.push({ eraId: era.id, eraName: era.name, count, width, left: center - width / 2 });
   }
@@ -335,14 +336,14 @@ export default function TimelineScreen() {
   const zoomControls = (
     <View className="flex-row items-center gap-1.5">
       <Pressable
-        accessibilityLabel="축소"
+        accessibilityLabel={t('축소')}
         disabled={zoom === 0}
         onPress={() => centerAt(currentCenterYear(), zoom - 1)}
         className={cn('size-8 items-center justify-center rounded-full bg-surface-2', zoom === 0 && 'opacity-40')}>
         <Icon as={MinusIcon} size={16} className="text-foreground" />
       </Pressable>
       <Pressable
-        accessibilityLabel="확대"
+        accessibilityLabel={t('확대')}
         disabled={zoom === ZOOM_MULTIPLIERS.length - 1}
         onPress={() => centerAt(currentCenterYear(), zoom + 1)}
         className={cn(
@@ -356,12 +357,12 @@ export default function TimelineScreen() {
 
   const eraChips = (
     <>
-      <Chip size="sm" label="전체 기간" selected={focusEraId === null} onPress={clearFocus} />
+      <Chip size="sm" label={t('전체 기간')} selected={focusEraId === null} onPress={clearFocus} />
       {eras.map((era) => (
         <Chip
           key={era.id}
           size="sm"
-          label={era.name}
+          label={t(era.name)}
           selected={focusEraId === era.id}
           leading={<ChipDot color={getEraForeground(era.name, scheme) ?? era.color} />}
           onPress={() => (focusEraId === era.id ? clearFocus() : focusOnEra(era))}
@@ -385,12 +386,12 @@ export default function TimelineScreen() {
                 className="mb-1 flex-row items-center gap-1 self-start">
                 <Icon as={ChevronLeftIcon} size={14} className="text-foreground-muted" />
                 <Text variant="caption" className="text-foreground-muted">
-                  작곡가 목록으로 보기
+                  {t('작곡가 목록으로 보기')}
                 </Text>
               </Pressable>
-              <Text variant={wide ? 'display' : 'title1'}>타임라인</Text>
+              <Text variant={wide ? 'display' : 'title1'}>{t('타임라인')}</Text>
               <Text variant="bodySm" className="mt-1 text-foreground-muted">
-                작곡가들이 살았던 시간을 겹쳐 봐요. 누가 같은 시대를 살았는지 한눈에 보여요.
+                {t('작곡가들이 살았던 시간을 겹쳐 봐요. 누가 같은 시대를 살았는지 한눈에 보여요.')}
               </Text>
             </View>
             <View className="flex-row items-center gap-2.5">
@@ -410,7 +411,7 @@ export default function TimelineScreen() {
                         'text-label font-semibold',
                         scope === item.key ? 'text-foreground' : 'text-foreground-muted'
                       )}>
-                      {item.label}
+                      {t(item.label)}
                     </Text>
                   </Pressable>
                 ))}
@@ -426,7 +427,7 @@ export default function TimelineScreen() {
               {canEdit ? (
                 <Button variant="outline" size="sm" onPress={() => setShowForm(true)}>
                   <Icon as={PlusIcon} size={14} className="text-foreground" />
-                  <Text>작곡가 추가</Text>
+                  <Text>{t('작곡가 추가')}</Text>
                 </Button>
               ) : null}
             </View>
@@ -444,7 +445,7 @@ export default function TimelineScreen() {
                 {canEdit ? (
                   <Button variant="outline" size="sm" className="ml-auto" onPress={() => setShowForm(true)}>
                     <Icon as={PlusIcon} size={14} className="text-foreground" />
-                    <Text>작곡가 추가</Text>
+                    <Text>{t('작곡가 추가')}</Text>
                   </Button>
                 ) : null}
               </View>
@@ -461,38 +462,40 @@ export default function TimelineScreen() {
             <EmptyState
               icon={AlertCircleIcon}
               tone="error"
-              title="작곡가를 불러오지 못했어요"
-              description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-              action={{ label: '다시 시도', onPress: () => composersQuery.refetch() }}
+              title={t('작곡가를 불러오지 못했어요')}
+              description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+              action={{ label: t('다시 시도'), onPress: () => composersQuery.refetch() }}
             />
           ) : scope === 'comparable' && comparableQuery.isError ? (
             <EmptyState
               icon={AlertCircleIcon}
               tone="error"
-              title="비교 영상 정보를 불러오지 못했어요"
-              description="잠시 뒤 다시 시도하거나 주요 작곡가부터 둘러봐 주세요."
-              action={{ label: '다시 시도', onPress: () => comparableQuery.refetch() }}
+              title={t('비교 영상 정보를 불러오지 못했어요')}
+              description={t('잠시 뒤 다시 시도하거나 주요 작곡가부터 둘러봐 주세요.')}
+              action={{ label: t('다시 시도'), onPress: () => comparableQuery.refetch() }}
             />
           ) : composers.length === 0 ? (
             <EmptyState
               icon={UsersIcon}
-              title="보여 줄 작곡가가 아직 없어요"
-              description="다른 범위를 골라 보세요."
-              action={{ label: '전체 작곡가 보기', onPress: () => setScope('all') }}
+              title={t('보여 줄 작곡가가 아직 없어요')}
+              description={t('다른 범위를 골라 보세요.')}
+              action={{ label: t('전체 작곡가 보기'), onPress: () => setScope('all') }}
             />
           ) : viewportWidth > 0 ? (
             <>
               <View className="h-4 flex-row items-center justify-between gap-3">
                 <Text numberOfLines={1} className="min-w-0 shrink text-micro text-foreground-subtle">
-                  {`10년마다 살았던 작곡가 수 · ${scrollable ? '누르면 그 해로 가요' : '누르면 확대해요'}`}
+                  {scrollable
+                    ? t('10년마다 살았던 작곡가 수 · 누르면 그 해로 가요')
+                    : t('10년마다 살았던 작곡가 수 · 누르면 확대해요')}
                 </Text>
                 {expanded ? (
                   <Pressable accessibilityRole="button" onPress={() => setExpanded(false)} hitSlop={8}>
-                    <Text className="text-micro text-primary">한 화면으로 접기</Text>
+                    <Text className="text-micro text-primary">{t('한 화면으로 접기')}</Text>
                   </Pressable>
                 ) : hiddenCount > 0 && wide ? (
                   <Text numberOfLines={1} className="shrink-0 text-micro text-foreground-subtle">
-                    {`${hiddenCount}명은 시대별로 묶었어요`}
+                    {t('{count}명은 시대별로 묶었어요', { count: hiddenCount })}
                   </Text>
                 ) : null}
               </View>
@@ -570,9 +573,9 @@ function Legend({ className }: { className?: string }) {
     <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', className)}>
       <View className="flex-row items-center gap-1.5">
         <View className="size-1.5 rounded-full bg-primary" />
-        <Text variant="caption">비교 영상 있음</Text>
+        <Text variant="caption">{t('비교 영상 있음')}</Text>
       </View>
-      <Text variant="caption">사진은 대표 작곡가 · 막대는 생애</Text>
+      <Text variant="caption">{t('사진은 대표 작곡가 · 막대는 생애')}</Text>
     </View>
   );
 }
@@ -616,15 +619,17 @@ function SelectedComposer({
         <View className="min-w-0 flex-1">
           <Text className="text-body font-bold text-foreground">{composer.name}</Text>
           <Text variant="mono" className="mt-0.5 text-foreground-muted">
-            {`${composer.birthYear}–${composer.deathYear ?? ''} · ${composer.period}`}
+            {`${composer.birthYear}–${composer.deathYear ?? ''} · ${t(composer.period)}`}
           </Text>
         </View>
-        <Pressable accessibilityLabel="닫기" onPress={onClose} hitSlop={10} className="size-8 items-center justify-center">
+        <Pressable accessibilityLabel={t('닫기')} onPress={onClose} hitSlop={10} className="size-8 items-center justify-center">
           <Icon as={XIcon} size={16} className="text-foreground-muted" />
         </Pressable>
       </View>
       <Text variant="caption" className="mt-3">
-        {comparableCount > 0 ? `비교할 수 있는 작품 ${comparableCount}곡` : '아직 비교할 수 있는 작품이 없어요'}
+        {comparableCount > 0
+          ? t('비교할 수 있는 작품 {count}곡', { count: comparableCount })
+          : t('아직 비교할 수 있는 작품이 없어요')}
       </Text>
       <View className="mt-3 flex-row gap-2">
         {firstPiece ? (
@@ -634,11 +639,11 @@ function SelectedComposer({
             onPress={() =>
               router.push(`/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}` as Href)
             }>
-            <Text className="text-primary-foreground">비교 보기</Text>
+            <Text className="text-primary-foreground">{t('비교 보기')}</Text>
           </Button>
         ) : null}
         <Button size="sm" variant="outline" className="rounded-full" onPress={onOpenComposer}>
-          <Text>작곡가 정보</Text>
+          <Text>{t('작곡가 정보')}</Text>
         </Button>
       </View>
     </View>

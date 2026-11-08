@@ -1,4 +1,5 @@
 import { clipDurationMs, primaryCredit } from '@/lib/data/comparison';
+import { t } from '@/lib/i18n';
 import type { ComparePlayerTrack } from '@/lib/player/compare-player-store';
 import type { ComparisonPerformance } from '@/lib/types/models';
 
@@ -18,7 +19,7 @@ export function trackFromPerformance(performance: ComparisonPerformance, imageUr
     pieceTitle: performance.pieceTitle,
     sectorName: performance.sectorName,
     artistId: credit?.artistId ?? null,
-    artistName: credit?.artistName ?? '연주자 정보 없음',
+    artistName: credit?.artistName ?? t('연주자 정보 없음'),
     artistImageUrl: imageUrl,
     durationSec: clipDurationMs(performance) / 1000,
     clipUrl: performance.clipUrl,
