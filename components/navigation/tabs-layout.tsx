@@ -3,6 +3,7 @@ import { BookmarkIcon, CompassIcon, HomeIcon, MoonStarIcon, SunIcon } from 'luci
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/ui/icons';
 import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/components/user-menu';
 import { THEME } from '@/lib/theme';
 import { withAlpha } from '@/lib/design/tokens';
@@ -19,7 +20,7 @@ import { runRouteTransition } from '@/lib/navigation/view-transition';
  * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
-  useLocale();
+  const { locale, setLocale } = useLocale();
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = THEME[scheme];
@@ -36,6 +37,17 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       className="rounded-full"
       accessibilityLabel={scheme === 'dark' ? t('라이트 모드로 전환') : t('다크 모드로 전환')}>
       <Icon as={scheme === 'dark' ? SunIcon : MoonStarIcon} className="size-6" />
+    </Button>
+  );
+  // 로그인하지 않아도 언어를 바꿀 수 있게(설정 화면은 로그인해야 열린다). 바꿀 언어의 이름을 보인다
+  const LanguageToggle = () => (
+    <Button
+      onPress={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
+      size="icon"
+      variant="ghost"
+      className="rounded-full"
+      accessibilityLabel={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}>
+      <Text className="text-[13px] font-semibold text-foreground-muted">{locale === 'ko' ? 'EN' : '한'}</Text>
     </Button>
   );
 
@@ -72,8 +84,9 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
             )
           : undefined,
         headerLeft: () => (
-          <View className="mb-2 ml-4">
+          <View className="mb-2 ml-4 flex-row items-center">
             <ThemeToggle />
+            <LanguageToggle />
           </View>
         ),
         headerRight: () => (
