@@ -1,4 +1,5 @@
 import { type FavoriteGroups, type FavoriteTargetType, MyPageAPI } from '@/lib/api/client';
+import { t } from '@/lib/i18n';
 import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/useMyPage';
 import { useMyFavoriteRecordings } from '@/lib/query/hooks/useRecordings';
 import { Alert } from '@/lib/utils/alert';
@@ -63,7 +64,7 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_PAGE_QUERY_KEYS.favorites }),
     onError: () => {
       setOptimistic(null);
-      Alert.alert('레퍼토리에 반영하지 못했어요', '연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.');
+      Alert.alert(t('레퍼토리에 반영하지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
     },
   });
 
@@ -74,9 +75,9 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
 
   const toggle = React.useCallback(() => {
     if (!isSignedIn) {
-      Alert.alert('로그인이 필요해요', '로그인하면 레퍼토리에 담아 두고 언제든 다시 볼 수 있어요.', [
-        { text: '취소', style: 'cancel' },
-        { text: '로그인', onPress: () => router.push('/(auth)/sign-in' as Href) },
+      Alert.alert(t('로그인이 필요해요'), t('로그인하면 레퍼토리에 담아 두고 언제든 다시 볼 수 있어요.'), [
+        { text: t('취소'), style: 'cancel' },
+        { text: t('로그인'), onPress: () => router.push('/(auth)/sign-in' as Href) },
       ]);
       return;
     }

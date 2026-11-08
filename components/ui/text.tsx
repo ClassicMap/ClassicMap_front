@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as Slot from '@rn-primitives/slot';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -96,6 +97,7 @@ function Text({
   React.RefAttributes<RNText> & {
     asChild?: boolean;
   }) {
+  useLocale();
   const textClass = React.useContext(TextClassContext);
   const Component = asChild ? Slot.Text : RNText;
   return (

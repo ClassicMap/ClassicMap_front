@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -67,6 +68,7 @@ export function GenreTile({
   height: number;
   onPress: () => void;
 }) {
+  useLocale();
   const art = Math.round(height * 0.62);
   const prefetch = usePrefetchOnHover({ kind: 'genre', genre: shelf.genre });
   return (
@@ -74,7 +76,7 @@ export function GenreTile({
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${shelf.style.label}, 비교할 수 있는 작품 ${shelf.pieceCount}곡`}
+      accessibilityLabel={t('{genre}, 비교할 수 있는 작품 {count}곡', { genre: t(shelf.style.label), count: shelf.pieceCount })}
       className={cn(Platform.OS === 'web' && 'cm-tile', 'overflow-hidden rounded-lg')}
       style={{ width, height, backgroundColor: shelf.style.color }}>
 
@@ -101,9 +103,9 @@ export function GenreTile({
       ) : null}
       <View className="p-3.5">
         <Text numberOfLines={1} className="text-headline font-extrabold text-white">
-          {shelf.style.label}
+          {t(shelf.style.label)}
         </Text>
-        <Text className="mt-0.5 text-caption font-semibold text-white/75">{`${shelf.pieceCount}곡`}</Text>
+        <Text className="mt-0.5 text-caption font-semibold text-white/75">{t('{count}곡', { count: shelf.pieceCount })}</Text>
       </View>
     </Pressable>
   );
@@ -124,6 +126,7 @@ export function GenreTiles({
   minTileWidth?: number;
   className?: string;
 }) {
+  useLocale();
   const { shelves, isLoading } = useGenreShelves();
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 16 : 10;
@@ -174,12 +177,13 @@ export function CompareGenrePieces({
   onOpen: (piece: ComparisonPiece) => void;
   onSelectGenre: (genre: PieceGenre) => void;
 }) {
+  const { locale } = useLocale();
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
   // 장르 작품은 서버에서 장르로 걸러 쪽 단위로 받는다
   const query = useGenrePieces(genre);
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 20 : 12;
   const columns =
@@ -193,7 +197,7 @@ export function CompareGenrePieces({
       <Pressable onPress={onBack} accessibilityRole="link" className="mb-5 flex-row items-center gap-1 self-start">
         <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
         <Text variant="caption" className="text-foreground-muted">
-          비교
+          {t('비교')}
         </Text>
       </Pressable>
       <Text
@@ -201,17 +205,17 @@ export function CompareGenrePieces({
           'font-extrabold tracking-tight text-foreground',
           wide ? 'text-[56px] leading-[60px]' : 'text-[40px] leading-[44px]'
         )}>
-        {style.label}
+        {t(style.label)}
       </Text>
       <Text variant="bodySm" className="mt-2 text-foreground-muted">
-        {count !== undefined ? `비교할 수 있는 작품 ${count}곡` : ' '}
+        {count !== undefined ? t('비교할 수 있는 작품 {count}곡', { count }) : ' '}
       </Text>
       {/* 다른 장르로 바로 넘어가는 칩 (스포티파이 홈 칩 꼴) */}
       <ScrollShelf gap={8} className="mt-5">
         {shelves.map((item) => (
           <Chip
             key={item.genre}
-            label={item.style.label}
+            label={t(item.style.label)}
             selected={item.genre === genre}
             onPress={() => item.genre !== genre && onSelectGenre(item.genre)}
           />
@@ -232,16 +236,16 @@ export function CompareGenrePieces({
           <EmptyState
             icon={AlertCircleIcon}
             tone="error"
-            title="작품 목록을 불러오지 못했어요"
-            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-            action={{ label: '다시 시도', onPress: () => query.refetch() }}
+            title={t('작품 목록을 불러오지 못했어요')}
+            description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+            action={{ label: t('다시 시도'), onPress: () => query.refetch() }}
           />
         ) : pieces.length === 0 ? (
           <EmptyState
             icon={CompareIcon}
-            title={`${style.label} 작품은 아직 비교할 수 없어요`}
-            description="다른 장르를 골라 보세요."
-            action={{ label: '비교로 돌아가기', onPress: onBack }}
+            title={t('{genre} 작품은 아직 비교할 수 없어요', { genre: t(style.label) })}
+            description={t('다른 장르를 골라 보세요.')}
+            action={{ label: t('비교로 돌아가기'), onPress: onBack }}
           />
         ) : itemWidth > 0 ? (
           <>
@@ -259,7 +263,7 @@ export function CompareGenrePieces({
                   className="rounded-full"
                   onPress={() => query.fetchNextPage()}
                   disabled={query.isFetchingNextPage}>
-                  <Text>{query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}</Text>
+                  <Text>{query.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}</Text>
                 </Button>
               </View>
             ) : null}

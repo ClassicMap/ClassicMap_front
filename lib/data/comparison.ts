@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import type {
   ComparisonPerformance,
   ComparisonPiece,
@@ -23,7 +24,7 @@ export function primaryCredit(performance: ComparisonPerformance): PerformanceCr
 export function supportingCredits(performance: ComparisonPerformance): string {
   return performance.credits
     .filter((credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra'))
-    .map((credit) => (credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName))
+    .map((credit) => (credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName))
     .join(' · ');
 }
 
@@ -108,5 +109,5 @@ export function pickDailyPiece(
 export function performerNamesLine(performers: readonly { artistName: string }[], total: number): string {
   const names = performers.slice(0, 3).map((performer) => performer.artistName);
   const rest = Math.max(0, total - names.length);
-  return rest > 0 ? `${names.join(', ')} 외 ${rest}명` : names.join(', ');
+  return rest > 0 ? t('{names} 외 {count}명', { names: names.join(', '), count: rest }) : names.join(', ');
 }

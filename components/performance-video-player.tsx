@@ -1,3 +1,4 @@
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
@@ -33,6 +34,7 @@ export function PerformanceVideoPlayer({
   clipUrl: preparedClipUrl,
   performanceId,
 }: PerformanceVideoPlayerProps) {
+  const { locale } = useLocale();
   const [error, setError] = React.useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = React.useState(0);
   const clipUrl = React.useMemo(() => {
@@ -43,7 +45,7 @@ export function PerformanceVideoPlayer({
       return createClipUrl(videoId, startTime, endTime);
     }
     return null;
-  }, [endTime, preparedClipUrl, startTime, videoId]);
+  }, [endTime, preparedClipUrl, startTime, videoId, locale]);
 
   React.useEffect(() => {
     setError(null);
@@ -65,7 +67,7 @@ export function PerformanceVideoPlayer({
     return (
       <View className="h-full items-center justify-center bg-black px-4">
         <Text className="text-center text-sm text-white/80">
-          이 영상은 현재 웹에서 재생할 수 있어요.
+          {t('이 영상은 현재 웹에서 재생할 수 있어요.')}
         </Text>
       </View>
     );
@@ -75,7 +77,7 @@ export function PerformanceVideoPlayer({
     return (
       <View className="h-full items-center justify-center bg-black px-4">
         <Text className="text-center text-sm text-white/80">
-          재생할 영상 주소가 없어요.
+          {t('재생할 영상 주소가 없어요.')}
         </Text>
       </View>
     );
@@ -90,7 +92,7 @@ export function PerformanceVideoPlayer({
           activeOpacity={0.8}
           className="rounded-full border border-white/40 px-4 py-2"
           onPress={retry}>
-          <Text className="text-sm font-semibold text-white">다시 시도</Text>
+          <Text className="text-sm font-semibold text-white">{t('다시 시도')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -101,7 +103,7 @@ export function PerformanceVideoPlayer({
       key={retryAttempt}
       clipUrl={clipUrl}
       performanceId={performanceId}
-      onError={() => setError('영상 구간을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.')}
+      onError={() => setError(t('영상 구간을 준비하지 못했어요. 잠시 후 다시 시도해 주세요.'))}
     />
   );
 }
@@ -116,6 +118,7 @@ function WebClip({
   performanceId?: number;
   onError: () => void;
 }) {
+  useLocale();
   const ref = React.useRef<HTMLVideoElement | null>(null);
 
   React.useEffect(() => {
@@ -199,6 +202,7 @@ export function NativeYoutubeClip({
   /** 플레이어 높이. 루트 호스트는 기준 크기로 그리고 자리에 맞춰 줄여 보인다 */
   height?: number;
 }) {
+  useLocale();
   const player = React.useRef<YoutubeClipHandle>(null);
   const duration = Math.max(0, endTime - startTime);
   // 처음 붙을 때만 정한다. 바꾸면 플레이어가 다시 만들어진다

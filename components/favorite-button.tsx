@@ -2,6 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useFavorite } from '@/hooks/use-favorite';
 import type { FavoriteTargetType } from '@/lib/api/client';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { BookmarkIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -19,8 +20,9 @@ interface FavoriteButtonProps {
 
 /** 레퍼토리 담기. 담기면 브라스로 채운다 (1차 시안 북마크) */
 export function FavoriteButton({ kind, id, name, variant = 'icon', className }: FavoriteButtonProps) {
+  useLocale();
   const { active, toggle, pending } = useFavorite(kind, id);
-  const label = active ? `${name} 레퍼토리에서 빼기` : `${name} 레퍼토리에 담기`;
+  const label = active ? t('{name} 레퍼토리에서 빼기', { name }) : t('{name} 레퍼토리에 담기', { name });
   // 눌러서 담긴 순간에만 아이콘이 톡 튄다 (처음 불러올 때 담겨 있던 건 가만히)
   const pressed = React.useRef(false);
   const [pop, setPop] = React.useState(false);
@@ -57,7 +59,7 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
           <Icon as={BookmarkIcon} size={16} className={active ? 'fill-primary text-primary' : 'text-foreground'} />
         </View>
         <Text className={cn('text-label font-semibold', active ? 'text-primary' : 'text-foreground')}>
-          {active ? '레퍼토리에 있어요' : '레퍼토리에 담기'}
+          {active ? t('레퍼토리에 있어요') : t('레퍼토리에 담기')}
         </Text>
       </Pressable>
     );

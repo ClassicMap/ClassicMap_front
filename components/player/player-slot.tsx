@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -17,6 +18,7 @@ interface PlayerSlotProps {
  * 이 자리가 사라지거나 가려지면 영상은 미니 플레이어로 옮겨 가고 재생은 이어진다.
  */
 export function PlayerSlot({ performanceId, fit = 'cover', radius = 0, controls = false, className }: PlayerSlotProps) {
+  useLocale();
   const ref = React.useRef<View>(null);
 
   React.useEffect(() => {

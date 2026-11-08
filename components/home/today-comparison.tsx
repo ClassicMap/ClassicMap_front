@@ -14,6 +14,7 @@ import {
   sortComparisonSectors,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
+import { t, useLocale } from '@/lib/i18n';
 import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
@@ -54,11 +55,12 @@ interface PerformerLine {
  * 홈에서는 영상을 불러오지 않고 썸네일만 둔다. 누르면 비교 화면에서 바로 재생된다.
  */
 export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }: TodayComparisonProps) {
+  const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(piece.pieceId);
   const sector = React.useMemo(() => {
     const sectors = sortComparisonSectors(sectorsQuery.data ?? []);
     return sectors.find((item) => item.id === sectorId) ?? defaultComparisonSector(sectors);
-  }, [sectorId, sectorsQuery.data]);
+  }, [sectorId, sectorsQuery.data, locale]);
   const reasonLine = reasons.join(' · ');
   const performancesQuery = useSectorComparisonPerformances(sector?.id);
   const [selected, setSelected] = React.useState(0);
@@ -72,12 +74,12 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
         const credit = primaryCredit(performance);
         return {
           performance,
-          name: credit?.artistName ?? '연주자 정보 없음',
+          name: credit?.artistName ?? t('연주자 정보 없음'),
           image: credit ? credit.imageUrl ?? images.get(credit.artistId) ?? null : null,
           durationMs: clipDurationMs(performance),
         };
       });
-  }, [performancesQuery.data, piece.performers]);
+  }, [performancesQuery.data, piece.performers, locale]);
 
   React.useEffect(() => setSelected(0), [sector?.id]);
 
@@ -99,7 +101,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
       <Pressable
         onPress={open}
         accessibilityRole="button"
-        accessibilityLabel={`${title} 비교 듣기`}
+        accessibilityLabel={t('{title} 비교 듣기', { title })}
         className="group absolute inset-0">
         {thumbnail || piece.composerAvatarUrl ? (
           <OptimizedImage
@@ -112,7 +114,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
         {/* 데스크톱은 옆 글에 같은 제목이 있다 */}
         {!wide ? (
           <View className="absolute left-3 top-3">
-            <Badge tone="media" label="오늘의 비교" />
+            <Badge tone="media" label={t('오늘의 비교')} />
           </View>
         ) : null}
         {/* 가운데 재생: 누르면 비교 화면에서 바로 재생된다 */}
@@ -131,7 +133,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
             onHoverIn={() => setSelected(index)}
             accessibilityRole="button"
             accessibilityState={{ selected: index === selected }}
-            accessibilityLabel={`${line.name} 연주 미리 보기`}
+            accessibilityLabel={t('{name} 연주 미리 보기', { name: line.name })}
             className={cn('rounded-full border-2', index === selected ? 'border-primary' : 'border-transparent')}>
             <EntityThumb name={line.name} image={line.image} shape="circle" size={wide ? 34 : 30} />
           </Pressable>
@@ -180,7 +182,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
         <View>
           <View className="flex-row items-center gap-2.5">
             <Text variant="label" className="font-semibold text-primary">
-              오늘의 비교
+              {t('오늘의 비교')}
             </Text>
             <GenreLink genre={piece.genre} />
           </View>
@@ -235,9 +237,11 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
             accessibilityRole="button"
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-5 web:transition-opacity web:hover:opacity-90">
             <Icon as={PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
-            <Text className="text-label font-bold text-primary-foreground">비교 듣기</Text>
+            <Text className="text-label font-bold text-primary-foreground">{t('비교 듣기')}</Text>
           </Pressable>
-          <Text variant="caption">{`연주자 ${piece.performerCount} · 구간 ${piece.sectorCount}`}</Text>
+          <Text variant="caption">
+            {`${t('연주자 {count}', { count: piece.performerCount })} · ${t('구간 {count}', { count: piece.sectorCount })}`}
+          </Text>
         </View>
       </View>
     </View>
@@ -245,6 +249,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
 }
 
 function TodaySkeleton({ wide }: { wide: boolean }) {
+  useLocale();
   if (!wide) {
     return (
       <View>

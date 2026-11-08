@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Platform, View } from 'react-native';
@@ -17,6 +18,7 @@ export function Equalizer({
   className?: string;
   colorClassName?: string;
 }) {
+  useLocale();
   const bar = Math.max(2, Math.round(size / 5));
   const rest = [0.45, 0.8, 0.6];
   return (

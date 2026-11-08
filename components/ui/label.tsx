@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as LabelPrimitive from '@rn-primitives/label';
 import { Platform } from 'react-native';
@@ -11,6 +12,7 @@ function Label({
   disabled,
   ...props
 }: LabelPrimitive.TextProps & React.RefAttributes<LabelPrimitive.TextRef>) {
+  useLocale();
   return (
     <LabelPrimitive.Root
       className={cn(

@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { isBarePath } from '@/components/navigation/bare-paths';
 import { RouteProgress } from '@/components/navigation/route-progress';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
@@ -12,6 +13,7 @@ import * as React from 'react';
  * 탭 화면뿐 아니라 아티스트·작곡가·공연 상세에서도 사이드바가 남는다.
  */
 export function RootChrome({ children }: { children: React.ReactNode }) {
+  useLocale();
   const { nav } = useBreakpoint();
   const pathname = usePathname();
   if (isBarePath(pathname)) return <>{children}</>;

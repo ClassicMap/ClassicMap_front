@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';
 import * as React from 'react';
@@ -13,9 +14,10 @@ import { Platform, TextInput, View } from 'react-native';
 type SignUpErrors = { firstName?: string; lastName?: string; email?: string; password?: string; form?: string };
 
 /** 입력칸에 붙일 수 없는 오류(보안 확인·네트워크 등)도 사용자가 다음에 할 일을 알 수 있게 한다 */
-const SIGN_UP_FALLBACK_ERROR = '가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.';
+const SIGN_UP_FALLBACK_ERROR = msg('가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.');
 
 export function SignUpForm() {
+  useLocale();
   const { signUp, isLoaded } = useSignUp();
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
@@ -68,7 +70,7 @@ export function SignUpForm() {
           }
         });
 
-        setError(Object.keys(newErrors).length > 0 ? newErrors : { form: SIGN_UP_FALLBACK_ERROR });
+        setError(Object.keys(newErrors).length > 0 ? newErrors : { form: t(SIGN_UP_FALLBACK_ERROR) });
         return;
       }
 
@@ -99,7 +101,7 @@ export function SignUpForm() {
         }
         return;
       }
-      setError({ form: SIGN_UP_FALLBACK_ERROR });
+      setError({ form: t(SIGN_UP_FALLBACK_ERROR) });
     }
   }
 
@@ -119,17 +121,17 @@ export function SignUpForm() {
 
   return (
     <View>
-      <AuthHeading title="회원가입" description="레퍼토리와 별점을 남기려면 계정이 필요해요." />
+      <AuthHeading title={t('회원가입')} description={t('레퍼토리와 별점을 남기려면 계정이 필요해요.')} />
       <SocialConnections />
-      <AuthDivider label="또는 이메일로" />
+      <AuthDivider label={t('또는 이메일로')} />
       <View className="gap-4">
         <View className="flex-row gap-3">
           <View className="flex-1 gap-1.5">
-            <Label htmlFor="lastName">성</Label>
+            <Label htmlFor="lastName">{t('family::성')}</Label>
             <Input
               ref={lastNameInputRef}
               id="lastName"
-              placeholder="성"
+              placeholder={t('family::성')}
               autoComplete="name-family"
               autoCapitalize="words"
               aria-invalid={Boolean(error.lastName)}
@@ -142,11 +144,11 @@ export function SignUpForm() {
             <FieldError message={error.lastName} />
           </View>
           <View className="flex-1 gap-1.5">
-            <Label htmlFor="firstName">이름</Label>
+            <Label htmlFor="firstName">{t('given::이름')}</Label>
             <Input
               ref={firstNameInputRef}
               id="firstName"
-              placeholder="이름"
+              placeholder={t('given::이름')}
               autoComplete="name-given"
               autoCapitalize="words"
               aria-invalid={Boolean(error.firstName)}
@@ -160,7 +162,7 @@ export function SignUpForm() {
           </View>
         </View>
         <View className="gap-1.5">
-          <Label htmlFor="email">이메일</Label>
+          <Label htmlFor="email">{t('이메일')}</Label>
           <Input
             ref={emailInputRef}
             id="email"
@@ -178,11 +180,11 @@ export function SignUpForm() {
           <FieldError message={error.email} />
         </View>
         <View className="gap-1.5">
-          <Label htmlFor="password">비밀번호</Label>
+          <Label htmlFor="password">{t('비밀번호')}</Label>
           <Input
             ref={passwordInputRef}
             id="password"
-            placeholder="8자 이상"
+            placeholder={t('8자 이상')}
             secureTextEntry
             autoComplete="new-password"
             aria-invalid={Boolean(error.password)}
@@ -197,13 +199,13 @@ export function SignUpForm() {
         {Platform.OS === 'web' ? <View nativeID="clerk-captcha" /> : null}
         <FieldError message={error.form} />
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
-          <Text className="font-bold">가입하고 인증 메일 받기</Text>
+          <Text className="font-bold">{t('가입하고 인증 메일 받기')}</Text>
         </Button>
       </View>
       <Text variant="bodySm" className="mt-5 text-center text-foreground-muted">
-        이미 계정이 있어요?{' '}
+        {t('이미 계정이 있어요?')}{' '}
         <Link href="/(auth)/sign-in" dismissTo className="font-semibold text-foreground">
-          로그인
+          {t('로그인')}
         </Link>
       </Text>
     </View>

@@ -11,6 +11,7 @@ import {
 } from '@/components/admin/form-field';
 import { FORM_INVALID_MESSAGE, FormModal } from '@/components/admin/form-modal';
 import { AdminPieceAPI } from '@/lib/api/admin';
+import { msg, t, useLocale } from '@/lib/i18n';
 import type { Piece } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as React from 'react';
@@ -24,11 +25,12 @@ interface PieceFormModalProps {
 }
 
 const TYPE_OPTIONS: ReadonlyArray<ChoiceOption<Piece['type']>> = [
-  { value: 'song', label: '단일곡' },
-  { value: 'album', label: '앨범·모음집' },
+  { value: 'song', label: msg('단일곡') },
+  { value: 'album', label: msg('앨범·모음집') },
 ];
 
 export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess }: PieceFormModalProps) {
+  useLocale();
   const [title, setTitle] = React.useState('');
   const [titleEn, setTitleEn] = React.useState('');
   const [type, setType] = React.useState<'album' | 'song'>('song');
@@ -74,7 +76,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
   }, [visible, piece]);
 
   const errors: FieldErrors<'title'> = {
-    title: title ? undefined : '제목을 입력해 주세요.',
+    title: title ? undefined : t('제목을 입력해 주세요.'),
   };
   const shown: FieldErrors<'title'> = attempted ? errors : {};
 
@@ -101,7 +103,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
         });
-        Alert.alert('작품을 수정했어요');
+        Alert.alert(t('작품을 수정했어요'));
       } else {
         // 생성 모드
         await AdminPieceAPI.create({
@@ -118,13 +120,13 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
           appleMusicUrl: appleMusicUrl || undefined,
           youtubeMusicUrl: youtubeMusicUrl || undefined,
         });
-        Alert.alert('작품을 추가했어요');
+        Alert.alert(t('작품을 추가했어요'));
       }
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save piece:', error);
-      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('저장하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -133,47 +135,53 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
   return (
     <FormModal
       visible={visible}
-      title={piece ? '작품 수정' : '작품 추가'}
+      title={piece ? t('작품 수정') : t('작품 추가')}
       subtitle={piece?.title}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
-      <FormSection title="기본 정보">
+      <FormSection title={t('기본 정보')}>
         <TextField
-          label="제목"
+          label={t('제목')}
           required
           value={title}
           onChangeText={setTitle}
-          placeholder="피아노 소나타 14번"
+          placeholder={t('피아노 소나타 14번')}
           error={shown.title}
         />
         <TextField
-          label="영문 제목"
+          label={t('영문 제목')}
           value={titleEn}
           onChangeText={setTitleEn}
           placeholder="Piano Sonata No. 14"
         />
-        <ChoiceField label="작품 유형" required options={TYPE_OPTIONS} value={type} onChange={setType} />
+        <ChoiceField
+          label={t('작품 유형')}
+          required
+          options={TYPE_OPTIONS}
+          value={type}
+          onChange={setType}
+        />
         <TextAreaField
-          label="설명"
+          label={t('설명')}
           value={description}
           onChangeText={setDescription}
-          placeholder="어떤 작품인지 적어 주세요"
+          placeholder={t('어떤 작품인지 적어 주세요')}
           numberOfLines={3}
         />
       </FormSection>
 
-      <FormSection title="세부 정보">
+      <FormSection title={t('세부 정보')}>
         <FormRow>
           <TextField
-            label="작품 번호"
+            label={t('작품 번호')}
             value={opusNumber}
             onChangeText={setOpusNumber}
             placeholder="Op. 27 No. 2"
           />
           <TextField
-            label="작곡 연도"
+            label={t('작곡 연도')}
             value={compositionYear}
             onChangeText={setCompositionYear}
             placeholder="1801"
@@ -182,14 +190,14 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         </FormRow>
         <FormRow>
           <TextField
-            label="난이도 (1–10)"
+            label={t('난이도 (1–10)')}
             value={difficultyLevel}
             onChangeText={setDifficultyLevel}
             placeholder="8"
             keyboardType="numeric"
           />
           <TextField
-            label="연주 시간 (분)"
+            label={t('연주 시간 (분)')}
             value={durationMinutes}
             onChangeText={setDurationMinutes}
             placeholder="15"
@@ -198,7 +206,7 @@ export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess 
         </FormRow>
       </FormSection>
 
-      <FormSection title="스트리밍 링크">
+      <FormSection title={t('스트리밍 링크')}>
         <TextField
           label="Spotify URL"
           value={spotifyUrl}

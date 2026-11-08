@@ -1,30 +1,31 @@
+import { msg } from '@/lib/i18n';
 import type { ListeningLevel, PlayerInstrument, TasteSound } from '@/lib/types/models';
 
-/** 온보딩 첫 질문의 답. short 는 설정 칩에 쓴다 */
+/** 온보딩 첫 질문의 답. short 는 설정 칩에 쓴다. 글자는 그리는 쪽에서 t() 로 옮긴다 */
 export const LEVEL_OPTIONS: readonly { key: ListeningLevel; label: string; short: string }[] = [
-  { key: 'new', label: '이제 막 듣기 시작했어요', short: '이제 막' },
-  { key: 'some', label: '좋아하는 곡이 몇 개 있어요', short: '몇 곡 알아요' },
-  { key: 'often', label: '자주 찾아 들어요', short: '자주 들어요' },
-  { key: 'player', label: '직접 연주해요', short: '직접 연주해요' },
+  { key: 'new', label: msg('이제 막 듣기 시작했어요'), short: msg('이제 막') },
+  { key: 'some', label: msg('좋아하는 곡이 몇 개 있어요'), short: msg('몇 곡 알아요') },
+  { key: 'often', label: msg('자주 찾아 들어요'), short: msg('자주 들어요') },
+  { key: 'player', label: msg('직접 연주해요'), short: msg('chip::직접 연주해요') },
 ];
 
 export const SOUND_OPTIONS: readonly { key: TasteSound; label: string }[] = [
-  { key: 'piano', label: '피아노' },
-  { key: 'orchestra', label: '오케스트라' },
-  { key: 'strings', label: '바이올린·첼로' },
-  { key: 'voice', label: '목소리' },
-  { key: 'ensemble', label: '작은 앙상블' },
+  { key: 'piano', label: msg('피아노') },
+  { key: 'orchestra', label: msg('오케스트라') },
+  { key: 'strings', label: msg('바이올린·첼로') },
+  { key: 'voice', label: msg('목소리') },
+  { key: 'ensemble', label: msg('작은 앙상블') },
 ];
 
 export const INSTRUMENT_OPTIONS: readonly { key: PlayerInstrument; label: string }[] = [
-  { key: 'piano', label: '피아노' },
-  { key: 'strings', label: '현악기' },
-  { key: 'winds', label: '관악기' },
-  { key: 'voice', label: '성악' },
-  { key: 'other', label: '그 밖의 악기' },
+  { key: 'piano', label: msg('피아노') },
+  { key: 'strings', label: msg('현악기') },
+  { key: 'winds', label: msg('관악기') },
+  { key: 'voice', label: msg('instrument::성악') },
+  { key: 'other', label: msg('그 밖의 악기') },
 ];
 
-/** 좋아하는 시대로 고를 수 있는 시대. 실제 작곡가 데이터가 있는 시대만 둔다 */
+/** 좋아하는 시대로 고를 수 있는 시대. 실제 작곡가 데이터가 있는 시대만 둔다. 값은 저장되는 데이터라 한국어 그대로이고, 화면에서 t() 로 옮긴다 */
 export const PREFERENCE_ERAS = ['바로크', '고전주의', '낭만주의', '근현대'] as const;
 
 /**

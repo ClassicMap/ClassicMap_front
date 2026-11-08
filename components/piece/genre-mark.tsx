@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { GENRE_ICONS, OtherGenreIcon } from '@/components/ui/icons/genre-icon';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
@@ -12,6 +13,7 @@ const NEUTRAL_MARK = '#5A544C';
  * 장르 색은 둘러보기 타일과 같은 단색만 쓴다(그라데이션 덧칠은 걷었다).
  */
 export function GenreMark({ genre, size = 20 }: { genre: PieceGenre | null; size?: number }) {
+  useLocale();
   const color = genreStyle(genre)?.color ?? NEUTRAL_MARK;
   const IconComponent = genre ? GENRE_ICONS[genre] : OtherGenreIcon;
   return (

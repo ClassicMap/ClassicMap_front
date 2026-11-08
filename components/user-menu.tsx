@@ -11,8 +11,10 @@ import * as React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
 import { getImageUrl } from '@/lib/utils/image';
+import { t, useLocale } from '@/lib/i18n';
 
 export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
+  useLocale();
   const { user } = useUser();
   const { signOut, isSignedIn } = useAuth();
   const router = useRouter();
@@ -30,8 +32,8 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
       await signOut();
       // 로그아웃 성공 - 조용히 처리 (페이지 전환이 피드백 역할)
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '알 수 없는 오류';
-      Alert.alert('로그아웃 실패', message, [{ text: '확인', style: 'default' }]);
+      const message = error instanceof Error ? error.message : t('알 수 없는 오류');
+      Alert.alert(t('로그아웃 실패'), message, [{ text: t('확인'), style: 'default' }]);
     } finally {
       setIsSigningOut(false);
     }
@@ -75,7 +77,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
           <View className="flex-row flex-wrap gap-3 py-0.5">
             <Button variant="outline" size="sm" onPress={onOpenMyPage} disabled={isSigningOut}>
               <Icon as={UserIcon} className="size-4" />
-              <Text>마이페이지</Text>
+              <Text>{t('마이페이지')}</Text>
             </Button>
             <Button
               variant="outline"
@@ -88,7 +90,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
               ) : (
                 <Icon as={LogOutIcon} className="size-4" />
               )}
-              <Text>{isSigningOut ? '로그아웃 중...' : '로그아웃'}</Text>
+              <Text>{isSigningOut ? t('로그아웃 중...') : t('로그아웃')}</Text>
             </Button>
           </View>
         </View>
@@ -100,6 +102,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
 function UserAvatar(
   props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { iconColor?: string }
 ) {
+  const { locale } = useLocale();
   const { user } = useUser();
   const { iconColor, ...avatarProps } = props;
 
@@ -112,7 +115,7 @@ function UserAvatar(
 
     const imageSource = user?.imageUrl ? { uri: getImageUrl(user.imageUrl) } : undefined;
     return { initials, imageSource, userName };
-  }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress]);
+  }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress, locale]);
 
   return (
     <Avatar alt={`${userName}'s avatar`} {...avatarProps}>

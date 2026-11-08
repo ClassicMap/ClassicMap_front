@@ -2,6 +2,7 @@ import { HeroImage, type HeroImageLayout } from '@/components/hero/hero-image';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -28,6 +29,7 @@ interface HeroBannerProps {
  * 아래쪽을 어둡게 눌러 그 위 왼쪽 아래에 이름을 크게 쓴다. 본문 좌우 여백을 뚫고 가장자리까지 채운다.
  */
 export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout = 'cover', focalPoint }: HeroBannerProps) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const insets = useSafeAreaInsets();
   const hasImage = Boolean(image);
@@ -52,7 +54,7 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
         <Pressable
           onPress={onBack}
           accessibilityRole="button"
-          accessibilityLabel="뒤로"
+          accessibilityLabel={t('뒤로')}
           className="absolute left-4 size-10 items-center justify-center rounded-full bg-black/40"
           style={{ top: insets.top + 10 }}>
           <Icon as={ArrowLeftIcon} size={20} className="text-white" />
@@ -96,12 +98,13 @@ export function HeroPlayButton({
   busy?: boolean;
   playing?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
       disabled={busy}
       accessibilityRole="button"
-      accessibilityLabel={playing ? '일시정지' : label}
+      accessibilityLabel={playing ? t('일시정지') : label}
       className={cn(
         'size-14 items-center justify-center rounded-full bg-primary web:shadow-lg web:shadow-black/40 web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95',
         busy && 'opacity-60'

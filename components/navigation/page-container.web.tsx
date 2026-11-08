@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { useRouteSignature } from '@/lib/navigation/route-signature';
 import { isRouteTransitionRunning } from '@/lib/navigation/view-transition';
 import * as React from 'react';
@@ -13,6 +14,7 @@ const EASE_SETTLE = 'cubic-bezier(0.22, 1, 0.36, 1)';
  * 새 화면이 8px 아래에서 살짝 올라오며 나타나게 한다.
  */
 export function PageContainer({ children }: { children: React.ReactNode }) {
+  useLocale();
   const ref = React.useRef<View>(null);
   const signature = useRouteSignature();
   const previous = React.useRef(signature);

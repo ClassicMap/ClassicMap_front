@@ -17,6 +17,7 @@ import { type ArtistCategoryCode, getArtistCategoryLabel, isArtistCategoryCode }
 import { getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { t, useLocale } from '@/lib/i18n';
 import { ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
 import { useBrowseComposers } from '@/lib/query/hooks/useComposers';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
@@ -34,7 +35,7 @@ type Segment = 'composer' | 'artist';
 
 const ARTIST_PAGE_SIZE = 30;
 
-/** 작곡가가 있는 시대만. 칩 라벨은 짧게 */
+/** 작곡가가 있는 시대만. 칩 라벨은 짧게(짧은 이름도 영어 사전에 있다) */
 const ERA_FILTERS = PERIODS.filter((era) => era.id !== 'medieval').map((era) => ({
   id: era.id,
   name: era.name,
@@ -71,6 +72,7 @@ function lifeSpan(composer: { birthYear?: number | null; deathYear?: number | nu
  * 세그먼트·시대·분류는 주소 파라미터(type·period·category)라 링크로 그대로 열린다.
  */
 export default function ArtistsScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string; period?: string; category?: string }>();
@@ -127,7 +129,7 @@ export default function ArtistsScreen() {
           key: `c-${item.composerId}`,
           name: item.name,
           image: item.avatarUrl,
-          caption: item.period,
+          caption: item.period ? t(item.period) : item.period,
           onPress: () => openComposer(item.composerId),
         }));
     }
@@ -140,7 +142,7 @@ export default function ArtistsScreen() {
         caption: getArtistCategoryLabel(item.category),
         onPress: () => openArtist(item.artistId),
       }));
-  }, [category, debounced, era, favorites.data, openArtist, openComposer, segment]);
+  }, [category, debounced, era, favorites.data, openArtist, openComposer, segment, locale]);
 
   const grid: PersonItem[] = React.useMemo(() => {
     const seen = new Set<number>();
@@ -151,7 +153,9 @@ export default function ArtistsScreen() {
           key: `c-${composer.id}`,
           name: composer.name,
           image: composer.avatarUrl,
-          caption: era ? lifeSpan(composer) : [composer.period, lifeSpan(composer)].filter(Boolean).join(' · '),
+          caption: era
+            ? lifeSpan(composer)
+            : [composer.period ? t(composer.period) : '', lifeSpan(composer)].filter(Boolean).join(' · '),
           inRepertoire: repertoire.composers.has(composer.id),
           onPress: () => openComposer(composer.id),
         }));
@@ -166,7 +170,7 @@ export default function ArtistsScreen() {
         inRepertoire: repertoire.artists.has(artist.id),
         onPress: () => openArtist(artist.id),
       }));
-  }, [artists.data, composers.data, era, openArtist, openComposer, repertoire, segment]);
+  }, [artists.data, composers.data, era, openArtist, openComposer, repertoire, segment, locale]);
 
   const setParams = (next: { type?: Segment; period?: string | null; category?: string | null }) =>
     router.setParams({
@@ -181,7 +185,7 @@ export default function ArtistsScreen() {
     if (nearEnd && active.hasNextPage && !active.isFetchingNextPage) void active.fetchNextPage();
   };
 
-  const noun = segment === 'composer' ? '작곡가' : '연주자';
+  const isComposer = segment === 'composer';
 
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
@@ -195,11 +199,11 @@ export default function ArtistsScreen() {
         contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}>
         <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
           <View>
-            <Text variant={wide ? 'display' : 'title1'}>아티스트</Text>
+            <Text variant={wide ? 'display' : 'title1'}>{t('아티스트')}</Text>
             <Text variant="bodySm" className="mt-1 text-foreground-muted">
               {segment === 'composer'
-                ? '추천 순으로 보여요. 시대를 고르거나 이름으로 찾아보세요.'
-                : '추천 순으로 보여요. 악기나 편성을 고르거나 이름으로 찾아보세요.'}
+                ? t('추천 순으로 보여요. 시대를 고르거나 이름으로 찾아보세요.')
+                : t('추천 순으로 보여요. 악기나 편성을 고르거나 이름으로 찾아보세요.')}
             </Text>
           </View>
           <View className={cn('flex-row items-center gap-2', wide && 'w-[380px]')}>
@@ -207,11 +211,11 @@ export default function ArtistsScreen() {
               <Input
                 value={query}
                 onChangeText={setQuery}
-                placeholder={`${noun} 이름으로 찾기`}
+                placeholder={isComposer ? t('작곡가 이름으로 찾기') : t('연주자 이름으로 찾기')}
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="search"
-                accessibilityLabel={`${noun} 이름으로 찾기`}
+                accessibilityLabel={isComposer ? t('작곡가 이름으로 찾기') : t('연주자 이름으로 찾기')}
                 className="h-11 rounded-full pl-10 sm:h-11"
               />
               <View pointerEvents="none" className="absolute left-3.5">
@@ -223,7 +227,7 @@ export default function ArtistsScreen() {
                 variant="outline"
                 size="icon"
                 className="rounded-full"
-                accessibilityLabel="연주자 추가"
+                accessibilityLabel={t('연주자 추가')}
                 onPress={() => setShowForm(true)}>
                 <Icon as={PlusIcon} size={16} className="text-foreground" />
               </Button>
@@ -237,12 +241,12 @@ export default function ArtistsScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="gap-2">
             {segment === 'composer' ? (
               <>
-                <Chip label="전체" selected={era === null} onPress={() => setParams({ period: null })} />
+                <Chip label={t('전체')} selected={era === null} onPress={() => setParams({ period: null })} />
                 {ERA_FILTERS.map((item) => (
                   <EraChip
                     key={item.id}
                     name={item.name}
-                    label={item.label}
+                    label={t(item.label)}
                     selected={era?.id === item.id}
                     onPress={() => setParams({ period: item.id })}
                   />
@@ -250,7 +254,7 @@ export default function ArtistsScreen() {
               </>
             ) : (
               <>
-                <Chip label="전체" selected={category === null} onPress={() => setParams({ category: null })} />
+                <Chip label={t('전체')} selected={category === null} onPress={() => setParams({ category: null })} />
                 {CATEGORY_FILTERS.map((code) => (
                   <Chip
                     key={code}
@@ -275,7 +279,9 @@ export default function ArtistsScreen() {
         {shelf.length > 0 ? (
           <View className="mt-7">
             <Text variant="caption" className="mb-3 font-semibold text-foreground-subtle">
-              레퍼토리에 담은 {noun} {shelf.length}
+              {isComposer
+                ? t('레퍼토리에 담은 작곡가 {count}', { count: shelf.length })
+                : t('레퍼토리에 담은 연주자 {count}', { count: shelf.length })}
             </Text>
             <PeopleShelf items={shelf} wide={wide} />
           </View>
@@ -284,7 +290,7 @@ export default function ArtistsScreen() {
         <View className="mt-7">
           {shelf.length > 0 && grid.length > 0 ? (
             <Text variant="caption" className="mb-3 font-semibold text-foreground-subtle">
-              {debounced ? `‘${debounced}’ 검색 결과` : `모든 ${noun}`}
+              {debounced ? t('‘{q}’ 검색 결과', { q: debounced }) : isComposer ? t('모든 작곡가') : t('모든 연주자')}
             </Text>
           ) : null}
           <PeopleGrid items={grid} loading={active.isLoading} wide={wide} />
@@ -294,24 +300,32 @@ export default function ArtistsScreen() {
           <EmptyState
             icon={AlertCircleIcon}
             tone="error"
-            title={`${noun}를 불러오지 못했어요`}
-            description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-            action={{ label: '다시 시도', onPress: () => active.refetch() }}
+            title={isComposer ? t('작곡가를 불러오지 못했어요') : t('연주자를 불러오지 못했어요')}
+            description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+            action={{ label: t('다시 시도'), onPress: () => active.refetch() }}
           />
         ) : !active.isLoading && grid.length === 0 ? (
           <EmptyState
             icon={UsersIcon}
-            title={debounced ? `‘${debounced}’에 맞는 ${noun}가 없어요` : `이 조건에는 아직 ${noun}가 없어요`}
-            description={debounced ? '다른 표기나 영문 이름으로 찾아보세요.' : '다른 시대나 분류를 골라 보세요.'}
+            title={
+              debounced
+                ? isComposer
+                  ? t('‘{q}’에 맞는 작곡가가 없어요', { q: debounced })
+                  : t('‘{q}’에 맞는 연주자가 없어요', { q: debounced })
+                : isComposer
+                  ? t('이 조건에는 아직 작곡가가 없어요')
+                  : t('이 조건에는 아직 연주자가 없어요')
+            }
+            description={debounced ? t('다른 표기나 영문 이름으로 찾아보세요.') : t('다른 시대나 분류를 골라 보세요.')}
             action={
               debounced
-                ? { label: '검색어 지우기', onPress: () => setQuery('') }
-                : { label: '전체 보기', onPress: () => setParams({ period: null, category: null }) }
+                ? { label: t('검색어 지우기'), onPress: () => setQuery('') }
+                : { label: t('전체 보기'), onPress: () => setParams({ period: null, category: null }) }
             }
           />
         ) : active.isFetchingNextPage ? (
           <Text variant="caption" className="mt-6 text-center">
-            더 불러오는 중…
+            {t('더 불러오는 중…')}
           </Text>
         ) : null}
       </ScrollView>
@@ -329,9 +343,10 @@ export default function ArtistsScreen() {
 }
 
 function SegmentedControl({ value, onChange }: { value: Segment; onChange: (value: Segment) => void }) {
+  useLocale();
   const options: { value: Segment; label: string }[] = [
-    { value: 'composer', label: '작곡가' },
-    { value: 'artist', label: '연주자' },
+    { value: 'composer', label: t('작곡가') },
+    { value: 'artist', label: t('연주자') },
   ];
   return (
     <View
@@ -372,19 +387,21 @@ function EraChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   const { colorScheme } = useColorScheme();
   const color = getEraForeground(name, colorScheme === 'dark' ? 'dark' : 'light');
   return <Chip label={label} selected={selected} onPress={onPress} leading={color ? <ChipDot color={color} /> : undefined} />;
 }
 
 function TimelineLink({ onPress }: { onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
       className="h-8 shrink-0 flex-row items-center gap-1.5 rounded-full px-3 active:bg-surface-2 web:hover:bg-surface-2">
       <EraIcon size={16} className="text-primary" />
-      <Text className="text-label font-semibold text-foreground">타임라인으로 보기</Text>
+      <Text className="text-label font-semibold text-foreground">{t('타임라인으로 보기')}</Text>
     </Pressable>
   );
 }

@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -45,6 +46,7 @@ type BadgeProps = React.ComponentProps<typeof View> &
   };
 
 function Badge({ label, leading, tone, className, ...props }: BadgeProps) {
+  useLocale();
   return (
     <View className={cn(badgeVariants({ tone }), className)} {...props}>
       {leading}

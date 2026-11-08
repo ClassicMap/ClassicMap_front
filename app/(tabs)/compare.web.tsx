@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
 import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
 import { CompareGenrePieces } from '@/components/compare/genre-browse';
@@ -20,6 +21,7 @@ function toId(value: string | string[] | undefined): number | undefined {
  * 데스크톱은 새 비교 API(공개 섹터·구간 연주)로 작곡가 → 작곡가의 작품 → 작품 비교를 보여 준다.
  */
 export default function CompareScreenWeb() {
+  useLocale();
   const { nav } = useBreakpoint();
   const router = useRouter();
   const params = useLocalSearchParams<{

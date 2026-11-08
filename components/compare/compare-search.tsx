@@ -3,6 +3,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { t, useLocale } from '@/lib/i18n';
 import type { ComparableComposer, ComparableComposers } from '@/lib/query/hooks/useComparisonPerformances';
 import { EMPTY_REPERTOIRE_IDS, repertoireFirst, type RepertoireIds } from '@/lib/data/library';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -66,6 +67,7 @@ interface CompareSearchFieldProps {
 
 /** 작곡가·작품 검색 칸. 웹에서는 '/'를 누르면 바로 입력할 수 있다 */
 export function CompareSearchField({ value, onChange, onSubmit, className }: CompareSearchFieldProps) {
+  useLocale();
   const inputRef = React.useRef<TextInput>(null);
   // 키보드가 있는 넓은 웹에서만 '/' 단축키를 알려 준다
   const { nav } = useBreakpoint();
@@ -98,16 +100,16 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
         value={value}
         onChangeText={onChange}
         onSubmitEditing={onSubmit}
-        placeholder="작곡가나 작품 찾기"
+        placeholder={t('작곡가나 작품 찾기')}
         placeholderTextColor="hsl(33 6% 46%)"
         returnKeyType="search"
         autoCorrect={false}
         autoCapitalize="none"
-        accessibilityLabel="비교할 작곡가나 작품 찾기"
+        accessibilityLabel={t('비교할 작곡가나 작품 찾기')}
         className="min-w-0 flex-1 text-base text-foreground web:outline-none"
       />
       {value ? (
-        <Pressable accessibilityLabel="검색어 지우기" hitSlop={10} onPress={() => onChange('')}>
+        <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => onChange('')}>
           <Icon as={XIcon} size={16} className="text-foreground-subtle" />
         </Pressable>
       ) : showShortcut ? (
@@ -137,13 +139,14 @@ export function CompareSearchResults({
   onOpenPiece,
   onClear,
 }: CompareSearchResultsProps) {
+  useLocale();
   if (result.composers.length === 0 && result.pieces.length === 0) {
     return (
       <View className="mt-10 items-center gap-2">
-        <Text className="text-body font-semibold text-foreground">‘{query.trim()}’ 검색 결과가 없어요</Text>
-        <Text variant="caption">비교할 수 있는 작품에서만 찾아요.</Text>
+        <Text className="text-body font-semibold text-foreground">{t('‘{query}’ 검색 결과가 없어요', { query: query.trim() })}</Text>
+        <Text variant="caption">{t('비교할 수 있는 작품에서만 찾아요.')}</Text>
         <Pressable onPress={onClear} accessibilityRole="button" className="mt-2 rounded-full bg-surface-2 px-4 py-2">
-          <Text className="text-body-sm font-semibold text-foreground">전체 작곡가 보기</Text>
+          <Text className="text-body-sm font-semibold text-foreground">{t('전체 작곡가 보기')}</Text>
         </Pressable>
       </View>
     );
@@ -154,13 +157,17 @@ export function CompareSearchResults({
       {result.composers.length > 0 ? (
         <View>
           <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
-            작곡가 {result.composers.length}
+            {t('작곡가 {count}', { count: result.composers.length })}
           </Text>
           {result.composers.map((composer) => (
             <ResultRow
               key={composer.composerId}
               onPress={() => onOpenComposer(composer.composerId)}
-              label={`${composer.composerName}${repertoire.composers.has(composer.composerId) ? ', 레퍼토리에 있어요' : ''}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+              label={
+                repertoire.composers.has(composer.composerId)
+                  ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+                  : t('{name}, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+              }
               thumb={
                 <RepertoireThumb active={repertoire.composers.has(composer.composerId)} badgeSize={16}>
                   <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={44} />
@@ -168,7 +175,7 @@ export function CompareSearchResults({
               }
               inRepertoire={repertoire.composers.has(composer.composerId)}
               title={composer.composerName}
-              meta={`비교할 수 있는 작품 ${composer.pieceCount}곡`}
+              meta={t('비교할 수 있는 작품 {count}곡', { count: composer.pieceCount })}
             />
           ))}
         </View>
@@ -176,13 +183,17 @@ export function CompareSearchResults({
       {result.pieces.length > 0 ? (
         <View>
           <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
-            작품 {result.pieces.length}
+            {t('작품 {count}', { count: result.pieces.length })}
           </Text>
           {result.pieces.map((piece) => (
             <ResultRow
               key={piece.pieceId}
               onPress={() => onOpenPiece(piece)}
-              label={`${piece.composerName} ${piece.pieceTitle}${repertoire.pieces.has(piece.pieceId) ? ', 레퍼토리에 있어요' : ''} 비교하기`}
+              label={
+                repertoire.pieces.has(piece.pieceId)
+                  ? t('{name} {title}, 레퍼토리에 있어요 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+                  : t('{name} {title} 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+              }
               thumb={
                 <RepertoireThumb active={repertoire.pieces.has(piece.pieceId)} badgeSize={16} shape="square">
                   <EntityThumb name={piece.pieceTitle} image={piece.composerAvatarUrl} shape="square" size={44} />
@@ -190,7 +201,7 @@ export function CompareSearchResults({
               }
               inRepertoire={repertoire.pieces.has(piece.pieceId)}
               title={piece.pieceTitle}
-              meta={[piece.composerName, piece.opusNumber, `연주자 ${piece.performerCount}`].filter(Boolean).join(' · ')}
+              meta={[piece.composerName, piece.opusNumber, t('연주자 {count}', { count: piece.performerCount })].filter(Boolean).join(' · ')}
             />
           ))}
         </View>
@@ -214,6 +225,7 @@ function ResultRow({
   meta: string;
   inRepertoire?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

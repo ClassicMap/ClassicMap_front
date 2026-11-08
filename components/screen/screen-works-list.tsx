@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchScreenTitle, useScreenWorks } from '@/lib/query/hooks/useScreen';
 import type { ScreenWork } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
@@ -25,12 +26,13 @@ function groupByComposer(works: ScreenWork[]) {
 
 /** 모아 보는 화면 '곡으로 찾기'. 작곡가마다 영화에 나온 곡과 그 곡이 나온 작품을 보여 준다 */
 export function ScreenWorksList() {
+  const { locale } = useLocale();
   const works = useScreenWorks(true);
   const items = React.useMemo(
     () => works.data?.pages.flatMap((page) => page.items) ?? [],
-    [works.data]
+    [works.data, locale]
   );
-  const groups = React.useMemo(() => groupByComposer(items), [items]);
+  const groups = React.useMemo(() => groupByComposer(items), [items, locale]);
 
   if (works.isLoading) {
     return (
@@ -58,9 +60,9 @@ export function ScreenWorksList() {
         icon={AlertCircleIcon}
         tone="error"
         compact
-        title="곡 목록을 불러오지 못했어요"
-        description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-        action={{ label: '다시 시도', onPress: () => void works.refetch() }}
+        title={t('곡 목록을 불러오지 못했어요')}
+        description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+        action={{ label: t('다시 시도'), onPress: () => void works.refetch() }}
       />
     );
   }
@@ -69,8 +71,8 @@ export function ScreenWorksList() {
       <EmptyState
         icon={MusicIcon}
         compact
-        title="아직 정리한 곡이 없어요"
-        description="근거를 확인한 작품부터 하나씩 채우고 있어요."
+        title={t('아직 정리한 곡이 없어요')}
+        description={t('근거를 확인한 작품부터 하나씩 채우고 있어요.')}
       />
     );
   }
@@ -94,7 +96,7 @@ export function ScreenWorksList() {
           disabled={works.isFetchingNextPage}
           onPress={() => void works.fetchNextPage()}>
           <Text className="font-semibold text-foreground">
-            {works.isFetchingNextPage ? '불러오는 중…' : '곡 더 보기'}
+            {works.isFetchingNextPage ? t('불러오는 중…') : t('곡 더 보기')}
           </Text>
         </Button>
       ) : null}
@@ -103,6 +105,7 @@ export function ScreenWorksList() {
 }
 
 function WorkRow({ work }: { work: ScreenWork }) {
+  useLocale();
   const router = useRouter();
   const prefetch = usePrefetchScreenTitle();
   const canCompare = work.pieceId !== null && work.composerId !== null;
@@ -124,10 +127,10 @@ function WorkRow({ work }: { work: ScreenWork }) {
           <Pressable
             onPress={openCompare}
             accessibilityRole="link"
-            accessibilityLabel={`${work.composerName} ${work.workTitle} 비교해 듣기`}
+            accessibilityLabel={t('{composer} {work} 비교해 듣기', { composer: work.composerName, work: work.workTitle })}
             hitSlop={6}
             className="flex-row items-center gap-0.5 rounded-full px-2 py-1 active:bg-surface-2 web:hover:bg-surface-2">
-            <Text className="text-label font-semibold text-primary">비교 듣기</Text>
+            <Text className="text-label font-semibold text-primary">{t('비교 듣기')}</Text>
             <Icon as={ChevronRightIcon} size={14} className="text-primary" />
           </Pressable>
         ) : null}
@@ -143,7 +146,7 @@ function WorkRow({ work }: { work: ScreenWork }) {
             className="flex-row items-center gap-1 rounded-full bg-surface-2 px-3 py-1.5 active:bg-surface-3 web:hover:bg-surface-3">
             <Text className="text-label font-semibold text-foreground">{title.titleKo}</Text>
             <Text variant="micro">
-              {[SCREEN_KIND_SHORT_LABELS[title.kind], title.releaseYear]
+              {[t(SCREEN_KIND_SHORT_LABELS[title.kind]), title.releaseYear]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>

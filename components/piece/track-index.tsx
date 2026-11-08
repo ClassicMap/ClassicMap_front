@@ -1,6 +1,7 @@
 import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import { PlayIcon } from 'lucide-react-native';
@@ -13,13 +14,14 @@ import { Platform, Pressable, View } from 'react-native';
  * 줄(부모 Pressable)에 group 클래스가 있어야 호버 아이콘이 뜬다.
  */
 export function TrackIndex({ index, pieceId, onPlay }: { index: number; pieceId: number; onPlay: () => void }) {
+  useLocale();
   const isCurrent = useComparePlayer((state) => state.current?.pieceId === pieceId);
   const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === pieceId);
   return (
     <Pressable
       onPress={isCurrent ? () => comparePlayer.togglePlay() : onPlay}
       accessibilityRole="button"
-      accessibilityLabel={playing ? '일시정지' : '바로 듣기'}
+      accessibilityLabel={playing ? t('일시정지') : t('바로 듣기')}
       hitSlop={6}
       className="w-6 items-center justify-center">
       {playing ? (

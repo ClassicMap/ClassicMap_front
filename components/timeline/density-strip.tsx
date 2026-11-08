@@ -1,6 +1,7 @@
 import { getEraForeground } from '@/lib/design/era-palette';
 import type { DecadeDensity } from '@/lib/design/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
+import { t, useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { type GestureResponderEvent, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
@@ -36,6 +37,7 @@ export function DensityStrip({
   viewport,
   onPressYear,
 }: DensityStripProps) {
+  useLocale();
   const inner = Math.max(1, width - padLeft - padRight);
   const pxPerYear = inner / Math.max(1, toYear - fromYear);
   const x = (year: number) => padLeft + (Math.min(toYear, Math.max(fromYear, year)) - fromYear) * pxPerYear;
@@ -93,8 +95,8 @@ export function DensityStrip({
       <View
         className="absolute inset-0 web:cursor-pointer"
         accessibilityRole="adjustable"
-        accessibilityLabel="시대별 작곡가 밀도"
-        accessibilityHint="누른 연도로 타임라인을 옮겨요"
+        accessibilityLabel={t('시대별 작곡가 밀도')}
+        accessibilityHint={t('누른 연도로 타임라인을 옮겨요')}
         onStartShouldSetResponder={() => true}
         onResponderRelease={handleRelease}
       />

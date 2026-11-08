@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import {
   CompareMobileCatalog,
   CompareMobileComposerPieces,
@@ -17,6 +18,7 @@ function toId(value: string | string[] | undefined): number | undefined {
 
 /** 네이티브와 좁은 웹의 비교 탭: 작곡가 → 작곡가의 작품 → 작품 비교. 주소 파라미터가 곧 상태다 */
 export function CompareMobileScreen() {
+  useLocale();
   const router = useRouter();
   const params = useLocalSearchParams<{
     pieceId?: string;

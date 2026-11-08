@@ -64,6 +64,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
+import { t, useLocale } from '@/lib/i18n';
 
 interface ComparePieceViewProps {
   pieceId: number;
@@ -91,13 +92,14 @@ export function ComparePieceView({
   onSelectSector,
   onFocus,
 }: ComparePieceViewProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   // 탭을 옮겨도 이 화면은 뒤에 살아 있다. 단축키는 보일 때만 받는다
   const screenFocused = useIsFocused();
   const { canEdit } = useAuth();
   const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   // 같은 작품 안에서 구간을 바꾸면 새 연주가 올 때까지 이전 구간 연주를 흐리게 남긴다
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id, { keepPreviousForPiece: pieceId });
@@ -124,12 +126,12 @@ export function ComparePieceView({
       repertoireFirst(performancesQuery.data ?? [], (performance) =>
         repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)
       ),
-    [performancesQuery.data, repertoire.artists]
+    [performancesQuery.data, repertoire.artists, locale]
   );
 
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
-    [pieceInfo?.performers]
+    [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
     (performance: ComparisonPerformance) => {
@@ -153,6 +155,11 @@ export function ComparePieceView({
       sectorName: activeSector.sectorName,
       genre: pieceInfo?.genre ?? null,
       coverVideoId: pieceInfo?.coverVideoId ?? null,
+      names: {
+        pieceTitle: first.names?.pieceTitle,
+        composerName: first.names?.composerName,
+        sectorName: activeSector.names?.sectorName,
+      },
     });
   }, [pieceId, first, activeSector, composerAvatar, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent, stale]);
 
@@ -169,16 +176,16 @@ export function ComparePieceView({
   const active = performances.find((performance) => performance.id === activeId);
   const longest = Math.max(1, ...performances.map(clipDurationMs));
   // 이 구간의 곡선은 모두 같은 눈금으로 그린다
-  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances]);
+  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances, locale]);
   // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
-  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances]);
+  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances, locale]);
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
   const staged = active ?? playable[0];
 
   // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
   const queue = React.useMemo<ComparePlayerTrack[]>(
     () => playable.map((performance) => trackFromPerformance(performance, imageOf(performance))),
-    [playable, imageOf]
+    [playable, imageOf, locale]
   );
   const choose = React.useCallback(
     (performance: ComparisonPerformance) =>
@@ -295,10 +302,10 @@ export function ComparePieceView({
       <EmptyState
         icon={AlertCircleIcon}
         tone="error"
-        title="비교 구간을 불러오지 못했어요"
-        description="잠시 뒤 다시 시도해 주세요."
+        title={t('비교 구간을 불러오지 못했어요')}
+        description={t('잠시 뒤 다시 시도해 주세요.')}
         action={{
-          label: '다시 시도',
+          label: t('다시 시도'),
           onPress: () => {
             void sectorsQuery.refetch();
             void performancesQuery.refetch();
@@ -311,9 +318,9 @@ export function ComparePieceView({
     return (
       <EmptyState
         icon={CompareIcon}
-        title="이 작품은 아직 비교할 수 없어요"
-        description="연주자 세 명 이상의 영상이 모이면 비교할 수 있어요."
-        action={{ label: '비교할 수 있는 작품 보기', onPress: goBack }}
+        title={t('이 작품은 아직 비교할 수 없어요')}
+        description={t('연주자 세 명 이상의 영상이 모이면 비교할 수 있어요.')}
+        action={{ label: t('비교할 수 있는 작품 보기'), onPress: goBack }}
       />
     );
   }
@@ -324,7 +331,7 @@ export function ComparePieceView({
         <Pressable onPress={goBack} className="mb-4 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
-            {backLabel ? `${backLabel}의 비교 작품` : '비교할 수 있는 작품'}
+            {backLabel ? t('{name}의 비교 작품', { name: backLabel }) : t('비교할 수 있는 작품')}
           </Text>
         </Pressable>
 
@@ -346,7 +353,7 @@ export function ComparePieceView({
             {!theater ? (
               <View className="flex-row items-center gap-2.5">
                 <Text variant="micro" className="uppercase tracking-widest">
-                  비교
+                  {t('비교')}
                 </Text>
                 <GenreLink genre={pieceInfo?.genre} />
               </View>
@@ -367,7 +374,7 @@ export function ComparePieceView({
                       <MetaLink
                         label={composerName}
                         strong
-                        accessibilityLabel={`${composerName} 작곡가 화면으로`}
+                        accessibilityLabel={t('{name} 작곡가 화면으로', { name: composerName })}
                         prefetch={{ kind: 'composer', composerId: headerComposerId }}
                         onPress={() => router.push(`/composer/${headerComposerId}` as Href)}
                       />
@@ -385,8 +392,8 @@ export function ComparePieceView({
                           {'  ·  '}
                         </Text>
                         <MetaLink
-                          label={`연주자 ${pieceInfo?.performerCount ?? first?.credits.length}`}
-                          accessibilityLabel="연주 칸으로"
+                          label={t('연주자 {count}', { count: pieceInfo?.performerCount ?? first?.credits.length ?? 0 })}
+                          accessibilityLabel={t('연주 칸으로')}
                           onPress={() => scrollToAnchor('performances')}
                         />
                       </>
@@ -395,8 +402,8 @@ export function ComparePieceView({
                       {'  ·  '}
                     </Text>
                     <MetaLink
-                      label={`구간 ${sectors.length || (pieceInfo?.sectorCount ?? 0)}`}
-                      accessibilityLabel="구간 고르는 곳으로"
+                      label={t('구간 {count}', { count: sectors.length || (pieceInfo?.sectorCount ?? 0) })}
+                      accessibilityLabel={t('구간 고르는 곳으로')}
                       onPress={() => scrollToAnchor('sectors')}
                     />
                   </View>
@@ -404,11 +411,11 @@ export function ComparePieceView({
                   {canEdit ? (
                     <Pressable
                       onPress={() => router.push(`/compare-admin?composerId=${headerComposerId ?? ''}&pieceId=${pieceId}` as Href)}
-                      accessibilityLabel="구간·연주 관리"
+                      accessibilityLabel={t('구간·연주 관리')}
                       className="h-9 flex-row items-center gap-1.5 rounded-full px-3 web:hover:bg-surface-3">
                       <Icon as={SettingsIcon} size={15} className="text-foreground-muted" />
                       <Text variant="label" className="text-foreground-muted">
-                        구간·연주 관리
+                        {t('구간·연주 관리')}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -449,10 +456,10 @@ export function ComparePieceView({
           <Pressable
             onPress={() => comparePlayer.setTheater(!theater)}
             accessibilityRole="button"
-            accessibilityLabel={theater ? '모아 보기 (T)' : '크게 보기 (T)'}
+            accessibilityLabel={theater ? t('모아 보기 (T)') : t('크게 보기 (T)')}
             className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
             <Icon as={theater ? LayoutGridIcon : RectangleHorizontalIcon} size={14} className="text-foreground" />
-            <Text className="text-label text-foreground">{theater ? '모아 보기' : '크게 보기'}</Text>
+            <Text className="text-label text-foreground">{theater ? t('mode::모아 보기') : t('mode::크게 보기')}</Text>
           </Pressable>
         </View>
 
@@ -479,11 +486,11 @@ export function ComparePieceView({
             {active ? <PerformerMark performer={performerOf(active, imageOf)} tone="a" size={24} /> : null}
             <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
               {active
-                ? `${performerOf(active).name} 연주와 견줄 연주자를 한 명 더 고르세요`
-                : '견줄 연주자를 두 명 고르세요'}
+                ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', { name: performerOf(active).name })
+                : t('견줄 연주자를 두 명 고르세요')}
             </Text>
             <Pressable onPress={() => setPicking(false)} accessibilityRole="button" className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
-              <Text className="text-label text-foreground-muted">취소 (Esc)</Text>
+              <Text className="text-label text-foreground-muted">{t('취소 (Esc)')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -510,7 +517,7 @@ export function ComparePieceView({
                     <Pressable
                       onPress={() => start(active)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${primaryCredit(active)?.artistName ?? '연주'} 재생·일시정지`}
+                      accessibilityLabel={t('{name} 재생·일시정지', { name: primaryCredit(active)?.artistName ?? t('fallback::연주') })}
                       className="absolute inset-0"
                     />
                   </>
@@ -519,7 +526,7 @@ export function ComparePieceView({
                 ) : (
                   <View className="absolute inset-0 items-center justify-center">
                     <Text variant="caption" className="text-white/70">
-                      이 구간은 아직 재생할 영상이 없어요
+                      {t('이 구간은 아직 재생할 영상이 없어요')}
                     </Text>
                   </View>
                 )}
@@ -553,7 +560,7 @@ export function ComparePieceView({
             </View>
             <View className="w-[300px] gap-1">
               <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
-                {`연주자 ${performances.length}`}
+                {t('연주자 {count}', { count: performances.length })}
               </Text>
               {performances.map((performance) => (
                 <TheaterRow
@@ -611,8 +618,8 @@ export function ComparePieceView({
         createPortal(
           <button
             type="button"
-            aria-label="전체 화면 (F)"
-            title="전체 화면 (F)"
+            aria-label={t('전체 화면 (F)')}
+            title={t('전체 화면 (F)')}
             onClick={toggleFullscreen}
             style={{
               position: 'absolute',
@@ -668,6 +675,7 @@ function Poster({
   onPlay: () => void;
   large?: boolean;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const thumbnail = youtubeThumbnailUrl(performance);
   const canPlay = isPlayablePerformance(performance);
@@ -675,7 +683,7 @@ function Poster({
     <Pressable
       onPress={canPlay ? onPlay : undefined}
       disabled={!canPlay}
-      accessibilityLabel={`${credit?.artistName ?? '연주'} 재생`}
+      accessibilityLabel={t('{name} 재생', { name: credit?.artistName ?? t('fallback::연주') })}
       className="group absolute inset-0">
       {thumbnail ? (
         <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -695,7 +703,7 @@ function Poster({
         )
       ) : (
         <View className="absolute inset-0 items-center justify-center">
-          <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">준비 중</Text>
+          <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">{t('준비 중')}</Text>
         </View>
       )}
       <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">
@@ -716,6 +724,7 @@ type PickState = 'anchor' | 'candidate' | undefined;
 
 /** 고르기 표시: 고를 수 있는 후보에 + 원. 기준 연주는 이름 옆에 '지금 연주'로 밝힌다 */
 function PickMark({ pick }: { pick: PickState }) {
+  useLocale();
   if (pick !== 'candidate') return null;
   return (
     <View pointerEvents="none" className="absolute left-3 top-3 z-10">
@@ -753,6 +762,7 @@ function SlotGrid({
   stale?: boolean;
   children: (width: number | undefined) => React.ReactNode;
 }) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const columns = width > 0 ? slotColumns(count, width) : 0;
   const slotWidth = columns > 0 ? Math.floor((width - SLOT_GAP * (columns - 1)) / columns) : undefined;
@@ -779,6 +789,7 @@ interface SlotProps {
 }
 
 function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
+  useLocale();
   const credit = primaryCredit(performance);
   const playing = useComparePlayer((state) => state.playing && state.current?.performanceId === performance.id);
   const photo = useArtistImage(credit?.artistId, image);
@@ -801,7 +812,7 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
             <Pressable
               onPress={onPlay}
               accessibilityRole="button"
-              accessibilityLabel={`${credit?.artistName ?? '연주'} 재생·일시정지`}
+              accessibilityLabel={t('{name} 재생·일시정지', { name: credit?.artistName ?? t('fallback::연주') })}
               className="absolute inset-0"
             />
           </>
@@ -829,7 +840,9 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
                   'text-body-sm font-semibold web:underline-offset-4 web:group-hover:underline',
                   active ? 'text-primary' : 'text-foreground'
                 )}>
-                {pick === 'anchor' ? `${credit?.artistName ?? '연주자 정보 없음'} · 지금 연주` : credit?.artistName ?? '연주자 정보 없음'}
+                {pick === 'anchor'
+                  ? t('{name} · 지금 연주', { name: credit?.artistName ?? t('연주자 정보 없음') })
+                  : credit?.artistName ?? t('연주자 정보 없음')}
               </Text>
             </ArtistLink>
           </View>
@@ -884,6 +897,7 @@ function PerformanceCurve({
   onSeek?: (offsetMs: number) => void;
   className?: string;
 }) {
+  useLocale();
   const progress = useComparePlayer((state) => (active ? state.progress : null));
   const playing = useComparePlayer((state) => active && state.playing);
   const saved = useComparePlayer((state) => state.positions[performance.id]);
@@ -920,6 +934,7 @@ function StageCaption({
   active: boolean;
   inRepertoire: boolean;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const support = supportingCredits(performance);
@@ -930,7 +945,7 @@ function StageCaption({
       </RepertoireThumb>
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className={cn('text-body font-bold', active ? 'text-primary' : 'text-foreground')}>
-          {credit?.artistName ?? '연주자 정보 없음'}
+          {credit?.artistName ?? t('연주자 정보 없음')}
         </Text>
         <Text variant="caption" numberOfLines={1}>
           {[support, `${performance.sectorName} · ${clipClock(clipDurationMs(performance))}`].filter(Boolean).join(' · ')}
@@ -960,6 +975,7 @@ function TheaterRow({
   pick?: PickState;
   onPress: () => void;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const canPlay = isPlayablePerformance(performance);
@@ -971,7 +987,11 @@ function TheaterRow({
       disabled={!canPlay}
       accessibilityRole="button"
       accessibilityState={{ selected: active, disabled: !canPlay }}
-      accessibilityLabel={`${credit?.artistName ?? '연주'} ${canPlay ? '재생' : '준비 중'}`}
+      accessibilityLabel={
+        canPlay
+          ? t('{name} 재생', { name: credit?.artistName ?? t('fallback::연주') })
+          : t('{name} 준비 중', { name: credit?.artistName ?? t('fallback::연주') })
+      }
       className={cn(
         '-mx-2 flex-row items-center gap-3 rounded-lg p-2 web:hover:bg-surface-2',
         active && 'bg-surface-2'
@@ -988,7 +1008,7 @@ function TheaterRow({
           </View>
         ) : !canPlay ? (
           <View className="absolute inset-0 items-center justify-center bg-black/45">
-            <Text className="text-micro text-white">준비 중</Text>
+            <Text className="text-micro text-white">{t('준비 중')}</Text>
           </View>
         ) : null}
         {pick === 'candidate' ? (
@@ -1003,7 +1023,7 @@ function TheaterRow({
             <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={22} />
           </RepertoireThumb>
           <Text numberOfLines={1} className={cn('min-w-0 flex-1 text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
-            {credit?.artistName ?? '연주자 정보 없음'}
+            {credit?.artistName ?? t('연주자 정보 없음')}
           </Text>
         </View>
         <View className="mt-2 flex-row items-center gap-2">
@@ -1040,6 +1060,7 @@ function FullscreenOverlay({
   playing: boolean;
   onExit: () => void;
 }) {
+  useLocale();
   const progress = useComparePlayer((state) => state.progress);
   return (
     <div
@@ -1058,7 +1079,7 @@ function FullscreenOverlay({
       <View className="flex-row items-center gap-3">
         <Pressable
           onPress={onTogglePlay}
-          accessibilityLabel={playing ? '일시정지' : '재생'}
+          accessibilityLabel={playing ? t('일시정지') : t('재생')}
           className="size-11 items-center justify-center rounded-full bg-white">
           <Icon as={playing ? PauseIcon : PlayIcon} size={18} className="fill-black text-black" />
         </Pressable>
@@ -1068,7 +1089,7 @@ function FullscreenOverlay({
         <ScrubBar
           value={progress.duration > 0 ? progress.current / progress.duration : 0}
           onCommit={(value) => comparePlayer.seek(value * progress.duration)}
-          label="재생 위치"
+          label={t('재생 위치')}
           valueText={(value) => clipClock(value * progress.duration * 1000)}
           disabled={progress.duration <= 0}
           tooltip
@@ -1079,7 +1100,7 @@ function FullscreenOverlay({
         </Text>
         <Pressable
           onPress={onExit}
-          accessibilityLabel="전체 화면 나가기 (F)"
+          accessibilityLabel={t('전체 화면 나가기 (F)')}
           className="size-11 items-center justify-center rounded-full bg-white/15">
           <Icon as={MinimizeIcon} size={18} className="text-white" />
         </Pressable>
@@ -1100,7 +1121,7 @@ function FullscreenOverlay({
               )}>
               <EntityThumb name={credit?.artistName ?? '?'} image={imageOf(performance)} shape="circle" size={32} />
               <Text className={cn('text-label font-semibold', selected ? 'text-primary-foreground' : 'text-white')}>
-                {credit?.artistName ?? `연주 ${index + 1}`}
+                {credit?.artistName ?? t('연주 {n}', { n: index + 1 })}
               </Text>
               <Text className={cn('font-mono text-micro', selected ? 'text-primary-foreground/80' : 'text-white/60')}>
                 {clipClock(clipDurationMs(performance))}
@@ -1109,7 +1130,7 @@ function FullscreenOverlay({
           );
         })}
         <Text variant="caption" className="self-center pl-2 text-white/55">
-          ←→ 연주자 · ⇧←→ 5초 · 스페이스 재생
+          {t('←→ 연주자 · ⇧←→ 5초 · 스페이스 재생')}
         </Text>
       </View>
     </div>
@@ -1153,6 +1174,7 @@ function PlayerBar({
   picking,
   onToggleFocus,
 }: PlayerBarProps) {
+  useLocale();
   const credit = active ? primaryCredit(active) : undefined;
   const photo = useArtistImage(credit?.artistId, activeImage);
   // 재생 위치는 초마다 바뀌어 바 안에서만 구독한다 (화면 전체가 다시 그려지지 않게)
@@ -1167,7 +1189,7 @@ function PlayerBar({
 
   const focusButton = (
     <Pressable
-      accessibilityLabel={picking ? '1:1 비교 고르기 취소' : '1:1 비교'}
+      accessibilityLabel={picking ? t('1:1 비교 고르기 취소') : t('1:1 비교')}
       accessibilityState={{ selected: picking, disabled: !canFocus }}
       onPress={onToggleFocus}
       disabled={!canFocus}
@@ -1180,14 +1202,14 @@ function PlayerBar({
       <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
       {compact ? null : (
         <Text numberOfLines={1} className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
-          {picking ? '고르는 중' : '1:1 비교'}
+          {picking ? t('고르는 중') : t('1:1 비교')}
         </Text>
       )}
     </Pressable>
   );
   const nextButton = (
     <Pressable
-      accessibilityLabel="다음 연주자"
+      accessibilityLabel={t('다음 연주자')}
       onPress={onNextTake}
       disabled={!canSwitch}
       className={cn(
@@ -1198,7 +1220,7 @@ function PlayerBar({
       <SwitchTakeIcon size={15} className="text-foreground" />
       {compact ? null : (
         <Text numberOfLines={1} className="text-label text-foreground">
-          다음 연주자
+          {t('다음 연주자')}
         </Text>
       )}
     </Pressable>
@@ -1215,7 +1237,7 @@ function PlayerBar({
             <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={48} />
             <View className="min-w-0 flex-1">
               <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-                {credit?.artistName ?? '연주자 정보 없음'}
+                {credit?.artistName ?? t('연주자 정보 없음')}
               </Text>
               <Text variant="caption" numberOfLines={1}>
                 {`${active.sectorName} · ${active.pieceTitle}`}
@@ -1229,10 +1251,10 @@ function PlayerBar({
         ) : (
           <View className="min-w-0 gap-0.5">
             <Text variant="caption" numberOfLines={1} className="text-foreground-muted">
-              연주를 누르면 재생돼요
+              {t('연주를 누르면 재생돼요')}
             </Text>
             <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
-              Space 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면
+              {t('Space 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면')}
             </Text>
           </View>
         )}
@@ -1241,20 +1263,20 @@ function PlayerBar({
       <View className={cn('items-center gap-1.5', compact ? 'w-[300px]' : 'w-[380px]')}>
         <View className="flex-row items-center gap-4">
           <Pressable
-            accessibilityLabel="이전 구간"
+            accessibilityLabel={t('이전 구간')}
             disabled={!canPrevSector}
             onPress={onPrevSector}
             className={cn('size-8 items-center justify-center rounded-full', !canPrevSector && 'opacity-40')}>
             <PrevSectionIcon size={18} className="text-foreground-muted" />
           </Pressable>
           <Pressable
-            accessibilityLabel={playing ? '일시정지' : '재생'}
+            accessibilityLabel={playing ? t('일시정지') : t('재생')}
             onPress={onTogglePlay}
             className="size-9 items-center justify-center rounded-full bg-foreground">
             <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
           </Pressable>
           <Pressable
-            accessibilityLabel="다음 구간"
+            accessibilityLabel={t('다음 구간')}
             disabled={!canNextSector}
             onPress={onNextSector}
             className={cn('size-8 items-center justify-center rounded-full', !canNextSector && 'opacity-40')}>
@@ -1272,7 +1294,7 @@ function PlayerBar({
               setScrub(null);
               comparePlayer.seek(value * duration);
             }}
-            label="재생 위치"
+            label={t('재생 위치')}
             valueText={(value) => `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`}
             step={duration > 0 ? 5 / duration : 0.05}
             disabled={!active || duration <= 0}
@@ -1288,7 +1310,7 @@ function PlayerBar({
         <VolumeControl width={compact ? 56 : 76} />
         <Pressable
           onPress={onFullscreen}
-          accessibilityLabel="전체 화면 (F)"
+          accessibilityLabel={t('전체 화면 (F)')}
           className="size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2">
           <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
         </Pressable>
@@ -1297,12 +1319,12 @@ function PlayerBar({
             href={youtubeWatchUrl(active)}
             target="_blank"
             rel="noreferrer"
-            aria-label="YouTube 원본 새 창으로 보기"
+            aria-label={t('YouTube 원본 새 창으로 보기')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
             <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
             {compact ? null : (
               <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
-                YouTube 원본
+                {t('YouTube 원본')}
               </Text>
             )}
           </a>
@@ -1326,6 +1348,7 @@ function MetaLink({
   prefetch?: PrefetchTarget;
   onPress: () => void;
 }) {
+  useLocale();
   const handlers = usePrefetchOnHover(prefetch);
   return (
     <Pressable
@@ -1358,6 +1381,7 @@ function ArtistLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  useLocale();
   const router = useRouter();
   const handlers = usePrefetchOnHover(artistId ? { kind: 'artist', artistId } : null);
   if (!artistId) return <View className={className}>{children}</View>;
@@ -1366,7 +1390,7 @@ function ArtistLink({
       {...handlers}
       onPress={() => router.push(`/artist/${artistId}` as Href)}
       accessibilityRole="link"
-      accessibilityLabel={`${name ?? '연주자'} 화면으로`}
+      accessibilityLabel={name ? t('{name} 화면으로', { name }) : t('연주자 화면으로')}
       className={cn('group', className)}>
       {children}
     </Pressable>
@@ -1375,6 +1399,7 @@ function ArtistLink({
 
 /** 지휘자·악단 줄. 사람마다 그 연주자 화면으로 간다 */
 function SupportingCreditLinks({ performance }: { performance: ComparisonPerformance }) {
+  useLocale();
   const credits = performance.credits.filter(
     (credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra')
   );
@@ -1389,7 +1414,7 @@ function SupportingCreditLinks({ performance }: { performance: ComparisonPerform
               variant="caption"
               numberOfLines={1}
               className="web:underline-offset-4 web:group-hover:text-foreground web:group-hover:underline">
-              {credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName}
+              {credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName}
             </Text>
           </ArtistLink>
         </React.Fragment>

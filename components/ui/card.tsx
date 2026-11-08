@@ -1,8 +1,10 @@
+import { useLocale } from '@/lib/i18n';
 import { Text, TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { View, type ViewProps } from 'react-native';
 
 function Card({ className, ...props }: ViewProps & React.RefAttributes<View>) {
+  useLocale();
   return (
     <TextClassContext.Provider value="text-card-foreground">
       <View
@@ -17,6 +19,7 @@ function Card({ className, ...props }: ViewProps & React.RefAttributes<View>) {
 }
 
 function CardHeader({ className, ...props }: ViewProps & React.RefAttributes<View>) {
+  useLocale();
   return <View className={cn('flex flex-col gap-1.5 px-6', className)} {...props} />;
 }
 
@@ -24,6 +27,7 @@ function CardTitle({
   className,
   ...props
 }: React.ComponentProps<typeof Text> & React.RefAttributes<Text>) {
+  useLocale();
   return (
     <Text
       role="heading"
@@ -38,14 +42,17 @@ function CardDescription({
   className,
   ...props
 }: React.ComponentProps<typeof Text> & React.RefAttributes<Text>) {
+  useLocale();
   return <Text className={cn('text-sm text-muted-foreground', className)} {...props} />;
 }
 
 function CardContent({ className, ...props }: ViewProps & React.RefAttributes<View>) {
+  useLocale();
   return <View className={cn('px-6', className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: ViewProps & React.RefAttributes<View>) {
+  useLocale();
   return <View className={cn('flex flex-row items-center px-6', className)} {...props} />;
 }
 

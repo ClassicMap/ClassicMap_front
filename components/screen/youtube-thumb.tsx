@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ScreenThumbQuality, ScreenThumbs } from '@/lib/types/models';
 import * as React from 'react';
@@ -168,6 +169,7 @@ interface YoutubeThumbProps {
  * 상자 크기에 맞는 화질만 받고, 받는 동안 쉬머를 보이다가 그림이 오면 서서히 드러낸다.
  */
 export function YoutubeThumb({ videoId, thumbs, frame, accessibilityLabel, fallback }: YoutubeThumbProps) {
+  useLocale();
   const [box, setBox] = React.useState<{ width: number; height: number } | null>(null);
   const target = box ? targetQuality(box.width, box.height) : null;
   const key = target ? cacheKey(videoId, frame, target) : null;
@@ -236,6 +238,7 @@ function FadeInImage({
   accessibilityLabel?: string;
   onRevealed: () => void;
 }) {
+  useLocale();
   const opacity = React.useRef(new Animated.Value(shown.has(pick.uri) ? 1 : 0)).current;
   const started = React.useRef(shown.has(pick.uri));
   const onLoad = () => {

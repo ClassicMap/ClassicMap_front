@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { NativeOnlyAnimatedView } from '@/components/ui/native-only-animated-view';
 import { TextClassContext } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ function PopoverContent({
   React.RefAttributes<PopoverPrimitive.ContentRef> & {
     portalHost?: string;
   }) {
+  useLocale();
   return (
     <PopoverPrimitive.Portal hostName={portalHost}>
       <FullWindowOverlay>

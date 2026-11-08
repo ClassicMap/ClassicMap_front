@@ -1,5 +1,6 @@
 import { Text } from '@/components/ui/text';
 import type { ImageCredit } from '@/lib/types/models';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Linking, Pressable, View } from 'react-native';
@@ -17,6 +18,7 @@ export function PhotoCredit({
   credit?: ImageCredit | null;
   centered: boolean;
 }) {
+  useLocale();
   const label = credit
     ? credit.author && credit.license
       ? `${credit.author} · ${credit.license}`
@@ -27,14 +29,14 @@ export function PhotoCredit({
   if (!label) return null;
   const text = (
     <Text variant="micro" numberOfLines={1} className="text-foreground-subtle">
-      {`사진: ${label}`}
+      {t('사진: {label}', { label })}
     </Text>
   );
   return credit ? (
     <Pressable
       onPress={() => void Linking.openURL(credit.sourceUrl).catch(() => undefined)}
       accessibilityRole="link"
-      accessibilityLabel={`사진 출처: ${label}`}
+      accessibilityLabel={t('사진 출처: {label}', { label })}
       className={cn('mt-4 max-w-full web:hover:opacity-80', centered ? 'self-center' : 'self-start')}>
       {text}
     </Pressable>

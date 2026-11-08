@@ -2,6 +2,7 @@ import { NotationGlyph } from '@/components/ui/notation-glyph';
 import { Text } from '@/components/ui/text';
 import { isWholeWorkSector, primaryCredit } from '@/lib/data/comparison';
 import { placeSections } from '@/lib/design/section-timeline';
+import { t, useLocale } from '@/lib/i18n';
 import { useAllSectorPerformances } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ interface SectionStaffProps {
  * 선은 한 곳에서만 긋고(부록 D-15) 강조 면은 모서리 없이 선 사이에 둔다(D-14).
  */
 export function SectionStaff({ sectors, activeSectorId, reference, onSelect, labels = 'all' }: SectionStaffProps) {
+  useLocale();
   const queries = useAllSectorPerformances(sectors.map((sector) => sector.id));
   const referenceArtist = reference ? primaryCredit(reference)?.artistId : undefined;
 
@@ -53,7 +55,7 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
   const wholeActive = whole !== undefined && whole.id === activeSectorId;
 
   return (
-    <View accessibilityLabel="곡 안에서 구간 위치" className="pb-5">
+    <View accessibilityLabel={t('곡 안에서 구간 위치')} className="pb-5">
       <View style={{ height: STAFF_HEIGHT + 1 }}>
         {/* 높은음자리표: SMuFL 원점이 G선(아래에서 둘째 줄)에 오도록 캔버스 가운데를 맞춘다 */}
         <View pointerEvents="none" className="absolute left-1" style={{ top: LINE_GAP * 3 - LINE_GAP * 4 }}>
@@ -79,7 +81,7 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
               onPress={() => onSelect(sector.id)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={`${sector.sectorName} ${placement.startLabel}부터`}
+              accessibilityLabel={t('{name} {start}부터', { name: sector.sectorName, start: placement.startLabel })}
               className={cn(
                 'absolute',
                 active

@@ -19,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { PerformanceSectorAPI } from '@/lib/api/client';
 import { useArtistSearch } from '@/lib/hooks/useArtistSearch';
+import { t, useLocale } from '@/lib/i18n';
 import type { Performance, PerformanceSectorWithCount } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as React from 'react';
@@ -79,6 +80,7 @@ export function PerformanceFormModal({
   onClose,
   onSuccess,
 }: PerformanceFormModalProps) {
+  useLocale();
   const [pieceId, setPieceId] = React.useState<number | null>(null);
   const [sectorId, setSectorId] = React.useState<number | null>(null);
   const [sectors, setSectors] = React.useState<PerformanceSectorWithCount[]>([]);
@@ -153,7 +155,7 @@ export function PerformanceFormModal({
         }
       } catch (error) {
         console.error('Failed to load sectors:', error);
-        Alert.alert('구간 목록을 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+        Alert.alert(t('구간 목록을 불러오지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
         setSectors([]);
       } finally {
         setLoadingSectors(false);
@@ -170,18 +172,18 @@ export function PerformanceFormModal({
   const endSeconds = parseTimeToSeconds(endTime);
 
   const errors: FieldErrors<PerformanceField> = {
-    sectorId: sectorId ? undefined : '구간을 골라 주세요.',
-    artistId: artistId ? undefined : '연주자를 골라 주세요.',
+    sectorId: sectorId ? undefined : t('구간을 골라 주세요.'),
+    artistId: artistId ? undefined : t('연주자를 골라 주세요.'),
     youtubeUrl: !youtubeUrl
-      ? 'YouTube 주소를 입력해 주세요.'
+      ? t('YouTube 주소를 입력해 주세요.')
       : !videoId
-        ? 'YouTube 영상 주소가 아니에요. 아래 예시처럼 watch?v= 주소를 넣어 주세요.'
+        ? t('YouTube 영상 주소가 아니에요. 아래 예시처럼 watch?v= 주소를 넣어 주세요.')
         : undefined,
-    startTime: startTime ? undefined : '시작 시간을 입력해 주세요.',
+    startTime: startTime ? undefined : t('시작 시간을 입력해 주세요.'),
     endTime: !endTime
-      ? '종료 시간을 입력해 주세요.'
+      ? t('종료 시간을 입력해 주세요.')
       : startTime && endSeconds <= startSeconds
-        ? '종료 시간은 시작 시간보다 뒤여야 해요.'
+        ? t('종료 시간은 시작 시간보다 뒤여야 해요.')
         : undefined,
   };
   const shown: FieldErrors<PerformanceField> = attempted ? errors : {};
@@ -209,16 +211,16 @@ export function PerformanceFormModal({
     try {
       if (performance) {
         await AdminPerformanceAPI.update(performance.id, performanceData);
-        Alert.alert('연주를 수정했어요');
+        Alert.alert(t('연주를 수정했어요'));
       } else {
         await AdminPerformanceAPI.create(performanceData);
-        Alert.alert('연주를 추가했어요');
+        Alert.alert(t('연주를 추가했어요'));
       }
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Failed to save performance:', error);
-      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('저장하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -226,33 +228,35 @@ export function PerformanceFormModal({
 
   const sectorLabel =
     !loadingSectors && sectorId
-      ? sectors.find((s) => s.id === sectorId)?.sectorName || `선택됨 · ID ${sectorId}`
+      ? sectors.find((s) => s.id === sectorId)?.sectorName || t('선택됨 · ID {id}', { id: sectorId })
       : undefined;
 
   const artistLabel = artistId
     ? artistSearchResults.find((a) => a.id === artistId)?.name ||
       pickedArtistName ||
-      `선택됨 · ID ${artistId}`
+      t('선택됨 · ID {id}', { id: artistId })
     : undefined;
 
-  let artistMessage = '연주자 이름을 입력하면 찾아 드려요.';
-  if (isLoading) artistMessage = '찾는 중…';
-  else if (artistSearch) artistMessage = '검색 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.';
+  let artistMessage = t('연주자 이름을 입력하면 찾아 드려요.');
+  if (isLoading) artistMessage = t('찾는 중…');
+  else if (artistSearch) {
+    artistMessage = t('검색 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.');
+  }
 
   return (
     <FormModal
       visible={visible}
-      title={performance ? '연주 수정' : '연주 추가'}
+      title={performance ? t('연주 수정') : t('연주 추가')}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
-      <FormSection title="연결">
-        <FormField label="구간" required error={shown.sectorId}>
+      <FormSection title={t('연결')}>
+        <FormField label={t('form::구간')} required error={shown.sectorId}>
           <PickerTrigger
-            label="구간"
+            label={t('form::구간')}
             value={sectorLabel}
-            placeholder={loadingSectors ? '구간을 불러오는 중…' : '구간을 골라 주세요'}
+            placeholder={loadingSectors ? t('구간을 불러오는 중…') : t('구간을 골라 주세요')}
             open={showSectorPicker}
             invalid={Boolean(shown.sectorId)}
             onPress={() => setShowSectorPicker(!showSectorPicker)}
@@ -262,8 +266,8 @@ export function PerformanceFormModal({
               {sectors.length === 0 ? (
                 <PickerMessage>
                   {loadingSectors
-                    ? '구간을 불러오는 중…'
-                    : '이 곡에 등록된 구간이 없어요. 구간을 먼저 추가해 주세요.'}
+                    ? t('구간을 불러오는 중…')
+                    : t('이 곡에 등록된 구간이 없어요. 구간을 먼저 추가해 주세요.')}
                 </PickerMessage>
               ) : (
                 sectors.map((sector) => (
@@ -271,7 +275,7 @@ export function PerformanceFormModal({
                     key={sector.id}
                     title={sector.sectorName}
                     description={sector.description || undefined}
-                    meta={`연주 ${sector.performanceCount}개`}
+                    meta={t('연주 {count}개', { count: sector.performanceCount })}
                     selected={sectorId === sector.id}
                     onPress={() => {
                       setSectorId(sector.id);
@@ -284,11 +288,11 @@ export function PerformanceFormModal({
           )}
         </FormField>
 
-        <FormField label="연주자" required error={shown.artistId}>
+        <FormField label={t('form::연주자')} required error={shown.artistId}>
           <PickerTrigger
-            label="연주자"
+            label={t('form::연주자')}
             value={artistLabel}
-            placeholder="연주자를 골라 주세요"
+            placeholder={t('연주자를 골라 주세요')}
             open={showArtistPicker}
             invalid={Boolean(shown.artistId)}
             onPress={() => setShowArtistPicker(!showArtistPicker)}
@@ -298,7 +302,7 @@ export function PerformanceFormModal({
               search={{
                 value: artistSearch,
                 onChangeText: setArtistSearch,
-                placeholder: '연주자 이름으로 찾기',
+                placeholder: t('연주자 이름으로 찾기'),
               }}>
               {artistSearchResults.length === 0 ? (
                 <PickerMessage>{artistMessage}</PickerMessage>
@@ -323,9 +327,9 @@ export function PerformanceFormModal({
         </FormField>
       </FormSection>
 
-      <FormSection title="영상">
+      <FormSection title={t('영상')}>
         <TextField
-          label="YouTube 주소"
+          label={t('YouTube 주소')}
           required
           value={youtubeUrl}
           onChangeText={setYoutubeUrl}
@@ -334,11 +338,11 @@ export function PerformanceFormModal({
           autoCorrect={false}
           keyboardType="url"
           error={shown.youtubeUrl}
-          help="예: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+          help={t('예: https://www.youtube.com/watch?v=dQw4w9WgXcQ')}
         />
         <FormRow>
           <TextField
-            label="시작 시간 (분:초)"
+            label={t('시작 시간 (분:초)')}
             required
             value={startTime}
             onChangeText={setStartTime}
@@ -347,7 +351,7 @@ export function PerformanceFormModal({
             error={shown.startTime}
           />
           <TextField
-            label="종료 시간 (분:초)"
+            label={t('종료 시간 (분:초)')}
             required
             value={endTime}
             onChangeText={setEndTime}
@@ -356,20 +360,20 @@ export function PerformanceFormModal({
             error={shown.endTime}
           />
         </FormRow>
-        <Text variant="caption">예: 0:30은 30초, 1:15는 1분 15초예요.</Text>
+        <Text variant="caption">{t('예: 0:30은 30초, 1:15는 1분 15초예요.')}</Text>
       </FormSection>
 
-      <FormSection title="부가 정보">
+      <FormSection title={t('부가 정보')}>
         <FormRow>
           <TextField
-            label="조회수"
+            label={t('조회수')}
             value={viewCount}
             onChangeText={setViewCount}
             placeholder="0"
             keyboardType="number-pad"
           />
           <TextField
-            label="평점"
+            label={t('평점')}
             value={rating}
             onChangeText={setRating}
             placeholder="0.0"
@@ -377,10 +381,10 @@ export function PerformanceFormModal({
           />
         </FormRow>
         <TextAreaField
-          label="연주 특징"
+          label={t('연주 특징')}
           value={characteristic}
           onChangeText={setCharacteristic}
-          placeholder="이 연주의 특징을 적어 주세요"
+          placeholder={t('이 연주의 특징을 적어 주세요')}
         />
       </FormSection>
     </FormModal>

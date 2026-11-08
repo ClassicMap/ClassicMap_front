@@ -1,6 +1,7 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { ArrowLeftIcon } from 'lucide-react-native';
@@ -17,6 +18,7 @@ interface SubPageProps {
 
 /** 설정 아래 화면(이름·비밀번호·계정 삭제·도움말·약관)의 틀. 한 줄기 640px */
 export function SubPage({ title, description, fallbackHref = '/settings', children }: SubPageProps) {
+  useLocale();
   const router = useRouter();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -30,7 +32,7 @@ export function SubPage({ title, description, fallbackHref = '/settings', childr
         {!wide ? (
           <Pressable
             onPress={() => (router.canGoBack() ? router.back() : router.replace(fallbackHref as Href))}
-            accessibilityLabel="뒤로"
+            accessibilityLabel={t('뒤로')}
             className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
             <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
           </Pressable>
@@ -50,6 +52,7 @@ export function SubPage({ title, description, fallbackHref = '/settings', childr
 }
 
 export function FieldMessage({ error, success }: { error?: string | null; success?: string | null }) {
+  useLocale();
   if (error) {
     return (
       <Text accessibilityRole="alert" className="text-caption text-destructive">

@@ -1,3 +1,5 @@
+import { msg, t } from '@/lib/i18n';
+
 /**
  * 공연 지역. `/concerts/areas`는 정식 명칭(`서울특별시`)을 주고, 박스오피스는 KOPIS 지역 코드를 쓴다.
  * 이전 화면은 짧은 이름(`서울`)을 키로 코드를 찾아 항상 전국 순위가 나왔다 (버그 D1).
@@ -12,29 +14,46 @@ export interface AreaOption {
 }
 
 const KNOWN_AREAS: { label: string; value: string; kopisCode: string }[] = [
-  { label: '서울', value: '서울특별시', kopisCode: '11' },
-  { label: '경기', value: '경기도', kopisCode: '41' },
-  { label: '부산', value: '부산광역시', kopisCode: '26' },
-  { label: '대구', value: '대구광역시', kopisCode: '27' },
-  { label: '인천', value: '인천광역시', kopisCode: '28' },
-  { label: '대전', value: '대전광역시', kopisCode: '30' },
-  { label: '광주', value: '광주광역시', kopisCode: '29' },
-  { label: '울산', value: '울산광역시', kopisCode: '31' },
-  { label: '세종', value: '세종특별자치시', kopisCode: '36' },
-  { label: '강원', value: '강원특별자치도', kopisCode: '42' },
-  { label: '충북', value: '충청북도', kopisCode: '43' },
-  { label: '충남', value: '충청남도', kopisCode: '44' },
-  { label: '전북', value: '전북특별자치도', kopisCode: '45' },
-  { label: '전남', value: '전라남도', kopisCode: '46' },
-  { label: '경북', value: '경상북도', kopisCode: '47' },
-  { label: '경남', value: '경상남도', kopisCode: '48' },
-  { label: '제주', value: '제주특별자치도', kopisCode: '50' },
+  { label: msg('area::서울'), value: '서울특별시', kopisCode: '11' },
+  { label: msg('area::경기'), value: '경기도', kopisCode: '41' },
+  { label: msg('area::부산'), value: '부산광역시', kopisCode: '26' },
+  { label: msg('area::대구'), value: '대구광역시', kopisCode: '27' },
+  { label: msg('area::인천'), value: '인천광역시', kopisCode: '28' },
+  { label: msg('area::대전'), value: '대전광역시', kopisCode: '30' },
+  { label: msg('area::광주'), value: '광주광역시', kopisCode: '29' },
+  { label: msg('area::울산'), value: '울산광역시', kopisCode: '31' },
+  { label: msg('area::세종'), value: '세종특별자치시', kopisCode: '36' },
+  { label: msg('area::강원'), value: '강원특별자치도', kopisCode: '42' },
+  { label: msg('area::충북'), value: '충청북도', kopisCode: '43' },
+  { label: msg('area::충남'), value: '충청남도', kopisCode: '44' },
+  { label: msg('area::전북'), value: '전북특별자치도', kopisCode: '45' },
+  { label: msg('area::전남'), value: '전라남도', kopisCode: '46' },
+  { label: msg('area::경북'), value: '경상북도', kopisCode: '47' },
+  { label: msg('area::경남'), value: '경상남도', kopisCode: '48' },
+  { label: msg('area::제주'), value: '제주특별자치도', kopisCode: '50' },
 ];
 
 /** 표에 없어 KOPIS 코드는 모르지만 칩에는 짧게 보일 이름 (행정구역 통합으로 새로 생긴 값) */
 const SHORT_LABELS: Record<string, string> = {
-  전남광주통합특별시: '전남광주',
+  전남광주통합특별시: msg('area::전남광주'),
 };
+
+/** `area::서울` → `서울` */
+function plainLabel(label: string): string {
+  return label.slice(label.indexOf('::') + 2);
+}
+
+/**
+ * 지역 이름을 지금 언어로. 정식 명칭(`서울특별시`)과 짧은 이름(`서울`) 어느 쪽이든 받고,
+ * 모르는 값은 원문 그대로 둔다.
+ */
+export function areaName(name: string): string {
+  if (name === '전국' || name === '전체') return t('전국');
+  const known = KNOWN_AREAS.find((area) => area.value === name || plainLabel(area.label) === name);
+  if (known) return t(known.label);
+  const short = SHORT_LABELS[name];
+  return short ? t(short) : name;
+}
 
 /**
  * 지역 API 응답을 칩 목록으로. `"대구광역시, 대구광역시"` 같은 중복 문자열은 쪼개서 합치고,
@@ -51,6 +70,6 @@ export function normalizeAreas(raw: string[]): AreaOption[] {
   const knownValues = new Set(known.map((area) => area.value));
   const unknown = [...values]
     .filter((value) => !knownValues.has(value))
-    .map((value) => ({ label: SHORT_LABELS[value] ?? value, value }));
-  return [...known, ...unknown];
+    .map((value) => ({ label: areaName(value), value }));
+  return [...known.map((area) => ({ ...area, label: t(area.label) })), ...unknown];
 }

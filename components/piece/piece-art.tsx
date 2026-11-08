@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { type Href, useRouter } from 'expo-router';
 
@@ -52,6 +53,7 @@ export function PieceArt({
   radius,
   className,
 }: PieceArtProps) {
+  useLocale();
   const corner = radius ?? Math.max(4, Math.round(size * 0.04));
   const [coverFailed, setCoverFailed] = React.useState(false);
   React.useEffect(() => setCoverFailed(false), [coverVideoId]);
@@ -106,6 +108,7 @@ export function PieceArt({
  * 카드(작품으로 가는 누름) 안에 있지만 안쪽 누름이 먼저 받는다.
  */
 function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerformer; size: number; overlap: number }) {
+  useLocale();
   const router = useRouter();
   const [hovered, setHovered] = React.useState(false);
   const prefetch = usePrefetchOnHover({ kind: 'artist', artistId: performer.artistId });
@@ -122,7 +125,7 @@ function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerf
         setHovered(false);
       }}
       accessibilityRole="link"
-      accessibilityLabel={`${performer.artistName} 화면으로`}
+      accessibilityLabel={t('{name} 화면으로', { name: performer.artistName })}
       hitSlop={3}
       className={cn(
         'rounded-full border-2 border-black/60 web:transition-transform web:duration-fast',

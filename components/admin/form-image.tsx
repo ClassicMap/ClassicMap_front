@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/utils/image';
 import { ImageIcon, UploadIcon } from 'lucide-react-native';
@@ -28,6 +29,7 @@ export function ImageUrlField({
   shape,
   help,
 }: ImageUrlFieldProps) {
+  useLocale();
   const labelId = React.useId();
   const [failed, setFailed] = React.useState(false);
 
@@ -39,7 +41,7 @@ export function ImageUrlField({
     <FormField
       label={label}
       help={help}
-      error={failed ? '이미지를 불러오지 못했어요. 주소가 맞는지 확인해 주세요.' : undefined}
+      error={failed ? t('이미지를 불러오지 못했어요. 주소가 맞는지 확인해 주세요.') : undefined}
       labelId={labelId}>
       <Input
         aria-labelledby={labelId}
@@ -62,7 +64,7 @@ export function ImageUrlField({
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
             onError={() => setFailed(true)}
-            accessibilityLabel={`${label} 미리보기`}
+            accessibilityLabel={t('{label} 미리보기', { label })}
           />
         </View>
       ) : null}
@@ -82,6 +84,7 @@ interface ImageUploadFieldProps {
 
 /** 갤러리에서 이미지를 골라 올리는 필드. 업로드 자체는 호출하는 쪽이 맡는다. */
 export function ImageUploadField({ label, uri, heightRatio, onPick, help }: ImageUploadFieldProps) {
+  useLocale();
   const width = 112;
   return (
     <FormField label={label}>
@@ -94,13 +97,13 @@ export function ImageUploadField({ label, uri, heightRatio, onPick, help }: Imag
               source={{ uri: getImageUrl(uri) }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
-              accessibilityLabel={`${label} 미리보기`}
+              accessibilityLabel={t('{label} 미리보기', { label })}
             />
           ) : (
             <View className="flex-1 items-center justify-center gap-1.5">
               <Icon as={ImageIcon} size={20} className="text-foreground-faint" />
               <Text variant="micro" className="text-foreground-faint">
-                이미지 없음
+                {t('이미지 없음')}
               </Text>
             </View>
           )}
@@ -108,7 +111,7 @@ export function ImageUploadField({ label, uri, heightRatio, onPick, help }: Imag
         <View className="min-w-0 flex-1 gap-2">
           <Button variant="outline" size="sm" onPress={onPick} className="self-start">
             <Icon as={UploadIcon} size={14} className="text-foreground" />
-            <Text>{uri ? '다른 이미지로 바꾸기' : '이미지 고르기'}</Text>
+            <Text>{uri ? t('다른 이미지로 바꾸기') : t('이미지 고르기')}</Text>
           </Button>
           {help ? <Text variant="caption">{help}</Text> : null}
         </View>

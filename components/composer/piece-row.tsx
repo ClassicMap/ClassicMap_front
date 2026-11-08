@@ -11,6 +11,8 @@ import { THEME } from '@/lib/theme';
 import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, TrashIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { t, useLocale } from '@/lib/i18n';
+import { termPattern } from '@/lib/utils/search-terms';
 import { Linking, Pressable, View } from 'react-native';
 
 interface ListenLink {
@@ -34,7 +36,12 @@ export function listenLinks(urls: ListenUrls): ListenLink[] {
 
 /** 묶음 안 곡을 세는 단위. 악장으로 나뉜 작품만 악장이고 나머지는 곡이다 */
 export function partUnit(kind: PiecePartKind | null | undefined): string {
-  return kind === 'movement' ? '악장' : '곡';
+  return kind === 'movement' ? t('악장') : t('part::곡');
+}
+
+/** 세트 안 곡 수: 「3악장」「12곡」 */
+export function partCountLabel(count: number, kind: PiecePartKind | null | undefined): string {
+  return kind === 'movement' ? t('{count}악장', { count }) : t('part::{count}곡', { count });
 }
 
 interface OrderedPart {
@@ -76,11 +83,12 @@ function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
 }
 
 /** 대표곡 별. 채운 별을 강조색으로 그린다 */
-export function NotableStar({ size = 13, label = '대표곡' }: { size?: number; label?: string }) {
+export function NotableStar({ size = 13, label }: { size?: number; label?: string }) {
+  useLocale();
   const { colorScheme } = useColorScheme();
   const color = THEME[colorScheme === 'dark' ? 'dark' : 'light'].primary;
   return (
-    <View accessible accessibilityLabel={label} className="shrink-0">
+    <View accessible accessibilityLabel={label ?? t('대표곡')} className="shrink-0">
       <Icon as={StarIcon} size={size} color={color} fill={color} />
     </View>
   );
@@ -98,12 +106,13 @@ export function catalogueLabel(piece: Piece): string | null {
  * 맞는 곳이 없으면 글을 그대로 둔다
  */
 export function Highlighted({ text, terms }: { text: string; terms?: readonly string[] }) {
+  useLocale();
   const words = (terms ?? [])
     .map((value) => value.trim())
     .filter(Boolean)
     .sort((a, b) => b.length - a.length);
   if (words.length === 0) return <>{text}</>;
-  const pattern = new RegExp(`(${words.map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  const pattern = new RegExp(`(${words.map(termPattern).join('|')})`, 'gi');
   const pieces = text.split(pattern);
   if (pieces.length === 1) return <>{text}</>;
   return (
@@ -127,7 +136,7 @@ function isComposerPiece(piece: Piece | ComposerPiece): piece is ComposerPiece {
 
 /** 세트 안 곡 번호를 화면 이름으로. 악장이면 「2악장」, 아니면 「3번」 */
 function partLabel(sequence: number, kind: PiecePartKind | null | undefined): string {
-  return kind === 'movement' ? `${sequence}악장` : `${sequence}번`;
+  return kind === 'movement' ? t('{n}악장', { n: sequence }) : t('{n}번', { n: sequence });
 }
 
 export function PieceRow({
@@ -153,6 +162,7 @@ export function PieceRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const partCount = piece.partCount ?? 0;
   const unit = partUnit(piece.partKind);
@@ -176,11 +186,15 @@ export function PieceRow({
                 onPress={() => setExpanded((value) => !value)}
                 accessibilityRole="button"
                 accessibilityState={{ expanded }}
-                accessibilityLabel={`${piece.title} 안의 ${unit} ${partCount}개 ${expanded ? '접기' : '펼치기'}`}
+                accessibilityLabel={
+                  expanded
+                    ? t('{title} 안의 {unit} {count}개 접기', { title: piece.title, unit, count: partCount })
+                    : t('{title} 안의 {unit} {count}개 펼치기', { title: piece.title, unit, count: partCount })
+                }
                 hitSlop={8}
                 className="shrink-0 flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
                 <Text variant="caption" className="tabular-nums">
-                  {`${partCount}${unit}`}
+                  {partCountLabel(partCount, piece.partKind)}
                 </Text>
                 <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
               </Pressable>
@@ -195,7 +209,7 @@ export function PieceRow({
               ) : null}
               {notableParts.length > 0 ? (
                 <View className="flex-row items-center gap-1">
-                  <NotableStar size={11} label="대표 곡" />
+                  <NotableStar size={11} label={t('대표 곡')} />
                   <Text variant="caption" className="text-foreground">
                     {notableParts.map((sequence) => partLabel(sequence, piece.partKind)).join(' · ')}
                   </Text>
@@ -212,15 +226,15 @@ export function PieceRow({
           ) : null}
         </View>
         {comparable ? (
-          <Chip size="sm" label="비교 듣기" onPress={onCompare} accessibilityLabel={`${piece.title} 비교 듣기`} />
+          <Chip size="sm" label={t('비교 듣기')} onPress={onCompare} accessibilityLabel={t('{title} 비교 듣기', { title: piece.title })} />
         ) : null}
         <FavoriteButton kind="pieces" id={piece.id} name={piece.title} />
         {canEdit ? (
           <View className="flex-row">
-            <Pressable onPress={onEdit} accessibilityLabel={`${piece.title} 수정`} hitSlop={6} className="size-8 items-center justify-center">
+            <Pressable onPress={onEdit} accessibilityLabel={t('{title} 수정', { title: piece.title })} hitSlop={6} className="size-8 items-center justify-center">
               <Icon as={EditIcon} size={15} className="text-foreground-muted" />
             </Pressable>
-            <Pressable onPress={onDelete} accessibilityLabel={`${piece.title} 삭제`} hitSlop={6} className="size-8 items-center justify-center">
+            <Pressable onPress={onDelete} accessibilityLabel={t('{title} 삭제', { title: piece.title })} hitSlop={6} className="size-8 items-center justify-center">
               <Icon as={TrashIcon} size={15} className="text-destructive" />
             </Pressable>
           </View>
@@ -234,6 +248,7 @@ export function PieceRow({
 }
 
 function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
+  useLocale();
   return (
     <View className="flex-row flex-wrap gap-2.5">
       {links.map((link) => (
@@ -241,7 +256,7 @@ function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
           key={link.label}
           onPress={() => Linking.openURL(link.url)}
           accessibilityRole="link"
-          accessibilityLabel={`${name} ${link.label}에서 듣기`}
+          accessibilityLabel={t('{name} {service}에서 듣기', { name, service: link.label })}
           hitSlop={6}
           className="flex-row items-center gap-1">
           <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
@@ -263,8 +278,9 @@ function PiecePartList({
   partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  const { locale } = useLocale();
   const unit = partUnit(partKind);
-  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data]);
+  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data, locale]);
 
   if (query.isLoading) {
     return (
@@ -280,11 +296,11 @@ function PiecePartList({
     return (
       <View className="mb-3 flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
         <Text variant="bodySm" className="flex-1 text-foreground-muted">
-          {`안의 ${unit}을 불러오지 못했어요.`}
+          {t('안의 {unit}을 불러오지 못했어요.', { unit })}
         </Text>
         <Pressable onPress={() => query.refetch()} disabled={query.isFetching} hitSlop={8}>
           <Text variant="label" className="text-primary">
-            {query.isFetching ? '불러오는 중…' : '다시 시도'}
+            {query.isFetching ? t('불러오는 중…') : t('다시 시도')}
           </Text>
         </Pressable>
       </View>
@@ -294,7 +310,7 @@ function PiecePartList({
   if (ordered.length === 0) {
     return (
       <View className="mb-3 ml-1 border-l border-border py-1 pl-3">
-        <Text variant="caption">{`안의 ${unit} 정보가 아직 없어요.`}</Text>
+        <Text variant="caption">{t('안의 {unit} 정보가 아직 없어요.', { unit })}</Text>
       </View>
     );
   }
@@ -319,6 +335,7 @@ function PiecePartRow({
   partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  useLocale();
   // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
   const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
   const linked = part.linkedPiece;
@@ -329,11 +346,11 @@ function PiecePartRow({
   return (
     <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
       <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
-        {movement ? `${part.sequenceNumber}악장` : `${part.sequenceNumber}.`}
+        {movement ? t('{n}악장', { n: part.sequenceNumber }) : `${part.sequenceNumber}.`}
       </Text>
       <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-3 gap-y-1">
         <View className="min-w-0 shrink flex-row items-center gap-1.5">
-          {part.notable ? <NotableStar size={12} label="대표 곡" /> : null}
+          {part.notable ? <NotableStar size={12} label={t('대표 곡')} /> : null}
           <Text numberOfLines={2} className="shrink text-body-sm text-foreground">
             {part.name}
           </Text>
@@ -343,9 +360,9 @@ function PiecePartRow({
       {linked?.comparable ? (
         <Chip
           size="sm"
-          label="비교 듣기"
+          label={t('비교 듣기')}
           onPress={() => onCompare(linked.id)}
-          accessibilityLabel={`${part.name} 비교 듣기`}
+          accessibilityLabel={t('{title} 비교 듣기', { title: part.name })}
         />
       ) : null}
     </View>

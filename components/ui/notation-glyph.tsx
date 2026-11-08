@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cssInterop } from 'nativewind';
 import Svg, { type SvgProps, Text as SvgText } from 'react-native-svg';
 import { SMUFL, type SmuflGlyph, staffFontSize } from '@/lib/design/smufl';
@@ -27,6 +28,7 @@ function NotationGlyphImpl({
   color = 'currentColor',
   ...rest
 }: NotationGlyphProps) {
+  useLocale();
   const fontSize = staffFontSize(lineSpacing);
   // 글리프가 오선 위아래로 크게 벗어나므로(특히 높은음자리표) 캔버스를 넉넉히 잡습니다.
   const height = fontSize * 2;

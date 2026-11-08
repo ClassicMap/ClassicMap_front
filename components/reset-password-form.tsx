@@ -4,12 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
+import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { type Href, router } from 'expo-router';
 import * as React from 'react';
 import { TextInput, View } from 'react-native';
 
 export function ResetPasswordForm() {
+  useLocale();
   const { signIn, setActive, isLoaded } = useSignIn();
   const [password, setPassword] = React.useState('');
   const [code, setCode] = React.useState('');
@@ -34,7 +36,7 @@ export function ResetPasswordForm() {
         router.replace('/home' as Href);
         return;
       }
-      setError({ code: '재설정을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.', password: '' });
+      setError({ code: t('재설정을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.'), password: '' });
     } catch (err: any) {
       // See https://go.clerk.com/mRUDrIe for more info on error handling
 
@@ -95,10 +97,10 @@ export function ResetPasswordForm() {
 
   return (
     <View>
-      <AuthHeading title="새 비밀번호 정하기" description="메일로 받은 인증 코드를 넣고 새 비밀번호를 정해 주세요." />
+      <AuthHeading title={t('새 비밀번호 정하기')} description={t('메일로 받은 인증 코드를 넣고 새 비밀번호를 정해 주세요.')} />
       <View className="gap-4">
         <View className="gap-1.5">
-          <Label htmlFor="code">인증 코드</Label>
+          <Label htmlFor="code">{t('인증 코드')}</Label>
           <Input
             id="code"
             autoCapitalize="none"
@@ -115,11 +117,11 @@ export function ResetPasswordForm() {
           <FieldError message={error.code} />
         </View>
         <View className="gap-1.5">
-          <Label htmlFor="password">새 비밀번호</Label>
+          <Label htmlFor="password">{t('새 비밀번호')}</Label>
           <Input
             ref={passwordInputRef}
             id="password"
-            placeholder="8자 이상"
+            placeholder={t('8자 이상')}
             secureTextEntry
             autoComplete="new-password"
             aria-invalid={Boolean(error.password)}
@@ -131,7 +133,7 @@ export function ResetPasswordForm() {
           <FieldError message={error.password} />
         </View>
         <Button className={AUTH_BUTTON_CLASS} onPress={onSubmit}>
-          <Text className="font-bold">비밀번호 바꾸기</Text>
+          <Text className="font-bold">{t('비밀번호 바꾸기')}</Text>
         </Button>
       </View>
     </View>

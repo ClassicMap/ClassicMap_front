@@ -28,6 +28,7 @@ import {
   useComparisonPieces,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece, ComparisonPiecePerformer } from '@/lib/types/models';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
@@ -42,21 +43,22 @@ interface CompareCatalogProps {
 
 /** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
 export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareCatalogProps) {
+  const { locale } = useLocale();
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
     () => countRepertoirePieces(comparable.data?.pieces ?? [], repertoire.pieces),
-    [comparable.data?.pieces, repertoire.pieces]
+    [comparable.data?.pieces, repertoire.pieces, locale]
   );
   const composers = React.useMemo(
     () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
-    [comparable.data?.composers, repertoire.composers, repertoirePieces]
+    [comparable.data?.composers, repertoire.composers, repertoirePieces, locale]
   );
   const [query, setQuery] = React.useState('');
   const searching = query.trim().length > 0;
   const result = React.useMemo(
     () => searchComparable(comparable.data, query, repertoire),
-    [comparable.data, query, repertoire]
+    [comparable.data, query, repertoire, locale]
   );
   const genreCount = useGenreShelves().shelves.length;
 
@@ -64,9 +66,9 @@ export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: Com
     <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
       <View className="flex-row items-end justify-between gap-6">
         <View className="min-w-0 flex-1">
-          <Text variant="display">비교</Text>
+          <Text variant="display">{t('비교')}</Text>
           <Text variant="bodySm" className="mt-1.5 text-foreground-muted">
-            같은 구간을 연주자마다 비교해요.
+            {t('같은 구간을 연주자마다 비교해요.')}
           </Text>
         </View>
         <CompareSearchField
@@ -102,28 +104,28 @@ export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: Com
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="비교할 수 있는 작곡가를 불러오지 못했어요"
-          description="잠시 뒤 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => comparable.refetch() }}
+          title={t('비교할 수 있는 작곡가를 불러오지 못했어요')}
+          description={t('잠시 뒤 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => comparable.refetch() }}
         />
       ) : composers.length === 0 ? (
         <EmptyState
           icon={CompareIcon}
-          title="아직 비교할 수 있는 작품이 없어요"
-          description="연주자 세 명 이상의 영상이 모이면 여기에 나와요."
+          title={t('아직 비교할 수 있는 작품이 없어요')}
+          description={t('연주자 세 명 이상의 영상이 모이면 여기에 나와요.')}
         />
       ) : (
         <>
           {genreCount > 0 ? (
             <>
               <Text variant="title2" className="mt-9">
-                장르로 찾기
+                {t('장르로 찾기')}
               </Text>
               <GenreTiles wide onOpen={onOpenGenre} className="mt-4" />
             </>
           ) : null}
           <Text variant="title2" className={genreCount > 0 ? 'mt-11' : 'mt-9'}>
-            작곡가로 찾기
+            {t('작곡가로 찾기')}
           </Text>
           <View className="mt-5 flex-row flex-wrap gap-x-5 gap-y-7">
             {composers.map((composer) => (
@@ -181,11 +183,16 @@ function ComposerCard({
   repertoireArtists: ReadonlySet<number>;
   onPress: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${composer.composerName}${inRepertoire ? ', 레퍼토리에 있어요' : ''}, 비교할 수 있는 작품 ${composer.pieceCount}곡`}
+      accessibilityLabel={
+        inRepertoire
+          ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+          : t('{name}, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+      }
       className="w-[188px] items-center rounded-lg p-2 -m-2 transition-colors duration-instant web:hover:bg-surface-2">
       {/* 작곡가는 사람이라 원형 */}
       <RepertoireThumb active={inRepertoire} badgeSize={36}>
@@ -198,11 +205,11 @@ function ComposerCard({
         {inRepertoire ? <RepertoireMark /> : null}
       </View>
       <Text variant="caption" className="mt-0.5">
-        비교할 수 있는 작품 {composer.pieceCount}곡
+        {t('비교할 수 있는 작품 {count}곡', { count: composer.pieceCount })}
       </Text>
       {repertoirePieceCount > 0 ? (
         <Text variant="caption" className="mt-0.5 font-semibold text-primary">
-          레퍼토리 작품 {repertoirePieceCount}곡
+          {t('레퍼토리 작품 {count}곡', { count: repertoirePieceCount })}
         </Text>
       ) : null}
       <Faces performers={composer.performers} highlightIds={repertoireArtists} className="mt-2.5" />
@@ -228,6 +235,7 @@ export function Faces({
   /** 앞에서부터 이만큼만. 레퍼토리 연주자를 앞으로 옮긴 뒤 자른다 */
   max?: number;
 }) {
+  useLocale();
   if (performers.length === 0) return null;
   const ordered = (
     highlightIds?.size ? repertoireFirst(performers, (performer) => highlightIds.has(performer.artistId)) : performers
@@ -237,7 +245,7 @@ export function Faces({
       {ordered.map((performer, index) => (
         <View
           key={performer.artistId}
-          accessibilityLabel={highlightIds?.has(performer.artistId) ? `${performer.artistName}, 레퍼토리에 있어요` : undefined}
+          accessibilityLabel={highlightIds?.has(performer.artistId) ? t('{name}, 레퍼토리에 있어요', { name: performer.artistName }) : undefined}
           className={cn(
             'rounded-full border-2',
             highlightIds?.has(performer.artistId) ? 'z-10 border-primary' : ringClassName
@@ -258,13 +266,14 @@ interface CompareComposerPiecesProps {
 
 /** 비교 탭 둘째 단: 한 작곡가의 비교할 수 있는 작품. 연주자가 많은 작품부터 온다. */
 export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareComposerPiecesProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   const catalog = useComparisonPieces(composerId);
   const repertoire = useRepertoireIds();
   // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
   const pieces = React.useMemo(
     () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
-    [catalog.data, repertoire.pieces]
+    [catalog.data, repertoire.pieces, locale]
   );
   const summary = useComparableComposers().data?.byId.get(composerId);
   const name = summary?.composerName ?? pieces[0]?.composerName;
@@ -276,7 +285,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
       <Pressable onPress={onBack} className="mb-4 flex-row items-center gap-1 self-start">
         <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
         <Text variant="caption" className="text-foreground-muted">
-          비교
+          {t('비교')}
         </Text>
       </Pressable>
 
@@ -290,7 +299,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
         )}
         <View className="min-w-0 flex-1 pb-1">
           <Text variant="caption" className="text-foreground-subtle">
-            작곡가
+            {t('role::작곡가')}
           </Text>
           {name ? (
             <Text variant="display" numberOfLines={1} className="mt-1">
@@ -302,7 +311,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
           <View className="mt-2 flex-row items-center gap-3">
             {count !== undefined ? (
               <Text variant="bodySm" className="text-foreground-muted">
-                비교할 수 있는 작품 {count}곡
+                {t('비교할 수 있는 작품 {count}곡', { count })}
               </Text>
             ) : null}
             {name ? (
@@ -311,7 +320,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
                 accessibilityRole="link"
                 className="rounded-full px-1 web:hover:opacity-80">
                 <Text variant="label" className="text-foreground-muted underline">
-                  작곡가 보기
+                  {t('작곡가 보기')}
                 </Text>
               </Pressable>
             ) : null}
@@ -335,16 +344,16 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="작품 목록을 불러오지 못했어요"
-          description="잠시 뒤 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => catalog.refetch() }}
+          title={t('작품 목록을 불러오지 못했어요')}
+          description={t('잠시 뒤 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => catalog.refetch() }}
         />
       ) : pieces.length === 0 ? (
         <EmptyState
           icon={CompareIcon}
-          title="이 작곡가는 아직 비교할 수 있는 작품이 없어요"
-          description="다른 작곡가를 골라 보세요."
-          action={{ label: '작곡가 목록 보기', onPress: onBack }}
+          title={t('이 작곡가는 아직 비교할 수 있는 작품이 없어요')}
+          description={t('다른 작곡가를 골라 보세요.')}
+          action={{ label: t('작곡가 목록 보기'), onPress: onBack }}
         />
       ) : (
         <>
@@ -367,7 +376,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
                 variant="outline"
                 onPress={() => catalog.fetchNextPage()}
                 disabled={catalog.isFetchingNextPage}>
-                <Text>{catalog.isFetchingNextPage ? '불러오는 중…' : '더 보기'}</Text>
+                <Text>{catalog.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}</Text>
               </Button>
             </View>
           ) : null}
@@ -390,6 +399,7 @@ function PieceRow({
   repertoireArtists: ReadonlySet<number>;
   onPress: () => void;
 }) {
+  useLocale();
   const queryClient = useQueryClient();
   const playHere = () => {
     playPiece(queryClient, { pieceId: piece.pieceId })
@@ -400,7 +410,11 @@ function PieceRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={`${piece.composerName} ${piece.pieceTitle}${inRepertoire ? ', 레퍼토리에 있어요' : ''} 비교하기`}
+      accessibilityLabel={
+        inRepertoire
+          ? t('{name} {title}, 레퍼토리에 있어요 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+          : t('{name} {title} 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+      }
       className="group flex-row items-center gap-4 rounded-md px-3 py-2.5 transition-colors duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index} pieceId={piece.pieceId} onPlay={playHere} />
       <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={44} />
@@ -425,7 +439,7 @@ function PieceRow({
         ) : null}
       </View>
       <Text variant="caption" className="w-14 text-right tabular-nums text-foreground-subtle">
-        구간 {piece.sectorCount}
+        {t('구간 {count}', { count: piece.sectorCount })}
       </Text>
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />
     </Pressable>

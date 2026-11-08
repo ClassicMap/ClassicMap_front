@@ -1,4 +1,5 @@
 import { Icon } from '@/components/ui/icon';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { BookmarkIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -9,9 +10,10 @@ import { View } from 'react-native';
  * 사진 모서리에 얹을 때는 RepertoireThumb 로 감싼다.
  */
 export function RepertoireBadge({ size = 18, className }: { size?: number; className?: string }) {
+  useLocale();
   return (
     <View
-      accessibilityLabel="레퍼토리에 있어요"
+      accessibilityLabel={t('레퍼토리에 있어요')}
       className={cn('items-center justify-center rounded-full border-2 border-background bg-primary web:border-surface-1', className)}
       style={{ width: size, height: size }}>
       <Icon
@@ -35,6 +37,7 @@ interface RepertoireThumbProps {
 
 /** 사진(EntityThumb 등)을 감싸 오른쪽 아래에 레퍼토리 배지를 얹는다. 담기지 않았으면 그대로 */
 export function RepertoireThumb({ active, children, badgeSize = 18, shape = 'circle', className }: RepertoireThumbProps) {
+  useLocale();
   if (!active) return <>{children}</>;
   const inset = shape === 'circle' ? -1 : -4;
   return (
@@ -49,8 +52,9 @@ export function RepertoireThumb({ active, children, badgeSize = 18, shape = 'cir
 
 /** 이름 옆에 붙이는 작은 채운 북마크 */
 export function RepertoireMark({ size = 12, className }: { size?: number; className?: string }) {
+  useLocale();
   return (
-    <View accessibilityLabel="레퍼토리에 있어요" className={className}>
+    <View accessibilityLabel={t('레퍼토리에 있어요')} className={className}>
       <Icon as={BookmarkIcon} size={size} className="fill-primary text-primary" />
     </View>
   );

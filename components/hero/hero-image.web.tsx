@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { getHeroImageCandidates } from '@/lib/utils/image';
 import * as React from 'react';
 
@@ -23,7 +24,8 @@ export function HeroImage({
   /** cover 에서 얼굴이 오게 할 CSS object-position. 배너 전용 사진은 서버가 준다 */
   focalPoint?: string;
 }) {
-  const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri]);
+  const { locale } = useLocale();
+  const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri, locale]);
   const [attempt, setAttempt] = React.useState(0);
   const [loaded, setLoaded] = React.useState(false);
   const ref = React.useRef<HTMLImageElement | null>(null);

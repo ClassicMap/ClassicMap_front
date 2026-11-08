@@ -22,11 +22,15 @@ import type {
   Piece,
 } from '@/lib/types/models';
 import { SearchIcon, XIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/lib/theme';
 import { useIsFetching } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { formatNumber, msg, t, useLocale } from '@/lib/i18n';
+import { scrollInnerView } from '@/lib/utils/scroll-inner-view';
+import { searchWords, wordVariants } from '@/lib/utils/search-terms';
 import {
   ActivityIndicator,
   Platform,
@@ -47,33 +51,20 @@ const FORM_PREVIEW_SIZE = 6;
 const PAGE_SIZE = 30;
 
 const SORTS: { key: ComposerPieceSort; label: string }[] = [
-  { key: 'catalogue', label: '작품번호순' },
-  { key: 'year', label: '작곡 연도순' },
-  { key: 'notable', label: '대표곡 먼저' },
+  { key: 'catalogue', label: msg('작품번호순') },
+  { key: 'year', label: msg('작곡 연도순') },
+  { key: 'notable', label: msg('대표곡 먼저') },
 ];
 
-/** 검색어를 데이터 표기로도 한 번 더 강조한다(서버 검색의 별칭과 같다): 야상곡 → 녹턴, op 9 → Op. 9 */
-const SEARCH_ALIASES: [string, string][] = [
-  ['야상곡', '녹턴'],
-  ['에튀드', '연습곡'],
-  ['폴로네이즈', '폴로네즈'],
-  ['프렐류드', '전주곡'],
-  ['판타지', '환상곡'],
-  ['랩소디', '광시곡'],
-];
-
+/**
+ * 검색어를 데이터 표기로도 강조한다(서버 검색과 같은 낱말 묶음):
+ * 에튀드·Etude → 연습곡·Étude, 교향곡 → Symphony, 5번 → No. 5, op 9 → Op. 9
+ */
 function highlightTerms(q: string): string[] {
-  // 서버처럼 낱말마다 찾고, 작품번호 머리(Op.·K.·BWV)는 뒤 숫자와 붙여 한 낱말로 본다
-  const words = q.replace(/\b(op\.?|k\.?|kv|bwv|hob\.|rv)\s+(?=\d)/gi, '$1\u0001').split(/\s+/);
   const terms = new Set<string>();
-  for (const raw of words) {
-    const word = raw.replace(/\u0001/g, ' ').trim();
-    if (!word) continue;
-    terms.add(word);
-    let normalized = word.replace(/^op\.?\s*(\d)/i, 'Op. $1');
-    for (const [alias, canonical] of SEARCH_ALIASES)
-      normalized = normalized.split(alias).join(canonical);
-    terms.add(normalized);
+  for (const word of searchWords(q)) {
+    for (const variant of wordVariants(word)) terms.add(variant);
+    terms.add(word.replace(/^op\.?\s*(\d)/i, 'Op. $1'));
   }
   return [...terms];
 }
@@ -94,7 +85,7 @@ function genreKey(genre: ComposerCatalogGenre): GenreKey {
 }
 
 function genreLabel(key: GenreKey): string {
-  return key === 'other' ? '기타' : (genreStyle(key)?.label ?? key);
+  return key === 'other' ? t('기타') : t(genreStyle(key)?.label ?? key);
 }
 
 export interface ComposerWorksProps {
@@ -127,11 +118,15 @@ type AlignMode = 'focus' | 'reset';
  * - 좁은 화면은 검색창을 누르면 화면 위로 올린다(모바일 검색 화면처럼 위는 검색창, 아래는 결과).
  */
 export function ComposerWorks(props: ComposerWorksProps) {
+  const { locale } = useLocale();
   const { composerId, composerName, headerAction, scrollRef } = props;
   const { colorScheme } = useColorScheme();
   const { layout } = useBreakpoint();
   const narrow = layout !== 'desktop' && layout !== 'wide';
   const { height: windowHeight } = useWindowDimensions();
+  // 앱은 화면이 상태 표시줄 밑까지 그려지므로 검색 칸을 그만큼 아래에 세운다(웹은 위에 붙는다)
+  const insets = useSafeAreaInsets();
+  const topInset = Platform.OS === 'web' ? 0 : insets.top;
   const headerRef = React.useRef<View>(null);
   const catalogQuery = useComposerCatalog(composerId);
   const catalog = catalogQuery.data;
@@ -164,7 +159,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
     const byGenre = new Map<GenreKey, number>();
     for (const item of resultCatalog.genres) byGenre.set(genreKey(item), item.count);
     return { total: resultCatalog.total, byGenre };
-  }, [searching, resultCatalog]);
+  }, [searching, resultCatalog, locale]);
 
   const alignSearchBlock = React.useCallback(
     (mode: AlignMode) => {
@@ -172,19 +167,20 @@ export function ComposerWorks(props: ComposerWorksProps) {
       const header = headerRef.current;
       const viewport = scroll?.getNativeScrollRef();
       if (!scroll || !header || !viewport) return;
-      header.measureLayout(scroll.getInnerViewNode(), (_x, headerY, _width, headerHeight) => {
+      header.measureLayout(scrollInnerView(scroll), (_x, headerY, _width, headerHeight) => {
         // 검색 칸의 제자리(스크롤 안 위치). 붙어 있어도 머리 줄은 제자리에 있어서 머리 줄로 잰다
-        const homeY = headerY + headerHeight + SECTION_GAP - STICKY_PAD;
+        const homeY = headerY + headerHeight + SECTION_GAP - STICKY_PAD - topInset;
         header.measureInWindow((_hx, headerTop) => {
           viewport.measureInWindow((_vx, viewportTop, _vw, viewportHeight) => {
-            const screenY = headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop;
+            const screenY =
+              headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop - topInset;
             const move = mode === 'focus' ? screenY > viewportHeight * 0.3 : screenY < 0;
-            if (move) scroll.scrollTo({ y: homeY, animated: mode === 'focus' });
+            if (move) scroll.scrollTo({ y: Math.max(0, homeY), animated: mode === 'focus' });
           });
         });
       });
     },
-    [scrollRef]
+    [scrollRef, topInset]
   );
 
   // 검색어·갈래가 바뀐 그 렌더부터 빈자리를 잡고(holding), 입력이 멈추고 받을 것이 없으면 거둔다
@@ -231,10 +227,10 @@ export function ComposerWorks(props: ComposerWorksProps) {
     <View style={{ gap: SECTION_GAP }}>
       <View ref={headerRef} className="flex-row items-center justify-between">
         <View className="flex-row items-baseline gap-2">
-          <Text variant="title3">작품</Text>
+          <Text variant="title3">{t('작품')}</Text>
           {catalog ? (
             <Text variant="caption" className="tabular-nums">
-              {`${catalog.total.toLocaleString('ko-KR')}곡`}
+              {t('{n}곡', { count: catalog.total, n: formatNumber(catalog.total) })}
             </Text>
           ) : null}
         </View>
@@ -265,13 +261,13 @@ export function ComposerWorks(props: ComposerWorksProps) {
             }}
             onBlur={() => setFocused(false)}
             onSubmitEditing={() => setQ(text.trim())}
-            placeholder={`${composerName} 작품에서 찾기 · 제목, 작품번호, 별칭`}
-            accessibilityLabel={`${composerName} 작품에서 찾기`}
+            placeholder={t('{name} 작품에서 찾기 · 제목, 작품번호, 별칭', { name: composerName })}
+            accessibilityLabel={t('{name} 작품에서 찾기', { name: composerName })}
             returnKeyType="search"
             className="h-10 flex-1 border-0 bg-transparent px-0 shadow-none web:focus-visible:border-transparent web:focus-visible:ring-0 dark:bg-transparent"
           />
           {text ? (
-            <Pressable onPress={clearSearch} accessibilityLabel="검색어 지우기" hitSlop={8}>
+            <Pressable onPress={clearSearch} accessibilityLabel={t('검색어 지우기')} hitSlop={8}>
               <Icon as={XIcon} size={16} className="text-foreground-subtle" />
             </Pressable>
           ) : null}
@@ -300,10 +296,13 @@ export function ComposerWorks(props: ComposerWorksProps) {
       {catalogQuery.isLoading ? (
         <RowsSkeleton count={6} />
       ) : catalogQuery.isError || !catalog ? (
-        <RetryRow message="작품 목록을 불러오지 못했어요." onRetry={() => catalogQuery.refetch()} />
+        <RetryRow
+          message={t('작품 목록을 불러오지 못했어요.')}
+          onRetry={() => catalogQuery.refetch()}
+        />
       ) : catalog.total === 0 ? (
         <Text variant="bodySm" className="text-foreground-muted">
-          아직 등록된 작품이 없어요.
+          {t('아직 등록된 작품이 없어요.')}
         </Text>
       ) : (
         // 바뀌는 동안은 화면 높이만큼 자리를 잡고(바로), 거둘 때는 줄어드는 것을 부드럽게 보인다(웹)
@@ -364,10 +363,11 @@ function GenreChips({
   resultCounts: { total: number; byGenre: ReadonlyMap<GenreKey, number> } | null;
   onChange: (next: GenreKey | 'all') => void;
 }) {
+  useLocale();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
       <Chip
-        label="전체"
+        label={t('전체')}
         count={resultCounts ? resultCounts.total : total}
         selected={value === 'all'}
         onPress={() => onChange('all')}
@@ -397,6 +397,7 @@ type RowActions = Pick<
 >;
 
 function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPiece[] }) {
+  useLocale();
   return (
     <View className="border-t border-border">
       {pieces.map((piece) => (
@@ -416,6 +417,7 @@ function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPi
 }
 
 function GenreHeader({ genre, notableCount }: { genre: GenreKey; notableCount: number }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-2.5">
       <GenreMark genre={genre === 'other' ? null : genre} size={28} />
@@ -430,6 +432,7 @@ function GenrePreview({
   onOpen,
   ...props
 }: ComposerWorksProps & { genre: ComposerCatalogGenre; onOpen: () => void }) {
+  useLocale();
   const key = genreKey(genre);
   const query = useComposerPieces(
     props.composerId,
@@ -441,15 +444,15 @@ function GenrePreview({
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
         <GenreHeader genre={key} notableCount={genre.notableCount} />
-        <Text
-          variant="caption"
-          className="tabular-nums">{`${genre.count.toLocaleString('ko-KR')}곡`}</Text>
+        <Text variant="caption" className="tabular-nums">
+          {t('{n}곡', { count: genre.count, n: formatNumber(genre.count) })}
+        </Text>
       </View>
       {query.isLoading ? (
         <RowsSkeleton count={Math.min(genre.count, PREVIEW_SIZE)} />
       ) : query.isError ? (
         <RetryRow
-          message={`${genreLabel(key)} 작품을 불러오지 못했어요.`}
+          message={t('{name} 작품을 불러오지 못했어요.', { name: genreLabel(key) })}
           onRetry={() => query.refetch()}
         />
       ) : (
@@ -457,7 +460,11 @@ function GenrePreview({
       )}
       {genre.count > PREVIEW_SIZE ? (
         <MoreLink
-          label={`${genreLabel(key)} ${genre.count.toLocaleString('ko-KR')}곡 모두 보기`}
+          label={t('{name} {n}곡 모두 보기', {
+            name: genreLabel(key),
+            count: genre.count,
+            n: formatNumber(genre.count),
+          })}
           onPress={onOpen}
         />
       ) : null}
@@ -479,6 +486,7 @@ function GenreView({
   notableOnly: boolean;
   onNotableOnly: (value: boolean) => void;
 }) {
+  useLocale();
   const key = genreKey(genre);
   const grouped = genre.count >= GROUP_BY_FORM_FROM && genre.forms.length > 1;
   const forms = notableOnly ? genre.forms.filter((form) => form.notableCount > 0) : genre.forms;
@@ -489,7 +497,7 @@ function GenreView({
           <Chip
             key={item.key}
             size="sm"
-            label={item.label}
+            label={t(item.label)}
             selected={sort === item.key}
             onPress={() => onSort(item.key)}
           />
@@ -497,7 +505,7 @@ function GenreView({
         {genre.notableCount > 0 ? (
           <Chip
             size="sm"
-            label="대표곡만"
+            label={t('대표곡만')}
             count={genre.notableCount}
             leading={<NotableStar size={11} />}
             selected={notableOnly}
@@ -508,7 +516,7 @@ function GenreView({
       {grouped ? (
         forms.length === 0 ? (
           <Text variant="bodySm" className="text-foreground-muted">
-            이 갈래에는 대표곡 표시가 붙은 작품이 없어요. '대표곡만'을 끄면 전체가 보여요.
+            {t("이 갈래에는 대표곡 표시가 붙은 작품이 없어요. '대표곡만'을 끄면 전체가 보여요.")}
           </Text>
         ) : (
           <View className="gap-6">
@@ -540,6 +548,7 @@ function FormGroup({
   filter: ComposerPieceFilter;
   notableOnly: boolean;
 }) {
+  useLocale();
   const [open, setOpen] = React.useState(false);
   const total = notableOnly ? form.notableCount : form.count;
   const preview = useComposerPieces(props.composerId, filter, {
@@ -549,8 +558,10 @@ function FormGroup({
   return (
     <View className="gap-1">
       <View className="flex-row items-center gap-2 pb-1.5">
-        <Text className="text-body-sm font-semibold text-foreground-muted">{form.name}</Text>
-        <Text variant="caption" className="tabular-nums">{`${total}곡`}</Text>
+        <Text className="text-body-sm font-semibold text-foreground-muted">{t(form.name)}</Text>
+        <Text variant="caption" className="tabular-nums">
+          {t('{n}곡', { count: total, n: formatNumber(total) })}
+        </Text>
         {!notableOnly && form.notableCount > 0 ? <StarCount count={form.notableCount} /> : null}
       </View>
       {open ? (
@@ -559,7 +570,7 @@ function FormGroup({
         <RowsSkeleton count={Math.min(total, FORM_PREVIEW_SIZE)} />
       ) : preview.isError ? (
         <RetryRow
-          message={`${form.name} 작품을 불러오지 못했어요.`}
+          message={t('{name} 작품을 불러오지 못했어요.', { name: t(form.name) })}
           onRetry={() => preview.refetch()}
         />
       ) : (
@@ -567,7 +578,7 @@ function FormGroup({
           <Rows pieces={preview.data?.pages[0] ?? []} {...props} />
           {total > FORM_PREVIEW_SIZE ? (
             <MoreLink
-              label={`${total - FORM_PREVIEW_SIZE}곡 더 보기`}
+              label={t('{count}곡 더 보기', { count: total - FORM_PREVIEW_SIZE })}
               onPress={() => setOpen(true)}
             />
           ) : null}
@@ -583,23 +594,26 @@ function PagedList({
   onCollapse,
   ...props
 }: ComposerWorksProps & { filter: ComposerPieceFilter; bare?: boolean; onCollapse?: () => void }) {
+  const { locale } = useLocale();
   const query = useComposerPieces(props.composerId, filter, { pageSize: PAGE_SIZE });
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
   if (query.isLoading) return <RowsSkeleton count={6} />;
   if (query.isError)
-    return <RetryRow message="작품 목록을 불러오지 못했어요." onRetry={() => query.refetch()} />;
+    return (
+      <RetryRow message={t('작품 목록을 불러오지 못했어요.')} onRetry={() => query.refetch()} />
+    );
   return (
     <View className={bare ? undefined : 'gap-2'}>
       <Rows pieces={pieces} {...props} />
       <View className="flex-row gap-4">
         {query.hasNextPage ? (
           <MoreLink
-            label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+            label={query.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}
             onPress={() => query.fetchNextPage()}
             disabled={query.isFetchingNextPage}
           />
         ) : null}
-        {onCollapse ? <MoreLink label="접기" onPress={onCollapse} collapse /> : null}
+        {onCollapse ? <MoreLink label={t('접기')} onPress={onCollapse} collapse /> : null}
       </View>
     </View>
   );
@@ -620,13 +634,19 @@ function SearchResults({
   onSearchAll: () => void;
   onClear: () => void;
 }) {
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
-  const terms = React.useMemo(() => highlightTerms(q), [q]);
+  const { locale } = useLocale();
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
+  const terms = React.useMemo(() => highlightTerms(q), [q, locale]);
   // 첫 검색에만 자리표시를 보이고, 그 뒤로는 앞 결과를 흐리게 둔 채 새 결과를 기다린다.
   // 결과 수 줄은 어느 때나 같은 자리에 한 줄로 두어 아래 목록이 위아래로 밀리지 않게 한다
   const firstLoad = query.isLoading && pieces.length === 0;
   const stale = query.isPlaceholderData || firstLoad;
-  const where = scope ? `${scope}에서 ` : '';
+  const params = { q, scope: scope ?? '' };
+  const found = {
+    ...params,
+    count: pieces.length,
+    n: `${pieces.length}${query.hasNextPage ? '+' : ''}`,
+  };
   return (
     <View className="gap-2">
       <View className="flex-row items-baseline justify-between gap-3">
@@ -636,32 +656,42 @@ function SearchResults({
           className="flex-1"
           accessibilityLiveRegion="polite">
           {query.isError
-            ? `${where}'${q}' 검색하지 못했어요`
+            ? scope
+              ? t("{scope}에서 '{q}' 검색하지 못했어요", params)
+              : t("'{q}' 검색하지 못했어요", params)
             : stale
-              ? `${where}'${q}' 찾는 중…`
+              ? scope
+                ? t("{scope}에서 '{q}' 찾는 중…", params)
+                : t("'{q}' 찾는 중…", params)
               : pieces.length === 0
-                ? `${where}'${q}'에 맞는 작품이 없어요`
-                : `${where}'${q}' ${pieces.length}${query.hasNextPage ? '+' : ''}곡`}
+                ? scope
+                  ? t("{scope}에서 '{q}'에 맞는 작품이 없어요", params)
+                  : t("'{q}'에 맞는 작품이 없어요", params)
+                : scope
+                  ? t("{scope}에서 '{q}' {n}곡", found)
+                  : t("'{q}' {n}곡", found)}
         </Text>
         <Pressable onPress={onClear} hitSlop={6} accessibilityRole="button">
           <Text variant="label" className="text-foreground-muted">
-            검색 지우기
+            {t('검색 지우기')}
           </Text>
         </Pressable>
       </View>
       {query.isError ? (
-        <RetryRow message="검색하지 못했어요." onRetry={() => query.refetch()} />
+        <RetryRow message={t('검색하지 못했어요.')} onRetry={() => query.refetch()} />
       ) : firstLoad ? (
         <RowsSkeleton count={3} />
       ) : pieces.length === 0 && !stale ? (
         <View className="gap-2 rounded-lg bg-surface-2 px-4 py-3.5">
           <Text variant="bodySm" className="text-foreground-muted">
-            작품번호(Op. 28, K. 331), 별칭(빗방울, 운명), 형식(녹턴, 소나타)으로도 찾을 수 있어요.
+            {t(
+              '작품번호(Op. 28, K. 331), 별칭(빗방울, 운명), 형식(녹턴, 소나타)으로도 찾을 수 있어요.'
+            )}
           </Text>
           {scope ? (
             <Pressable onPress={onSearchAll} hitSlop={6} className="self-start">
               <Text variant="label" className="text-primary">
-                {`전체 갈래에서 '${q}' 찾기`}
+                {t("전체 갈래에서 '{q}' 찾기", { q })}
               </Text>
             </Pressable>
           ) : null}
@@ -688,7 +718,7 @@ function SearchResults({
           </View>
           {query.hasNextPage ? (
             <MoreLink
-              label={query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+              label={query.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}
               onPress={() => query.fetchNextPage()}
               disabled={query.isFetchingNextPage}
             />
@@ -700,6 +730,7 @@ function SearchResults({
 }
 
 function RowsSkeleton({ count }: { count: number }) {
+  useLocale();
   return (
     <View className="gap-2">
       {Array.from({ length: Math.max(count, 1) }, (_, index) => (
@@ -710,6 +741,7 @@ function RowsSkeleton({ count }: { count: number }) {
 }
 
 function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
       <Text variant="bodySm" className="flex-1 text-foreground-muted">
@@ -717,7 +749,7 @@ function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }
       </Text>
       <Pressable onPress={onRetry} hitSlop={8}>
         <Text variant="label" className="text-primary">
-          다시 시도
+          {t('다시 시도')}
         </Text>
       </Pressable>
     </View>
@@ -725,8 +757,11 @@ function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }
 }
 
 function StarCount({ count }: { count: number }) {
+  useLocale();
   return (
-    <View className="flex-row items-center gap-1" accessibilityLabel={`대표곡 ${count}곡`}>
+    <View
+      className="flex-row items-center gap-1"
+      accessibilityLabel={t('대표곡 {count}곡', { count })}>
       <NotableStar size={11} />
       <Text variant="caption" className="tabular-nums">
         {count}

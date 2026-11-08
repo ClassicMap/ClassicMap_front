@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { useRouteSignature } from '@/lib/navigation/route-signature';
 import { type Query, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
@@ -25,6 +26,7 @@ function isFirstLoad(query: Query): boolean {
  * 움직임 줄이기면 자라지 않고 꽉 찬 막대만 보였다 사라진다.
  */
 export function RouteProgress({ placement }: { placement: 'panel' | 'viewport' }) {
+  useLocale();
   const signature = useRouteSignature();
   const queryClient = useQueryClient();
   const barRef = React.useRef<HTMLDivElement | null>(null);

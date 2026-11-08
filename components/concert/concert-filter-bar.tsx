@@ -14,7 +14,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
-import type { AreaOption } from '@/lib/data/areas';
+import { type AreaOption, areaName } from '@/lib/data/areas';
 import {
   type ConcertFilter,
   type ConcertInstrumentKey,
@@ -26,6 +26,7 @@ import {
   periodLabel,
   periodRange,
 } from '@/lib/data/concert-filters';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { TriggerRef } from '@rn-primitives/popover';
 import {
@@ -50,6 +51,7 @@ interface ConcertSearchFieldProps {
 
 /** 공연 안에서만 찾는 검색 칸. 프로그램에 적힌 작곡가 이름으로도 찾는다 */
 export function ConcertSearchField({ value, onChange, className }: ConcertSearchFieldProps) {
+  useLocale();
   return (
     <View
       className={cn(
@@ -60,15 +62,15 @@ export function ConcertSearchField({ value, onChange, className }: ConcertSearch
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholder="공연 제목, 출연자, 작곡가, 공연장"
+        placeholder={t('공연 제목, 출연자, 작곡가, 공연장')}
         placeholderTextColor="hsl(33 6% 46%)"
         returnKeyType="search"
         autoCorrect={false}
-        accessibilityLabel="공연 검색어"
+        accessibilityLabel={t('공연 검색어')}
         className="min-w-0 flex-1 text-body-sm text-foreground web:outline-none"
       />
       {value ? (
-        <Pressable accessibilityLabel="검색어 지우기" hitSlop={10} onPress={() => onChange('')}>
+        <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => onChange('')}>
           <Icon as={XIcon} size={15} className="text-foreground-subtle" />
         </Pressable>
       ) : null}
@@ -100,6 +102,7 @@ export interface FilterMenuProps {
 }
 
 export function FilterMenu({ label, value, leading, width, children }: FilterMenuProps) {
+  useLocale();
   const triggerRef = React.useRef<TriggerRef>(null);
   const close = React.useCallback(() => triggerRef.current?.close(), []);
   const active = value !== undefined;
@@ -144,12 +147,14 @@ function periodValue(filter: ConcertFilter): string | undefined {
  * 기간은 실제 날짜가 붙은 목록, 지역은 권역별 묶음, 편성은 아이콘 타일, 연주자는 검색.
  */
 export function ConcertFilterBar(props: ConcertFilterBarProps) {
+  useLocale();
   const { filter, areas, artist, favoriteArtists, instrumentCounts, onChange, onArtistChange } = props;
-  const areaLabel = areas.find((area) => area.value === filter.area)?.label ?? filter.area;
+  const areaLabel =
+    areas.find((area) => area.value === filter.area)?.label ?? (filter.area ? areaName(filter.area) : undefined);
   return (
     <View className="gap-3">
       <View className="flex-row flex-wrap items-center gap-2">
-        <FilterMenu label="장르" value={genreLabel(filter.genre)} width={220}>
+        <FilterMenu label={t('장르')} value={genreLabel(filter.genre)} width={220}>
           {(close) => (
             <GenrePanel
               value={filter.genre}
@@ -161,7 +166,7 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <FilterMenu
-          label="날짜"
+          label={t('날짜')}
           value={periodValue(filter)}
           leading={<Icon as={CalendarDaysIcon} size={14} className="text-foreground-subtle" />}
           width={260}>
@@ -176,7 +181,7 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <FilterMenu
-          label="지역"
+          label={t('지역')}
           value={filter.area ? areaLabel : undefined}
           leading={<Icon as={MapPinIcon} size={14} className="text-foreground-subtle" />}
           width={360}>
@@ -192,7 +197,7 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <FilterMenu
-          label="편성"
+          label={t('편성')}
           value={filter.instrument ? instrumentLabel(filter.instrument) : undefined}
           leading={
             filter.instrument ? <InstrumentIcon code={filter.instrument} size={14} className="text-foreground" /> : null
@@ -210,8 +215,8 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <FilterMenu
-          label="연주자"
-          value={filter.artist ? artist?.name ?? '연주자 1명' : undefined}
+          label={t('filter::연주자')}
+          value={filter.artist ? artist?.name ?? t('연주자 1명') : undefined}
           leading={
             artist ? (
               <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={18} />
@@ -235,8 +240,8 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <View className="mx-1 h-5 w-px bg-border" />
-        <Chip label="내한" selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
-        <Chip label="페스티벌" selected={filter.festival} onPress={() => onChange({ festival: !filter.festival })} />
+        <Chip label={t('내한')} selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
+        <Chip label={t('페스티벌')} selected={filter.festival} onPress={() => onChange({ festival: !filter.festival })} />
       </View>
       <AppliedFilters {...props} />
     </View>
@@ -261,7 +266,7 @@ function appliedChips({ filter, areas, artist, onChange, onArtistChange }: Conce
     chips.push({ key: 'period', label: periodValue(filter) ?? '', clear: () => onChange({ period: 'all' }) });
   }
   if (filter.area) {
-    const label = areas.find((area) => area.value === filter.area)?.label ?? filter.area;
+    const label = areas.find((area) => area.value === filter.area)?.label ?? areaName(filter.area);
     chips.push({ key: 'area', label, clear: () => onChange({ area: undefined }) });
   }
   if (filter.instrument) {
@@ -276,18 +281,19 @@ function appliedChips({ filter, areas, artist, onChange, onArtistChange }: Conce
   if (filter.artist) {
     chips.push({
       key: 'artist',
-      label: artist?.name ?? '연주자',
+      label: artist?.name ?? t('filter::연주자'),
       leading: artist ? <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={16} /> : undefined,
       clear: () => onArtistChange(undefined),
     });
   }
-  if (filter.visit) chips.push({ key: 'visit', label: '내한', clear: () => onChange({ visit: false }) });
-  if (filter.festival) chips.push({ key: 'festival', label: '페스티벌', clear: () => onChange({ festival: false }) });
+  if (filter.visit) chips.push({ key: 'visit', label: t('내한'), clear: () => onChange({ visit: false }) });
+  if (filter.festival) chips.push({ key: 'festival', label: t('페스티벌'), clear: () => onChange({ festival: false }) });
   return chips;
 }
 
 /** 지금 걸린 조건을 한 줄로. 하나씩 빼거나 한 번에 초기화한다. 기본값(클래식)은 조건으로 치지 않는다 */
 function AppliedFilters(props: ConcertFilterBarProps) {
+  useLocale();
   const chips = appliedChips(props);
   if (chips.length === 0) return null;
   return (
@@ -297,7 +303,7 @@ function AppliedFilters(props: ConcertFilterBarProps) {
           key={chip.key}
           onPress={chip.clear}
           accessibilityRole="button"
-          accessibilityLabel={`${chip.label} 조건 빼기`}
+          accessibilityLabel={t('{label} 조건 빼기', { label: chip.label })}
           className="h-7 flex-row items-center gap-1.5 rounded-full bg-surface-2 pl-2.5 pr-2 active:bg-surface-3 web:hover:bg-surface-3">
           {chip.leading}
           <Text className="text-caption font-medium text-foreground">{chip.label}</Text>
@@ -307,10 +313,10 @@ function AppliedFilters(props: ConcertFilterBarProps) {
       <Pressable
         onPress={props.onReset}
         accessibilityRole="button"
-        accessibilityLabel={`조건 ${chips.length}개 모두 빼기`}
+        accessibilityLabel={t('조건 {count}개 모두 빼기', { count: chips.length })}
         className="ml-1 h-7 flex-row items-center gap-1 rounded-full px-2 web:hover:bg-surface-2">
         <Icon as={RotateCcwIcon} size={12} className="text-foreground-muted" />
-        <Text className="text-caption text-foreground-muted">초기화</Text>
+        <Text className="text-caption text-foreground-muted">{t('초기화')}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -331,6 +337,7 @@ interface MobileFilterProps extends ConcertFilterBarProps {
  * 자주 쓰는 오늘·이번 주말·내한만 바로 누를 수 있게 밖에 둔다.
  */
 export function ConcertMobileFilter(props: MobileFilterProps) {
+  useLocale();
   const { filter, query, onQueryChange, onChange } = props;
   const [open, setOpen] = React.useState(false);
   const count = countActiveFilters(filter);
@@ -341,13 +348,13 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
         <Pressable
           onPress={() => setOpen(true)}
           accessibilityRole="button"
-          accessibilityLabel={count > 0 ? `필터, 조건 ${count}개` : '필터'}
+          accessibilityLabel={count > 0 ? t('필터, 조건 {count}개', { count }) : t('필터')}
           className={cn(
             'h-10 flex-row items-center gap-1.5 rounded-full border px-3.5',
             count > 0 ? 'border-primary bg-primary-muted' : 'border-border-strong bg-surface-2'
           )}>
           <Icon as={SlidersHorizontalIcon} size={16} className="text-foreground" />
-          <Text className="text-label font-semibold text-foreground">필터</Text>
+          <Text className="text-label font-semibold text-foreground">{t('필터')}</Text>
           {count > 0 ? (
             <View className="h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1">
               <Text className="text-micro font-bold text-primary-foreground">{count}</Text>
@@ -358,20 +365,20 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-2">
         <Chip
           size="sm"
-          label="오늘"
+          label={t('오늘')}
           selected={filter.period === 'today'}
           onPress={() => onChange({ period: filter.period === 'today' ? 'all' : 'today' })}
         />
         <Chip
           size="sm"
-          label="이번 주말"
+          label={t('이번 주말')}
           selected={filter.period === 'weekend'}
           onPress={() => onChange({ period: filter.period === 'weekend' ? 'all' : 'weekend' })}
         />
-        <Chip size="sm" label="내한" selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
+        <Chip size="sm" label={t('내한')} selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
         <Chip
           size="sm"
-          label="페스티벌"
+          label={t('페스티벌')}
           selected={filter.festival}
           onPress={() => onChange({ festival: !filter.festival })}
         />
@@ -383,6 +390,7 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
 }
 
 function SheetSection({ title, children }: { title: string; children: React.ReactNode }) {
+  useLocale();
   return (
     <View className="gap-2.5 border-b border-border py-5">
       <Text className="text-body font-bold text-foreground">{title}</Text>
@@ -398,6 +406,7 @@ function FilterSheet({
   more,
   ...props
 }: MobileFilterProps & { visible: boolean; onClose: () => void }) {
+  useLocale();
   const { filter, areas, favoriteArtists, instrumentCounts, onChange, onArtistChange, onReset } = props;
   const insets = useSafeAreaInsets();
   const count = countActiveFilters(filter);
@@ -406,7 +415,7 @@ function FilterSheet({
       <View className="flex-1 justify-end">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="필터 닫기"
+          accessibilityLabel={t('필터 닫기')}
           onPress={onClose}
           className="absolute inset-0 bg-black/40"
         />
@@ -415,56 +424,56 @@ function FilterSheet({
             <View className="h-1 w-10 rounded-full bg-border-strong" />
           </View>
           <View className="flex-row items-center justify-between px-4 pb-1 pt-2">
-            <Text variant="headline">필터</Text>
+            <Text variant="headline">{t('필터')}</Text>
             <View className="flex-row items-center gap-1">
               {count > 0 ? (
                 <Pressable onPress={onReset} accessibilityRole="button" hitSlop={6} className="h-9 justify-center px-2">
-                  <Text className="text-label text-foreground-muted">초기화</Text>
+                  <Text className="text-label text-foreground-muted">{t('초기화')}</Text>
                 </Pressable>
               ) : null}
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="닫기"
+                accessibilityLabel={t('닫기')}
                 className="size-9 items-center justify-center rounded-full bg-surface-2">
                 <Icon as={XIcon} size={16} className="text-foreground" />
               </Pressable>
             </View>
           </View>
           <ScrollView contentContainerClassName="px-4 pb-4" keyboardShouldPersistTaps="handled">
-            <SheetSection title="장르">
+            <SheetSection title={t('장르')}>
               <View className="flex-row flex-wrap gap-2">
                 {(['classic', 'gugak', 'musical', 'all'] as const).map((key) => (
                   <Chip key={key} label={genreLabel(key)} selected={filter.genre === key} onPress={() => onChange({ genre: key })} />
                 ))}
               </View>
             </SheetSection>
-            <SheetSection title="날짜">
+            <SheetSection title={t('날짜')}>
               <PeriodPanel value={filter.period} onSelect={(period) => onChange({ period })} />
             </SheetSection>
-            <SheetSection title="편성">
+            <SheetSection title={t('편성')}>
               <InstrumentPanel
                 value={filter.instrument}
                 counts={instrumentCounts}
                 onSelect={(instrument) => onChange({ instrument })}
               />
             </SheetSection>
-            <SheetSection title="지역">
+            <SheetSection title={t('지역')}>
               <AreaPanel areas={areas} value={filter.area} onSelect={(area) => onChange({ area })} />
             </SheetSection>
-            <SheetSection title="연주자">
+            <SheetSection title={t('filter::연주자')}>
               <ArtistPanel value={filter.artist} favorites={favoriteArtists} onSelect={onArtistChange} />
             </SheetSection>
             <View className="pt-2">
               <ToggleRow
-                label="내한 공연"
-                description="해외 연주자·단체가 한국에 와서 여는 공연"
+                label={t('내한 공연')}
+                description={t('해외 연주자·단체가 한국에 와서 여는 공연')}
                 value={filter.visit}
                 onChange={(visit) => onChange({ visit })}
               />
               <ToggleRow
-                label="페스티벌"
-                description="음악제·축제 안에서 열리는 공연"
+                label={t('페스티벌')}
+                description={t('음악제·축제 안에서 열리는 공연')}
                 value={filter.festival}
                 onChange={(festival) => onChange({ festival })}
               />
@@ -473,7 +482,11 @@ function FilterSheet({
           <View className="border-t border-border px-4 pt-3">
             <Button className="h-12 rounded-full" onPress={onClose}>
               <Text className="font-semibold text-primary-foreground">
-                {resultCount === 0 && !more ? '조건에 맞는 공연이 없어요' : `공연 ${resultCount}${more ? '개 이상' : '개'} 보기`}
+                {resultCount === 0 && !more
+                  ? t('조건에 맞는 공연이 없어요')
+                  : more
+                    ? t('공연 {count}개 이상 보기', { count: resultCount })
+                    : t('공연 {count}개 보기', { count: resultCount })}
               </Text>
             </Button>
           </View>

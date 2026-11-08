@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { Linking, Platform, View } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
@@ -92,6 +93,7 @@ export const YoutubeClipPlayer = React.forwardRef<YoutubeClipHandle, YoutubeClip
   { videoId, start, end, height, onReady, onState, onTime, onError },
   ref
 ) {
+  useLocale();
   const webView = React.useRef<WebView>(null);
   const ready = React.useRef(false);
   // 준비 전에 받은 명령. 준비되면 이 순서로 적용한다

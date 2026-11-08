@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Platform, TextInput, type TextInputProps } from 'react-native';
 
@@ -6,6 +7,7 @@ function Input({
   placeholderClassName,
   ...props
 }: TextInputProps & React.RefAttributes<TextInput>) {
+  useLocale();
   return (
     <TextInput
       className={cn(

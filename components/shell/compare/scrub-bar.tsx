@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import * as React from 'react';
 
 interface ScrubBarProps {
@@ -39,6 +40,7 @@ export function ScrubBar({
   fill = FOREGROUND,
   height = 4,
 }: ScrubBarProps) {
+  useLocale();
   const trackRef = React.useRef<HTMLDivElement | null>(null);
   const [dragValue, setDragValue] = React.useState<number | null>(null);
   const [hover, setHover] = React.useState(false);

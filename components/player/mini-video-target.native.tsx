@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { registerNativeSurface, surfaceRects } from '@/lib/player/native-surface';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -6,6 +7,7 @@ import Animated, { measure, useAnimatedRef, useFrameCallback } from 'react-nativ
 
 /** 루트의 비교 영상이 미니 플레이어로 올 때 뜨는 작은 자리 (네이티브) */
 export function MiniVideoTarget({ width, height, className }: { width: number; height: number; className?: string }) {
+  useLocale();
   const ref = useAnimatedRef<View>();
   const { height: windowHeight } = useWindowDimensions();
 

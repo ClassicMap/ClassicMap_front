@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
@@ -35,6 +36,7 @@ function EmptyState({
   compact = false,
   className,
 }: EmptyStateProps) {
+  useLocale();
   return (
     <View
       className={cn('items-center gap-2 px-6', compact ? 'py-6' : 'py-12', className)}
