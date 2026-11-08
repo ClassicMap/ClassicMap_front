@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeftIcon, ChevronRightIcon, MoonStarIcon, SearchIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { Pressable, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
@@ -35,6 +35,7 @@ export function TopBar() {
   const router = useRouter();
   const { setOpen } = useCommandPalette();
   const { colorScheme, toggleColorScheme } = useColorScheme();
+  const { locale, setLocale } = useLocale();
 
   return (
     <View className="h-14 shrink-0 flex-row items-center gap-2.5 px-5">
@@ -58,6 +59,12 @@ export function TopBar() {
       </Pressable>
 
       <View className="ml-auto flex-row items-center gap-1.5">
+        {/* 로그인하지 않아도 언어를 바꿀 수 있게. 바꿀 언어의 이름을 보인다 */}
+        <RoundButton
+          label={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}
+          onPress={() => setLocale(locale === 'ko' ? 'en' : 'ko')}>
+          <Text className="text-[11px] font-semibold text-foreground-muted">{locale === 'ko' ? 'EN' : '한'}</Text>
+        </RoundButton>
         <RoundButton
           label={colorScheme === 'dark' ? t('라이트 모드로 전환') : t('다크 모드로 전환')}
           onPress={toggleColorScheme}>

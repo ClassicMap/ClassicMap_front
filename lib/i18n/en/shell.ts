@@ -21,4 +21,6 @@ export const SHELL: Readonly<Record<string, string>> = {
   '라이트 모드로 전환': 'Switch to light mode',
   '다크 모드로 전환': 'Switch to dark mode',
   둘러보기: 'Browse',
+  '영어로 보기': 'View in English',
+  '한국어로 보기': 'View in Korean',
 };
