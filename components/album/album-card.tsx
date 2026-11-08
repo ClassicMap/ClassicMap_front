@@ -4,6 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import type { RecordingListItem } from '@/lib/api/client';
+import { msg, pick, t } from '@/lib/i18n';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 
@@ -25,11 +26,11 @@ function daysSince(releaseDate: string | null | undefined): number | null {
   return Math.floor((Date.now() - time) / 86_400_000);
 }
 
-/** 카드 위 상태 배지: 발매 예정, 최근 30일 안 발매 */
+/** 카드 위 상태 배지: 발매 예정, 최근 30일 안 발매. 값은 한국어 표시이니 그릴 때 t(badge) 로 옮긴다 */
 export function albumBadge(album: Pick<RecordingListItem, 'releaseDate' | 'isPreRelease'>): string | null {
   const since = daysSince(album.releaseDate);
-  if (album.isPreRelease || (since !== null && since < 0)) return '발매 예정';
-  if (since !== null && since <= NEW_ALBUM_DAYS) return '새 앨범';
+  if (album.isPreRelease || (since !== null && since < 0)) return msg('발매 예정');
+  if (since !== null && since <= NEW_ALBUM_DAYS) return msg('새 앨범');
   return null;
 }
 
@@ -44,18 +45,23 @@ interface AlbumCardProps {
 export function AlbumCard({ album, width, inRepertoire = false, onPress }: AlbumCardProps) {
   const badge = albumBadge(album);
   const meta = [album.label, albumDate(album)].filter(Boolean).join(' · ');
+  const artistName = pick(album.artistName, album.artistEnglishName);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${album.title}, ${album.artistName}${badge ? `, ${badge}` : ''}. 앨범 정보 보기`}
+      accessibilityLabel={t('{title}, {artist}{badge}. 앨범 정보 보기', {
+        title: album.title,
+        artist: artistName,
+        badge: badge ? `, ${t(badge)}` : '',
+      })}
       style={{ width }}
       className="rounded-md web:transition-opacity web:hover:opacity-90">
       <RepertoireThumb active={inRepertoire} shape="square" badgeSize={Math.max(18, Math.round(width / 8))}>
         <View>
           <EntityThumb name={album.title} image={album.coverUrl} shape="square" size={width} />
           {badge ? (
-            <Badge tone={badge === '발매 예정' ? 'info' : 'accent'} label={badge} className="absolute left-2 top-2 bg-background/90" />
+            <Badge tone={badge === '발매 예정' ? 'info' : 'accent'} label={t(badge)} className="absolute left-2 top-2 bg-background/90" />
           ) : null}
         </View>
       </RepertoireThumb>
@@ -66,7 +72,7 @@ export function AlbumCard({ album, width, inRepertoire = false, onPress }: Album
         {inRepertoire ? <RepertoireMark className="mt-1" /> : null}
       </View>
       <Text variant="caption" numberOfLines={1} className="mt-0.5 text-foreground-muted">
-        {album.artistName}
+        {artistName}
       </Text>
       {meta ? (
         <Text variant="caption" numberOfLines={1} className="mt-0.5 text-foreground-subtle">

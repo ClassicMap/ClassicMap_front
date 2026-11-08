@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { type Href, useRouter } from 'expo-router';
 
@@ -122,7 +123,7 @@ function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerf
         setHovered(false);
       }}
       accessibilityRole="link"
-      accessibilityLabel={`${performer.artistName} 화면으로`}
+      accessibilityLabel={t('{name} 화면으로', { name: performer.artistName })}
       hitSlop={3}
       className={cn(
         'rounded-full border-2 border-black/60 web:transition-transform web:duration-fast',

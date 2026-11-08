@@ -1,3 +1,4 @@
+import { msg } from '@/lib/i18n';
 import { Period } from '../types/models';
 import { ERA_BASE_COLORS } from '../design/era-palette';
 
@@ -8,7 +9,8 @@ export const ERA_COLORS: Record<string, string> = ERA_BASE_COLORS;
 export const PERIODS: Period[] = [
   {
     id: 'medieval',
-    name: '중세',
+    // 이름은 API 필터·색 조회의 키라 한국어로 두고, 화면에는 t(era.name) 으로 옮긴다
+    name: msg('중세'),
     period: '500-1400',
     startYear: 500,
     endYear: 1400,
@@ -24,7 +26,7 @@ export const PERIODS: Period[] = [
   },
   {
     id: 'renaissance',
-    name: '르네상스',
+    name: msg('르네상스'),
     period: '1400-1600',
     startYear: 1400,
     endYear: 1600,
@@ -40,7 +42,7 @@ export const PERIODS: Period[] = [
   },
   {
     id: 'baroque',
-    name: '바로크',
+    name: msg('바로크'),
     period: '1600-1750',
     startYear: 1600,
     endYear: 1750,
@@ -56,7 +58,7 @@ export const PERIODS: Period[] = [
   },
   {
     id: 'classical',
-    name: '고전주의',
+    name: msg('고전주의'),
     period: '1730-1820',
     startYear: 1730,
     endYear: 1820,
@@ -72,7 +74,7 @@ export const PERIODS: Period[] = [
   },
   {
     id: 'romantic',
-    name: '낭만주의',
+    name: msg('낭만주의'),
     period: '1800-1910',
     startYear: 1800,
     endYear: 1910,
@@ -88,7 +90,7 @@ export const PERIODS: Period[] = [
   },
   {
     id: 'modern',
-    name: '근현대',
+    name: msg('근현대'),
     period: '1890-현재',
     startYear: 1890,
     endYear: new Date().getFullYear(),

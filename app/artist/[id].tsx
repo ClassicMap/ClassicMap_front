@@ -20,6 +20,7 @@ import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
 import { ConcertAPI, RecordingAPI, type RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { msg, t } from '@/lib/i18n';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import type { Artist, Concert, ImageCredit, Recording, TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,30 @@ import {
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = [
+  msg('weekday::일'),
+  msg('weekday::월'),
+  msg('weekday::화'),
+  msg('weekday::수'),
+  msg('weekday::목'),
+  msg('weekday::금'),
+  msg('weekday::토'),
+];
+// 한국어는 숫자 월(11월), 영어는 줄임 월 이름(Nov)
+const MONTHS = [
+  msg('month::1'),
+  msg('month::2'),
+  msg('month::3'),
+  msg('month::4'),
+  msg('month::5'),
+  msg('month::6'),
+  msg('month::7'),
+  msg('month::8'),
+  msg('month::9'),
+  msg('month::10'),
+  msg('month::11'),
+  msg('month::12'),
+];
 
 function parseDate(value: string): Date | null {
   const date = new Date(value);
@@ -44,8 +68,12 @@ function parseDate(value: string): Date | null {
 
 function formatConcertDay(value: string): string {
   const date = parseDate(value);
-  if (!date) return '날짜 미정';
-  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]})`;
+  if (!date) return t('날짜 미정');
+  return t('{month}월 {day}일 ({weekday})', {
+    month: t(MONTHS[date.getMonth()]),
+    day: date.getDate(),
+    weekday: t(WEEKDAYS[date.getDay()]),
+  });
 }
 
 /** 오늘 기준 남은 날. 지난 공연이면 null */
@@ -141,17 +169,17 @@ export default function ArtistDetailScreen() {
 
   const handleDeleteArtist = () => {
     if (!artist) return;
-    Alert.alert('아티스트 삭제', `${artist.name}을(를) 삭제할까요?`, [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('아티스트 삭제'), t('{name}을(를) 삭제할까요?', { name: artist.name }), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminArtistAPI.delete(artist.id);
             router.back();
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
           }
         },
       },
@@ -159,17 +187,17 @@ export default function ArtistDetailScreen() {
   };
 
   const handleDeleteRecording = (recordingId: number) => {
-    Alert.alert('앨범 삭제', '이 앨범을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('앨범 삭제'), t('이 앨범을 삭제할까요?'), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminRecordingAPI.delete(recordingId);
             void recordingsQuery.refetch();
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
           }
         },
       },
@@ -181,7 +209,7 @@ export default function ArtistDetailScreen() {
       setVendors(await ConcertAPI.getTicketVendors(concert.id));
       setShowVendorsModal(true);
     } catch {
-      Alert.alert('예매처를 불러오지 못했어요', '공연 상세에서 다시 시도해 주세요.');
+      Alert.alert(t('예매처를 불러오지 못했어요'), t('공연 상세에서 다시 시도해 주세요.'));
     }
   };
 
@@ -206,9 +234,9 @@ export default function ArtistDetailScreen() {
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
-          title="아티스트 정보를 불러오지 못했어요"
-          description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-          action={{ label: '다시 시도', onPress: () => artistQuery.refetch() }}
+          title={t('아티스트 정보를 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => artistQuery.refetch() }}
         />
       </View>
     );
@@ -216,8 +244,8 @@ export default function ArtistDetailScreen() {
 
   const meta = [
     getArtistCategoryLabel(artist.category),
-    artist.nationality,
-    artist.birthYear ? `${artist.birthYear}년생` : null,
+    artist.nationality ? t(artist.nationality) : null,
+    artist.birthYear ? t('{year}년생', { year: artist.birthYear }) : null,
   ].filter(Boolean);
   const nextConcert = concerts[0];
 
@@ -225,7 +253,7 @@ export default function ArtistDetailScreen() {
     <View className="gap-8">
       <View>
         <Text variant="headline" className="mb-3">
-          다가오는 공연
+          {t('다가오는 공연')}
         </Text>
         {concertsQuery.isLoading ? (
           <Skeleton className="h-32 w-full rounded-lg" />
@@ -241,7 +269,7 @@ export default function ArtistDetailScreen() {
                   <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={72} aspect={4 / 3} />
                   <View className="min-w-0 flex-1">
                     {days !== null ? (
-                      <Badge tone="accent" label={days === 0 ? '오늘' : `D-${days}`} />
+                      <Badge tone="accent" label={days === 0 ? t('오늘') : `D-${days}`} />
                     ) : null}
                     <Text numberOfLines={2} className="mt-1.5 text-body-sm font-bold text-foreground">
                       {concert.title}
@@ -257,7 +285,7 @@ export default function ArtistDetailScreen() {
                     {concert.status === 'upcoming' ? (
                       <Pressable onPress={() => openTickets(concert)} className="mt-1.5 self-start">
                         <Text variant="label" className="text-primary">
-                          예매처 보기
+                          {t('예매처 보기')}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -268,7 +296,7 @@ export default function ArtistDetailScreen() {
           </View>
         ) : (
           <Text variant="bodySm" className="text-foreground-muted">
-            예정된 공연이 없어요.
+            {t('예정된 공연이 없어요.')}
           </Text>
         )}
       </View>
@@ -276,7 +304,7 @@ export default function ArtistDetailScreen() {
       {awards.length > 0 ? (
         <View>
           <Text variant="headline" className="mb-3">
-            수상
+            {t('수상')}
           </Text>
           <View className="gap-3.5">
             {awards.map((award, index) => (
@@ -312,7 +340,7 @@ export default function ArtistDetailScreen() {
           image={artist.banner?.url ?? artist.imageUrl}
           focalPoint={artist.banner?.focalPoint}
           title={artist.name}
-          meta={[...meta, artist.englishName]}
+          meta={[...meta, artist.englishName !== artist.name ? artist.englishName : null]}
           wide={wide}
           imageLayout={artist.banner ? 'cover' : 'side'}
           onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))}
@@ -325,11 +353,11 @@ export default function ArtistDetailScreen() {
             <>
               <Button variant="outline" size="sm" onPress={() => setEditModalVisible(true)}>
                 <Icon as={EditIcon} size={14} className="text-foreground" />
-                <Text>수정</Text>
+                <Text>{t('수정')}</Text>
               </Button>
               <Button variant="outline" size="sm" onPress={handleDeleteArtist}>
                 <Icon as={TrashIcon} size={14} className="text-destructive" />
-                <Text className="text-destructive">삭제</Text>
+                <Text className="text-destructive">{t('삭제')}</Text>
               </Button>
             </>
           ) : null}
@@ -354,7 +382,7 @@ export default function ArtistDetailScreen() {
                 accessibilityRole="button"
                 className="mt-1.5 self-start">
                 <Text variant="label" className="text-foreground">
-                  {bioExpanded ? '접기' : '더 보기'}
+                  {bioExpanded ? t('접기') : t('더 보기')}
                 </Text>
               </Pressable>
             ) : null}
@@ -378,12 +406,14 @@ export default function ArtistDetailScreen() {
         {/* 음반: 콘텐츠라 사각. 들으러 가는 곳을 숨기지 않는다 */}
         <View className="mt-12">
           <View className="mb-4 flex-row items-baseline justify-between">
-            <Text variant="title3">음반</Text>
+            <Text variant="title3">{t('음반')}</Text>
             <View className="flex-row items-center gap-3">
-              {recordings.length > 0 ? <Text variant="caption">{`${recordings.length}장 · 최신순`}</Text> : null}
+              {recordings.length > 0 ? (
+                <Text variant="caption">{t('{count}장 · 최신순', { count: recordings.length })}</Text>
+              ) : null}
               {canEdit ? (
                 <Pressable
-                  accessibilityLabel="앨범 추가"
+                  accessibilityLabel={t('앨범 추가')}
                   onPress={() => {
                     setSelectedRecording(undefined);
                     setRecordingFormVisible(true);
@@ -401,7 +431,7 @@ export default function ArtistDetailScreen() {
             </View>
           ) : recordings.length === 0 ? (
             <Text variant="bodySm" className="text-foreground-muted">
-              등록된 음반이 없어요.
+              {t('등록된 음반이 없어요.')}
             </Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-5">
@@ -421,11 +451,11 @@ export default function ArtistDetailScreen() {
                             setSelectedRecording(recording);
                             setRecordingFormVisible(true);
                           }}>
-                          <Text variant="caption">수정</Text>
+                          <Text variant="caption">{t('수정')}</Text>
                         </Pressable>
                         <Pressable onPress={() => handleDeleteRecording(recording.id)}>
                           <Text variant="caption" className="text-destructive">
-                            삭제
+                            {t('삭제')}
                           </Text>
                         </Pressable>
                       </View>

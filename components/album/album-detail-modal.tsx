@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
+import { pick, t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { type Href, useRouter } from 'expo-router';
@@ -31,7 +32,10 @@ export function albumListenLinks(album: Pick<RecordingListItem, 'appleMusicUrl' 
 
 function openLink(link: ListenLink) {
   Linking.openURL(link.url).catch(() =>
-    Alert.alert(`${link.service}를 열지 못했어요`, '잠시 뒤 다시 눌러 주세요. 계속 안 되면 앱에서 앨범 이름으로 찾아 주세요.')
+    Alert.alert(
+      t('{service}를 열지 못했어요', { service: link.service }),
+      t('잠시 뒤 다시 눌러 주세요. 계속 안 되면 앱에서 앨범 이름으로 찾아 주세요.')
+    )
   );
 }
 
@@ -79,13 +83,14 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
 
   const badge = albumBadge(shown);
   const links = albumListenLinks(shown);
+  const artistName = pick(shown.artistName, shown.artistEnglishName);
   const facts = [
-    { label: '레이블', value: shown.label },
-    { label: badge === '발매 예정' ? '발매 예정일' : '발매일', value: albumDate(shown) },
-    { label: '트랙', value: shown.trackCount ? `${shown.trackCount}곡` : null },
+    { label: t('레이블'), value: shown.label },
+    { label: badge === '발매 예정' ? t('발매 예정일') : t('발매일'), value: albumDate(shown) },
+    { label: t('트랙'), value: shown.trackCount ? t('track::{count}곡', { count: shown.trackCount }) : null },
     {
-      label: '형태',
-      value: shown.isSingle ? '싱글' : shown.isCompilation ? '모음집' : null,
+      label: t('형태'),
+      value: shown.isSingle ? t('싱글') : shown.isCompilation ? t('모음집') : null,
     },
   ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value));
 
@@ -104,7 +109,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
         <Animated.View style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: progress }}>
           <Pressable
             onPress={onClose}
-            accessibilityLabel="앨범 정보 닫기"
+            accessibilityLabel={t('앨범 정보 닫기')}
             style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.55)' }}
             className="web:cursor-default"
           />
@@ -115,7 +120,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
           <View
             role="dialog"
             aria-modal
-            aria-label={`${shown.title} 앨범 정보`}
+            aria-label={t('{title} 앨범 정보', { title: shown.title })}
             style={dialog ? { maxHeight: '100%' } : { maxHeight: '100%', paddingBottom: insets.bottom + 12 }}
             className={cn(
               'overflow-hidden border-border bg-background',
@@ -125,7 +130,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="닫기"
+              accessibilityLabel={t('닫기')}
               hitSlop={8}
               className="absolute right-3 top-3 z-10 size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
               <Icon as={XIcon} size={18} className="text-foreground-muted" />
@@ -136,7 +141,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                 <EntityThumb name={shown.title} image={shown.coverUrl} shape="square" size={coverSize} />
                 <View className={cn('min-w-0', dialog ? 'flex-1 pt-1' : 'mt-4 w-full')}>
                   {badge ? (
-                    <Badge tone={badge === '발매 예정' ? 'info' : 'accent'} label={badge} className="mb-2" />
+                    <Badge tone={badge === '발매 예정' ? 'info' : 'accent'} label={t(badge)} className="mb-2" />
                   ) : null}
                   <Text className="pr-8 text-title-3 font-bold text-foreground">{shown.title}</Text>
                   <Pressable
@@ -145,11 +150,11 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                       router.push(`/artist/${shown.artistId}` as Href);
                     }}
                     accessibilityRole="link"
-                    accessibilityLabel={`${shown.artistName} 아티스트 보기`}
+                    accessibilityLabel={t('{name} 아티스트 보기', { name: artistName })}
                     className="-mx-2 mt-3 flex-row items-center gap-2.5 self-start rounded-full py-1 pl-1 pr-2 active:bg-surface-2 web:hover:bg-surface-2">
-                    <EntityThumb name={shown.artistName} image={shown.artistImageUrl} shape="circle" size={28} />
+                    <EntityThumb name={artistName} image={shown.artistImageUrl} shape="circle" size={28} />
                     <View>
-                      <Text className="text-body-sm font-semibold text-foreground">{shown.artistName}</Text>
+                      <Text className="text-body-sm font-semibold text-foreground">{artistName}</Text>
                       {shown.artistCategory ? (
                         <Text variant="caption" className="text-foreground-subtle">
                           {getArtistCategoryLabel(shown.artistCategory)}
@@ -180,11 +185,11 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
 
               <View className="mt-6 h-px bg-border" />
               <Text variant="caption" className="mb-2 mt-4 font-semibold text-foreground-subtle">
-                들으러 가기
+                {t('들으러 가기')}
               </Text>
               {links.length === 0 ? (
                 <Text variant="caption">
-                  연결된 스트리밍 링크가 아직 없어요. 쓰는 음악 앱에서 앨범 이름으로 찾아 주세요.
+                  {t('연결된 스트리밍 링크가 아직 없어요. 쓰는 음악 앱에서 앨범 이름으로 찾아 주세요.')}
                 </Text>
               ) : (
                 <View className="gap-2">
@@ -193,11 +198,11 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                       key={link.service}
                       onPress={() => openLink(link)}
                       accessibilityRole="link"
-                      accessibilityLabel={`${link.service}에서 듣기, 새 창으로 열려요`}
+                      accessibilityLabel={t('{service}에서 듣기, 새 창으로 열려요', { service: link.service })}
                       className="flex-row items-center gap-3 rounded-xl border border-border px-4 py-3 active:bg-surface-2 web:transition-colors web:hover:border-border-strong web:hover:bg-surface-2">
                       <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">{link.service}</Text>
                       <Text variant="caption" className="text-primary">
-                        듣기
+                        {t('듣기')}
                       </Text>
                       <Icon as={ExternalLinkIcon} size={14} className="text-primary" />
                     </Pressable>
@@ -205,7 +210,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                 </View>
               )}
               <Text variant="caption" className="mt-3 text-foreground-subtle">
-                음원은 각 서비스에서 재생돼요. 앨범 정보는 Apple Music 카탈로그를 기준으로 해요.
+                {t('음원은 각 서비스에서 재생돼요. 앨범 정보는 Apple Music 카탈로그를 기준으로 해요.')}
               </Text>
             </ScrollView>
           </View>

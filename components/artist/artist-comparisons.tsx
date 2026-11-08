@@ -4,6 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import {
   useArtistComparisonPerformances,
   useComparisonPiece,
@@ -36,7 +37,7 @@ function groupByPiece(items: ComparisonPerformance[], artistId: number): PieceGr
     }
     const supporting = item.credits
       .filter((credit) => credit.artistId !== artistId && (credit.role === 'conductor' || credit.role === 'orchestra'))
-      .map((credit) => (credit.role === 'conductor' ? `${credit.artistName} 지휘` : credit.artistName))
+      .map((credit) => (credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName))
       .join(' · ');
     groups.set(item.pieceId, {
       pieceId: item.pieceId,
@@ -71,16 +72,16 @@ export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: 
         compact
         icon={AlertCircleIcon}
         tone="error"
-        title="연주 비교를 불러오지 못했어요"
-        description="잠시 뒤 다시 시도해 주세요."
-        action={{ label: '다시 시도', onPress: () => query.refetch() }}
+        title={t('연주 비교를 불러오지 못했어요')}
+        description={t('잠시 뒤 다시 시도해 주세요.')}
+        action={{ label: t('다시 시도'), onPress: () => query.refetch() }}
       />
     );
   }
   if (items.length === 0) {
     return (
       <Text variant="bodySm" className="text-foreground-muted">
-        아직 이 연주자의 비교 구간이 없어요.
+        {t('아직 이 연주자의 비교 구간이 없어요.')}
       </Text>
     );
   }
@@ -88,8 +89,10 @@ export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: 
   return (
     <View>
       <View className="mb-2 flex-row items-baseline justify-between">
-        <Text variant="title3">연주 비교</Text>
-        <Text variant="caption">{`${groups.length}곡 · 구간 ${sectorCount}개`}</Text>
+        <Text variant="title3">{t('연주 비교')}</Text>
+        <Text variant="caption">
+          {`${t('{count}곡', { count: groups.length })} · ${t('구간 {count}개', { count: sectorCount })}`}
+        </Text>
       </View>
       {groups.map((group) => (
         <View key={group.pieceId} className="mt-3">
@@ -102,7 +105,7 @@ export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: 
       {query.hasNextPage ? (
         <Pressable onPress={() => query.fetchNextPage()} className="mt-3 self-start py-2">
           <Text variant="label" className="text-foreground-muted">
-            {query.isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+            {query.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}
           </Text>
         </Pressable>
       ) : null}
@@ -142,14 +145,15 @@ function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; arti
     <Pressable
       onPress={() => router.push(href)}
       accessibilityRole="link"
-      accessibilityLabel={`${item.pieceTitle} ${item.sectorName} 비교하기`}
+      accessibilityLabel={t('{title} 비교하기', { title: `${item.pieceTitle} ${item.sectorName}` })}
       className="-mx-3 min-h-14 flex-row items-center gap-4 rounded-md px-3 py-2 active:bg-surface-2 web:hover:bg-surface-2">
       <View className="min-w-0 flex-[1.4]">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {item.sectorName}
         </Text>
         <Text variant="caption" numberOfLines={1}>
-          원본 영상 <Text variant="mono" className="text-foreground-muted">{`${clipClock(item.startMs)}–${clipClock(item.endMs)}`}</Text>
+          {t('원본 영상')}{' '}
+          <Text variant="mono" className="text-foreground-muted">{`${clipClock(item.startMs)}–${clipClock(item.endMs)}`}</Text>
         </Text>
       </View>
       {wide ? (

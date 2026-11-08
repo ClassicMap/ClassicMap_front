@@ -1,6 +1,7 @@
 import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import { PlayIcon } from 'lucide-react-native';
@@ -19,7 +20,7 @@ export function TrackIndex({ index, pieceId, onPlay }: { index: number; pieceId:
     <Pressable
       onPress={isCurrent ? () => comparePlayer.togglePlay() : onPlay}
       accessibilityRole="button"
-      accessibilityLabel={playing ? '일시정지' : '바로 듣기'}
+      accessibilityLabel={playing ? t('일시정지') : t('바로 듣기')}
       hitSlop={6}
       className="w-6 items-center justify-center">
       {playing ? (

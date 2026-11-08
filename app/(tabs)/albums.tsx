@@ -11,6 +11,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { isApiUnavailable, type RecordingListItem, type RecordingSort } from '@/lib/api/client';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { msg, t } from '@/lib/i18n';
 import {
   type AlbumBrowseFilters,
   useAlbumBrowse,
@@ -29,8 +30,8 @@ import { type NativeScrollEvent, type NativeSyntheticEvent, Pressable, RefreshCo
 const FIRST_YEAR = 2000;
 
 const SORT_OPTIONS: { value: RecordingSort; label: string }[] = [
-  { value: 'release', label: '최신 발매' },
-  { value: 'title', label: '제목' },
+  { value: 'release', label: msg('최신 발매') },
+  { value: 'title', label: msg('제목') },
 ];
 
 function paramOf(value: string | string[] | undefined): string | undefined {
@@ -157,20 +158,20 @@ export default function AlbumsScreen() {
         contentContainerClassName={cn('pb-28', wide ? 'px-7 pt-3' : 'px-4 pt-2')}>
         <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
           <View>
-            <Text variant={wide ? 'display' : 'title1'}>앨범</Text>
+            <Text variant={wide ? 'display' : 'title1'}>{t('앨범')}</Text>
             <Text variant="bodySm" className="mt-1 text-foreground-muted">
-              연주자들의 음반을 발매 순으로 모았어요. 앨범 정보는 Apple Music 카탈로그 기준이에요.
+              {t('연주자들의 음반을 발매 순으로 모았어요. 앨범 정보는 Apple Music 카탈로그 기준이에요.')}
             </Text>
           </View>
           <View className={cn('justify-center', wide && 'w-[380px]')}>
             <Input
               value={query}
               onChangeText={setQuery}
-              placeholder="앨범 제목이나 연주자 이름"
+              placeholder={t('앨범 제목이나 연주자 이름')}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"
-              accessibilityLabel="앨범 찾기"
+              accessibilityLabel={t('앨범 찾기')}
               className="h-11 rounded-full pl-10 sm:h-11"
             />
             <View pointerEvents="none" className="absolute left-3.5">
@@ -182,22 +183,22 @@ export default function AlbumsScreen() {
         {shelf.length > 0 && !debounced ? (
           <View className="mt-8">
             <View className="mb-3.5 flex-row items-baseline gap-2.5">
-              <Text className="text-[18px] font-bold text-foreground">담은 연주자의 새 앨범</Text>
-              <Text variant="caption">최근 90일 · 발매 예정 포함</Text>
+              <Text className="text-[18px] font-bold text-foreground">{t('담은 연주자의 새 앨범')}</Text>
+              <Text variant="caption">{t('최근 90일 · 발매 예정 포함')}</Text>
             </View>
             <AlbumShelf albums={shelf} wide={wide} isInRepertoire={isInRepertoire} onOpen={openAlbum} />
           </View>
         ) : null}
 
         <View className="mt-8">
-          <Text className="text-[18px] font-bold text-foreground">앨범 찾기</Text>
+          <Text className="text-[18px] font-bold text-foreground">{t('앨범 찾기')}</Text>
           {/* 배포 전(목록 경로 없음)에는 걸 필터가 없으니 숨긴다 */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             className={cn('mt-3.5', unavailable && 'hidden')}
             contentContainerClassName="items-center gap-2">
-            <FilterMenu label="레이블" value={label} width={300}>
+            <FilterMenu label={t('레이블')} value={label} width={300}>
               {(close) => (
                 <LabelOptions
                   current={label}
@@ -211,11 +212,11 @@ export default function AlbumsScreen() {
                 />
               )}
             </FilterMenu>
-            <FilterMenu label="발매 연도" value={year ? `${year}년` : undefined} width={280}>
+            <FilterMenu label={t('발매 연도')} value={year ? t('{year}년', { year }) : undefined} width={280}>
               {(close) => (
                 <View className="flex-row flex-wrap gap-1.5">
                   <Chip
-                    label="전체"
+                    label={t('전체')}
                     selected={year === undefined}
                     onPress={() => {
                       setParams({ year: undefined });
@@ -237,13 +238,13 @@ export default function AlbumsScreen() {
               )}
             </FilterMenu>
             {/* 기본(최신 발매)은 고른 값으로 강조하지 않는다 */}
-            <FilterMenu label="최신 발매 순" value={sort === 'title' ? '제목 순' : undefined} width={200}>
+            <FilterMenu label={t('최신 발매 순')} value={sort === 'title' ? t('제목 순') : undefined} width={200}>
               {(close) => (
                 <View className="gap-0.5">
                   {SORT_OPTIONS.map((option) => (
                     <OptionRow
                       key={option.value}
-                      label={option.label}
+                      label={t(option.label)}
                       selected={sort === option.value}
                       onPress={() => {
                         setParams({ sort: option.value === 'release' ? undefined : option.value });
@@ -256,7 +257,7 @@ export default function AlbumsScreen() {
             </FilterMenu>
             {isSignedIn ? (
               <Chip
-                label="레퍼토리 연주자만"
+                label={t('레퍼토리 연주자만')}
                 selected={mine}
                 leading={<Icon as={BookmarkIcon} size={13} className={mine ? 'fill-primary text-primary' : 'text-foreground-subtle'} />}
                 onPress={() => setParams({ mine: mine ? undefined : '1' })}
@@ -264,7 +265,7 @@ export default function AlbumsScreen() {
             ) : null}
             {activeFilters > 0 ? (
               <Pressable onPress={resetFilters} accessibilityRole="button" className="h-9 justify-center rounded-full px-3 active:bg-surface-2 web:hover:bg-surface-2">
-                <Text className="text-label text-foreground-muted">초기화 {activeFilters}</Text>
+                <Text className="text-label text-foreground-muted">{t('초기화 {count}', { count: activeFilters })}</Text>
               </Pressable>
             ) : null}
           </ScrollView>
@@ -272,43 +273,43 @@ export default function AlbumsScreen() {
           {mine && repertoireArtists.length === 0 ? (
             <EmptyState
               icon={BookmarkIcon}
-              title="레퍼토리에 담은 연주자가 없어요"
-              description="연주자 화면에서 레퍼토리에 담으면 그 연주자의 앨범만 모아 볼 수 있어요."
-              action={{ label: '연주자 둘러보기', onPress: () => router.push('/artists?type=artist' as Href) }}
+              title={t('레퍼토리에 담은 연주자가 없어요')}
+              description={t('연주자 화면에서 레퍼토리에 담으면 그 연주자의 앨범만 모아 볼 수 있어요.')}
+              action={{ label: t('연주자 둘러보기'), onPress: () => router.push('/artists?type=artist' as Href) }}
             />
           ) : unavailable ? (
             <EmptyState
               icon={DiscIcon}
-              title="앨범 목록을 준비하고 있어요"
-              description="앨범 찾기가 곧 열려요. 그동안 연주자 화면에서 연주자별 음반을 볼 수 있어요."
-              action={{ label: '연주자 둘러보기', onPress: () => router.push('/artists?type=artist' as Href) }}
+              title={t('앨범 목록을 준비하고 있어요')}
+              description={t('앨범 찾기가 곧 열려요. 그동안 연주자 화면에서 연주자별 음반을 볼 수 있어요.')}
+              action={{ label: t('연주자 둘러보기'), onPress: () => router.push('/artists?type=artist' as Href) }}
             />
           ) : error ? (
             <EmptyState
               icon={AlertCircleIcon}
               tone="error"
-              title="앨범을 불러오지 못했어요"
-              description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-              action={{ label: '다시 시도', onPress: () => (mine ? mineAlbums.refetch() : void browse.refetch()) }}
+              title={t('앨범을 불러오지 못했어요')}
+              description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+              action={{ label: t('다시 시도'), onPress: () => (mine ? mineAlbums.refetch() : void browse.refetch()) }}
             />
           ) : !loading && albums.length === 0 ? (
             <EmptyState
               icon={DiscIcon}
-              title={debounced ? `‘${debounced}’에 맞는 앨범이 없어요` : '이 조건에 맞는 앨범이 없어요'}
-              description="레이블이나 발매 연도를 바꿔 보세요."
-              action={{ label: '필터 초기화', onPress: resetFilters }}
+              title={debounced ? t('‘{q}’에 맞는 앨범이 없어요', { q: debounced }) : t('이 조건에 맞는 앨범이 없어요')}
+              description={t('레이블이나 발매 연도를 바꿔 보세요.')}
+              action={{ label: t('필터 초기화'), onPress: resetFilters }}
             />
           ) : (
             <View className="mt-5">
               {mine && mineAlbums.truncated ? (
                 <Text variant="caption" className="mb-3 text-foreground-subtle">
-                  레퍼토리 연주자 중 최근에 담은 12명의 앨범이에요.
+                  {t('레퍼토리 연주자 중 최근에 담은 12명의 앨범이에요.')}
                 </Text>
               ) : null}
               <AlbumGrid albums={albums} loading={loading} wide={wide} isInRepertoire={isInRepertoire} onOpen={openAlbum} />
               {!mine && browse.isFetchingNextPage ? (
                 <Text variant="caption" className="mt-6 text-center">
-                  더 불러오는 중…
+                  {t('더 불러오는 중…')}
                 </Text>
               ) : null}
             </View>
@@ -353,18 +354,18 @@ function LabelOptions({
   onPick: (label: string | undefined) => void;
 }) {
   if (loading) {
-    return <Text variant="caption" className="px-1 py-2">레이블을 불러오는 중이에요…</Text>;
+    return <Text variant="caption" className="px-1 py-2">{t('레이블을 불러오는 중이에요…')}</Text>;
   }
   if (unavailable || labels.length === 0) {
     return (
       <Text variant="caption" className="px-1 py-2">
-        레이블 목록을 준비하고 있어요. 검색 칸에 레이블 이름을 넣어도 찾을 수 있어요.
+        {t('레이블 목록을 준비하고 있어요. 검색 칸에 레이블 이름을 넣어도 찾을 수 있어요.')}
       </Text>
     );
   }
   return (
     <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-      <OptionRow label="모든 레이블" selected={current === undefined} onPress={() => onPick(undefined)} />
+      <OptionRow label={t('모든 레이블')} selected={current === undefined} onPress={() => onPick(undefined)} />
       {labels.map((item) => (
         <Pressable
           key={item.label}
