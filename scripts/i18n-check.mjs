@@ -8,7 +8,7 @@ import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const SOURCE_DIRS = ['app', 'components', 'hooks', 'lib'];
-// 운영자만 보는 화면, 목업, 사전 자체는 뺀다
+// 목업과 사전 자체는 뺀다
 const SKIP = [
   'lib/i18n/',
   'lib/data/mockDatabase.ts',
@@ -18,8 +18,6 @@ const SKIP = [
   'lib/data/composers.ts',
   'lib/data/artists.ts',
   'lib/data/pieces.ts',
-  'components/admin/',
-  'app/compare-admin.tsx',
 ];
 const HANGUL = /[가-힣]/;
 
