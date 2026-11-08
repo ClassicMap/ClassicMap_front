@@ -1,31 +1,41 @@
 import { t, useLocale } from '@/lib/i18n';
-import { comparePlayer, type PlayerSlot, useComparePlayer } from '@/lib/player/compare-player-store';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 
-interface Frame {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  /** 스크롤 영역 밖으로 나간 만큼 잘라 낸다 (위·오른쪽·아래·왼쪽) */
-  clip: [number, number, number, number];
-  radius: number;
+/** 영상이 지금 들어가 있는 자리의 모양 */
+interface Placement {
+  kind: 'slot' | 'mini' | 'parked';
   fit: 'cover' | 'contain';
+  radius: number;
   controls: boolean;
-  kind: 'slot' | 'mini';
 }
 
-const HIDDEN: Frame = {
-  left: -10000,
-  top: 0,
-  width: 16,
-  height: 9,
-  clip: [0, 0, 0, 0],
-  radius: 0,
-  fit: 'cover',
-  controls: false,
-  kind: 'mini',
-};
+const PARKED: Placement = { kind: 'parked', fit: 'cover', radius: 0, controls: false };
+
+function samePlacement(a: Placement, b: Placement): boolean {
+  return a.kind === b.kind && a.fit === b.fit && a.radius === b.radius && a.controls === b.controls;
+}
+
+type MovableParent = HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void };
+
+/**
+ * 영상 무대를 다른 자리로 옮긴다. 같은 task 안에서 다시 붙이면 브라우저가 재생을 멈추지 않는다.
+ * moveBefore 가 있으면 그 상태(재생·포커스)를 더 온전히 지킨다
+ */
+function moveInto(target: HTMLElement, stage: HTMLElement) {
+  if (stage.parentElement === target) return;
+  const parent = target as MovableParent;
+  if (typeof parent.moveBefore === 'function' && stage.isConnected && target.isConnected) {
+    try {
+      parent.moveBefore(stage, null);
+      return;
+    } catch {
+      // 옮길 수 없는 조합이면 그냥 붙인다
+    }
+  }
+  target.appendChild(stage);
+}
 
 /**
  * 화면에 실제로 보이는 자리인가. 탭 내비게이터는 떠난 화면을 지우지 않고 aria-hidden 으로 뒤에 숨겨 두므로
@@ -41,58 +51,11 @@ function isShown(element: HTMLElement): boolean {
   return true;
 }
 
-/** 넘치는 부분을 자르는 조상들 (스크롤 영역). 이 사각형들과 겹치는 부분만 보인다 */
-function clippingAncestors(element: HTMLElement): HTMLElement[] {
-  const found: HTMLElement[] = [];
-  let node = element.parentElement;
-  while (node && node !== document.body) {
-    const style = window.getComputedStyle(node);
-    if (style.overflowX !== 'visible' || style.overflowY !== 'visible') found.push(node);
-    node = node.parentElement;
-  }
-  return found;
-}
-
-function frameFor(element: HTMLElement, ancestors: HTMLElement[], base: Omit<Frame, 'left' | 'top' | 'width' | 'height' | 'clip'>): Frame {
-  const rect = element.getBoundingClientRect();
-  let top = rect.top;
-  let right = rect.right;
-  let bottom = rect.bottom;
-  let left = rect.left;
-  for (const ancestor of ancestors) {
-    const box = ancestor.getBoundingClientRect();
-    top = Math.max(top, box.top);
-    right = Math.min(right, box.right);
-    bottom = Math.min(bottom, box.bottom);
-    left = Math.max(left, box.left);
-  }
-  const clip: [number, number, number, number] = [
-    Math.max(0, top - rect.top),
-    Math.max(0, rect.right - right),
-    Math.max(0, rect.bottom - bottom),
-    Math.max(0, left - rect.left),
-  ];
-  return { ...base, left: rect.left, top: rect.top, width: rect.width, height: rect.height, clip };
-}
-
-function sameFrame(a: Frame, b: Frame): boolean {
-  return (
-    a.left === b.left &&
-    a.top === b.top &&
-    a.width === b.width &&
-    a.height === b.height &&
-    a.radius === b.radius &&
-    a.fit === b.fit &&
-    a.controls === b.controls &&
-    a.kind === b.kind &&
-    a.clip.every((value, index) => value === b.clip[index])
-  );
-}
-
 /**
- * 웹 비교 영상은 앱 전체에 <video> 하나다. 라우트 밖(루트)에 두고, 비교 화면이 낸 자리(슬롯)나
- * 미니 플레이어의 작은 자리 위에 화면 좌표로 겹쳐 띄운다. 요소를 옮겨 붙이지 않으니 화면을
- * 오가도 재생이 끊기지 않는다.
+ * 웹 비교 영상은 앱 전체에 <video> 하나다. 라우트 밖(루트)에서 한 번 만든 무대(stage)에 그리고,
+ * 그 무대를 비교 화면이 낸 자리(슬롯)나 미니 플레이어의 작은 자리 안으로 DOM 째 옮긴다.
+ * 자리 안에 들어가 있으니 스크롤·잘림·둥근 모서리를 브라우저가 그대로 처리하고,
+ * 요소를 새로 만들지 않으니 화면을 오가도 재생이 끊기지 않는다.
  */
 export function ComparePlayerHost() {
   useLocale();
@@ -102,11 +65,23 @@ export function ComparePlayerHost() {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const wrapperRef = React.useRef<HTMLDivElement | null>(null);
   const overlayRef = React.useRef<HTMLDivElement | null>(null);
-  const [frame, setFrame] = React.useState<Frame>(HIDDEN);
+  const parkingRef = React.useRef<HTMLDivElement | null>(null);
+  // 정적 렌더링과 어긋나지 않게 무대는 화면에 붙은 뒤 만든다
+  const [stage, setStage] = React.useState<HTMLDivElement | null>(null);
+  const [placement, setPlacement] = React.useState<Placement>(PARKED);
   const [failed, setFailed] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
   const performanceId = current?.performanceId ?? null;
   const clipUrl = current?.clipUrl ?? null;
+
+  React.useLayoutEffect(() => {
+    const element = document.createElement('div');
+    // 무대 자체는 누름을 받지 않는다. 조작부가 있는 자리에서만 안쪽 영상이 받는다
+    element.style.cssText = 'position:absolute;inset:0;overflow:hidden;pointer-events:none;';
+    parkingRef.current?.appendChild(element);
+    setStage(element);
+    return () => element.remove();
+  }, []);
 
   // 주소를 바꾸면 브라우저가 새 영상을 싣기 전에 0초 위치를 먼저 알린다. 그대로 적으면 새 연주의
   // 기억해 둔 위치가 0으로 덮이므로, 메타데이터를 받아 위치를 잡은 뒤부터만 위치를 적는다
@@ -120,7 +95,7 @@ export function ComparePlayerHost() {
   React.useEffect(() => {
     const wrapper = wrapperRef.current;
     const overlay = overlayRef.current;
-    if (!wrapper || !overlay) return;
+    if (!stage || !wrapper || !overlay) return;
     const unregister = comparePlayer.registerHost({
       overlay,
       requestFullscreen: () => wrapper.requestFullscreen(),
@@ -131,12 +106,12 @@ export function ComparePlayerHost() {
       unregister();
       document.removeEventListener('fullscreenchange', onChange);
     };
-  }, []);
+  }, [stage]);
 
   // 미디어 손잡이: 지금 트랙이 바뀔 때마다 새로 건다 (요소는 그대로)
   React.useEffect(() => {
     const video = videoRef.current;
-    if (!video || performanceId === null) return;
+    if (!stage || !video || performanceId === null) return;
     const id = performanceId;
     return comparePlayer.registerMedia({
       performanceId: id,
@@ -152,98 +127,85 @@ export function ComparePlayerHost() {
         video.muted = muted;
       },
     });
-  }, [performanceId, reloadKey]);
+  }, [stage, performanceId, reloadKey]);
 
   // 집중 비교가 열리면 쉰다
   React.useEffect(() => {
     if (focus) videoRef.current?.pause();
   }, [focus]);
 
-  // 자리 추적: 보이는 슬롯 → 미니 자리 → 숨김. 스크롤·크기 변화를 매 프레임 따라간다
-  React.useEffect(() => {
+  // 자리 고르기: 보이는 슬롯 → 미니 자리 → 주차. 자리가 바뀔 때만 무대를 옮긴다.
+  // 자리가 등록·해제되면 바로(같은 커밋 안에서) 옮겨, 사라지는 자리와 함께 영상이 문서에서 빠지지 않게 한다.
+  // 화면이 aria-hidden 으로 숨는 것은 등록 변화가 없어 매 프레임 가볍게 확인한다
+  React.useLayoutEffect(() => {
+    const parking = parkingRef.current;
+    if (!stage || !parking) return;
     let raf = 0;
-    let lastFrame = HIDDEN;
-    let ancestorsFor: HTMLElement | null = null;
-    let ancestors: HTMLElement[] = [];
+    let last = PARKED;
 
-    const pickSlot = (): PlayerSlot | null => {
-      if (performanceId === null) return null;
+    const choose = (): { element: HTMLElement; placement: Placement } => {
+      if (performanceId === null || comparePlayer.getState().focus) return { element: parking, placement: PARKED };
       for (const slot of comparePlayer.getSlots()) {
-        if (slot.performanceId === performanceId && isShown(slot.element)) return slot;
+        if (slot.performanceId === performanceId && isShown(slot.element)) {
+          return {
+            element: slot.element,
+            placement: { kind: 'slot', fit: slot.fit, radius: slot.radius, controls: slot.controls },
+          };
+        }
       }
-      return null;
+      const mini = comparePlayer.getMiniTarget();
+      if (mini && isShown(mini)) {
+        return { element: mini, placement: { kind: 'mini', fit: 'cover', radius: 6, controls: false } };
+      }
+      return { element: parking, placement: PARKED };
+    };
+
+    const place = () => {
+      // 전체 화면이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다.
+      // 전체 화면 요소를 옮기면 전체 화면이 풀리므로 그대로 둔다
+      if (document.fullscreenElement && stage.contains(document.fullscreenElement)) {
+        comparePlayer.reportSurface('slot');
+        return;
+      }
+      const next = choose();
+      moveInto(next.element, stage);
+      stage.style.borderRadius = `${next.placement.radius}px`;
+      comparePlayer.reportSurface(next.placement.kind === 'parked' ? 'none' : next.placement.kind);
+      if (!samePlacement(next.placement, last)) {
+        last = next.placement;
+        setPlacement(next.placement);
+      }
     };
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
-      // 전체 화면이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다
-      if (document.fullscreenElement && document.fullscreenElement === wrapperRef.current) {
-        comparePlayer.reportSurface('slot');
-        return;
-      }
-      let next = HIDDEN;
-      let surface: 'slot' | 'mini' | 'none' = 'none';
-      const slot = comparePlayer.getState().focus ? null : pickSlot();
-      if (slot) {
-        if (ancestorsFor !== slot.element) {
-          ancestorsFor = slot.element;
-          ancestors = clippingAncestors(slot.element);
-        }
-        next = frameFor(slot.element, ancestors, {
-          radius: slot.radius,
-          fit: slot.fit,
-          controls: slot.controls,
-          kind: 'slot',
-        });
-        surface = 'slot';
-      } else {
-        const mini = comparePlayer.getMiniTarget();
-        if (mini && performanceId !== null && isShown(mini)) {
-          if (ancestorsFor !== mini) {
-            ancestorsFor = mini;
-            ancestors = clippingAncestors(mini);
-          }
-          next = frameFor(mini, ancestors, { radius: 6, fit: 'cover', controls: false, kind: 'mini' });
-          surface = 'mini';
-        }
-      }
-      comparePlayer.reportSurface(surface);
-      if (!sameFrame(next, lastFrame)) {
-        lastFrame = next;
-        setFrame(next);
-      }
+      place();
     };
+    place();
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [performanceId]);
+    const unsubscribe = comparePlayer.subscribeSurface(place);
+    return () => {
+      cancelAnimationFrame(raf);
+      unsubscribe();
+    };
+  }, [stage, performanceId]);
 
-  const [clipTop, clipRight, clipBottom, clipLeft] = frame.clip;
-  const clipped = clipTop + clipRight + clipBottom + clipLeft > 0;
-  const hidden = performanceId === null || frame === HIDDEN || Boolean(focus);
+  const hidden = performanceId === null || placement.kind === 'parked' || Boolean(focus);
 
-  return (
+  const player = (
     <div
       ref={wrapperRef}
       aria-hidden={hidden}
       style={
         fullscreen
-          ? { position: 'fixed', inset: 0, background: '#000', zIndex: 40 }
+          ? { position: 'fixed', inset: 0, background: '#000' }
           : {
-              position: 'fixed',
-              left: frame.left,
-              top: frame.top,
-              width: frame.width,
-              height: frame.height,
-              borderRadius: frame.radius,
+              position: 'absolute',
+              inset: 0,
+              borderRadius: placement.radius,
               overflow: 'hidden',
               background: '#000',
-              // 미니 플레이어는 화면 위에 떠 있는 카드라 영상이 그보다 위에 와야 보인다
-              zIndex: frame.kind === 'mini' ? 35 : 20,
-              visibility: hidden ? 'hidden' : 'visible',
-              pointerEvents: frame.controls ? 'auto' : 'none',
-              clipPath: clipped
-                ? `inset(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`
-                : undefined,
+              pointerEvents: placement.controls ? 'auto' : 'none',
             }
       }>
       {clipUrl ? (
@@ -252,9 +214,15 @@ export function ComparePlayerHost() {
           ref={videoRef}
           src={clipUrl}
           playsInline
-          controls={frame.controls && !fullscreen}
+          controls={placement.controls && !fullscreen}
           preload={comparePlayer.getState().restored ? 'metadata' : 'auto'}
-          style={{ width: '100%', height: '100%', objectFit: fullscreen ? 'contain' : frame.fit, display: 'block', background: '#000' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: fullscreen ? 'contain' : placement.fit,
+            display: 'block',
+            background: '#000',
+          }}
           onLoadedMetadata={(event) => {
             if (performanceId === null) return;
             const video = event.currentTarget;
@@ -280,7 +248,7 @@ export function ComparePlayerHost() {
           onError={() => setFailed(true)}
         />
       ) : null}
-      {failed && frame.kind === 'slot' ? (
+      {failed && placement.kind === 'slot' ? (
         <div
           style={{
             position: 'absolute',
@@ -315,10 +283,28 @@ export function ComparePlayerHost() {
         </div>
       ) : null}
       {/* 화면들이 영상 위에 겹치는 조작부(전체 화면 버튼·전체 화면 조작부)를 여기에 그린다 */}
-      <div
-        ref={overlayRef}
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-      />
+      <div ref={overlayRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
     </div>
+  );
+
+  return (
+    <>
+      {/* 보일 자리가 없을 때 영상을 세워 두는 곳. 화면 밖이라 보이지 않지만 문서 안이라 재생은 이어진다 */}
+      <div
+        ref={parkingRef}
+        aria-hidden
+        style={{
+          position: 'fixed',
+          left: -10000,
+          top: 0,
+          width: 16,
+          height: 9,
+          overflow: 'hidden',
+          visibility: 'hidden',
+          pointerEvents: 'none',
+        }}
+      />
+      {stage ? createPortal(player, stage) : null}
+    </>
   );
 }
