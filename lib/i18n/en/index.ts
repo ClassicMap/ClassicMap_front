@@ -16,6 +16,7 @@ import { LIBRARY } from './library';
 import { ACCOUNT } from './account';
 import { SCREEN } from './screen';
 import { MISC } from './misc';
+import { LEGAL } from './legal';
 
 export const EN: Readonly<Record<string, string>> = {
   ...COMMON,
@@ -32,4 +33,5 @@ export const EN: Readonly<Record<string, string>> = {
   ...ACCOUNT,
   ...SCREEN,
   ...MISC,
+  ...LEGAL,
 };
