@@ -286,7 +286,7 @@ export default function ComposerDetailScreen() {
           image={composer.banner?.url ?? composer.avatarUrl}
           focalPoint={composer.banner?.focalPoint}
           title={composer.name}
-          meta={[composer.period, ...meta]}
+          meta={[composer.period ? t(composer.period) : '', ...meta].filter(Boolean)}
           wide={wide}
           onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
         />

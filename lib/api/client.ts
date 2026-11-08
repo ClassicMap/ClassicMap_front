@@ -126,6 +126,7 @@ interface APIArtistAward {
   artistId: number;
   year: string;
   awardName: string;
+  awardNameEn?: string | null;
   displayOrder: number;
 }
 
@@ -370,7 +371,7 @@ const mapArtist = (api: APIArtist): Artist => ({
     id: award.id,
     artistId: award.artistId,
     year: award.year,
-    awardName: award.awardName,
+    awardName: pick(award.awardName, award.awardNameEn),
     displayOrder: award.displayOrder,
   })),
   concertCount: api.concertCount,

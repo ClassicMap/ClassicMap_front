@@ -409,7 +409,7 @@ export default function HomeScreen() {
             {genreShelves.shelves.map((shelf) => (
               <Chip
                 key={shelf.genre}
-                label={shelf.style.label}
+                label={t(shelf.style.label)}
                 selected={shelfGenre === shelf.genre}
                 onPress={() => setShelfGenre(shelfGenre === shelf.genre ? null : shelf.genre)}
               />

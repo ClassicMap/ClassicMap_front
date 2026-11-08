@@ -261,7 +261,7 @@ function parseComparison(value: unknown): ComparisonPerformance {
     pieceId: requireInteger(value.pieceId, 'pieceId'),
     pieceTitle: pick(requireString(value.pieceTitle, 'pieceTitle'), optionalString(value.pieceTitleEn)),
     sectorId: requireInteger(value.sectorId, 'sectorId'),
-    sectorName: requireString(value.sectorName, 'sectorName'),
+    sectorName: pick(requireString(value.sectorName, 'sectorName'), optionalString(value.sectorNameEn)),
     sourceId: requireInteger(value.sourceId, 'sourceId'),
     startMs,
     videoId: typeof value.videoId === 'string' ? value.videoId : undefined,
