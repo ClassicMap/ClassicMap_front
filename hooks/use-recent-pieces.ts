@@ -1,4 +1,5 @@
 import { relocalize, type NameSidecar } from '@/lib/i18n';
+import { sectorNames } from '@/lib/data/legacy-names';
 import { recordListeningEvent } from '@/lib/data/listening-events';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,23 +45,46 @@ function isRecentPiece(value: unknown): value is RecentPiece {
   );
 }
 
-async function readRecentPieces(): Promise<RecentPiece[]> {
+async function readStoredPieces(): Promise<RecentPiece[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter(isRecentPiece).map((item) =>
-          relocalize({
-            ...item,
-            genre: isPieceGenre(item.genre) ? item.genre : null,
-            coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
-          })
-        )
+      ? parsed.filter(isRecentPiece).map((item) => ({
+          ...item,
+          genre: isPieceGenre(item.genre) ? item.genre : null,
+          coverVideoId: typeof item.coverVideoId === 'string' ? item.coverVideoId : null,
+        }))
       : [];
   } catch {
     return [];
   }
+}
+
+/** 영어판 전에 저장한 항목(names 없음)은 구간 연주에서 두 언어 이름을 받아 채우고 다시 저장한다 */
+async function withNames(items: RecentPiece[]): Promise<RecentPiece[]> {
+  if (items.every((item) => item.names || item.sectorId === null)) return items;
+  let changed = false;
+  const filled = await Promise.all(
+    items.map(async (item) => {
+      if (item.names || item.sectorId === null) return item;
+      const names = await sectorNames(item.sectorId);
+      if (!names) return item;
+      changed = true;
+      return {
+        ...item,
+        names: { pieceTitle: names.pieceTitle, composerName: names.composerName, sectorName: names.sectorName },
+      };
+    })
+  );
+  if (changed) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filled)).catch(() => undefined);
+  return filled;
+}
+
+async function readRecentPieces(): Promise<RecentPiece[]> {
+  const items = await withNames(await readStoredPieces());
+  return items.map((item) => relocalize(item));
 }
 
 export function useRecentPieces() {

@@ -83,7 +83,10 @@ export function usePinnedToday(
 
   const now = new Date();
   const day = localDay(now);
-  const pinned = stored && stored.day === day && stored.context === context ? stored.piece : null;
+  const { locale } = useLocale();
+  // 영어판 전에 고정한 곡은 두 언어 이름이 없어 영어로 못 보인다. 영어로 볼 때는 새 추천으로 다시 고정한다
+  const legacy = Boolean(stored) && !stored?.piece.names && locale === 'en';
+  const pinned = stored && !legacy && stored.day === day && stored.context === context ? stored.piece : null;
   const freshSince = Math.max(startOfDay(now), contextSince.current.since);
   const pinnable = Boolean(candidate) && !source.placeholder && source.updatedAt >= freshSince;
 
@@ -94,7 +97,6 @@ export function usePinnedToday(
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => undefined);
   }, [candidate, context, day, pinnable, pinned, stored]);
 
-  const { locale } = useLocale();
   const shown = pinned ?? candidate;
   // 고정해 둔 곡은 고를 때 언어로 이름이 저장돼 있다. 남겨 둔 두 언어 값으로 지금 언어를 다시 고른다
   const localized = React.useMemo(() => (shown ? relocalizeRecommended(shown) : shown), [shown, locale]);
