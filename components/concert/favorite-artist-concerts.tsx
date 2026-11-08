@@ -2,6 +2,7 @@ import { ConcertCard } from '@/components/concert/concert-card';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { type FavoriteArtistRef, useFavoriteArtistConcerts } from '@/lib/query/hooks/useConcerts';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -28,7 +29,9 @@ function FeaturingLine({ artists }: { artists: FavoriteArtistRef[] }) {
         ))}
       </View>
       <Text numberOfLines={1} className="min-w-0 flex-1 text-caption font-medium text-primary">
-        {rest.length > 0 ? `${first.name} 외 ${rest.length}명` : first.name}
+        {rest.length > 0
+          ? t('{name} 외 {count}명', { name: first.name, count: rest.length })
+          : first.name}
       </Text>
     </View>
   );
@@ -60,9 +63,9 @@ export function FavoriteArtistConcerts({ artists, from, cardWidth }: FavoriteArt
   if (isError) {
     return (
       <View className="mt-7 flex-row items-center gap-3">
-        <Text variant="caption">찜한 아티스트 공연을 불러오지 못했어요.</Text>
+        <Text variant="caption">{t('찜한 아티스트 공연을 불러오지 못했어요.')}</Text>
         <Pressable onPress={refetch} accessibilityRole="button">
-          <Text className="text-caption font-semibold text-primary">다시 시도</Text>
+          <Text className="text-caption font-semibold text-primary">{t('다시 시도')}</Text>
         </Pressable>
       </View>
     );
@@ -73,8 +76,10 @@ export function FavoriteArtistConcerts({ artists, from, cardWidth }: FavoriteArt
   return (
     <View className="mt-7">
       <View className="flex-row items-baseline gap-2.5">
-        <Text className="text-[18px] font-bold text-foreground">찜한 아티스트 공연</Text>
-        <Text variant="caption">{items.length}개 · 출연진에 이름이 있는 공연이에요</Text>
+        <Text className="text-[18px] font-bold text-foreground">{t('찜한 아티스트 공연')}</Text>
+        <Text variant="caption">
+          {t('{count}개 · 출연진에 이름이 있는 공연이에요', { count: items.length })}
+        </Text>
       </View>
       <ScrollView
         horizontal

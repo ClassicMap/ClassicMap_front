@@ -2,6 +2,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { t } from '@/lib/i18n';
 import type { TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -46,8 +47,8 @@ export function vendorDomain(url: string): string {
 export function openVendorUrl(url: string) {
   Linking.openURL(url).catch(() => {
     Alert.alert(
-      '예매 페이지를 열지 못했어요',
-      '잠시 뒤 다시 시도하거나 판매처 사이트에서 공연을 찾아 주세요.'
+      t('예매 페이지를 열지 못했어요'),
+      t('잠시 뒤 다시 시도하거나 판매처 사이트에서 공연을 찾아 주세요.')
     );
   });
 }
@@ -123,7 +124,7 @@ export function TicketVendorsModal({
           style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: progress }}>
           <Pressable
             onPress={onClose}
-            accessibilityLabel="예매처 닫기"
+            accessibilityLabel={t('예매처 닫기')}
             style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.55)' }}
             className="web:cursor-default"
           />
@@ -139,7 +140,7 @@ export function TicketVendorsModal({
             ref={panelRef}
             role="dialog"
             aria-modal
-            aria-label="예매처 고르기"
+            aria-label={t('예매처 고르기')}
             tabIndex={-1}
             style={
               dialog
@@ -166,7 +167,7 @@ export function TicketVendorsModal({
                   />
                   <View className="min-w-0 flex-1">
                     <Text variant="caption" className="font-semibold text-primary">
-                      예매하기
+                      {t('예매하기')}
                     </Text>
                     <Text numberOfLines={2} className="mt-0.5 text-body font-bold text-foreground">
                       {summary.title}
@@ -185,13 +186,13 @@ export function TicketVendorsModal({
                 </>
               ) : (
                 <Text className="min-w-0 flex-1 text-title-3 font-bold text-foreground">
-                  예매하기
+                  {t('예매하기')}
                 </Text>
               )}
               <Pressable
                 onPress={onClose}
                 accessibilityRole="button"
-                accessibilityLabel="닫기"
+                accessibilityLabel={t('닫기')}
                 hitSlop={8}
                 className="-mr-1.5 -mt-1 size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
                 <Icon as={XIcon} size={18} className="text-foreground-muted" />
@@ -208,16 +209,16 @@ export function TicketVendorsModal({
                 <View className="items-center gap-2 rounded-xl bg-surface-2 px-4 py-6">
                   <Icon as={TicketIcon} size={22} className="text-foreground-subtle" />
                   <Text className="text-body-sm font-semibold text-foreground">
-                    아직 등록된 예매처가 없어요
+                    {t('아직 등록된 예매처가 없어요')}
                   </Text>
                   <Text variant="caption" className="text-center">
-                    공연장이나 주최 측 사이트에서 예매 일정을 확인해 주세요.
+                    {t('공연장이나 주최 측 사이트에서 예매 일정을 확인해 주세요.')}
                   </Text>
                 </View>
               ) : (
                 <>
                   <Text variant="caption" className="mb-2 font-semibold text-foreground-subtle">
-                    예매처 {sorted.length}곳
+                    {t('예매처 {count}곳', { count: sorted.length })}
                   </Text>
                   <View className="gap-2">
                     {sorted.map((vendor) => (
@@ -229,7 +230,9 @@ export function TicketVendorsModal({
             </ScrollView>
 
             <Text variant="caption" className="px-5 pb-5 pt-3 text-foreground-subtle">
-              예매는 각 판매처 사이트에서 진행돼요. 좌석과 가격은 판매처에서 한 번 더 확인해 주세요.
+              {t(
+                '예매는 각 판매처 사이트에서 진행돼요. 좌석과 가격은 판매처에서 한 번 더 확인해 주세요.'
+              )}
             </Text>
           </View>
         </Animated.View>
@@ -244,7 +247,7 @@ function VendorRow({ vendor }: { vendor: TicketVendor }) {
     <Pressable
       onPress={() => openVendorUrl(vendor.vendorUrl)}
       accessibilityRole="link"
-      accessibilityLabel={`${name}에서 예매하기, 새 창으로 열려요`}
+      accessibilityLabel={t('{name}에서 예매하기, 새 창으로 열려요', { name })}
       className="group flex-row items-center gap-3 rounded-xl border border-border px-4 py-3.5 active:bg-surface-2 web:transition-colors web:hover:border-border-strong web:hover:bg-surface-2">
       <View className="size-9 items-center justify-center rounded-lg bg-surface-2 web:group-hover:bg-surface-3">
         <Icon as={TicketIcon} size={17} className="text-foreground-muted" />
@@ -258,7 +261,7 @@ function VendorRow({ vendor }: { vendor: TicketVendor }) {
         </Text>
       </View>
       <View className="flex-row items-center gap-1">
-        <Text className="text-caption font-semibold text-primary">예매</Text>
+        <Text className="text-caption font-semibold text-primary">{t('예매')}</Text>
         <Icon
           as={Platform.OS === 'web' ? ExternalLinkIcon : ChevronRightIcon}
           size={15}

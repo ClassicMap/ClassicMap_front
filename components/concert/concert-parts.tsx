@@ -3,6 +3,7 @@ import { ImageLightbox } from '@/components/concert/image-lightbox';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { msg, t } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/utils/image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import {
@@ -15,7 +16,35 @@ import { Maximize2Icon } from 'lucide-react-native';
 import * as React from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = [
+  msg('weekday::일'),
+  msg('weekday::월'),
+  msg('weekday::화'),
+  msg('weekday::수'),
+  msg('weekday::목'),
+  msg('weekday::금'),
+  msg('weekday::토'),
+];
+
+const MONTHS = [
+  msg('month::1'),
+  msg('month::2'),
+  msg('month::3'),
+  msg('month::4'),
+  msg('month::5'),
+  msg('month::6'),
+  msg('month::7'),
+  msg('month::8'),
+  msg('month::9'),
+  msg('month::10'),
+  msg('month::11'),
+  msg('month::12'),
+];
+
+/** 한국어는 숫자 월(`9`→`9월`), 영어는 줄임 월 이름(`Sep`). `{month}월` 자리에 넣는다 */
+export function monthLabel(date: Date): string {
+  return t(MONTHS[date.getMonth()]);
+}
 
 export function parseDay(value?: string): Date | null {
   if (!value) return null;
@@ -27,9 +56,13 @@ export function parseDay(value?: string): Date | null {
 
 export function formatDay(value?: string, withYear = false): string {
   const date = parseDay(value);
-  if (!date) return '날짜 미정';
-  const base = `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]})`;
-  return withYear ? `${date.getFullYear()}년 ${base}` : base;
+  if (!date) return t('날짜 미정');
+  const base = t('{month}월 {day}일 ({weekday})', {
+    month: monthLabel(date),
+    day: date.getDate(),
+    weekday: t(WEEKDAYS[date.getDay()]),
+  });
+  return withYear ? t('{year}년 {base}', { year: date.getFullYear(), base }) : base;
 }
 
 /** 오늘까지 남은 날. 지났으면 null */
@@ -45,8 +78,12 @@ export function daysLeft(value?: string): number | null {
 /** 목록용 짧은 날짜: `9.29 (화)` */
 export function formatShortDay(value?: string): string {
   const date = parseDay(value);
-  if (!date) return '날짜 미정';
-  return `${date.getMonth() + 1}.${date.getDate()} (${WEEKDAYS[date.getDay()]})`;
+  if (!date) return t('날짜 미정');
+  return t('{month}.{day} ({weekday})', {
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+    weekday: t(WEEKDAYS[date.getDay()]),
+  });
 }
 
 /**
@@ -91,6 +128,12 @@ export interface SeatPrice {
   price: string;
 }
 
+/** `R석` 같은 등급은 `R seats` 로, 흔한 좌석 이름은 사전에서. 모르는 이름은 원문 그대로 */
+function seatLabel(seat: string): string {
+  const grade = seat.match(/^([A-Za-z0-9+]+)석$/);
+  return grade ? t('{grade}석', { grade: grade[1] }) : t(seat);
+}
+
 /** `R석 150,000원, S석 135,000원` → 좌석별 줄. 모양이 다르면 원문 한 줄로 둔다. */
 export function parsePrices(priceInfo?: string): SeatPrice[] {
   if (!priceInfo) return [];
@@ -100,17 +143,19 @@ export function parsePrices(priceInfo?: string): SeatPrice[] {
     .filter(Boolean)
     .map((part) => {
       const match = part.match(/^(.+?)\s+([\d,]+원)$/);
-      return match ? { seat: match[1], price: match[2] } : { seat: part, price: '' };
+      return match
+        ? { seat: seatLabel(match[1]), price: t('{amount}원', { amount: match[2].slice(0, -1) }) }
+        : { seat: seatLabel(part), price: '' };
     });
 }
 
 export function concertStatusLabel(concert: Concert): { label: string; tone: 'accent' | 'neutral' | 'danger' | 'success' } {
-  if (concert.status === 'cancelled') return { label: '취소', tone: 'danger' };
+  if (concert.status === 'cancelled') return { label: t('status::취소'), tone: 'danger' };
   const days = daysLeft(concert.startDate);
   const endDays = daysLeft(concert.endDate ?? concert.startDate);
-  if (days === 0 || (days === null && endDays !== null)) return { label: '공연 중', tone: 'success' };
-  if (days === null) return { label: '종료', tone: 'neutral' };
-  return { label: `D-${days}`, tone: 'accent' };
+  if (days === 0 || (days === null && endDays !== null)) return { label: t('공연 중'), tone: 'success' };
+  if (days === null) return { label: t('종료'), tone: 'neutral' };
+  return { label: t('D-{days}', { days, count: days }), tone: 'accent' };
 }
 
 /** 출연자 칩: 이름이 아니라 공연-아티스트 연결로 아티스트 상세에 간다 */
@@ -147,7 +192,7 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
   return (
     <View>
       <Text variant="headline" className="mb-3">
-        출연자의 연주 비교
+        {t('출연자의 연주 비교')}
       </Text>
       {horizontal ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
@@ -157,7 +202,7 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
         <View className="gap-2">{cards}</View>
       )}
       <Pressable onPress={() => router.push(`/artist/${first.artistId}` as Href)} className="mt-3 self-start">
-        <Text variant="label" className="text-foreground-muted">{`${first.artistName}의 연주 비교 전체 보기`}</Text>
+        <Text variant="label" className="text-foreground-muted">{t('{name}의 연주 비교 전체 보기', { name: first.artistName })}</Text>
       </Pressable>
     </View>
   );
@@ -182,7 +227,7 @@ function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; co
           {item.sectorName === '전곡' ? item.pieceTitle : item.sectorName}
         </Text>
         <Text variant="caption" numberOfLines={1} className="mt-0.5">
-          {`${item.composerName}${piece ? ` · ${piece.performerCount}명` : ''}`}
+          {`${item.composerName}${piece ? ` · ${t('performer::{count}명', { count: piece.performerCount })}` : ''}`}
         </Text>
       </View>
       {!compact ? (
@@ -210,8 +255,8 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
   return (
     <View>
       <View className="mb-3 flex-row items-baseline gap-2">
-        <Text variant="headline">공연 소개</Text>
-        {sorted.length > 1 ? <Text variant="caption">이미지 {sorted.length}장</Text> : null}
+        <Text variant="headline">{t('공연 소개')}</Text>
+        {sorted.length > 1 ? <Text variant="caption">{t('이미지 {count}장', { count: sorted.length })}</Text> : null}
       </View>
       <View className="relative w-full max-w-[420px] overflow-hidden rounded-md" style={expanded ? undefined : { maxHeight: 330 }}>
         {uris.map((uri, index) => (
@@ -219,7 +264,7 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
             key={sorted[index].id}
             onPress={() => setViewing(index)}
             accessibilityRole="imagebutton"
-            accessibilityLabel={`공연 소개 이미지 ${index + 1} 크게 보기`}
+            accessibilityLabel={t('공연 소개 이미지 {n} 크게 보기', { n: index + 1 })}
             className="web:cursor-zoom-in">
             <ScaledImage uri={uri} />
           </Pressable>
@@ -238,7 +283,7 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
           className="flex-row items-center gap-1.5 rounded-full bg-foreground px-4 py-1.5 active:opacity-80 web:hover:opacity-90">
           <Icon as={Maximize2Icon} size={13} className="text-background" />
           <Text variant="label" className="text-background">
-            크게 보기
+            {t('크게 보기')}
           </Text>
         </Pressable>
         <Pressable
@@ -246,7 +291,7 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
           accessibilityRole="button"
           className="rounded-full border border-border-strong px-4 py-1.5 web:hover:bg-surface-2">
           <Text variant="label" className="text-foreground">
-            {expanded ? '소개 접기' : '여기서 펼치기'}
+            {expanded ? t('소개 접기') : t('여기서 펼치기')}
           </Text>
         </Pressable>
       </View>

@@ -3,7 +3,7 @@ import { ConcertCard } from '@/components/concert/concert-card';
 import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/components/concert/concert-filter-bar';
 import type { ArtistChoice } from '@/components/concert/concert-filter-panels';
 import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
-import { parseDay, shortVenue } from '@/components/concert/concert-parts';
+import { monthLabel, parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -28,6 +28,7 @@ import {
 import { getRankForeground } from '@/lib/design/rank-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { msg, t } from '@/lib/i18n';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
@@ -45,7 +46,18 @@ import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
 const MIN_VISIBLE = 12;
 const AUTOFILL_PAGE_LIMIT = 8;
 
-const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+const WEEKDAYS = [
+  msg('일요일'),
+  msg('월요일'),
+  msg('화요일'),
+  msg('수요일'),
+  msg('목요일'),
+  msg('금요일'),
+  msg('토요일'),
+];
+
+/** `2026-10-03` → `10.03` */
+const monthDay = (day: string) => t('{month}.{day}', { month: day.slice(5, 7), day: day.slice(8, 10) });
 
 interface DateGroup {
   key: string;
@@ -70,14 +82,18 @@ function groupByDay(concerts: Concert[], fromDay: string): DateGroup[] {
     const diff = Math.round((start.getTime() - today.getTime()) / 86_400_000);
     let key: string;
     let title: string;
-    let subtitle = `${start.getMonth() + 1}월 ${start.getDate()}일 ${WEEKDAYS[start.getDay()]}`;
+    let subtitle = t('{month}월 {day}일 {weekday}', {
+      month: monthLabel(start),
+      day: start.getDate(),
+      weekday: t(WEEKDAYS[start.getDay()]),
+    });
     if (diff < 0) {
       key = 'ongoing';
-      title = '공연 중';
-      subtitle = '이미 시작한 여러 날 공연';
+      title = t('공연 중');
+      subtitle = t('이미 시작한 여러 날 공연');
     } else {
       key = day;
-      title = diff === 0 ? '오늘' : diff === 1 ? '내일' : subtitle;
+      title = diff === 0 ? t('오늘') : diff === 1 ? t('내일') : subtitle;
       if (diff > 1) subtitle = '';
     }
     const group = groups.get(key) ?? { key, title, subtitle, concerts: [] };
@@ -220,18 +236,19 @@ export default function ConcertsScreen() {
   const boxofficePanel =
     kopisCode === undefined ? null : (
       <View>
-        <Text variant="headline">많이 찾는 공연</Text>
+        <Text variant="headline">{t('많이 찾는 공연')}</Text>
         <Text variant="caption" className="mb-2 mt-1 text-foreground-subtle">
           {boxoffice[0]
-            ? `KOPIS 예매 순위 · ${boxoffice[0].syncStartDate.slice(5).replace('-', '.')}–${boxoffice[0].syncEndDate
-                .slice(5)
-                .replace('-', '.')}`
-            : 'KOPIS 예매 순위'}
+            ? t('KOPIS 예매 순위 · {from}–{to}', {
+                from: monthDay(boxoffice[0].syncStartDate),
+                to: monthDay(boxoffice[0].syncEndDate),
+              })
+            : t('KOPIS 예매 순위')}
         </Text>
         {boxofficeQuery.isLoading ? (
           <Skeleton className="h-20 w-full rounded-lg" />
         ) : boxoffice.length === 0 ? (
-          <Text variant="caption">이 지역 순위가 아직 없어요.</Text>
+          <Text variant="caption">{t('이 지역 순위가 아직 없어요.')}</Text>
         ) : (
           <View className={cn(wide ? 'gap-1' : 'flex-row gap-3')}>
             {boxoffice.map((item: BoxofficeConcert) => (
@@ -253,7 +270,7 @@ export default function ConcertsScreen() {
                     {item.title}
                   </Text>
                   <Text variant="caption" numberOfLines={1} className="mt-1">
-                    {[item.startDate.slice(5).replace('-', '.'), shortVenue(item.facilityName)].filter(Boolean).join(' · ')}
+                    {[monthDay(item.startDate), shortVenue(item.facilityName)].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
               </Pressable>
@@ -282,16 +299,16 @@ export default function ConcertsScreen() {
         scrollEventThrottle={200}>
         <View className="flex-row items-end justify-between gap-4">
           <View className="min-w-0 flex-1">
-            <Text variant={wide ? 'display' : 'title1'}>공연</Text>
+            <Text variant={wide ? 'display' : 'title1'}>{t('공연')}</Text>
             <Text variant="caption" className="mt-1">
-              클래식 공연 일정 · KOPIS 공연예술통합전산망 제공
+              {t('클래식 공연 일정 · KOPIS 공연예술통합전산망 제공')}
             </Text>
           </View>
           {wide ? <ConcertSearchField value={query} onChange={setQuery} className="w-[300px]" /> : null}
           {canEdit ? (
             <Button variant="outline" size="sm" onPress={() => setShowForm(true)}>
               <Icon as={PlusIcon} size={14} className="text-foreground" />
-              <Text>공연 추가</Text>
+              <Text>{t('공연 추가')}</Text>
             </Button>
           ) : null}
         </View>
@@ -344,9 +361,9 @@ export default function ConcertsScreen() {
               <EmptyState
                 icon={AlertCircleIcon}
                 tone="error"
-                title="공연 목록을 불러오지 못했어요"
-                description="연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요."
-                action={{ label: '다시 시도', onPress: () => concertsQuery.refetch() }}
+                title={t('공연 목록을 불러오지 못했어요')}
+                description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+                action={{ label: t('다시 시도'), onPress: () => concertsQuery.refetch() }}
               />
             ) : groups.length === 0 &&
               (concertsQuery.isFetchingNextPage || (concertsQuery.hasNextPage && pageCount < AUTOFILL_PAGE_LIMIT)) ? (
@@ -357,18 +374,24 @@ export default function ConcertsScreen() {
               activeCount > 0 ? (
                 <EmptyState
                   icon={SearchXIcon}
-                  title="조건에 맞는 공연이 없어요"
+                  title={t('조건에 맞는 공연이 없어요')}
                   description={
-                    area ? `${area.label} 말고 다른 지역이나 날짜로 넓혀 보세요.` : '날짜를 넓히거나 조건을 몇 개 빼 보세요.'
+                    area
+                      ? t('{area} 말고 다른 지역이나 날짜로 넓혀 보세요.', { area: area.label })
+                      : t('날짜를 넓히거나 조건을 몇 개 빼 보세요.')
                   }
                   action={
                     concertsQuery.hasNextPage
-                      ? { label: '더 찾아보기', onPress: () => void concertsQuery.fetchNextPage() }
-                      : { label: '필터 초기화', onPress: resetFilter }
+                      ? { label: t('더 찾아보기'), onPress: () => void concertsQuery.fetchNextPage() }
+                      : { label: t('필터 초기화'), onPress: resetFilter }
                   }
                 />
               ) : (
-                <EmptyState icon={TicketIcon} title="예정된 공연이 없어요" description="잠시 뒤 다시 확인해 주세요." />
+                <EmptyState
+                  icon={TicketIcon}
+                  title={t('예정된 공연이 없어요')}
+                  description={t('잠시 뒤 다시 확인해 주세요.')}
+                />
               )
             ) : (
               groups.map((group) => (

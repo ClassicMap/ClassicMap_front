@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeftIcon,
@@ -141,29 +142,29 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
           <View className="flex-row items-center gap-1">
             {Platform.OS === 'web' ? (
               <>
-                <BarButton label="축소" onPress={() => stepZoom(-1)} disabled={zoom <= 1}>
+                <BarButton label={t('축소')} onPress={() => stepZoom(-1)} disabled={zoom <= 1}>
                   <Icon as={MinusIcon} size={18} className="text-white" />
                 </BarButton>
                 <Pressable
                   onPress={() => setZoom(1)}
-                  accessibilityLabel="원래 크기로"
+                  accessibilityLabel={t('원래 크기로')}
                   className="h-9 min-w-14 items-center justify-center rounded-full px-2 web:hover:bg-white/10">
                   <Text variant="mono" className="text-caption text-white/80">
                     {Math.round(zoom * 100)}%
                   </Text>
                 </Pressable>
-                <BarButton label="확대" onPress={() => stepZoom(1)} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
+                <BarButton label={t('확대')} onPress={() => stepZoom(1)} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
                   <Icon as={PlusIcon} size={18} className="text-white" />
                 </BarButton>
                 <View className="mx-1.5 h-5 w-px bg-white/20" />
               </>
             ) : null}
             {uri ? (
-              <BarButton label="원본 이미지 새 창으로 열기" onPress={() => Linking.openURL(uri).catch(() => undefined)}>
+              <BarButton label={t('원본 이미지 새 창으로 열기')} onPress={() => Linking.openURL(uri).catch(() => undefined)}>
                 <Icon as={ExternalLinkIcon} size={17} className="text-white" />
               </BarButton>
             ) : null}
-            <BarButton label="닫기" onPress={onClose}>
+            <BarButton label={t('닫기')} onPress={onClose}>
               <Icon as={XIcon} size={20} className="text-white" />
             </BarButton>
           </View>
@@ -172,8 +173,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
         <View className="flex-1">
           {failed ? (
             <View className="flex-1 items-center justify-center gap-2 px-6">
-              <Text className="text-body font-semibold text-white">이미지를 불러오지 못했어요</Text>
-              <Text className="text-center text-caption text-white/60">원본 열기로 판매처 사이트의 이미지를 확인해 주세요.</Text>
+              <Text className="text-body font-semibold text-white">{t('이미지를 불러오지 못했어요')}</Text>
+              <Text className="text-center text-caption text-white/60">{t('원본 열기로 판매처 사이트의 이미지를 확인해 주세요.')}</Text>
             </View>
           ) : !ratio ? null : Platform.OS === 'web' ? (
             <WebZoomCanvas
@@ -208,7 +209,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
 
         {Platform.OS === 'web' && wide ? (
           <Text className="pb-3 text-center text-caption text-white/45">
-            누르면 확대돼요 · 드래그해서 옮기고 ⌘/Ctrl+휠로 크기를 바꿔요 · Esc로 닫아요
+            {t('누르면 확대돼요 · 드래그해서 옮기고 ⌘/Ctrl+휠로 크기를 바꿔요 · Esc로 닫아요')}
           </Text>
         ) : null}
       </GestureHandlerRootView>
@@ -248,7 +249,7 @@ function NavButton({ side, onPress }: { side: 'left' | 'right'; onPress: () => v
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={side === 'left' ? '이전 이미지' : '다음 이미지'}
+      accessibilityLabel={side === 'left' ? t('이전 이미지') : t('다음 이미지')}
       style={{ position: 'absolute', top: '50%', marginTop: -24, [side]: 12 }}
       className="size-12 items-center justify-center rounded-full bg-black/55 active:bg-black/75 web:hover:bg-black/75">
       <Icon as={side === 'left' ? ChevronLeftIcon : ChevronRightIcon} size={24} className="text-white" />
@@ -368,13 +369,13 @@ function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }
     <View ref={scrollRef} style={{ flex: 1, overflow: 'scroll' }} {...pointerHandlers}>
       <Pressable
         onPress={onBackdrop}
-        accessibilityLabel="닫기"
+        accessibilityLabel={t('닫기')}
         style={{ minWidth: '100%', minHeight: '100%', alignItems: 'center', justifyContent: 'center', padding }}
         className="web:cursor-default">
         <Pressable
           onPress={onImagePress}
           accessibilityRole="imagebutton"
-          accessibilityLabel={zoom > 1 ? '원래 크기로' : '확대하기'}
+          accessibilityLabel={zoom > 1 ? t('원래 크기로') : t('확대하기')}
           className={cn(zoom > 1 ? 'web:cursor-grab web:active:cursor-grabbing' : 'web:cursor-zoom-in')}>
           <Image
             source={{ uri }}
@@ -507,7 +508,7 @@ function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, o
       <View
         collapsable={false}
         style={{ flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}
-        accessibilityHint="두 손가락으로 확대하고, 두 번 톡 치면 2배로 커져요">
+        accessibilityHint={t('두 손가락으로 확대하고, 두 번 톡 치면 2배로 커져요')}>
         <Animated.Image source={{ uri }} resizeMode="contain" style={[{ width, height }, imageStyle]} />
       </View>
     </GestureDetector>

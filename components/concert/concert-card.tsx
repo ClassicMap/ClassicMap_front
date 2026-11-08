@@ -2,6 +2,7 @@ import { concertClock, daysLeft, formatShortDay, shortVenue } from '@/components
 import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Text } from '@/components/ui/text';
+import { t } from '@/lib/i18n';
 import type { Concert } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -33,8 +34,8 @@ export function ConcertCard({ concert, width, showDate = false, footer }: Concer
       className="rounded-md web:hover:opacity-90">
       <View className="relative">
         <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
-        {days === 0 ? <Badge tone="accent" label="오늘" className="absolute left-2 top-2" /> : null}
-        {concert.status === 'cancelled' ? <Badge tone="danger" label="취소" className="absolute left-2 top-2" /> : null}
+        {days === 0 ? <Badge tone="accent" label={t('오늘')} className="absolute left-2 top-2" /> : null}
+        {concert.status === 'cancelled' ? <Badge tone="danger" label={t('status::취소')} className="absolute left-2 top-2" /> : null}
       </View>
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {concert.title}
