@@ -47,11 +47,11 @@ export const LEGAL: Readonly<Record<string, string>> = {
     '- Taste answers and listening history: until the member withdraws or the user deletes them in Settings. Recommendations use only listening history from the last 180 days, and "not interested" marks are used until you delete them.',
   '다. 관련 법령에 의한 정보보유': 'C. Retention required by law',
   '- 계약 또는 청약철회 등에 관한 기록: 5년 (전자상거래 등에서의 소비자보호에 관한 법률)':
-    '- Records of contracts and withdrawal of offers, etc.: 5 years (Act on the Consumer Protection in Electronic Commerce, etc.)',
+    '- Records of contracts and withdrawal of offers, etc.: 5 years (Act on the Consumer Protection in Electronic Commerce)',
   '- 대금결제 및 재화 등의 공급에 관한 기록: 5년 (전자상거래 등에서의 소비자보호에 관한 법률)':
-    '- Records of payment and supply of goods, etc.: 5 years (Act on the Consumer Protection in Electronic Commerce, etc.)',
+    '- Records of payment and supply of goods, etc.: 5 years (Act on the Consumer Protection in Electronic Commerce)',
   '- 소비자의 불만 또는 분쟁처리에 관한 기록: 3년 (전자상거래 등에서의 소비자보호에 관한 법률)':
-    '- Records of consumer complaints or dispute resolution: 3 years (Act on the Consumer Protection in Electronic Commerce, etc.)',
+    '- Records of consumer complaints or dispute resolution: 3 years (Act on the Consumer Protection in Electronic Commerce)',
   '- 웹사이트 방문 기록: 3개월 (통신비밀보호법)':
     '- Website visit records: 3 months (Protection of Communications Secrets Act)',
   '4. 개인정보의 제3자 제공': '4. Provision of personal information to third parties',
