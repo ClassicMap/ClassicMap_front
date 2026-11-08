@@ -18,6 +18,8 @@ const SKIP = [
   'lib/data/composers.ts',
   'lib/data/artists.ts',
   'lib/data/pieces.ts',
+  // 검색 낱말 묶음(화면 문구가 아니다)
+  'lib/utils/search-terms.ts',
 ];
 const HANGUL = /[가-힣]/;
 
