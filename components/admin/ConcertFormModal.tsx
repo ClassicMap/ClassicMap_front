@@ -19,6 +19,7 @@ import {
 import { Text } from '@/components/ui/text';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { useVenueSearch } from '@/lib/hooks/useVenueSearch';
+import { msg, t, useLocale } from '@/lib/i18n';
 import type { Concert } from '@/lib/types/models';
 import { Alert } from '@/lib/utils/alert';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -35,10 +36,10 @@ interface ConcertFormModalProps {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'upcoming', label: '예정' },
-  { value: 'ongoing', label: '진행 중' },
-  { value: 'completed', label: '완료' },
-  { value: 'cancelled', label: '취소됨' },
+  { value: 'upcoming', label: msg('status::예정') },
+  { value: 'ongoing', label: msg('status::진행 중') },
+  { value: 'completed', label: msg('status::완료') },
+  { value: 'cancelled', label: msg('status::취소됨') },
 ];
 
 // 날짜 형식 검증 (YYYY-MM-DD)
@@ -47,6 +48,7 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type ConcertField = 'title' | 'startDate' | 'venueId';
 
 export function ConcertFormModal({ visible, concert, onClose, onSuccess }: ConcertFormModalProps) {
+  useLocale();
   const [title, setTitle] = React.useState('');
   const [composerInfo, setComposerInfo] = React.useState('');
   const [venueId, setVenueId] = React.useState<number | null>(null);
@@ -142,7 +144,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const pickPoster = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('사진 접근 권한이 필요해요', '설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.');
+      Alert.alert(t('사진 접근 권한이 필요해요'), t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.'));
       return;
     }
 
@@ -204,23 +206,23 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         const serverUrl = data.url; // 서버에서 받은 상대 경로: /uploads/...
         setPosterUrl(serverUrl);
         setSelectedPoster(serverUrl); // 미리보기도 서버 경로로 업데이트
-        Alert.alert('포스터를 올렸어요');
+        Alert.alert(t('포스터를 올렸어요'));
       } else {
         throw new Error('Upload failed');
       }
     } catch (error) {
-      Alert.alert('포스터를 올리지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('포스터를 올리지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     }
   };
 
   const errors: FieldErrors<ConcertField> = {
-    title: title ? undefined : '제목을 입력해 주세요.',
+    title: title ? undefined : t('제목을 입력해 주세요.'),
     startDate: !startDate
-      ? '공연일을 골라 주세요.'
+      ? t('공연일을 골라 주세요.')
       : !DATE_PATTERN.test(startDate)
-        ? '날짜는 YYYY-MM-DD 형식이어야 해요. 날짜를 다시 골라 주세요.'
+        ? t('날짜는 YYYY-MM-DD 형식이어야 해요. 날짜를 다시 골라 주세요.')
         : undefined,
-    venueId: venueId ? undefined : '공연장을 골라 주세요.',
+    venueId: venueId ? undefined : t('공연장을 골라 주세요.'),
   };
   const shown: FieldErrors<ConcertField> = attempted ? errors : {};
 
@@ -246,16 +248,16 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
       if (concert) {
         // Update existing concert
         await AdminConcertAPI.update(concert.id, data);
-        Alert.alert('공연을 수정했어요');
+        Alert.alert(t('공연을 수정했어요'));
       } else {
         // Create new concert
         await AdminConcertAPI.create(data);
-        Alert.alert('공연을 추가했어요');
+        Alert.alert(t('공연을 추가했어요'));
       }
       onSuccess();
       onClose();
     } catch (error) {
-      Alert.alert('저장하지 못했어요', '잠시 뒤 다시 시도해 주세요.');
+      Alert.alert(t('저장하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
     } finally {
       setSubmitting(false);
     }
@@ -264,66 +266,66 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const venueLabel = venueId
     ? venueSearchResults.find((v) => v.id === venueId)?.name ||
       pickedVenueName ||
-      `선택됨 · ID ${venueId}`
+      t('선택됨 · ID {id}', { id: venueId })
     : undefined;
 
-  let venueMessage = '공연장 이름을 입력하면 찾아 드려요.';
-  if (venuesLoading) venueMessage = '찾는 중…';
-  else if (venueSearch) venueMessage = '검색 결과가 없어요. 다른 이름으로 찾아보세요.';
+  let venueMessage = t('공연장 이름을 입력하면 찾아 드려요.');
+  if (venuesLoading) venueMessage = t('찾는 중…');
+  else if (venueSearch) venueMessage = t('검색 결과가 없어요. 다른 이름으로 찾아보세요.');
 
   return (
     <FormModal
       visible={visible}
-      title={concert ? '공연 수정' : '공연 추가'}
+      title={concert ? t('공연 수정') : t('공연 추가')}
       subtitle={concert?.title}
       onClose={onClose}
       onSubmit={handleSubmit}
       submitting={submitting}
       error={attempted && hasErrors(errors) ? FORM_INVALID_MESSAGE : undefined}>
-      <FormSection title="포스터">
+      <FormSection title={t('포스터')}>
         <ImageUploadField
-          label="공연 포스터"
+          label={t('공연 포스터')}
           uri={selectedPoster}
           heightRatio={1.5}
           onPick={pickPoster}
-          help="고르면 바로 올라가요. 저장을 눌러야 공연에 반영돼요."
+          help={t('고르면 바로 올라가요. 저장을 눌러야 공연에 반영돼요.')}
         />
       </FormSection>
 
-      <FormSection title="기본 정보">
+      <FormSection title={t('기본 정보')}>
         <TextField
-          label="제목"
+          label={t('제목')}
           required
           value={title}
           onChangeText={setTitle}
-          placeholder="베토벤 교향곡 전곡 연주회"
+          placeholder={t('베토벤 교향곡 전곡 연주회')}
           error={shown.title}
         />
         <TextField
-          label="작곡가·프로그램 정보"
+          label={t('작곡가·프로그램 정보')}
           value={composerInfo}
           onChangeText={setComposerInfo}
-          placeholder="베토벤, 모차르트"
+          placeholder={t('베토벤, 모차르트')}
         />
       </FormSection>
 
-      <FormSection title="일정과 장소">
+      <FormSection title={t('일정과 장소')}>
         <FormRow>
-          <FormField label="공연일" required error={shown.startDate}>
+          <FormField label={t('공연일')} required error={shown.startDate}>
             <PickerTrigger
-              label="공연일"
+              label={t('공연일')}
               value={startDate || undefined}
-              placeholder="날짜를 골라 주세요"
+              placeholder={t('날짜를 골라 주세요')}
               icon={CalendarIcon}
               invalid={Boolean(shown.startDate)}
               onPress={() => setShowDatePicker(true)}
             />
           </FormField>
-          <FormField label="공연 시간">
+          <FormField label={t('공연 시간')}>
             <PickerTrigger
-              label="공연 시간"
+              label={t('공연 시간')}
               value={concertTime ? concertTime.substring(0, 5) : undefined}
-              placeholder="시간을 골라 주세요"
+              placeholder={t('시간을 골라 주세요')}
               icon={ClockIcon}
               onPress={() => setShowTimePicker(true)}
             />
@@ -346,14 +348,16 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
           />
         )}
         {Platform.OS === 'web' ? (
-          <Text variant="caption">웹에서는 날짜와 시간을 아직 고를 수 없어요. 앱에서 입력해 주세요.</Text>
+          <Text variant="caption">
+            {t('웹에서는 날짜와 시간을 아직 고를 수 없어요. 앱에서 입력해 주세요.')}
+          </Text>
         ) : null}
 
-        <FormField label="공연장" required error={shown.venueId}>
+        <FormField label={t('공연장')} required error={shown.venueId}>
           <PickerTrigger
-            label="공연장"
+            label={t('공연장')}
             value={venueLabel}
-            placeholder="공연장을 골라 주세요"
+            placeholder={t('공연장을 골라 주세요')}
             open={showVenuePicker}
             invalid={Boolean(shown.venueId)}
             onPress={() => setShowVenuePicker(!showVenuePicker)}
@@ -363,7 +367,7 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
               search={{
                 value: venueSearch,
                 onChangeText: setVenueSearch,
-                placeholder: '공연장 이름으로 찾기',
+                placeholder: t('공연장 이름으로 찾기'),
               }}>
               {venueSearchResults.length === 0 ? (
                 <PickerMessage>{venueMessage}</PickerMessage>
@@ -390,14 +394,14 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
         </FormField>
       </FormSection>
 
-      <FormSection title="가격과 상태">
+      <FormSection title={t('가격과 상태')}>
         <TextField
-          label="가격 정보"
+          label={t('가격 정보')}
           value={priceInfo}
           onChangeText={setPriceInfo}
-          placeholder="R석 100,000원"
+          placeholder={t('R석 100,000원')}
         />
-        <ChoiceField label="상태" options={STATUS_OPTIONS} value={status} onChange={setStatus} />
+        <ChoiceField label={t('상태')} options={STATUS_OPTIONS} value={status} onChange={setStatus} />
       </FormSection>
     </FormModal>
   );

@@ -1,6 +1,7 @@
 import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { View } from 'react-native';
@@ -186,6 +187,7 @@ export function ChoiceField<T extends string>({
   onChange,
   ...chrome
 }: ChoiceFieldProps<T>) {
+  useLocale();
   const labelId = React.useId();
   return (
     <FormField {...chrome} labelId={labelId}>
@@ -193,7 +195,7 @@ export function ChoiceField<T extends string>({
         {options.map((option) => (
           <Chip
             key={option.value}
-            label={option.label}
+            label={t(option.label)}
             selected={option.value === value}
             onPress={() => onChange(option.value)}
           />

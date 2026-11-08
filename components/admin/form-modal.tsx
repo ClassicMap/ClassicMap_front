@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -17,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** 저장을 눌렀는데 검증에 걸렸을 때 푸터에 띄우는 안내 */
-export const FORM_INVALID_MESSAGE = '표시된 항목을 채우거나 고친 뒤 다시 저장해 주세요.';
+export const FORM_INVALID_MESSAGE = msg('표시된 항목을 채우거나 고친 뒤 다시 저장해 주세요.');
 
 /** 모바일 시트: iOS는 페이지 시트, 안드로이드는 시스템 바 아래까지 그리고 여백은 인셋으로 준다. */
 const SHEET_PROPS: Partial<ModalProps> =
@@ -41,7 +42,7 @@ export interface FormModalProps {
   /** 저장이 아닌 작업(삭제 등)이 진행 중일 때 푸터 버튼만 잠근다 */
   busy?: boolean;
   submitLabel?: string;
-  /** 폼 전체에 대한 오류 안내. 푸터에 띄워 스크롤 위치와 상관없이 보이게 한다 */
+  /** 폼 전체에 대한 오류 안내(한국어 원문). 푸터에 띄워 스크롤 위치와 상관없이 보이게 하고, 그릴 때 t()로 옮긴다 */
   error?: string;
   children: React.ReactNode;
 }
@@ -59,10 +60,11 @@ export function FormModal({
   onSubmit,
   submitting = false,
   busy = false,
-  submitLabel = '저장',
+  submitLabel = t('저장'),
   error,
   children,
 }: FormModalProps) {
+  useLocale();
   const { nav } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const titleId = React.useId();
@@ -96,7 +98,7 @@ export function FormModal({
         variant="ghost"
         size="icon"
         onPress={onClose}
-        accessibilityLabel="닫기"
+        accessibilityLabel={t('닫기')}
         className="rounded-full">
         <Icon as={XIcon} size={18} className="text-foreground-muted" />
       </Button>
@@ -124,7 +126,7 @@ export function FormModal({
         onPress={onClose}
         disabled={locked}
         className={buttonWidth}>
-        <Text>취소</Text>
+        <Text>{t('취소')}</Text>
       </Button>
       <Button
         size={buttonSize}
@@ -132,13 +134,13 @@ export function FormModal({
         disabled={locked}
         accessibilityState={{ busy: submitting, disabled: locked }}
         className={buttonWidth}>
-        <Text>{submitting ? '저장 중…' : submitLabel}</Text>
+        <Text>{submitting ? t('저장 중…') : submitLabel}</Text>
       </Button>
     </>
   );
   const errorText = error ? (
     <Text variant="caption" role="alert" className="text-destructive">
-      {error}
+      {t(error)}
     </Text>
   ) : null;
 
@@ -163,7 +165,7 @@ export function FormModal({
             </View>
           </View>
           <Pressable
-            accessibilityLabel="패널 닫기"
+            accessibilityLabel={t('패널 닫기')}
             onPress={onClose}
             className="absolute inset-0 bg-black/30"
           />

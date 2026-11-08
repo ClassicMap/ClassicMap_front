@@ -1,4 +1,4 @@
-import { useLocale } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,7 +69,7 @@ export default function CompareScreen() {
     return composersQueryData.pages.flat();
   }, [composersQueryData, locale]);
 
-  const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
+  const error = queryError ? t('작곡가 정보를 불러오는데 실패했습니다.') : null;
 
   // 작곡가에 곡 목록 추가
   const [composers, setComposers] = React.useState<ComposerWithPieces[]>([]);
@@ -166,7 +166,7 @@ export default function CompareScreen() {
           {/* Artist Name & Metadata */}
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
-              <Text className="text-sm font-semibold">{artist?.name || '알 수 없음'}</Text>
+              <Text className="text-sm font-semibold">{artist?.name || t('알 수 없음')}</Text>
             </View>
             <Text className="text-xs text-muted-foreground">
               {formatTime(performance.startTime)} - {formatTime(performance.endTime)}
@@ -218,7 +218,7 @@ export default function CompareScreen() {
         )}
       </Card>
     );
-  }, [artists, canEdit, router]);
+  }, [artists, canEdit, router, locale]);
 
   // URL 파라미터로부터 곡이 선택되었는지 추적
   const isFromUrlParams = React.useRef(false);
@@ -834,20 +834,20 @@ export default function CompareScreen() {
   };
 
   const handleDeletePerformance = (performanceId: number) => {
-    Alert.alert('연주 삭제', '정말 이 연주를 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('연주 삭제'), t('정말 이 연주를 삭제하시겠습니까?'), [
+      { text: t('취소'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('삭제'),
         style: 'destructive',
         onPress: async () => {
           try {
             await AdminPerformanceAPI.delete(performanceId);
-            Alert.alert('성공', '연주가 삭제되었습니다.');
+            Alert.alert(t('alert::성공'), t('연주가 삭제되었습니다.'));
             if (selectedSector) {
               loadPerformancesBySector(selectedSector.id);
             }
           } catch (error) {
-            Alert.alert('오류', '연주 삭제에 실패했습니다.');
+            Alert.alert(t('alert::오류'), t('연주 삭제에 실패했습니다.'));
           }
         },
       },
@@ -869,7 +869,7 @@ export default function CompareScreen() {
         <Card className="w-full max-w-md p-8">
           <Text className="mb-4 text-center text-destructive">{error}</Text>
           <Button variant="outline" onPress={() => refetch()}>
-            <Text>다시 시도</Text>
+            <Text>{t('다시 시도')}</Text>
           </Button>
         </Card>
       </View>
@@ -879,7 +879,7 @@ export default function CompareScreen() {
   if (!selectedComposer) {
     return (
       <View className="flex-1 items-center justify-center bg-background p-4">
-        <Text className="text-muted-foreground">작곡가를 선택해주세요.</Text>
+        <Text className="text-muted-foreground">{t('작곡가를 선택해주세요.')}</Text>
       </View>
     );
   }
@@ -908,7 +908,7 @@ export default function CompareScreen() {
           {/* 작곡가 선택 */}
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold">작곡가 선택</Text>
+              <Text className="text-xl font-bold">{t('작곡가 선택')}</Text>
               <TouchableOpacity
                 onPress={() => setShowComposerList(!showComposerList)}
                 className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent">
@@ -925,7 +925,7 @@ export default function CompareScreen() {
               <>
                 <View className="relative">
                   <Input
-                    placeholder="작곡가 검색..."
+                    placeholder={t('작곡가 검색...')}
                     value={composerSearchQuery}
                     onChangeText={setComposerSearchQuery}
                     className="pl-10"
@@ -941,49 +941,49 @@ export default function CompareScreen() {
                     variant={periodFilter === 'all' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('all')}>
-                    <Text className="text-xs">전체</Text>
+                    <Text className="text-xs">{t('전체')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '중세' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('중세')}>
-                    <Text className="text-xs">중세</Text>
+                    <Text className="text-xs">{t('중세')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '르네상스' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('르네상스')}>
-                    <Text className="text-xs">르네상스</Text>
+                    <Text className="text-xs">{t('르네상스')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '바로크' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('바로크')}>
-                    <Text className="text-xs">바로크</Text>
+                    <Text className="text-xs">{t('바로크')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '고전주의' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('고전주의')}>
-                    <Text className="text-xs">고전주의</Text>
+                    <Text className="text-xs">{t('고전주의')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '낭만주의' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('낭만주의')}>
-                    <Text className="text-xs">낭만주의</Text>
+                    <Text className="text-xs">{t('낭만주의')}</Text>
                   </Button>
                   <Button
                     size="sm"
                     variant={periodFilter === '근현대' ? 'default' : 'outline'}
                     className="rounded-full"
                     onPress={() => setPeriodFilter('근현대')}>
-                    <Text className="text-xs">근현대</Text>
+                    <Text className="text-xs">{t('근현대')}</Text>
                   </Button>
                 </View>
               </>
@@ -1065,7 +1065,7 @@ export default function CompareScreen() {
                         <View className="items-center py-3">
                           <ActivityIndicator size="small" />
                           <Text className="mt-2 text-xs text-muted-foreground">
-                            필터 적용 중...
+                            {t('필터 적용 중...')}
                           </Text>
                         </View>
                       )}
@@ -1076,12 +1076,12 @@ export default function CompareScreen() {
                             <>
                               <ActivityIndicator size="small" />
                               <Text className="mt-2 text-sm text-muted-foreground">
-                                로딩 중...
+                                {t('로딩 중...')}
                               </Text>
                             </>
                           ) : (
                             <Text className="text-sm text-muted-foreground">
-                              검색 결과가 없습니다
+                              {t('검색 결과가 없습니다')}
                             </Text>
                           )}
                         </View>
@@ -1125,11 +1125,13 @@ export default function CompareScreen() {
                               <View className="flex-1">
                                 <Text className="text-base font-semibold">{composer.name}</Text>
                                 <Text className="text-xs text-muted-foreground">
-                                  {composer.period}
+                                  {t(composer.period)}
                                 </Text>
                                 {(composer.majorPieces?.length !== undefined || composer.pieceCount !== undefined) && (
                                   <Text className="text-xs text-muted-foreground">
-                                    {`${composer.majorPieces?.length ?? composer.pieceCount ?? 0}곡`}
+                                    {t('{count}곡', {
+                                      count: composer.majorPieces?.length ?? composer.pieceCount ?? 0,
+                                    })}
                                   </Text>
                                 )}
                               </View>
@@ -1146,7 +1148,7 @@ export default function CompareScreen() {
                         <View className="items-center py-4">
                           <ActivityIndicator size="small" />
                           <Text className="mt-2 text-xs text-muted-foreground">
-                            로딩 중...
+                            {t('로딩 중...')}
                           </Text>
                         </View>
                       )}
@@ -1160,7 +1162,7 @@ export default function CompareScreen() {
           {/* 곡 선택 */}
           <View className="gap-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold">곡 선택</Text>
+              <Text className="text-xl font-bold">{t('곡 선택')}</Text>
               <TouchableOpacity
                 onPress={() => setShowPieceList(!showPieceList)}
                 className="size-10 items-center justify-center rounded-full border border-border bg-background active:bg-accent">
@@ -1176,7 +1178,7 @@ export default function CompareScreen() {
             {showPieceList && (
               <View className="relative">
                 <Input
-                  placeholder="곡 검색..."
+                  placeholder={t('곡 검색...')}
                   value={pieceSearchQuery}
                   onChangeText={setPieceSearchQuery}
                   className="pl-10"
@@ -1204,7 +1206,9 @@ export default function CompareScreen() {
                   <View className="gap-1">
                     <Text className="text-lg font-semibold">{selectedPiece.title}</Text>
                     <Text className="text-sm text-muted-foreground">
-                      {piecePerformanceCounts[selectedPiece.id] || 0}개의 연주 비교 가능
+                      {t('{count}개의 연주 비교 가능', {
+                        count: piecePerformanceCounts[selectedPiece.id] || 0,
+                      })}
                     </Text>
                   </View>
                 </Card>
@@ -1224,7 +1228,7 @@ export default function CompareScreen() {
                   <Card className="gap-3 overflow-hidden p-3">
                     {filteredPieces.length === 0 ? (
                       <View className="items-center p-4">
-                        <Text className="text-sm text-muted-foreground">검색 결과가 없습니다</Text>
+                        <Text className="text-sm text-muted-foreground">{t('검색 결과가 없습니다')}</Text>
                       </View>
                     ) : (
                       filteredPieces.map((piece) => (
@@ -1241,7 +1245,9 @@ export default function CompareScreen() {
                                 </Text>
                               )}
                               <Text className="text-sm text-muted-foreground">
-                                {piecePerformanceCounts[piece.id] || 0}개의 연주 비교 가능
+                                {t('{count}개의 연주 비교 가능', {
+                                  count: piecePerformanceCounts[piece.id] || 0,
+                                })}
                               </Text>
                             </View>
                             {selectedPiece?.id === piece.id && (
@@ -1263,10 +1269,11 @@ export default function CompareScreen() {
               <View className="items-center gap-4">
                 <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
                 <View className="items-center gap-2">
-                  <Text className="text-center text-xl font-bold">비교 영상이 없습니다</Text>
+                  <Text className="text-center text-xl font-bold">{t('비교 영상이 없습니다')}</Text>
                   <Text className="text-center text-sm text-muted-foreground">
-                    해당 곡의 연주 비교 영상이 아직 준비되지 않았습니다.{'\n'}
-                    다른 곡을 선택해주세요.
+                    {t('해당 곡의 연주 비교 영상이 아직 준비되지 않았습니다.')}
+                    {'\n'}
+                    {t('다른 곡을 선택해주세요.')}
                   </Text>
                 </View>
               </View>
@@ -1279,7 +1286,7 @@ export default function CompareScreen() {
                     {selectedPiece.title}
                   </Text>
                   <Text className="text-sm text-muted-foreground">
-                    {selectedComposer.fullName} • {selectedComposer.period}
+                    {selectedComposer.fullName} • {t(selectedComposer.period)}
                   </Text>
                   <Text className="mt-2 text-sm leading-6">{selectedPiece.description}</Text>
                 </View>
@@ -1288,7 +1295,7 @@ export default function CompareScreen() {
               {/* 연주 비교 섹션 */}
               {selectedPiece && (
                 <View className="gap-4">
-                  <Text className="text-xl font-bold">연주 비교</Text>
+                  <Text className="text-xl font-bold">{t('연주 비교')}</Text>
 
                   {/* Sector Chips */}
                   {sectors.length > 0 ? (
@@ -1308,14 +1315,14 @@ export default function CompareScreen() {
                     <Card className="bg-muted/20 p-8">
                       <View className="items-center gap-3">
                         <Icon as={PlayCircleIcon} size={48} className="text-primary/60" />
-                        <Text className="text-center text-base font-medium">섹터가 없습니다</Text>
+                        <Text className="text-center text-base font-medium">{t('섹터가 없습니다')}</Text>
                         <Text className="text-center text-sm text-muted-foreground">
-                          {canEdit ? '섹터를 추가하여 연주를 분류하세요' : '아직 섹터가 생성되지 않았습니다'}
+                          {canEdit ? t('섹터를 추가하여 연주를 분류하세요') : t('아직 섹터가 생성되지 않았습니다')}
                         </Text>
                         {canEdit && (
                           <Button size="sm" onPress={handleAddSector} className="mt-2">
                             <Icon as={PlusIcon} size={16} className="text-primary-foreground" />
-                            <Text className="ml-1">섹터 추가</Text>
+                            <Text className="ml-1">{t('섹터 추가')}</Text>
                           </Button>
                         )}
                       </View>
@@ -1328,7 +1335,10 @@ export default function CompareScreen() {
                       {performances.length > 0 && (
                         <View className="flex-row items-center justify-between">
                           <Text className="text-sm text-muted-foreground">
-                            {currentPerformanceIndex + 1} / {performances.length}개 연주
+                            {t('{index} / {count}개 연주', {
+                              index: currentPerformanceIndex + 1,
+                              count: performances.length,
+                            })}
                           </Text>
                           {canEdit && (
                             <Button
@@ -1336,7 +1346,7 @@ export default function CompareScreen() {
                               variant="outline"
                               onPress={() => handleAddPerformanceToSector(selectedSector)}>
                               <Icon as={PlusIcon} size={14} />
-                              <Text className="ml-1">연주 추가</Text>
+                              <Text className="ml-1">{t('연주 추가')}</Text>
                             </Button>
                           )}
                         </View>
@@ -1347,9 +1357,9 @@ export default function CompareScreen() {
                           <View className="items-center gap-4">
                             <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
                             <View className="items-center gap-2">
-                              <Text className="text-center text-xl font-bold">연주 영상 준비 중</Text>
+                              <Text className="text-center text-xl font-bold">{t('연주 영상 준비 중')}</Text>
                               <Text className="text-center text-sm text-muted-foreground">
-                                이 섹터의 연주 비교 영상이 아직 준비되지 않았습니다.
+                                {t('이 섹터의 연주 비교 영상이 아직 준비되지 않았습니다.')}
                               </Text>
                             </View>
                             {canEdit && (
@@ -1358,7 +1368,7 @@ export default function CompareScreen() {
                                 onPress={() => handleAddPerformanceToSector(selectedSector)}
                                 className="mt-2">
                                 <Icon as={PlusIcon} size={16} />
-                                <Text className="ml-1">연주 추가</Text>
+                                <Text className="ml-1">{t('연주 추가')}</Text>
                               </Button>
                             )}
                           </View>
@@ -1398,7 +1408,7 @@ export default function CompareScreen() {
                       <Card className="bg-muted/20 p-8">
                         <View className="items-center gap-2">
                           <Text className="text-center text-sm text-muted-foreground">
-                            섹터를 선택하여 연주를 감상하세요
+                            {t('섹터를 선택하여 연주를 감상하세요')}
                           </Text>
                         </View>
                       </Card>
