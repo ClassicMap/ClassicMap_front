@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
 import { View } from 'react-native';
@@ -20,6 +20,7 @@ function clerkMessage(error: unknown): string {
 }
 
 export default function ChangePasswordScreen() {
+  useLocale();
   const { user } = useUser();
   const [current, setCurrent] = React.useState('');
   const [next, setNext] = React.useState('');

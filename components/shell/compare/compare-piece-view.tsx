@@ -64,7 +64,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Pressable, ScrollView, View } from 'react-native';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 
 interface ComparePieceViewProps {
   pieceId: number;
@@ -92,13 +92,14 @@ export function ComparePieceView({
   onSelectSector,
   onFocus,
 }: ComparePieceViewProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   // 탭을 옮겨도 이 화면은 뒤에 살아 있다. 단축키는 보일 때만 받는다
   const screenFocused = useIsFocused();
   const { canEdit } = useAuth();
   const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   // 같은 작품 안에서 구간을 바꾸면 새 연주가 올 때까지 이전 구간 연주를 흐리게 남긴다
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id, { keepPreviousForPiece: pieceId });
@@ -125,12 +126,12 @@ export function ComparePieceView({
       repertoireFirst(performancesQuery.data ?? [], (performance) =>
         repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)
       ),
-    [performancesQuery.data, repertoire.artists]
+    [performancesQuery.data, repertoire.artists, locale]
   );
 
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
-    [pieceInfo?.performers]
+    [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
     (performance: ComparisonPerformance) => {
@@ -170,16 +171,16 @@ export function ComparePieceView({
   const active = performances.find((performance) => performance.id === activeId);
   const longest = Math.max(1, ...performances.map(clipDurationMs));
   // 이 구간의 곡선은 모두 같은 눈금으로 그린다
-  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances]);
+  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances, locale]);
   // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
-  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances]);
+  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances, locale]);
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
   const staged = active ?? playable[0];
 
   // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
   const queue = React.useMemo<ComparePlayerTrack[]>(
     () => playable.map((performance) => trackFromPerformance(performance, imageOf(performance))),
-    [playable, imageOf]
+    [playable, imageOf, locale]
   );
   const choose = React.useCallback(
     (performance: ComparisonPerformance) =>
@@ -669,6 +670,7 @@ function Poster({
   onPlay: () => void;
   large?: boolean;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const thumbnail = youtubeThumbnailUrl(performance);
   const canPlay = isPlayablePerformance(performance);
@@ -717,6 +719,7 @@ type PickState = 'anchor' | 'candidate' | undefined;
 
 /** 고르기 표시: 고를 수 있는 후보에 + 원. 기준 연주는 이름 옆에 '지금 연주'로 밝힌다 */
 function PickMark({ pick }: { pick: PickState }) {
+  useLocale();
   if (pick !== 'candidate') return null;
   return (
     <View pointerEvents="none" className="absolute left-3 top-3 z-10">
@@ -754,6 +757,7 @@ function SlotGrid({
   stale?: boolean;
   children: (width: number | undefined) => React.ReactNode;
 }) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const columns = width > 0 ? slotColumns(count, width) : 0;
   const slotWidth = columns > 0 ? Math.floor((width - SLOT_GAP * (columns - 1)) / columns) : undefined;
@@ -780,6 +784,7 @@ interface SlotProps {
 }
 
 function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
+  useLocale();
   const credit = primaryCredit(performance);
   const playing = useComparePlayer((state) => state.playing && state.current?.performanceId === performance.id);
   const photo = useArtistImage(credit?.artistId, image);
@@ -887,6 +892,7 @@ function PerformanceCurve({
   onSeek?: (offsetMs: number) => void;
   className?: string;
 }) {
+  useLocale();
   const progress = useComparePlayer((state) => (active ? state.progress : null));
   const playing = useComparePlayer((state) => active && state.playing);
   const saved = useComparePlayer((state) => state.positions[performance.id]);
@@ -923,6 +929,7 @@ function StageCaption({
   active: boolean;
   inRepertoire: boolean;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const support = supportingCredits(performance);
@@ -963,6 +970,7 @@ function TheaterRow({
   pick?: PickState;
   onPress: () => void;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const photo = useArtistImage(credit?.artistId, image);
   const canPlay = isPlayablePerformance(performance);
@@ -1047,6 +1055,7 @@ function FullscreenOverlay({
   playing: boolean;
   onExit: () => void;
 }) {
+  useLocale();
   const progress = useComparePlayer((state) => state.progress);
   return (
     <div
@@ -1160,6 +1169,7 @@ function PlayerBar({
   picking,
   onToggleFocus,
 }: PlayerBarProps) {
+  useLocale();
   const credit = active ? primaryCredit(active) : undefined;
   const photo = useArtistImage(credit?.artistId, activeImage);
   // 재생 위치는 초마다 바뀌어 바 안에서만 구독한다 (화면 전체가 다시 그려지지 않게)
@@ -1333,6 +1343,7 @@ function MetaLink({
   prefetch?: PrefetchTarget;
   onPress: () => void;
 }) {
+  useLocale();
   const handlers = usePrefetchOnHover(prefetch);
   return (
     <Pressable
@@ -1365,6 +1376,7 @@ function ArtistLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  useLocale();
   const router = useRouter();
   const handlers = usePrefetchOnHover(artistId ? { kind: 'artist', artistId } : null);
   if (!artistId) return <View className={className}>{children}</View>;
@@ -1382,6 +1394,7 @@ function ArtistLink({
 
 /** 지휘자·악단 줄. 사람마다 그 연주자 화면으로 간다 */
 function SupportingCreditLinks({ performance }: { performance: ComparisonPerformance }) {
+  useLocale();
   const credits = performance.credits.filter(
     (credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra')
   );

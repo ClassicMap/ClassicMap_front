@@ -11,7 +11,7 @@ import {
 } from '@/components/screen/labels';
 import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useScreen';
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
-import { getLocale, t } from '@/lib/i18n';
+import { getLocale, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useLeadPerformance } from '@/components/screen/use-lead-performance';
@@ -43,6 +43,7 @@ interface ScreenCueCardProps {
 
 /** 작품 페이지의 장면 카드. 들을 길은 같은 대목 비교 → 같은 곡 비교 → 스트리밍 링크 순 */
 export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps) {
+  useLocale();
   const router = useRouter();
   const [showSpoiler, setShowSpoiler] = React.useState(false);
   const [showEvidence, setShowEvidence] = React.useState(false);
@@ -180,6 +181,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 }
 
 function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (sectorId?: number) => void }) {
+  useLocale();
   const listen = cue.listen;
   if (listen.kind === 'sector' || listen.kind === 'piece') {
     return <QuickListen cue={cue} sectorId={listen.kind === 'sector' ? listen.sectorId : undefined} onOpenCompare={onOpenCompare} />;
@@ -220,6 +222,7 @@ function QuickListen({
   sectorId?: number;
   onOpenCompare: (sectorId?: number) => void;
 }) {
+  useLocale();
   const sameSector = sectorId !== undefined;
   const lead = useLeadPerformance(cue.pieceId, sectorId);
   const action = lead.playing ? t('cue::일시정지') : t('cue::바로 듣기');
@@ -276,6 +279,7 @@ function StillPicker({
   cue: ScreenCue;
   onClose: () => void;
 }) {
+  useLocale();
   const candidates = useScreenStillCandidates(titleId, visible);
   const setStill = useSetCueStill(titleId);
   const paths = candidates.data?.stillPaths ?? [];

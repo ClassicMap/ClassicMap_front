@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
 import { type Href, router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
@@ -15,6 +15,7 @@ const RESEND_CODE_INTERVAL_SECONDS = 30;
 const TABULAR_NUMBERS_STYLE: TextStyle = { fontVariant: ['tabular-nums'] };
 
 export function VerifyEmailForm() {
+  useLocale();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { email = '' } = useLocalSearchParams<{ email?: string }>();
   const [code, setCode] = React.useState('');

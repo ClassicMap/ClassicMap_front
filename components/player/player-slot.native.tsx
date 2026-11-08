@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { tabBarHeight } from '@/components/player/player-bar-helpers';
 import { registerNativeSurface, surfaceRects } from '@/lib/player/native-surface';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ interface PlayerSlotProps {
  * 이 화면이 가려지면(다른 탭·위에 쌓인 화면) 자리를 거둬 영상이 미니 플레이어로 옮겨 간다.
  */
 export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotProps) {
+  useLocale();
   const ref = useAnimatedRef<View>();
   const focused = useIsFocused();
   const headerHeight = React.useContext(HeaderHeightContext) ?? 0;

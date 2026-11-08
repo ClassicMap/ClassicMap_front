@@ -2,7 +2,7 @@ import { type Performer, PerformerMark, performerOf } from '@/components/compare
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type {
   ComparisonPerformance,
   FeaturedPair,
@@ -33,6 +33,7 @@ export function MomentChip({
   performer?: Performer;
   onPress?: () => void;
 }) {
+  useLocale();
   const clock = clipClock(moment.offsetMs);
   return (
     <Pressable
@@ -86,6 +87,7 @@ export function PerformanceNote({
   curve,
   className,
 }: PerformanceNoteProps) {
+  useLocale();
   return (
     <View className={cn('gap-1.5', className)}>
       <Text className="text-[16px] font-bold leading-[22px] tracking-tight text-foreground">
@@ -144,6 +146,7 @@ export function FeaturedPairLink({
   compact?: boolean;
   onOpen: () => void;
 }) {
+  useLocale();
   const performerA = performerOf(a);
   const performerB = performerOf(b);
   const nameA = performerA.name;
@@ -190,6 +193,7 @@ export function FeaturedPairNote({
   imageOf?: (performance: ComparisonPerformance) => string | null;
   onMoment: (side: NoteTone, offsetMs: number) => void;
 }) {
+  useLocale();
   const sideOf = (performanceId: number): NoteTone | null =>
     performanceId === a.id ? 'a' : performanceId === b.id ? 'b' : null;
   return (

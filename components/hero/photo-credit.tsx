@@ -1,6 +1,6 @@
 import { Text } from '@/components/ui/text';
 import type { ImageCredit } from '@/lib/types/models';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Linking, Pressable, View } from 'react-native';
@@ -18,6 +18,7 @@ export function PhotoCredit({
   credit?: ImageCredit | null;
   centered: boolean;
 }) {
+  useLocale();
   const label = credit
     ? credit.author && credit.license
       ? `${credit.author} · ${credit.license}`

@@ -26,7 +26,7 @@ import {
   periodLabel,
   periodRange,
 } from '@/lib/data/concert-filters';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { TriggerRef } from '@rn-primitives/popover';
 import {
@@ -51,6 +51,7 @@ interface ConcertSearchFieldProps {
 
 /** 공연 안에서만 찾는 검색 칸. 프로그램에 적힌 작곡가 이름으로도 찾는다 */
 export function ConcertSearchField({ value, onChange, className }: ConcertSearchFieldProps) {
+  useLocale();
   return (
     <View
       className={cn(
@@ -101,6 +102,7 @@ export interface FilterMenuProps {
 }
 
 export function FilterMenu({ label, value, leading, width, children }: FilterMenuProps) {
+  useLocale();
   const triggerRef = React.useRef<TriggerRef>(null);
   const close = React.useCallback(() => triggerRef.current?.close(), []);
   const active = value !== undefined;
@@ -145,6 +147,7 @@ function periodValue(filter: ConcertFilter): string | undefined {
  * 기간은 실제 날짜가 붙은 목록, 지역은 권역별 묶음, 편성은 아이콘 타일, 연주자는 검색.
  */
 export function ConcertFilterBar(props: ConcertFilterBarProps) {
+  useLocale();
   const { filter, areas, artist, favoriteArtists, instrumentCounts, onChange, onArtistChange } = props;
   const areaLabel =
     areas.find((area) => area.value === filter.area)?.label ?? (filter.area ? areaName(filter.area) : undefined);
@@ -290,6 +293,7 @@ function appliedChips({ filter, areas, artist, onChange, onArtistChange }: Conce
 
 /** 지금 걸린 조건을 한 줄로. 하나씩 빼거나 한 번에 초기화한다. 기본값(클래식)은 조건으로 치지 않는다 */
 function AppliedFilters(props: ConcertFilterBarProps) {
+  useLocale();
   const chips = appliedChips(props);
   if (chips.length === 0) return null;
   return (
@@ -333,6 +337,7 @@ interface MobileFilterProps extends ConcertFilterBarProps {
  * 자주 쓰는 오늘·이번 주말·내한만 바로 누를 수 있게 밖에 둔다.
  */
 export function ConcertMobileFilter(props: MobileFilterProps) {
+  useLocale();
   const { filter, query, onQueryChange, onChange } = props;
   const [open, setOpen] = React.useState(false);
   const count = countActiveFilters(filter);
@@ -385,6 +390,7 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
 }
 
 function SheetSection({ title, children }: { title: string; children: React.ReactNode }) {
+  useLocale();
   return (
     <View className="gap-2.5 border-b border-border py-5">
       <Text className="text-body font-bold text-foreground">{title}</Text>
@@ -400,6 +406,7 @@ function FilterSheet({
   more,
   ...props
 }: MobileFilterProps & { visible: boolean; onClose: () => void }) {
+  useLocale();
   const { filter, areas, favoriteArtists, instrumentCounts, onChange, onArtistChange, onReset } = props;
   const insets = useSafeAreaInsets();
   const count = countActiveFilters(filter);

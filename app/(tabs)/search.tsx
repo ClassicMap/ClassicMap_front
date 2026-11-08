@@ -15,7 +15,7 @@ import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/lib/types/models';
 import { titleMeta } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ClapperboardIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
@@ -134,6 +134,7 @@ function pickTopHit(
 }
 
 export default function SearchScreen() {
+  useLocale();
   const headerInset = useTabHeaderInset();
   const router = useRouter();
   const params = useLocalSearchParams<{ q?: string }>();
@@ -344,6 +345,7 @@ export default function SearchScreen() {
 }
 
 function ResultGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  useLocale();
   return (
     <View className="mt-6">
       <Text variant="headline" className="mb-1.5">
@@ -365,6 +367,7 @@ function ResultRow({
   thumb: React.ReactNode;
   onPress: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -386,11 +389,13 @@ function ResultRow({
 
 /** 작품은 사각. 음반 그림이 없어 작곡가 초상을 쓴다 */
 function PieceThumb({ piece }: { piece: PieceSearchResult }) {
+  useLocale();
   const image = useComposerAvatar(piece.composerId, piece.composerAvatarUrl);
   return <EntityThumb name={piece.title} image={image} shape="square" size={44} />;
 }
 
 function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide: boolean }) {
+  useLocale();
   const router = useRouter();
   return (
     <View className={cn('gap-3', isWide && 'flex-row flex-wrap')}>
@@ -418,6 +423,7 @@ function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide
 
 /** 검색어가 없을 때: 아티스트 · 시대 · 악기 · 더 둘러보기 입구 */
 function BrowseLanding({ isWide }: { isWide: boolean }) {
+  useLocale();
   const router = useRouter();
   const genres = useGenreShelves();
   const { colorScheme } = useColorScheme();

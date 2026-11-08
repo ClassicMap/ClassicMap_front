@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react-native';
@@ -16,6 +17,7 @@ export function MoreLink({
   /** 접기면 위 화살표 */
   collapse?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

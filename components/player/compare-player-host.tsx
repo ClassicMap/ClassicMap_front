@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { NativeYoutubeClip } from '@/components/performance-video-player';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { surfaceRects, useNativeSurface } from '@/lib/player/native-surface';
@@ -17,6 +18,7 @@ const SIDE_GUTTER = 32;
  * 웹 구현은 compare-player-host.web.tsx
  */
 export function ComparePlayerHost() {
+  useLocale();
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
   const surface = useNativeSurface();

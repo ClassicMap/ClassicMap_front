@@ -20,7 +20,7 @@ import { AdminArtistAPI, AdminRecordingAPI } from '@/lib/api/admin';
 import { ConcertAPI, RecordingAPI, type RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import type { Artist, Concert, ImageCredit, Recording, TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -122,6 +122,7 @@ function toAlbumItem(recording: Recording, artist: Artist): RecordingListItem {
 }
 
 export default function ArtistDetailScreen() {
+  const { locale } = useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const artistId = Number(id);
   const router = useRouter();
@@ -153,12 +154,12 @@ export default function ArtistDetailScreen() {
 
   const recordings = React.useMemo(
     () => [...(recordingsQuery.data ?? [])].sort((a, b) => recordingYear(b).localeCompare(recordingYear(a))),
-    [recordingsQuery.data]
+    [recordingsQuery.data, locale]
   );
-  const concerts = React.useMemo(() => upcomingConcerts(concertsQuery.data ?? []), [concertsQuery.data]);
+  const concerts = React.useMemo(() => upcomingConcerts(concertsQuery.data ?? []), [concertsQuery.data, locale]);
   const awards = React.useMemo(
     () => [...(artist?.awards ?? [])].sort((a, b) => b.year.localeCompare(a.year)),
-    [artist?.awards]
+    [artist?.awards, locale]
   );
 
   const refresh = () => {

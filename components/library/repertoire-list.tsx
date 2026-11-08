@@ -10,7 +10,7 @@ import {
   type LibraryEntry,
   type LibraryKind,
 } from '@/lib/data/library';
-import { getLocale, msg, t } from '@/lib/i18n';
+import { getLocale, msg, t, useLocale } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -63,17 +63,18 @@ interface RepertoireListProps {
  * '전체'에서는 작곡가·연주자·작품·공연 묶음으로 나눠 보여 주고, 묶음 안은 최근에 담은 순서다.
  */
 export function RepertoireList({ favorites, editable = false, limit, onShowAll, initialFilter }: RepertoireListProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   const [filter, setFilter] = React.useState<Filter>(initialFilter ?? 'all');
   React.useEffect(() => {
     if (initialFilter) setFilter(initialFilter);
   }, [initialFilter]);
-  const entries = React.useMemo(() => buildLibraryEntries(favorites), [favorites]);
+  const entries = React.useMemo(() => buildLibraryEntries(favorites), [favorites, locale]);
   const counts = React.useMemo(() => {
     const map: Record<Filter, number> = { all: entries.length, composer: 0, artist: 0, piece: 0, album: 0, concert: 0 };
     for (const entry of entries) map[entry.kind] += 1;
     return map;
-  }, [entries]);
+  }, [entries, locale]);
   const filtered = filter === 'all' ? entries : entries.filter((entry) => entry.kind === filter);
   const visible = limit ? filtered.slice(0, limit) : filtered;
 
@@ -146,6 +147,7 @@ interface RepertoireRowProps {
 }
 
 function RepertoireRow({ entry, editable, onPress, grouped = false }: RepertoireRowProps) {
+  useLocale();
   const meta =
     grouped || entry.kind === 'composer' || entry.kind === 'artist'
       ? entry.subtitle

@@ -4,7 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { RatedConcertListItem } from '@/lib/api/client';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { StarIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -49,10 +49,12 @@ export function ratingStats(ratings: readonly RatedConcertListItem[]): RatingSta
 
 /** 사람은 원형. 사진이 없으면 이름 첫 글자 타일 */
 export function ProfileAvatar({ name, uri, size }: { name: string; uri?: string | null; size: number }) {
+  useLocale();
   return <EntityThumb name={name} image={uri} shape="circle" size={size} />;
 }
 
 export function StatTile({ value, label, accent = false }: { value: string; label: string; accent?: boolean }) {
+  useLocale();
   return (
     <View className="flex-1 rounded-lg bg-surface-2 px-3.5 py-3">
       <Text className={cn('text-[24px] font-bold leading-8 tabular-nums', accent ? 'text-primary' : 'text-foreground')}>
@@ -66,6 +68,7 @@ export function StatTile({ value, label, accent = false }: { value: string; labe
 }
 
 export function RatingStars({ value, size = 13 }: { value: number; size?: number }) {
+  useLocale();
   const rounded = Math.round(value);
   return (
     <View className="flex-row gap-px" accessibilityLabel={t('별점 {count}점', { count: value })}>
@@ -92,11 +95,12 @@ interface RatingGridProps {
 
 /** 평가한 공연: 포스터 그리드 + 별점. 칸 폭은 부모 폭에서 계산한다 */
 export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidth }: RatingGridProps) {
+  const { locale } = useLocale();
   const [width, setWidth] = React.useState(0);
   const gap = 16;
   const columns = width > 0 ? Math.max(2, Math.floor((width + gap) / (minItemWidth + gap))) : 0;
   const itemWidth = columns > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
-  const sorted = React.useMemo(() => sortRatings(ratings, sortKey), [ratings, sortKey]);
+  const sorted = React.useMemo(() => sortRatings(ratings, sortKey), [ratings, sortKey, locale]);
 
   return (
     <View>

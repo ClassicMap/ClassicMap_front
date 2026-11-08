@@ -2,7 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -19,6 +19,7 @@ interface AuthShellProps {
  * 400px 폼 하나만 둔다. 데스크톱은 화면 가운데에, 모바일은 위에서부터 그린다.
  */
 export function AuthShell({ children, onClose }: AuthShellProps) {
+  useLocale();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
 
@@ -55,6 +56,7 @@ export const AUTH_INPUT_CLASS = 'h-12 rounded-lg px-3.5 sm:h-12 md:text-body';
 export const AUTH_BUTTON_CLASS = 'h-12 w-full rounded-full sm:h-12';
 
 export function AuthHeading({ title, description }: { title: string; description?: string }) {
+  useLocale();
   return (
     <View className="mb-6">
       <Text className="text-[28px] font-bold leading-9 tracking-tight text-foreground">{title}</Text>
@@ -68,6 +70,7 @@ export function AuthHeading({ title, description }: { title: string; description
 }
 
 export function AuthDivider({ label }: { label: string }) {
+  useLocale();
   return (
     <View className="my-5 flex-row items-center gap-3">
       <View className="h-px flex-1 bg-border" />
@@ -80,6 +83,7 @@ export function AuthDivider({ label }: { label: string }) {
 }
 
 export function FieldError({ message }: { message?: string }) {
+  useLocale();
   if (!message) return null;
   return (
     <Text accessibilityRole="alert" className="text-caption text-destructive">

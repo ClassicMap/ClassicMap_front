@@ -10,7 +10,7 @@ import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useCachedScreenTitleSummary, useScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { ScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FilmTitleScreen() {
+  useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const titleId = Number(id);
   const router = useRouter();
@@ -177,6 +178,7 @@ export default function FilmTitleScreen() {
 
 /** 작품 페이지 모양 그대로의 자리. 포스터와 제목 → 곡 카드 */
 function FilmTitleSkeleton({ wide }: { wide: boolean }) {
+  useLocale();
   const insets = useSafeAreaInsets();
   const posterWidth = wide ? 152 : 112;
   return (
@@ -200,6 +202,7 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
 
 /** 곡 카드 자리. 장면 사진 → 쓰임 줄·곡 이름 → 설명 → 듣기 버튼 → 근거 */
 function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
+  useLocale();
   return (
     <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
       {Array.from({ length: Math.max(count, 1) }, (_, index) => (

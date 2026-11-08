@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -51,6 +52,7 @@ function Chip({
   className,
   ...props
 }: ChipProps) {
+  useLocale();
   const isSelected = selected === true;
   return (
     <Pressable
@@ -83,6 +85,7 @@ function Chip({
 
 /** 시대 칩 등에 쓰는 6px 색 도트. 색은 데이터 카테고리 색만 넘긴다. */
 function ChipDot({ color }: { color: string }) {
+  useLocale();
   return <View className="size-1.5 rounded-full" style={{ backgroundColor: color }} />;
 }
 

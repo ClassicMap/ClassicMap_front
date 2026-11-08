@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount } from '@/lib/data/library';
 import { usePublicProfile } from '@/lib/query/hooks/useMyPage';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, EyeOffIcon, UserXIcon } from 'lucide-react-native';
@@ -25,6 +25,7 @@ function parseUserId(id: string | string[] | undefined): number | undefined {
 
 /** 공개 프로필: 마이페이지와 같은 틀, 본인이 공개한 것만 보인다 */
 export default function PublicProfileScreen() {
+  useLocale();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const userId = parseUserId(id);
@@ -202,5 +203,6 @@ export default function PublicProfileScreen() {
 }
 
 function PrivateState({ description }: { description: string }) {
+  useLocale();
   return <EmptyState compact icon={EyeOffIcon} title={t('비공개예요')} description={description} />;
 }

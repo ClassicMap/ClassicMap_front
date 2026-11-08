@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import * as React from 'react';
 
 interface CommandPaletteState {
@@ -13,6 +14,7 @@ const CommandPaletteContext = React.createContext<CommandPaletteState | null>(nu
  * (RN TextInput은 키 이벤트 전파를 끊는다).
  */
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
+  const { locale } = useLocale();
   const [open, setOpen] = React.useState(false);
   const toggle = React.useCallback(() => setOpen((value) => !value), []);
 
@@ -27,7 +29,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, []);
 
-  const value = React.useMemo(() => ({ open, setOpen, toggle }), [open, toggle]);
+  const value = React.useMemo(() => ({ open, setOpen, toggle }), [open, toggle, locale]);
   return <CommandPaletteContext.Provider value={value}>{children}</CommandPaletteContext.Provider>;
 }
 

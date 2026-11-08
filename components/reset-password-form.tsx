@@ -4,13 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { type Href, router } from 'expo-router';
 import * as React from 'react';
 import { TextInput, View } from 'react-native';
 
 export function ResetPasswordForm() {
+  useLocale();
   const { signIn, setActive, isLoaded } = useSignIn();
   const [password, setPassword] = React.useState('');
   const [code, setCode] = React.useState('');

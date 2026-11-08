@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { PersonCard } from '@/components/home/cards';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as React from 'react';
@@ -22,6 +23,7 @@ export function PeopleGrid({
   loading: boolean;
   wide: boolean;
 }) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 24 : 14;
   const minItem = wide ? 148 : 96;
@@ -60,6 +62,7 @@ export function PeopleGrid({
 
 /** 레퍼토리에 담은 사람을 목록 위에 가로 한 줄로 */
 export function PeopleShelf({ items, wide }: { items: readonly PersonItem[]; wide: boolean }) {
+  useLocale();
   const size = wide ? 112 : 84;
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-5">

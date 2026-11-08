@@ -17,7 +17,7 @@ import { type ArtistCategoryCode, getArtistCategoryLabel, isArtistCategoryCode }
 import { getEraForeground } from '@/lib/design/era-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { ARTIST_QUERY_KEYS } from '@/lib/query/hooks/useArtists';
 import { useBrowseComposers } from '@/lib/query/hooks/useComposers';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
@@ -72,6 +72,7 @@ function lifeSpan(composer: { birthYear?: number | null; deathYear?: number | nu
  * 세그먼트·시대·분류는 주소 파라미터(type·period·category)라 링크로 그대로 열린다.
  */
 export default function ArtistsScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: string; period?: string; category?: string }>();
@@ -141,7 +142,7 @@ export default function ArtistsScreen() {
         caption: getArtistCategoryLabel(item.category),
         onPress: () => openArtist(item.artistId),
       }));
-  }, [category, debounced, era, favorites.data, openArtist, openComposer, segment]);
+  }, [category, debounced, era, favorites.data, openArtist, openComposer, segment, locale]);
 
   const grid: PersonItem[] = React.useMemo(() => {
     const seen = new Set<number>();
@@ -169,7 +170,7 @@ export default function ArtistsScreen() {
         inRepertoire: repertoire.artists.has(artist.id),
         onPress: () => openArtist(artist.id),
       }));
-  }, [artists.data, composers.data, era, openArtist, openComposer, repertoire, segment]);
+  }, [artists.data, composers.data, era, openArtist, openComposer, repertoire, segment, locale]);
 
   const setParams = (next: { type?: Segment; period?: string | null; category?: string | null }) =>
     router.setParams({
@@ -342,6 +343,7 @@ export default function ArtistsScreen() {
 }
 
 function SegmentedControl({ value, onChange }: { value: Segment; onChange: (value: Segment) => void }) {
+  useLocale();
   const options: { value: Segment; label: string }[] = [
     { value: 'composer', label: t('작곡가') },
     { value: 'artist', label: t('연주자') },
@@ -385,12 +387,14 @@ function EraChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   const { colorScheme } = useColorScheme();
   const color = getEraForeground(name, colorScheme === 'dark' ? 'dark' : 'light');
   return <Chip label={label} selected={selected} onPress={onPress} leading={color ? <ChipDot color={color} /> : undefined} />;
 }
 
 function TimelineLink({ onPress }: { onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

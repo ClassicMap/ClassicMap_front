@@ -1,6 +1,6 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { primaryCredit } from '@/lib/data/comparison';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { ComparisonPerformance } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -50,6 +50,7 @@ export function PerformerMark({
   dim?: boolean;
   className?: string;
 }) {
+  useLocale();
   return (
     <View
       accessible={false}

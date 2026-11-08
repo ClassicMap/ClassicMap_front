@@ -46,7 +46,7 @@ import {
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { formatNumber, t } from '@/lib/i18n';
+import { formatNumber, t, useLocale } from '@/lib/i18n';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 interface PerformerSummary {
@@ -77,6 +77,7 @@ function collectPerformers(pieces: readonly ComparisonPiece[]): PerformerSummary
 }
 
 export default function ComposerDetailScreen() {
+  const { locale } = useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const composerId = Number(id);
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function ComposerDetailScreen() {
   const comparableQuery = useComparisonPieces(composerId, Boolean(composer));
   const refreshPieces = () => queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
 
-  const comparable = React.useMemo(() => comparableQuery.data?.pages.flat() ?? [], [comparableQuery.data]);
+  const comparable = React.useMemo(() => comparableQuery.data?.pages.flat() ?? [], [comparableQuery.data, locale]);
   const comparableFoldable =
     comparable.length > COMPARABLE_PREVIEW || Boolean(comparableQuery.hasNextPage);
   const shownComparable = comparableOpen ? comparable : comparable.slice(0, COMPARABLE_PREVIEW);
@@ -128,8 +129,8 @@ export default function ComposerDetailScreen() {
       });
     });
   };
-  const comparableIds = React.useMemo(() => new Set(comparable.map((piece) => piece.pieceId)), [comparable]);
-  const performers = React.useMemo(() => collectPerformers(comparable), [comparable]);
+  const comparableIds = React.useMemo(() => new Set(comparable.map((piece) => piece.pieceId)), [comparable, locale]);
+  const performers = React.useMemo(() => collectPerformers(comparable), [comparable, locale]);
 
   const refresh = () => {
     void composerQuery.refetch();
@@ -224,7 +225,8 @@ export default function ComposerDetailScreen() {
     composer.englishName,
   ].filter(Boolean);
   const styleKeywords = (composer.style ?? '')
-    .split(',')
+    // 괄호 안 쉼표(「피아노 독주곡(녹턴, 발라드)」)에서는 나누지 않는다
+    .split(/,(?![^()]*\))/)
     .map((keyword) => keyword.trim())
     .filter(Boolean);
   const firstComparable = comparable[0];
@@ -464,6 +466,7 @@ export default function ComposerDetailScreen() {
 const COMPARABLE_PREVIEW = 5;
 
 function SectionTitle({ title, meta }: { title: string; meta?: string }) {
+  useLocale();
   return (
     <View className="mb-3.5 flex-row items-baseline gap-2">
       <Text variant="title3">{title}</Text>
@@ -486,6 +489,7 @@ function ComparableRow({
   /** 번호 칸을 누르면 그 자리에서 바로 튼다 */
   onPlay: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -525,6 +529,7 @@ function ComparableRow({
 }
 
 function PerformerTile({ performer, onPress }: { performer: PerformerSummary; onPress: () => void }) {
+  useLocale();
   const caption =
     performer.pieces.length > 1
       ? t('{title} 외 {count}곡', { title: performer.pieces[0], count: performer.pieces.length - 1 })
@@ -556,6 +561,7 @@ function PerformerSidebar({
   performers: PerformerSummary[];
   onOpen: (artistId: number) => void;
 }) {
+  useLocale();
   const [all, setAll] = React.useState(false);
   const shown = all ? performers : performers.slice(0, SIDEBAR_PERFORMERS);
   return (

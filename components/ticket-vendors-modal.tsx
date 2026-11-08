@@ -2,7 +2,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
@@ -63,6 +63,7 @@ export function TicketVendorsModal({
   onClose,
   summary,
 }: TicketVendorsModalProps) {
+  const { locale } = useLocale();
   const { layout } = useBreakpoint();
   const dialog = layout === 'desktop' || layout === 'wide';
   const insets = useSafeAreaInsets();
@@ -96,7 +97,7 @@ export function TicketVendorsModal({
 
   const sorted = React.useMemo(
     () => [...vendors].sort((a, b) => a.displayOrder - b.displayOrder),
-    [vendors]
+    [vendors, locale]
   );
 
   const panelStyle = dialog
@@ -242,6 +243,7 @@ export function TicketVendorsModal({
 }
 
 function VendorRow({ vendor }: { vendor: TicketVendor }) {
+  useLocale();
   const name = vendor.vendorName?.trim() || vendorDomain(vendor.vendorUrl);
   return (
     <Pressable

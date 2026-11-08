@@ -4,9 +4,11 @@
  * - 문구는 한국어 원문을 그대로 쓰고 `t('작품')` 으로 감싼다. 영어 사전(`./en`)에 없으면 한국어가 그대로 나온다.
  * - 이름·제목처럼 데이터에 두 언어가 다 있는 값은 `pick(한국어, 영어)` 로 고른다.
  * - `t`·`pick` 은 렌더 중(또는 이벤트 처리 중)에 부른다. 모듈 맨 위 상수에서 부르면 언어를 바꿔도 그대로다.
- * - 정적 웹 HTML 은 한국어로 미리 그려 둔다. 화면이 뜬 뒤 저장한 설정 → 기기 언어 순으로 언어를 정하고,
- *   바뀌면 받아 둔 API 응답을 버리고 화면 전체를 다시 그린다(`LocaleProvider` 의 key).
- * - API 응답 → 화면 모델 변환(lib/api/client.ts)에서 이름을 `pick` 으로 고른다.
+ * - 정적 웹 HTML 은 한국어로 미리 그려 둔다. 화면이 뜬 뒤 저장한 설정 → 기기 언어 순으로 언어를 정한다.
+ * - 언어가 바뀌어도 화면을 새로 만들지 않는다(스크롤·펼침·입력이 그대로). 컴포넌트마다 `useLocale()` 로
+ *   언어를 구독해서 다시 그릴 때 t() 가 새 언어를 읽는다. useMemo 는 의존 목록에 locale 을 둔다.
+ * - API 응답 → 화면 모델 변환(lib/api/*.ts)에서 이름을 `pick` 으로 고른다. 언어가 바뀌면 받아 둔 응답을
+ *   그대로 보이면서 뒤에서 다시 받아(invalidate) 이름도 곧 바뀐다.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueryClient } from '@tanstack/react-query';
@@ -111,9 +113,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     const apply = (next: Locale) => {
       if (!alive || next === current) return;
       current = next;
-      // API 응답을 화면 모델로 바꿀 때 이름을 언어에 맞춰 고르므로, 받아 둔 것은 버리고 다시 받는다
-      queryClient.clear();
       setLocaleState(next);
+      // 이름은 응답을 화면 모델로 바꿀 때 고르므로 다시 받는다. 받는 동안은 앞의 것을 그대로 보인다
+      void queryClient.invalidateQueries();
     };
     AsyncStorage.getItem(STORAGE_KEY)
       .then((saved) => apply(isLocale(saved) ? saved : detectLocale()))
@@ -134,20 +136,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(STORAGE_KEY, next).catch(() => undefined);
       if (next === current) return;
       current = next;
-      queryClient.clear();
       setLocaleState(next);
+      void queryClient.invalidateQueries();
     },
     [queryClient]
   );
 
   const value = React.useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
 
-  return (
-    <LocaleContext.Provider value={value}>
-      {/* 언어가 바뀌면 아래를 새로 그려 t()·pick() 을 다시 부른다 */}
-      <React.Fragment key={locale}>{children}</React.Fragment>
-    </LocaleContext.Provider>
-  );
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 export function useLocale(): LocaleContextValue {

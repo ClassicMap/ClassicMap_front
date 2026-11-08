@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cssInterop } from 'nativewind';
 import type * as React from 'react';
 import Svg, { type SvgProps } from 'react-native-svg';
@@ -36,6 +37,7 @@ export function createClassicIcon(
     strokeWidth = CLASSIC_ICON_STROKE,
     ...rest
   }: ClassicIconProps) {
+    useLocale();
     return (
       <Svg
         width={size}

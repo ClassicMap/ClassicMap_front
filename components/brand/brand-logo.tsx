@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Image, View } from 'react-native';
 
@@ -5,6 +6,7 @@ const LOGO_MARK = require('@/assets/images/logo-mark.png');
 
 /** 클래식맵 로고(높은음자리표 + 지도 등고선). 앱 아이콘·파비콘과 같은 그림이다 */
 export function BrandLogo({ size, className }: { size: number; className?: string }) {
+  useLocale();
   return (
     <View
       accessibilityRole="image"

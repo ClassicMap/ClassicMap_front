@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Icon } from '@/components/ui/icon';
 import { createClassicIcon } from '@/components/ui/icons';
 import type { ConcertInstrumentKey } from '@/lib/data/concert-filters';
@@ -51,6 +52,7 @@ interface InstrumentIconProps {
 }
 
 export function InstrumentIcon({ code, size = 20, className }: InstrumentIconProps) {
+  useLocale();
   if (code === 'strings') return <StringsIcon size={size} className={className} />;
   if (code === 'chamber') return <ChamberIcon size={size} className={className} />;
   const lucide = LUCIDE[code] ?? AudioLinesIcon;

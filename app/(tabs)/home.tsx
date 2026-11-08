@@ -33,7 +33,7 @@ import type {
   RecommendationShelfKey,
   TasteSound,
 } from '@/lib/types/models';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -112,6 +112,7 @@ function weekConcerts(concerts: readonly Concert[]): { items: Concert[]; thisWee
 }
 
 export default function HomeScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { layout } = useBreakpoint();
@@ -131,7 +132,7 @@ export default function HomeScreen() {
   const composersQuery = useRecommendedComposers();
   const artistsQuery = useArtists();
   // 공연 탭과 같은 기본 필터(클래식, 오늘 이후). 필터 없는 목록은 뮤지컬·국악이 섞여 홈에 어린이 뮤지컬이 먼저 떴다
-  const concertRange = React.useMemo(() => periodRange('all'), []);
+  const concertRange = React.useMemo(() => periodRange('all'), [locale]);
   const { query: concertsQuery } = useFilteredConcerts(DEFAULT_CONCERT_FILTER, concertRange);
   const recentPieces = useRecentPieces().data ?? [];
 
@@ -150,11 +151,11 @@ export default function HomeScreen() {
     updatedAt: reco.dataUpdatedAt,
     placeholder: reco.isPlaceholderData,
   });
-  const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data]);
+  const recoShelves = React.useMemo(() => reco.data?.shelves ?? [], [reco.data, locale]);
   const favorites = useMyFavorites(taste.signedIn);
 
-  const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data]);
-  const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data]);
+  const pieces = React.useMemo(() => catalog.data?.pages[0] ?? [], [catalog.data, locale]);
+  const composers = React.useMemo(() => composersQuery.data ?? [], [composersQuery.data, locale]);
 
   const today = React.useMemo(() => {
     // 좋아하는 시대가 있으면 그 시대 작곡가의 작품 중에서 고른다
@@ -163,7 +164,7 @@ export default function HomeScreen() {
     );
     const preferred = pieces.filter((piece) => preferredIds.has(piece.composerId));
     return pickDailyPiece(preferred.length > 0 ? preferred : pieces, new Date());
-  }, [composers, favoritePeriods, pieces]);
+  }, [composers, favoritePeriods, pieces, locale]);
 
   // 추천이 있으면 추천의 오늘의 비교, 없으면(답을 못 읽었거나 추천이 실패하면) 예전처럼 고른다
   const todayPiece = recoToday ?? today;
@@ -173,11 +174,11 @@ export default function HomeScreen() {
   const genreQuery = useGenrePieces(shelfGenre ?? 'symphony', shelfGenre !== null);
   const allShelfPieces = React.useMemo(
     () => pieces.filter((piece) => piece.pieceId !== todayPiece?.pieceId),
-    [pieces, todayPiece?.pieceId]
+    [pieces, todayPiece?.pieceId, locale]
   );
   const shelfPieces = React.useMemo(
     () => (shelfGenre ? (genreQuery.data?.pages[0] ?? []) : allShelfPieces),
-    [allShelfPieces, genreQuery.data, shelfGenre]
+    [allShelfPieces, genreQuery.data, shelfGenre, locale]
   );
 
   const favoriteArtistIds = React.useMemo(
@@ -185,7 +186,7 @@ export default function HomeScreen() {
       new Set(
         taste.signedIn ? (favorites.data?.artists ?? []).map((item) => item.artistId) : taste.guest.favoriteArtistIds
       ),
-    [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn]
+    [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn, locale]
   );
   const preferredComposerIds = React.useMemo(() => {
     const favoriteComposers = taste.signedIn
@@ -193,22 +194,22 @@ export default function HomeScreen() {
       : taste.guest.favoriteComposerIds;
     const known = recoShelves.find((shelf) => shelf.key === 'known')?.items.map((item) => item.composerId) ?? [];
     return new Set([...favoriteComposers, ...known]);
-  }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn]);
+  }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn, locale]);
 
   const artists = React.useMemo(
     () => curateArtists(artistsQuery.data?.pages[0] ?? [], favoriteArtistIds, taste.answers.sounds),
-    [artistsQuery.data, favoriteArtistIds, taste.answers.sounds]
+    [artistsQuery.data, favoriteArtistIds, taste.answers.sounds, locale]
   );
   const featuredComposers = React.useMemo(
     () => curateComposers(composers, favoritePeriods, preferredComposerIds),
-    [composers, favoritePeriods, preferredComposerIds]
+    [composers, favoritePeriods, preferredComposerIds, locale]
   );
   const soundMeta = taste.answers.sounds
     .map((sound) => SOUND_OPTIONS.find((option) => option.key === sound)?.label)
     .filter((label): label is string => Boolean(label))
     .map((label) => t(label))
     .join(' · ');
-  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data]);
+  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data, locale]);
   const eras = React.useMemo(
     () =>
       PERIODS.filter((era) => (PREFERENCE_ERAS as readonly string[]).includes(era.name)).map((era) => ({
@@ -216,7 +217,7 @@ export default function HomeScreen() {
         // 시대 대표 초상: 추천 순에서 그 시대 첫 작곡가
         portrait: composers.find((composer) => composer.period === era.name && composer.avatarUrl),
       })),
-    [composers]
+    [composers, locale]
   );
 
   const refreshing =
@@ -586,6 +587,7 @@ function Section({
   onAction?: () => void;
   children: React.ReactNode;
 }) {
+  useLocale();
   return (
     <View className={wide ? 'mt-11' : 'mt-9'}>
       <ShelfHeader title={title} meta={meta} actionLabel={actionLabel} onAction={onAction} wide={wide} />
@@ -595,6 +597,7 @@ function Section({
 }
 
 function InlineError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
       <Text variant="bodySm" className="flex-1 text-foreground-muted">
@@ -610,6 +613,7 @@ function InlineError({ message, onRetry }: { message: string; onRetry: () => voi
 }
 
 function CardSkeletonRow({ wide, shape }: { wide: boolean; shape: 'square' | 'circle' | 'poster' }) {
+  useLocale();
   const count = wide ? 6 : shape === 'circle' ? 4 : 3;
   return (
     <View className="flex-row gap-4 overflow-hidden">

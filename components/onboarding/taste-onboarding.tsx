@@ -15,7 +15,7 @@ import {
   SOUND_OPTIONS,
 } from '@/lib/data/taste-labels';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { TASTE_QUERY_KEYS } from '@/lib/hooks/useTaste';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import type { OnboardingPiece, TasteAnswers } from '@/lib/types/models';
@@ -54,6 +54,7 @@ const SUGGESTED_ARTISTS = 10;
  * 어느 장이든 건너뛸 수 있고, 닫으면 그때까지 고른 답만 남긴다.
  */
 export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingProps) {
+  useLocale();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const insets = useSafeAreaInsets();
@@ -157,6 +158,7 @@ export function TasteOnboarding({ initial, onFinish, onClose }: TasteOnboardingP
 }
 
 function StepHeading({ title, hint }: { title: string; hint: string }) {
+  useLocale();
   return (
     <View className="mb-6 gap-1.5">
       <Text className="text-[26px] font-bold leading-9 tracking-tight text-foreground">
@@ -175,6 +177,7 @@ interface StepProps {
 }
 
 function LevelStep({ answers, onChange }: StepProps) {
+  useLocale();
   return (
     <View>
       <StepHeading
@@ -241,6 +244,7 @@ function LevelStep({ answers, onChange }: StepProps) {
 }
 
 function SoundStep({ answers, onChange }: StepProps) {
+  useLocale();
   return (
     <View>
       <StepHeading
@@ -272,6 +276,7 @@ function SoundStep({ answers, onChange }: StepProps) {
 }
 
 function PieceStep({ answers, onChange }: StepProps) {
+  useLocale();
   const { layout } = useBreakpoint();
   const columns = layout === 'mobile' ? 2 : 3;
   const query = useQuery({
@@ -366,6 +371,7 @@ function PeopleStep({
   people: PersonPick[];
   onChange: (people: PersonPick[]) => void;
 }) {
+  const { locale } = useLocale();
   const [text, setText] = React.useState('');
   const q = useDebounce(text.trim(), 250);
   const catalog = useComparisonPieces();
@@ -418,7 +424,7 @@ function PeopleStep({
       });
     }
     return list;
-  }, [catalog.data, onboardingPieces.data]);
+  }, [catalog.data, onboardingPieces.data, locale]);
 
   const results = React.useMemo<PersonPick[]>(
     () => [
@@ -435,7 +441,7 @@ function PeopleStep({
         image: artist.imageUrl ?? null,
       })),
     ],
-    [artistResults.data, composerResults.data]
+    [artistResults.data, composerResults.data, locale]
   );
 
   const isPicked = (person: PersonPick) =>

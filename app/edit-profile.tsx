@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';
 import { View } from 'react-native';
@@ -19,6 +19,7 @@ function clerkMessage(error: unknown): string {
 
 /** 계정 이름(로그인 계정의 성·이름). 공개 프로필의 표시 이름은 설정 > 프로필에서 바꾼다 */
 export default function EditProfileScreen() {
+  useLocale();
   const { user } = useUser();
   const [lastName, setLastName] = React.useState(user?.lastName || '');
   const [firstName, setFirstName] = React.useState(user?.firstName || '');

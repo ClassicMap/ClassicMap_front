@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import type { NavMode } from '@/lib/design/breakpoints';
 import * as React from 'react';
 import { View } from 'react-native';
@@ -16,6 +17,7 @@ import { TopBar } from './top-bar';
  * 본문 패널 안에서만 스크롤하고 사이드바·상단바는 고정한다.
  */
 export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; children: React.ReactNode }) {
+  useLocale();
   return (
     <CommandPaletteProvider>
       <View className="h-full flex-1 flex-row gap-2 bg-background p-2" style={{ height: '100vh' } as object}>

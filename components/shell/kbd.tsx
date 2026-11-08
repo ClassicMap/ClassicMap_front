@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -5,6 +6,7 @@ import { View } from 'react-native';
 
 /** 키캡 표시 (`⌘K`, `↵`). 웹 셸 전용. */
 export function Kbd({ children, className }: { children: string; className?: string }) {
+  useLocale();
   return (
     <View
       className={cn(

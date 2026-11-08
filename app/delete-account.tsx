@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { MyPageAPI } from '@/lib/api/client';
 import { clearAllData } from '@/lib/api/mock-db';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useAuth as useAppAuth } from '@/lib/hooks/useAuth';
@@ -35,6 +35,7 @@ function isUnsupported(error: unknown): boolean {
  * 앱에서 지울 수 없는 계정이면 메일로 요청하는 길을 안내한다.
  */
 export default function DeleteAccountScreen() {
+  useLocale();
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useAuth();

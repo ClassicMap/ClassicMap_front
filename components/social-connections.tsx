@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useSSO, type StartSSOFlowParams } from '@clerk/clerk-expo';
 import * as AuthSession from 'expo-auth-session';
@@ -47,6 +47,7 @@ function webRedirectUrl(): string {
 }
 
 export function SocialConnections() {
+  useLocale();
   useWarmUpBrowser();
   const { colorScheme } = useColorScheme();
   const { startSSOFlow } = useSSO();

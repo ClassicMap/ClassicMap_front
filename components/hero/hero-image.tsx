@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Scrim } from '@/components/ui/scrim';
 import { getHeroImageCandidates } from '@/lib/utils/image';
 import * as React from 'react';
@@ -23,7 +24,8 @@ export function HeroImage({
   /** 웹 object-position 과 같은 'x% y%' */
   focalPoint?: string;
 }) {
-  const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri]);
+  const { locale } = useLocale();
+  const candidates = React.useMemo(() => getHeroImageCandidates(uri), [uri, locale]);
   const [attempt, setAttempt] = React.useState(0);
   const [natural, setNatural] = React.useState<{ width: number; height: number } | null>(null);
   React.useEffect(() => setNatural(null), [uri]);

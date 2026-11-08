@@ -1,7 +1,7 @@
 import { getEraForeground } from '@/lib/design/era-palette';
 import type { DecadeDensity } from '@/lib/design/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { type GestureResponderEvent, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
@@ -37,6 +37,7 @@ export function DensityStrip({
   viewport,
   onPressYear,
 }: DensityStripProps) {
+  useLocale();
   const inner = Math.max(1, width - padLeft - padRight);
   const pxPerYear = inner / Math.max(1, toYear - fromYear);
   const x = (year: number) => padLeft + (Math.min(toYear, Math.max(fromYear, year)) - fromYear) * pxPerYear;

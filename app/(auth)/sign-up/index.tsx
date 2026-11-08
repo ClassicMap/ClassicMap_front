@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { AuthShell } from '@/components/auth/auth-shell';
 import { SignUpForm } from '@/components/sign-up-form';
 import { useAuth } from '@clerk/clerk-expo';
@@ -7,6 +8,7 @@ import * as React from 'react';
 import { Platform } from 'react-native';
 
 export default function SignUpScreen() {
+  useLocale();
   const router = useRouter();
   const { isSignedIn } = useAuth();
 

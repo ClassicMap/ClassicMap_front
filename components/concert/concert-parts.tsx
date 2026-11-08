@@ -3,7 +3,7 @@ import { ImageLightbox } from '@/components/concert/image-lightbox';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/utils/image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import {
@@ -160,6 +160,7 @@ export function concertStatusLabel(concert: Concert): { label: string; tone: 'ac
 
 /** 출연자 칩: 이름이 아니라 공연-아티스트 연결로 아티스트 상세에 간다 */
 export function CastChip({ cast }: { cast: ConcertArtist }) {
+  useLocale();
   const router = useRouter();
   const artist = useArtist(cast.artistId);
   return (
@@ -177,6 +178,7 @@ export function CastChip({ cast }: { cast: ConcertArtist }) {
  * 공연 → 비교 다리. 출연자의 비교 구간을 보여 줄 뿐, 공연 프로그램과 같은 곡이라고 주장하지 않는다.
  */
 export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; horizontal: boolean }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const first = cast[0];
   const query = useArtistComparisonPerformances(first?.artistId ?? 0);
@@ -185,7 +187,7 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
     // 곡마다 하나씩만
     const seen = new Set<number>();
     return all.filter((item) => (seen.has(item.pieceId) ? false : (seen.add(item.pieceId), true))).slice(0, 3);
-  }, [query.data]);
+  }, [query.data, locale]);
   if (!first || items.length === 0) return null;
 
   const cards = items.map((item) => <ComparisonMiniCard key={item.id} item={item} compact={horizontal} />);
@@ -210,6 +212,7 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
 
 
 function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; compact: boolean }) {
+  useLocale();
   const router = useRouter();
   const piece = useComparisonPiece(item.pieceId, item.composerId).data;
   const href = `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
@@ -244,13 +247,14 @@ function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; co
  * contain + 폭 상한 420 + 높이만 접고, 펼치기 버튼은 이미지 밖 아래에 둔다.
  */
 export function IntroImages({ images }: { images: ConcertImage[] }) {
+  const { locale } = useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const [viewing, setViewing] = React.useState<number | null>(null);
   const sorted = React.useMemo(
     () => [...images].sort((a, b) => a.displayOrder - b.displayOrder),
-    [images]
+    [images, locale]
   );
-  const uris = React.useMemo(() => sorted.map((image) => getImageUrl(image.imageUrl)), [sorted]);
+  const uris = React.useMemo(() => sorted.map((image) => getImageUrl(image.imageUrl)), [sorted, locale]);
   if (sorted.length === 0) return null;
   return (
     <View>
@@ -301,6 +305,7 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
 }
 
 function ScaledImage({ uri }: { uri: string }) {
+  useLocale();
   const [ratio, setRatio] = React.useState(221 / 620);
   React.useEffect(() => {
     Image.getSize(

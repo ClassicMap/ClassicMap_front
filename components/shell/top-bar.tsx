@@ -20,6 +20,7 @@ function RoundButton({
   onPress: () => void;
   children: React.ReactNode;
 }) {
+  useLocale();
   return (
     <Pressable
       accessibilityRole="button"
@@ -32,6 +33,7 @@ function RoundButton({
 }
 
 export function TopBar() {
+  useLocale();
   const router = useRouter();
   const { setOpen } = useCommandPalette();
   const { colorScheme, toggleColorScheme } = useColorScheme();

@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ interface ComposerWithPieces extends Composer {
 }
 
 export default function CompareScreen() {
+  const { locale } = useLocale();
   const params = useLocalSearchParams();
   const router = useRouter();
   const { canEdit } = useAuth();
@@ -65,7 +67,7 @@ export default function CompareScreen() {
   const composersData = React.useMemo(() => {
     if (!composersQueryData?.pages) return [];
     return composersQueryData.pages.flat();
-  }, [composersQueryData]);
+  }, [composersQueryData, locale]);
 
   const error = queryError ? '작곡가 정보를 불러오는데 실패했습니다.' : null;
 
@@ -267,7 +269,7 @@ export default function CompareScreen() {
       return searchResults;
     }
     return composersData;
-  }, [debouncedSearchQuery, searchResults, composersData]);
+  }, [debouncedSearchQuery, searchResults, composersData, locale]);
 
   // Update composers list with piece counts
   React.useEffect(() => {
@@ -301,7 +303,7 @@ export default function CompareScreen() {
     }
 
     return filtered;
-  }, [selectedComposer, pieceSearchQuery]);
+  }, [selectedComposer, pieceSearchQuery, locale]);
 
   // composersData가 변경되면 composers 상태 업데이트
   React.useEffect(() => {

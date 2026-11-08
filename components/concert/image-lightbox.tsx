@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeftIcon,
@@ -48,6 +48,7 @@ interface ImageLightboxProps {
  * 원래 크기에서 좌우로 밀면 이전·다음 이미지.
  */
 export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLightboxProps) {
+  useLocale();
   const visible = index !== null && images.length > 0;
   const current = visible ? Math.min(Math.max(index, 0), images.length - 1) : 0;
   const uri = images[current];
@@ -228,6 +229,7 @@ function BarButton({
   disabled?: boolean;
   children: React.ReactNode;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -245,6 +247,7 @@ function BarButton({
 }
 
 function NavButton({ side, onPress }: { side: 'left' | 'right'; onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -273,6 +276,7 @@ interface WebZoomCanvasProps {
  * 누른 지점이 화면 가운데 오도록 스크롤을 맞춘다. 드래그는 스크롤 이동으로 바꾼다.
  */
 function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }: WebZoomCanvasProps) {
+  useLocale();
   const scrollRef = React.useRef<View>(null);
   const anchor = React.useRef<{ x: number; y: number; from: number } | null>(null);
   const drag = React.useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
@@ -408,6 +412,7 @@ interface NativeZoomCanvasProps {
  * 이미지 중심이 화면 중심에 오는 좌표계라, 이동 한계는 넘치는 크기의 절반이다.
  */
 function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, onSwipe }: NativeZoomCanvasProps) {
+  useLocale();
   // 긴 이미지는 위쪽부터 보이게 시작한다
   const startY = Math.max(0, (height - viewportHeight) / 2);
   const scale = useSharedValue(1);

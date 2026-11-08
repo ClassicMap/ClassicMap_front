@@ -9,7 +9,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { getFavoriteCount } from '@/lib/data/library';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useMyFavorites, useMyRatings, useProfileVisibility } from '@/lib/query/hooks/useMyPage';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
@@ -32,6 +32,7 @@ type Tab = 'ratings' | 'repertoire';
 
 /** 마이페이지 (3차 시안): 왼쪽은 누구인가와 얼마나 들었나, 오른쪽은 평가한 공연과 레퍼토리 */
 export default function MyPageScreen() {
+  useLocale();
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerkAuth();
@@ -286,6 +287,7 @@ function MenuRow({
   onPress: () => void;
   chevron?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

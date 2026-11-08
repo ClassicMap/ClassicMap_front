@@ -2,7 +2,7 @@ import { ConcertCard } from '@/components/concert/concert-card';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { type FavoriteArtistRef, useFavoriteArtistConcerts } from '@/lib/query/hooks/useConcerts';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -15,6 +15,7 @@ interface FavoriteArtistConcertsProps {
 }
 
 function FeaturingLine({ artists }: { artists: FavoriteArtistRef[] }) {
+  useLocale();
   const [first, ...rest] = artists;
   return (
     <View className="mt-1.5 flex-row items-center gap-1.5">
@@ -42,6 +43,7 @@ function FeaturingLine({ artists }: { artists: FavoriteArtistRef[] }) {
  * 출연진 이름으로 찾기 때문에 동명이인이 섞일 수 있어, 어떤 아티스트로 찾았는지 카드에 적는다.
  */
 export function FavoriteArtistConcerts({ artists, from, cardWidth }: FavoriteArtistConcertsProps) {
+  useLocale();
   const { items, isLoading, isError, refetch } = useFavoriteArtistConcerts(artists, from);
 
   if (isLoading && items.length === 0) {

@@ -28,7 +28,7 @@ import {
 import { getRankForeground } from '@/lib/design/rank-palette';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
 import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
@@ -107,6 +107,7 @@ function groupByDay(concerts: Concert[], fromDay: string): DateGroup[] {
 }
 
 export default function ConcertsScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const { canEdit, isSignedIn } = useAuth();
@@ -131,7 +132,7 @@ export default function ConcertsScreen() {
         artist: params.artist,
         q: params.q,
       }),
-    [params.genre, params.period, params.visit, params.festival, params.area, params.instrument, params.artist, params.q]
+    [params.genre, params.period, params.visit, params.festival, params.area, params.instrument, params.artist, params.q, locale]
   );
   const updateFilter = React.useCallback(
     (next: Partial<ConcertFilter>) => router.setParams(toConcertFilterParams({ ...filter, ...next })),
@@ -156,7 +157,7 @@ export default function ConcertsScreen() {
   };
 
   const areasQuery = useAreas();
-  const areas = React.useMemo(() => normalizeAreas(areasQuery.data ?? []), [areasQuery.data]);
+  const areas = React.useMemo(() => normalizeAreas(areasQuery.data ?? []), [areasQuery.data, locale]);
   const area = areas.find((option) => option.value === filter.area) ?? null;
 
   const favorites = useMyFavorites(isSignedIn);
@@ -167,7 +168,7 @@ export default function ConcertsScreen() {
         name: artist.name,
         imageUrl: artist.imageUrl,
       })),
-    [favorites.data?.artists]
+    [favorites.data?.artists, locale]
   );
 
   // 주소에는 연주자 id만 있다. 방금 고른 값 → 찜 목록 → 아티스트 상세 순으로 이름을 찾는다
@@ -186,17 +187,17 @@ export default function ConcertsScreen() {
     updateFilter({ artist: artist?.artistId });
   };
 
-  const range = React.useMemo(() => periodRange(filter.period), [filter.period]);
+  const range = React.useMemo(() => periodRange(filter.period), [filter.period, locale]);
   const { query: concertsQuery, localQuery, waiting } = useFilteredConcerts(filter, range, {
     artistName: selectedArtist?.name,
   });
   const pageCount = concertsQuery.data?.pages.length ?? 0;
-  const loaded = React.useMemo(() => concertsQuery.data?.pages.flat() ?? [], [concertsQuery.data]);
+  const loaded = React.useMemo(() => concertsQuery.data?.pages.flat() ?? [], [concertsQuery.data, locale]);
   const concerts = React.useMemo(
     () => selectVisibleConcerts(loaded, filter, range, localQuery),
-    [loaded, filter, range, localQuery]
+    [loaded, filter, range, localQuery, locale]
   );
-  const groups = React.useMemo(() => groupByDay(concerts, range.from), [concerts, range.from]);
+  const groups = React.useMemo(() => groupByDay(concerts, range.from), [concerts, range.from, locale]);
 
   // 서버가 아직 모르는 조건은 화면에서 걸러 한 페이지가 비어 보일 수 있다. 몇 페이지까지 더 채운다.
   React.useEffect(() => {
@@ -225,7 +226,7 @@ export default function ConcertsScreen() {
       .slice()
       .sort((a, b) => a.ranking - b.ranking)
       .filter((item) => (seen.has(item.concertId) ? false : (seen.add(item.concertId), true)));
-  }, [boxofficeQuery.data]);
+  }, [boxofficeQuery.data, locale]);
 
   const columns = wide ? Math.max(3, Math.floor((gridWidth + 18) / 196)) : 2;
   const activeCount = countActiveFilters(filter) + Number(Boolean(filter.q.trim()));

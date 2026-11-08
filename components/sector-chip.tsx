@@ -5,7 +5,7 @@ import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { PerformanceSectorWithCount } from '@/lib/types/models';
 
 interface SectorChipProps {
@@ -16,6 +16,7 @@ interface SectorChipProps {
 }
 
 export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipProps) {
+  useLocale();
   if (!sector || !sector.sectorName) {
     return null;
   }
@@ -46,6 +47,7 @@ export function SectorChip({ sector, isSelected, onPress, onEdit }: SectorChipPr
 }
 
 export function AddSectorChip({ onPress }: { onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       accessibilityRole="button"

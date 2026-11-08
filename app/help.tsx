@@ -2,7 +2,7 @@ import { SubPage } from '@/components/account/sub-page';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import Constants from 'expo-constants';
@@ -56,6 +56,7 @@ function openMail(subject: string, body = '') {
 }
 
 export default function HelpScreen() {
+  useLocale();
   const router = useRouter();
   const [open, setOpen] = React.useState<number | null>(0);
   const version = Constants.expoConfig?.version;

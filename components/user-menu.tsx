@@ -11,9 +11,10 @@ import * as React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { Alert } from '@/lib/utils/alert';
 import { getImageUrl } from '@/lib/utils/image';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 
 export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
+  useLocale();
   const { user } = useUser();
   const { signOut, isSignedIn } = useAuth();
   const router = useRouter();
@@ -101,6 +102,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
 function UserAvatar(
   props: Omit<React.ComponentProps<typeof Avatar>, 'alt'> & { iconColor?: string }
 ) {
+  const { locale } = useLocale();
   const { user } = useUser();
   const { iconColor, ...avatarProps } = props;
 
@@ -113,7 +115,7 @@ function UserAvatar(
 
     const imageSource = user?.imageUrl ? { uri: getImageUrl(user.imageUrl) } : undefined;
     return { initials, imageSource, userName };
-  }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress]);
+  }, [user?.imageUrl, user?.fullName, user?.emailAddresses[0]?.emailAddress, locale]);
 
   return (
     <Avatar alt={`${userName}'s avatar`} {...avatarProps}>

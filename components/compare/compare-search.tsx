@@ -3,7 +3,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { ComparableComposer, ComparableComposers } from '@/lib/query/hooks/useComparisonPerformances';
 import { EMPTY_REPERTOIRE_IDS, repertoireFirst, type RepertoireIds } from '@/lib/data/library';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -67,6 +67,7 @@ interface CompareSearchFieldProps {
 
 /** 작곡가·작품 검색 칸. 웹에서는 '/'를 누르면 바로 입력할 수 있다 */
 export function CompareSearchField({ value, onChange, onSubmit, className }: CompareSearchFieldProps) {
+  useLocale();
   const inputRef = React.useRef<TextInput>(null);
   // 키보드가 있는 넓은 웹에서만 '/' 단축키를 알려 준다
   const { nav } = useBreakpoint();
@@ -138,6 +139,7 @@ export function CompareSearchResults({
   onOpenPiece,
   onClear,
 }: CompareSearchResultsProps) {
+  useLocale();
   if (result.composers.length === 0 && result.pieces.length === 0) {
     return (
       <View className="mt-10 items-center gap-2">
@@ -223,6 +225,7 @@ function ResultRow({
   meta: string;
   inRepertoire?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

@@ -8,7 +8,7 @@ import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';
 import { getEraColor } from '@/lib/design/era-palette';
 import { genreStyle } from '@/lib/design/genre-palette';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,7 @@ export function PieceCard({
   /** 한 장르만 모인 화면에서는 부제에 장르 대신 연주자 수를 쓴다 */
   hideGenre?: boolean;
 }) {
+  useLocale();
   const confirmDismiss = onDismiss
     ? () =>
         Alert.alert(t('이 곡을 추천에서 뺄까요?'), t('설정에서 들은 기록을 지우면 다시 보여요.'), [
@@ -157,6 +158,7 @@ export function PersonCard({
   /** 호버·누르기 시작에 미리 받을 다음 화면 */
   prefetchTarget?: PrefetchTarget;
 }) {
+  useLocale();
   const prefetch = usePrefetchOnHover(prefetchTarget);
   return (
     <Pressable
@@ -185,6 +187,7 @@ export function PersonCard({
 
 /** 공연 포스터. KOPIS 포스터는 세로가 길어 3:4로 자른다 */
 export function ConcertCard({ concert, width, onPress }: { concert: Concert; width: number; onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -217,6 +220,7 @@ export function EraTile({
   height: number;
   onPress: () => void;
 }) {
+  useLocale();
   const color = getEraColor(era.name)?.tile ?? '#4A4540';
   const art = Math.round(height * 0.66);
   return (
@@ -264,6 +268,7 @@ export function RecentTile({
   onPress: () => void;
   className?: string;
 }) {
+  useLocale();
   const prefetch = usePrefetchOnHover({
     kind: 'piece',
     pieceId: item.pieceId,

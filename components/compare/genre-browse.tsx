@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece } from '@/lib/types/models';
@@ -68,6 +68,7 @@ export function GenreTile({
   height: number;
   onPress: () => void;
 }) {
+  useLocale();
   const art = Math.round(height * 0.62);
   const prefetch = usePrefetchOnHover({ kind: 'genre', genre: shelf.genre });
   return (
@@ -125,6 +126,7 @@ export function GenreTiles({
   minTileWidth?: number;
   className?: string;
 }) {
+  useLocale();
   const { shelves, isLoading } = useGenreShelves();
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 16 : 10;
@@ -175,12 +177,13 @@ export function CompareGenrePieces({
   onOpen: (piece: ComparisonPiece) => void;
   onSelectGenre: (genre: PieceGenre) => void;
 }) {
+  const { locale } = useLocale();
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
   // 장르 작품은 서버에서 장르로 걸러 쪽 단위로 받는다
   const query = useGenrePieces(genre);
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 20 : 12;
   const columns =

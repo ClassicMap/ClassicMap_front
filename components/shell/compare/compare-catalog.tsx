@@ -28,7 +28,7 @@ import {
   useComparisonPieces,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPiece, ComparisonPiecePerformer } from '@/lib/types/models';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
@@ -43,21 +43,22 @@ interface CompareCatalogProps {
 
 /** 비교 탭 첫 화면: 비교할 수 있는 작품이 있는 작곡가를 작품이 많은 순으로 보여 준다. 위 검색 칸으로 바로 찾는다. */
 export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareCatalogProps) {
+  const { locale } = useLocale();
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
     () => countRepertoirePieces(comparable.data?.pieces ?? [], repertoire.pieces),
-    [comparable.data?.pieces, repertoire.pieces]
+    [comparable.data?.pieces, repertoire.pieces, locale]
   );
   const composers = React.useMemo(
     () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
-    [comparable.data?.composers, repertoire.composers, repertoirePieces]
+    [comparable.data?.composers, repertoire.composers, repertoirePieces, locale]
   );
   const [query, setQuery] = React.useState('');
   const searching = query.trim().length > 0;
   const result = React.useMemo(
     () => searchComparable(comparable.data, query, repertoire),
-    [comparable.data, query, repertoire]
+    [comparable.data, query, repertoire, locale]
   );
   const genreCount = useGenreShelves().shelves.length;
 
@@ -182,6 +183,7 @@ function ComposerCard({
   repertoireArtists: ReadonlySet<number>;
   onPress: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -233,6 +235,7 @@ export function Faces({
   /** 앞에서부터 이만큼만. 레퍼토리 연주자를 앞으로 옮긴 뒤 자른다 */
   max?: number;
 }) {
+  useLocale();
   if (performers.length === 0) return null;
   const ordered = (
     highlightIds?.size ? repertoireFirst(performers, (performer) => highlightIds.has(performer.artistId)) : performers
@@ -263,13 +266,14 @@ interface CompareComposerPiecesProps {
 
 /** 비교 탭 둘째 단: 한 작곡가의 비교할 수 있는 작품. 연주자가 많은 작품부터 온다. */
 export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareComposerPiecesProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   const catalog = useComparisonPieces(composerId);
   const repertoire = useRepertoireIds();
   // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
   const pieces = React.useMemo(
     () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
-    [catalog.data, repertoire.pieces]
+    [catalog.data, repertoire.pieces, locale]
   );
   const summary = useComparableComposers().data?.byId.get(composerId);
   const name = summary?.composerName ?? pieces[0]?.composerName;
@@ -395,6 +399,7 @@ function PieceRow({
   repertoireArtists: ReadonlySet<number>;
   onPress: () => void;
 }) {
+  useLocale();
   const queryClient = useQueryClient();
   const playHere = () => {
     playPiece(queryClient, { pieceId: piece.pieceId })

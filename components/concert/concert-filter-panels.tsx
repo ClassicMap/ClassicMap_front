@@ -18,7 +18,7 @@ import {
 } from '@/lib/data/concert-filters';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useConcertArtistOptions } from '@/lib/query/hooks/useConcerts';
 import { cn } from '@/lib/utils';
 import { CheckIcon, HeartIcon, SearchIcon, XIcon } from 'lucide-react-native';
@@ -41,6 +41,7 @@ function OptionRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -62,6 +63,7 @@ function OptionRow({
 }
 
 export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSelect: (key: ConcertGenreKey) => void }) {
+  useLocale();
   return (
     <View className="gap-0.5">
       {CONCERT_GENRES.map((genre) => (
@@ -78,6 +80,7 @@ export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSele
 
 /** 기간 프리셋. 오른쪽에 실제 날짜를 붙여 '이번 주'가 언제까지인지 바로 보이게 한다 */
 export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSelect: (key: ConcertPeriodKey) => void }) {
+  useLocale();
   const now = new Date();
   return (
     <View className="gap-0.5">
@@ -95,6 +98,7 @@ export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSe
 }
 
 function AreaPill({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -123,6 +127,7 @@ export function AreaPanel({
   value?: string;
   onSelect: (value: string | undefined) => void;
 }) {
+  useLocale();
   const byValue = new Map(areas.map((area) => [area.value, area]));
   const grouped = new Set(AREA_REGIONS.flatMap((region) => region.areas));
   const others = areas.filter((area) => !grouped.has(area.value));
@@ -175,6 +180,7 @@ export function InstrumentPanel({
   columns?: number;
   onSelect: (key: ConcertInstrumentKey | undefined) => void;
 }) {
+  useLocale();
   return (
     <View className="gap-2.5">
       <View className="flex-row flex-wrap" style={{ marginHorizontal: -4 }}>
@@ -243,6 +249,7 @@ function ArtistRow({
   favorite: boolean;
   onPress: () => void;
 }) {
+  useLocale();
   const meta = [option.category ? getArtistCategoryLabel(option.category) : null, option.englishName]
     .filter(Boolean)
     .join(' · ');
@@ -294,6 +301,7 @@ export function ArtistPanel({
   onSelect: (artist: ArtistChoice | undefined) => void;
   autoFocus?: boolean;
 }) {
+  useLocale();
   const [search, setSearch] = React.useState('');
   const debounced = useDebounce(search, 250);
   const { options, hasCounts, isLoading, isError, refetch } = useConcertArtistOptions(debounced);
@@ -411,6 +419,7 @@ export function ToggleRow({
   value: boolean;
   onChange: (next: boolean) => void;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={() => onChange(!value)}

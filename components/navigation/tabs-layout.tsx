@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { THEME } from '@/lib/theme';
 import { withAlpha } from '@/lib/design/tokens';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useColorScheme } from 'nativewind';
 import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -19,6 +19,7 @@ import { runRouteTransition } from '@/lib/navigation/view-transition';
  * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
+  useLocale();
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = THEME[scheme];

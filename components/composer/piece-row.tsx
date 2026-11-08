@@ -11,7 +11,7 @@ import { THEME } from '@/lib/theme';
 import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, TrashIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { Linking, Pressable, View } from 'react-native';
 
 interface ListenLink {
@@ -83,6 +83,7 @@ function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
 
 /** 대표곡 별. 채운 별을 강조색으로 그린다 */
 export function NotableStar({ size = 13, label }: { size?: number; label?: string }) {
+  useLocale();
   const { colorScheme } = useColorScheme();
   const color = THEME[colorScheme === 'dark' ? 'dark' : 'light'].primary;
   return (
@@ -104,6 +105,7 @@ export function catalogueLabel(piece: Piece): string | null {
  * 맞는 곳이 없으면 글을 그대로 둔다
  */
 export function Highlighted({ text, terms }: { text: string; terms?: readonly string[] }) {
+  useLocale();
   const words = (terms ?? [])
     .map((value) => value.trim())
     .filter(Boolean)
@@ -159,6 +161,7 @@ export function PieceRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const partCount = piece.partCount ?? 0;
   const unit = partUnit(piece.partKind);
@@ -244,6 +247,7 @@ export function PieceRow({
 }
 
 function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
+  useLocale();
   return (
     <View className="flex-row flex-wrap gap-2.5">
       {links.map((link) => (
@@ -273,8 +277,9 @@ function PiecePartList({
   partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  const { locale } = useLocale();
   const unit = partUnit(partKind);
-  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data]);
+  const ordered = React.useMemo(() => orderParts(query.data ?? []), [query.data, locale]);
 
   if (query.isLoading) {
     return (
@@ -329,6 +334,7 @@ function PiecePartRow({
   partKind: PiecePartKind | null | undefined;
   onCompare: (pieceId: number) => void;
 }) {
+  useLocale();
   // 묶음 안 소나타의 악장처럼 묶음 단위가 곡이어도 악장 번호가 있는 줄은 악장으로 센다
   const movement = partKind === 'movement' || Boolean(part.movementNumber?.trim());
   const linked = part.linkedPiece;

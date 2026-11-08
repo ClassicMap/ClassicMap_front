@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View, type LayoutChangeEvent } from 'react-native';
@@ -18,6 +18,7 @@ type ExpandableTextProps = {
  * 글자 수로 가늠하면 좁은 칸에서 잘리는데 버튼이 없는 일이 생겨, 전체 높이를 숨은 사본으로 재서 견준다.
  */
 export function ExpandableText({ text, lines, variant = 'body', className, toggleClassName }: ExpandableTextProps) {
+  useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const [fullHeight, setFullHeight] = React.useState(0);
   const [clampedHeight, setClampedHeight] = React.useState(0);

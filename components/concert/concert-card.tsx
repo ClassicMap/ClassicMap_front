@@ -2,7 +2,7 @@ import { concertClock, daysLeft, formatShortDay, shortVenue } from '@/components
 import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { Concert } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
@@ -19,6 +19,7 @@ interface ConcertCardProps {
 
 /** 공연 포스터 카드. 공연 탭 목록과 찜한 아티스트 공연 선반이 같이 쓴다 */
 export function ConcertCard({ concert, width, showDate = false, footer }: ConcertCardProps) {
+  useLocale();
   const router = useRouter();
   const days = daysLeft(concert.startDate);
   const time = concertClock(concert.concertTime);

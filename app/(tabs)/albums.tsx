@@ -11,7 +11,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { isApiUnavailable, type RecordingListItem, type RecordingSort } from '@/lib/api/client';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import {
   type AlbumBrowseFilters,
   useAlbumBrowse,
@@ -49,6 +49,7 @@ function yearOptions(): number[] {
  * 필터는 주소 파라미터(label·year·sort·mine·q)에, 연 앨범은 album 에 둔다.
  */
 export default function AlbumsScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -92,10 +93,10 @@ export default function AlbumsScreen() {
 
   const filters: AlbumBrowseFilters = React.useMemo(
     () => ({ label, year, q: debounced || undefined, sort }),
-    [debounced, label, sort, year]
+    [debounced, label, sort, year, locale]
   );
 
-  const repertoireArtists = React.useMemo(() => [...repertoire.artists], [repertoire.artists]);
+  const repertoireArtists = React.useMemo(() => [...repertoire.artists], [repertoire.artists, locale]);
   const browse = useAlbumBrowse(filters);
   const mineAlbums = useRepertoireArtistAlbums(repertoireArtists, filters, mine);
   const labels = useAlbumLabels();
@@ -106,7 +107,7 @@ export default function AlbumsScreen() {
     return (browse.data?.pages.flat() ?? []).filter((album) =>
       seen.has(album.id) ? false : (seen.add(album.id), true)
     );
-  }, [browse.data]);
+  }, [browse.data, locale]);
   const albums = mine ? mineAlbums.albums : browseAlbums;
   const loading = mine ? mineAlbums.isLoading : browse.isLoading;
   const error = mine ? mineAlbums.error : browse.error;
@@ -323,6 +324,7 @@ export default function AlbumsScreen() {
 }
 
 function OptionRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -353,6 +355,7 @@ function LabelOptions({
   unavailable: boolean;
   onPick: (label: string | undefined) => void;
 }) {
+  useLocale();
   if (loading) {
     return <Text variant="caption" className="px-1 py-2">{t('레이블을 불러오는 중이에요…')}</Text>;
   }

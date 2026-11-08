@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router/build/hooks';
@@ -12,6 +12,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 
 export function ForgotPasswordForm() {
+  useLocale();
   const { email: emailParam = '' } = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = React.useState(emailParam);
   const { signIn, isLoaded } = useSignIn();

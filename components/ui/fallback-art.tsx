@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { Text } from '@/components/ui/text';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -35,6 +36,7 @@ interface FallbackArtProps {
 }
 
 function FallbackArt({ name, shape = 'circle', size, className }: FallbackArtProps) {
+  useLocale();
   const hash = hashName(name);
   // 채도를 낮게 두어 액센트(brass)나 시대 색과 겹쳐 보이지 않게 한다.
   const hue = hash % 360;

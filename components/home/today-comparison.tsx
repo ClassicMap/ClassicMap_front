@@ -14,7 +14,7 @@ import {
   sortComparisonSectors,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
@@ -55,11 +55,12 @@ interface PerformerLine {
  * 홈에서는 영상을 불러오지 않고 썸네일만 둔다. 누르면 비교 화면에서 바로 재생된다.
  */
 export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }: TodayComparisonProps) {
+  const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(piece.pieceId);
   const sector = React.useMemo(() => {
     const sectors = sortComparisonSectors(sectorsQuery.data ?? []);
     return sectors.find((item) => item.id === sectorId) ?? defaultComparisonSector(sectors);
-  }, [sectorId, sectorsQuery.data]);
+  }, [sectorId, sectorsQuery.data, locale]);
   const reasonLine = reasons.join(' · ');
   const performancesQuery = useSectorComparisonPerformances(sector?.id);
   const [selected, setSelected] = React.useState(0);
@@ -78,7 +79,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
           durationMs: clipDurationMs(performance),
         };
       });
-  }, [performancesQuery.data, piece.performers]);
+  }, [performancesQuery.data, piece.performers, locale]);
 
   React.useEffect(() => setSelected(0), [sector?.id]);
 
@@ -248,6 +249,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
 }
 
 function TodaySkeleton({ wide }: { wide: boolean }) {
+  useLocale();
   if (!wide) {
     return (
       <View>

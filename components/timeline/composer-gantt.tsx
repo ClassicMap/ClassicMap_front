@@ -3,7 +3,7 @@ import { Text } from '@/components/ui/text';
 import { getEraFill, getEraForeground } from '@/lib/design/era-palette';
 import type { PlacedLabeledSpan } from '@/lib/design/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { Composer, Period } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -81,6 +81,7 @@ export function ComposerGantt({
   onSelect,
   onOverflowPress,
 }: ComposerGanttProps) {
+  useLocale();
   const height = ganttHeight(laneCount, overflowGroups.length > 0);
   const focusEra = eras.find((era) => era.id === focusEraId);
   const overflowTop = GANTT_LANES_TOP + Math.max(1, laneCount) * GANTT_ROW_HEIGHT + 8;
@@ -188,6 +189,7 @@ function GanttRowBase({
   scheme: ColorScheme;
   onSelect: (id: number) => void;
 }) {
+  useLocale();
   const { item, lane, startX, endX, labelX, labelWidth } = span;
   const left = Math.min(startX, labelX);
   const right = Math.max(endX, labelX + labelWidth);

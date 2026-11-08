@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import {
   useFeaturedScreenCues,
   usePrefetchScreenTitle,
@@ -50,6 +50,7 @@ const FEATURED_POSTER = 64;
 const GRID_GAP = 12;
 
 export default function FilmsScreen() {
+  useLocale();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { layout } = useBreakpoint();
@@ -244,6 +245,7 @@ export default function FilmsScreen() {
 }
 
 function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: BrowseView) => void }) {
+  useLocale();
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={t('찾는 방법')} className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
       {VIEW_OPTIONS.map((option) => {
@@ -267,6 +269,7 @@ function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: 
 }
 
 function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number }) {
+  useLocale();
   const router = useRouter();
   const prefetch = usePrefetchScreenTitle();
   return (
@@ -301,6 +304,7 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
 }
 
 function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
+  useLocale();
   const router = useRouter();
   const open = () => {
     const params = new URLSearchParams({

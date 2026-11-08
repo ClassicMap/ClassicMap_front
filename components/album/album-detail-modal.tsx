@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { pick, t } from '@/lib/i18n';
+import { pick, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { type Href, useRouter } from 'expo-router';
@@ -50,6 +50,7 @@ interface AlbumDetailModalProps {
  * 큰 커버, 연주자, 레이블·발매일·트랙 수, 스트리밍 바로가기, 레퍼토리 담기.
  */
 export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
+  useLocale();
   const router = useRouter();
   const { layout } = useBreakpoint();
   const dialog = layout === 'desktop' || layout === 'wide';

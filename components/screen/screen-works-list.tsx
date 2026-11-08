@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchScreenTitle, useScreenWorks } from '@/lib/query/hooks/useScreen';
 import type { ScreenWork } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
@@ -26,12 +26,13 @@ function groupByComposer(works: ScreenWork[]) {
 
 /** 모아 보는 화면 '곡으로 찾기'. 작곡가마다 영화에 나온 곡과 그 곡이 나온 작품을 보여 준다 */
 export function ScreenWorksList() {
+  const { locale } = useLocale();
   const works = useScreenWorks(true);
   const items = React.useMemo(
     () => works.data?.pages.flatMap((page) => page.items) ?? [],
-    [works.data]
+    [works.data, locale]
   );
-  const groups = React.useMemo(() => groupByComposer(items), [items]);
+  const groups = React.useMemo(() => groupByComposer(items), [items, locale]);
 
   if (works.isLoading) {
     return (
@@ -104,6 +105,7 @@ export function ScreenWorksList() {
 }
 
 function WorkRow({ work }: { work: ScreenWork }) {
+  useLocale();
   const router = useRouter();
   const prefetch = usePrefetchScreenTitle();
   const canCompare = work.pieceId !== null && work.composerId !== null;

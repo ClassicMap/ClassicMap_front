@@ -2,7 +2,7 @@ import { type Performer, PerformerMark } from '@/components/compare/performer-ma
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
 import { THEME, withAlpha } from '@/lib/design/tokens';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import type { LoudnessProfile } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
@@ -196,6 +196,7 @@ export function LoudnessSparkline({
   label?: string;
   className?: string;
 }) {
+  const { locale } = useLocale();
   const [width, onLayout] = useWidth();
   const colors = useCurveColors();
   const clipId = `spark-${React.useId().replace(/:/g, '')}`;
@@ -213,12 +214,12 @@ export function LoudnessSparkline({
     () => (width > 0 ? curvePath(loudness, plot, false) : ''),
     // 경로는 폭·눈금·곡선이 바뀔 때만 다시 만든다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loudness, width, height, plot.floor]
+    [loudness, width, height, plot.floor, locale]
   );
   const area = React.useMemo(
     () => (width > 0 ? curvePath(loudness, plot, true) : ''),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loudness, width, height, plot.floor]
+    [loudness, width, height, plot.floor, locale]
   );
   const describe = flat ? t('처음부터 끝까지 거의 평평해요') : t('가장 센 곳 {clock}', { clock: clipClock(loudness.peakMs) });
   const head = shownHead !== undefined && Number.isFinite(shownHead) ? Math.min(1, Math.max(0, shownHead)) : undefined;
@@ -366,6 +367,7 @@ export function LoudnessOverlay({
   playing?: boolean;
   height?: number;
 }) {
+  useLocale();
   const [width, onLayout] = useWidth();
   const colors = useCurveColors();
   const clipBase = `overlay-${React.useId().replace(/:/g, '')}`;
@@ -540,6 +542,7 @@ export function LoudnessMeasures({
   performerA: Performer;
   performerB: Performer;
 }) {
+  useLocale();
   const nameA = performerA.name;
   const nameB = performerB.name;
   const cellsA = measuredCells(a);
@@ -591,6 +594,7 @@ export function LoudnessMeasures({
 
 /** 잰 값 표 머리: 곡선과 같은 색 테두리의 얼굴, 그 색 이름 */
 function MeasureHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  useLocale();
   return (
     <View className="min-w-0 flex-1 flex-row items-center gap-1.5">
       <PerformerMark performer={performer} tone={tone} size={18} />

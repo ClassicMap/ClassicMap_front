@@ -1,10 +1,11 @@
 import { EmptyState } from '@/components/ui/empty-state';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { type Href, Stack, useRouter } from 'expo-router';
 import { CompassIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 
 export default function NotFoundScreen() {
+  useLocale();
   const router = useRouter();
   return (
     <>

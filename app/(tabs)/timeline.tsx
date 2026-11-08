@@ -31,7 +31,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useAllComposers } from '@/lib/query/hooks/useComposers';
 import type { Composer, Period } from '@/lib/types/models';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
@@ -114,6 +114,7 @@ function layoutOverflowGroups(
 }
 
 export default function TimelineScreen() {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const router = useRouter();
   // 홈 "시대로 듣기"에서 오면 그 시대에 초점을 맞춰 연다
@@ -146,19 +147,19 @@ export default function TimelineScreen() {
       comparableQuery.data
         ? new Map(comparableQuery.data.composers.map((entry) => [entry.composerId, entry.pieceCount]))
         : undefined,
-    [comparableQuery.data]
+    [comparableQuery.data, locale]
   );
   const currentYear = new Date().getFullYear();
 
   const validComposers = React.useMemo(
     () => (composersQuery.data ?? []).filter((c) => Number.isFinite(c.birthYear) && c.birthYear > 0),
-    [composersQuery.data]
+    [composersQuery.data, locale]
   );
   const composers = React.useMemo(() => {
     if (scope === 'major') return validComposers.filter((c) => c.tier === 'S' || c.tier === 'A');
     if (scope === 'comparable') return validComposers.filter((c) => comparable?.has(c.id));
     return validComposers;
-  }, [validComposers, scope, comparable]);
+  }, [validComposers, scope, comparable, locale]);
 
   // 축은 칩과 상관없이 전체 작곡가 범위로 고정한다. 칩을 바꿔도 눈금이 흔들리지 않고 밀도 띠와 맞는다
   const fromYear =
@@ -188,7 +189,7 @@ export default function TimelineScreen() {
     ? Number.POSITIVE_INFINITY
     : clamp(Math.floor(laneBudget / GANTT_ROW_HEIGHT), MIN_LANES, MAX_LANES);
 
-  const eras = React.useMemo(() => PERIODS.filter((era) => era.endYear > fromYear), [fromYear]);
+  const eras = React.useMemo(() => PERIODS.filter((era) => era.endYear > fromYear), [fromYear, locale]);
   const focusEra = eras.find((era) => era.id === focusEraId) ?? null;
 
   const { placed, overflow, laneCount } = React.useMemo(() => {
@@ -207,17 +208,17 @@ export default function TimelineScreen() {
       };
     });
     return placeLabeledSpans(inputs, { gapPx: LABEL_GAP_PX, maxLanes, rightEdge: chartWidth - 4 });
-  }, [composers, comparable, x, currentYear, focusEra, maxLanes, chartWidth]);
+  }, [composers, comparable, x, currentYear, focusEra, maxLanes, chartWidth, locale]);
 
   const overflowGroups = React.useMemo(
     () => layoutOverflowGroups(overflow, eras, x, fromYear, toYear, chartWidth),
-    [overflow, eras, x, fromYear, toYear, chartWidth]
+    [overflow, eras, x, fromYear, toYear, chartWidth, locale]
   );
   const density = React.useMemo(
     () => decadeDensity(validComposers, { fromYear, toYear, currentYear }),
-    [validComposers, fromYear, toYear, currentYear]
+    [validComposers, fromYear, toYear, currentYear, locale]
   );
-  const eraOrder = React.useMemo(() => PERIODS.map((era) => era.name), []);
+  const eraOrder = React.useMemo(() => PERIODS.map((era) => era.name), [locale]);
   const ticks = yearTicks(fromYear, toYear, ppy);
 
   const yearAt = (px: number) => fromYear + (px - PAD_LEFT) / ppy;
@@ -569,6 +570,7 @@ export default function TimelineScreen() {
 }
 
 function Legend({ className }: { className?: string }) {
+  useLocale();
   return (
     <View className={cn('flex-row flex-wrap items-center gap-x-3 gap-y-1', className)}>
       <View className="flex-row items-center gap-1.5">
@@ -581,6 +583,7 @@ function Legend({ className }: { className?: string }) {
 }
 
 function TimelineSkeleton() {
+  useLocale();
   return (
     <View className="gap-2.5">
       <Skeleton className="h-8 w-full rounded-md" />
@@ -606,6 +609,7 @@ function SelectedComposer({
   onOpenComposer: () => void;
   onClose: () => void;
 }) {
+  useLocale();
   const router = useRouter();
   const pieces = useComparisonPieces(composer.id, comparableCount > 0);
   const firstPiece = comparableCount > 0 ? pieces.data?.pages[0]?.[0] : undefined;

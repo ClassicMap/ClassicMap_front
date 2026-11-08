@@ -4,7 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import type { RecordingListItem } from '@/lib/api/client';
-import { msg, pick, t } from '@/lib/i18n';
+import { msg, pick, t, useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
 
@@ -43,6 +43,7 @@ interface AlbumCardProps {
 
 /** 앨범 카드: 정사각 커버(콘텐츠라 사각), 제목, 연주자, 레이블·발매일 */
 export function AlbumCard({ album, width, inRepertoire = false, onPress }: AlbumCardProps) {
+  useLocale();
   const badge = albumBadge(album);
   const meta = [album.label, albumDate(album)].filter(Boolean).join(' · ');
   const artistName = pick(album.artistName, album.artistEnglishName);
@@ -93,6 +94,7 @@ interface AlbumGridProps {
 
 /** 폭에 맞춰 열 수를 정하는 앨범 그리드 */
 export function AlbumGrid({ albums, loading, wide, isInRepertoire, onOpen }: AlbumGridProps) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 22 : 14;
   const minItem = wide ? 168 : 140;
@@ -134,6 +136,7 @@ export function AlbumShelf({
   isInRepertoire,
   onOpen,
 }: Omit<AlbumGridProps, 'loading'>) {
+  useLocale();
   const size = wide ? 176 : 148;
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-4">

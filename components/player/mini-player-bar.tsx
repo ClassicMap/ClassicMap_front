@@ -3,7 +3,7 @@ import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/pl
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { useRouter, useSegments } from 'expo-router';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * 왼쪽 작은 자리에 재생 중인 영상이 그대로 옮겨 와 뜬다 (웹은 셸 영상, 네이티브는 루트의 YouTube).
  */
 export function MiniPlayerBar() {
+  useLocale();
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();

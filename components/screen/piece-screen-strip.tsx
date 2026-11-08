@@ -3,7 +3,7 @@ import { SCREEN_KIND_LABELS, shortTitleMeta } from '@/components/screen/labels';
 import { ScreenPoster } from '@/components/screen/screen-poster';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { usePieceScreenCues, usePrefetchScreenTitle } from '@/lib/query/hooks/useScreen';
 import type { PieceScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,7 @@ export function PieceScreenStrip({
   activeSectorId?: number;
   className?: string;
 }) {
+  const { locale } = useLocale();
   const router = useRouter();
   const prefetch = usePrefetchScreenTitle();
   const { layout } = useBreakpoint();
@@ -45,7 +46,7 @@ export function PieceScreenStrip({
   const { data } = usePieceScreenCues(pieceId);
   const items = React.useMemo(
     () => groupByTitle(data ?? [], activeSectorId),
-    [data, activeSectorId]
+    [data, activeSectorId, locale]
   );
   if (items.length === 0) return null;
 

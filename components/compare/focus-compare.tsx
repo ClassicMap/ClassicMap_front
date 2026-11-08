@@ -32,7 +32,7 @@ import {
   useSectorComparisonPerformances,
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, FeaturedPair } from '@/lib/types/models';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
   AlertCircleIcon,
@@ -97,16 +97,17 @@ function artistKey(performance: ComparisonPerformance): number {
  * 웹은 두 클립만 미리 불러 두고 소리 나는 쪽만 튼다. 네이티브는 플레이어 하나로 전환한다.
  */
 export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onChangeSector }: FocusCompareProps) {
+  const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
-  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data]);
+  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data, locale]);
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
-    [pieceInfo?.performers]
+    [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
     (performance: ComparisonPerformance) => {
@@ -128,7 +129,7 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       const pb = list.find((performance) => artistKey(performance) === artistKey(b));
       return { sector, a: pa, b: pb, loading: allSectors[index]?.isLoading ?? false };
     });
-  }, [a, b, sectors, allSectors]);
+  }, [a, b, sectors, allSectors, locale]);
 
   // 집중 비교가 보이는 동안 셸 영상은 쉬고 미니 플레이어도 숨는다.
   // 탭 화면은 떠나도 뒤에 살아 있으므로 마운트가 아니라 화면 포커스를 따른다
@@ -253,6 +254,7 @@ interface SideProgress {
 }
 
 function FocusStage(props: FocusStageProps) {
+  useLocale();
   const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue, featuredPair } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
@@ -1019,6 +1021,7 @@ function NativeLoopButton({
   progress: { current: number; duration: number };
   onChange: (loop: LoopRange | null) => void;
 }) {
+  useLocale();
   const [start, setStart] = React.useState<number | null>(null);
   const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
   const active = Boolean(loop) || start !== null;
@@ -1062,6 +1065,7 @@ function Segmented<T extends string | number>({
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
 }) {
+  useLocale();
   return (
     <View accessibilityRole="radiogroup" accessibilityLabel={label} className="flex-row items-center gap-2">
       <Text variant="caption" className="text-foreground-subtle">
@@ -1105,6 +1109,7 @@ function SideControls({
   progress: SideProgress;
   onSeek: (seconds: number) => void;
 }) {
+  useLocale();
   const [scrub, setScrub] = React.useState<number | null>(null);
   const [trackWidth, setTrackWidth] = React.useState(0);
   const duration = progress.duration;
@@ -1189,6 +1194,7 @@ function LengthTable({
   rows: SectorRow[];
   activeSectorId: number | undefined;
 }) {
+  useLocale();
   const performerA = performerOf(a, imageOf);
   const performerB = performerOf(b, imageOf);
   return (
@@ -1237,6 +1243,7 @@ function LengthTable({
 
 /** 크로스페이드: 켜면 연주자를 바꿀 때 두 소리를 잠깐 겹쳐 넘긴다. 켠 상태는 기억한다 (웹만) */
 function CrossfadeToggle() {
+  useLocale();
   const on = useComparePlayer((state) => state.crossfade);
   return (
     <SwitchToggle
@@ -1249,6 +1256,7 @@ function CrossfadeToggle() {
 }
 
 function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (on: boolean) => void; label: string; hint: string }) {
+  useLocale();
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -1267,6 +1275,7 @@ function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (o
 
 /** 길이 표 머리: 얼굴과 이름 */
 function LengthHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b' }) {
+  useLocale();
   return (
     <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
       <PerformerMark performer={performer} tone={tone} size={16} />
@@ -1294,6 +1303,7 @@ function FocusBar({
   onLoopChange: (range: LoopRange | null) => void;
   onExit: () => void;
 }) {
+  useLocale();
   const { progress } = engine;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
@@ -1406,6 +1416,7 @@ function LoopProgress({
   onLoop: (range: LoopRange | null) => void;
   duration: number;
 }) {
+  useLocale();
   const trackRef = React.useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = React.useState<{ from: number; to: number } | null>(null);
   const ratioAt = (clientX: number) => {

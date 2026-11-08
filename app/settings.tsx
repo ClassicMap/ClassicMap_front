@@ -58,6 +58,7 @@ const BIO_MAX = 80;
 
 /** 설정 (3차 시안): 프로필 · 공개 범위 · 취향 · 화면 · 계정 · 정보 */
 export default function SettingsScreen() {
+  useLocale();
   const router = useRouter();
   const { user } = useUser();
   const { signOut } = useClerkAuth();
@@ -213,6 +214,7 @@ export default function SettingsScreen() {
 }
 
 function Group({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  useLocale();
   return (
     <View className="gap-4 rounded-xl border border-border px-5 py-5 web:px-6">
       <View className="gap-1">
@@ -229,6 +231,7 @@ function Group({ title, description, children }: { title: string; description?: 
 }
 
 function RetryLine({ message, onRetry }: { message: string; onRetry: () => void }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
       <Text variant="bodySm" className="flex-1 text-foreground-muted">{message}</Text>
@@ -250,6 +253,7 @@ function ProfileForm({
   defaultName: string;
   defaultAvatar?: string;
 }) {
+  const { locale } = useLocale();
   const update = useUpdateProfileVisibility();
   const initial = React.useMemo(
     () => ({
@@ -257,7 +261,7 @@ function ProfileForm({
       bio: profile?.bio || '',
       avatarUrl: profile?.avatarUrl || '',
     }),
-    [defaultName, profile]
+    [defaultName, profile, locale]
   );
   const [draft, setDraft] = React.useState(initial);
   const [error, setError] = React.useState<string | null>(null);
@@ -361,6 +365,7 @@ function ProfileForm({
 
 /** 공개 범위는 켜고 끄는 즉시 저장한다. 실패하면 되돌리고 알린다 */
 function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
+  useLocale();
   const update = useUpdateProfileVisibility();
   const { colorScheme } = useColorScheme();
   const colors = THEME[colorScheme === 'dark' ? 'dark' : 'light'];
@@ -409,6 +414,7 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
 }
 
 function TastePreferences() {
+  useLocale();
   const router = useRouter();
   const taste = useTaste();
   const { colorScheme } = useColorScheme();
@@ -532,6 +538,7 @@ function TastePreferences() {
 
 /** 들은 기록: 추천을 고치는 데 쓸지 켜고 끄고, 모아 둔 것을 지운다 */
 function ListeningHistory() {
+  useLocale();
   const taste = useTaste();
   const queryClient = useQueryClient();
   const { colorScheme } = useColorScheme();
@@ -599,6 +606,7 @@ function resolveThemeChoice(choice: 'system' | 'light' | 'dark'): 'system' | 'li
 }
 
 function ThemeSelector() {
+  useLocale();
   const { setColorScheme } = useColorScheme();
   // 테마 선택은 저장해 두지 않아서 화면을 열 때마다 시스템에서 시작한다
   const [choice, setChoice] = React.useState<'system' | 'light' | 'dark'>('system');
@@ -663,6 +671,7 @@ function LinkRow({
   destructive?: boolean;
   mono?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

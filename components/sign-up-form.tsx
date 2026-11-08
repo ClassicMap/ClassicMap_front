@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/lib/clerk/error-translator';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';
 import * as React from 'react';
@@ -17,6 +17,7 @@ type SignUpErrors = { firstName?: string; lastName?: string; email?: string; pas
 const SIGN_UP_FALLBACK_ERROR = msg('가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.');
 
 export function SignUpForm() {
+  useLocale();
   const { signUp, isLoaded } = useSignUp();
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');

@@ -1,10 +1,11 @@
 import { SubPage } from '@/components/account/sub-page';
 import { Text } from '@/components/ui/text';
-import { getLocale, t } from '@/lib/i18n';
+import { getLocale, t, useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { View } from 'react-native';
 
 export default function PrivacyPolicyScreen() {
+  useLocale();
   return (
     <SubPage title={t('개인정보 처리방침')} fallbackHref="/settings">
         <View className="gap-6">

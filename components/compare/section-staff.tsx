@@ -2,7 +2,7 @@ import { NotationGlyph } from '@/components/ui/notation-glyph';
 import { Text } from '@/components/ui/text';
 import { isWholeWorkSector, primaryCredit } from '@/lib/data/comparison';
 import { placeSections } from '@/lib/design/section-timeline';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { useAllSectorPerformances } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ interface SectionStaffProps {
  * 선은 한 곳에서만 긋고(부록 D-15) 강조 면은 모서리 없이 선 사이에 둔다(D-14).
  */
 export function SectionStaff({ sectors, activeSectorId, reference, onSelect, labels = 'all' }: SectionStaffProps) {
+  useLocale();
   const queries = useAllSectorPerformances(sectors.map((sector) => sector.id));
   const referenceArtist = reference ? primaryCredit(reference)?.artistId : undefined;
 

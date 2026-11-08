@@ -13,7 +13,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { type Href, Link, usePathname } from 'expo-router';
 import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
@@ -55,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
 const LIBRARY_PER_SECTION = 4;
 
 export function SideNav({ collapsed }: { collapsed: boolean }) {
+  useLocale();
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
   const queryClient = useQueryClient();
@@ -120,13 +121,14 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
 }
 
 function Library() {
+  const { locale } = useLocale();
   const { isSignedIn } = useAuth();
   const favorites = useMyRepertoire(isSignedIn === true);
   const queryClient = useQueryClient();
 
   const sections = React.useMemo(
     () => (favorites.data ? groupLibraryEntries(buildLibraryEntries(favorites.data), LIBRARY_PER_SECTION) : []),
-    [favorites.data]
+    [favorites.data, locale]
   );
 
   return (
@@ -196,6 +198,7 @@ function Library() {
 }
 
 function LibraryThumb({ entry }: { entry: LibraryEntry }) {
+  useLocale();
   const image = useComposerAvatar(entry.composerId, entry.image);
   return <EntityThumb name={entry.title} image={image} shape={entry.shape} size={38} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
 }

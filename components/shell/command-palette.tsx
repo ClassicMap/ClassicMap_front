@@ -4,7 +4,7 @@ import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
-import { msg, t } from '@/lib/i18n';
+import { msg, t, useLocale } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { type PrefetchTarget, prefetchTarget } from '@/lib/navigation/prefetch';
 import { useQueryClient } from '@tanstack/react-query';
@@ -58,6 +58,7 @@ const GROUP_LABELS: Record<Exclude<ResultKind, 'action'>, string> = {
 };
 
 export function CommandPalette() {
+  const { locale } = useLocale();
   const { open, setOpen } = useCommandPalette();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -189,9 +190,9 @@ export function CommandPalette() {
     go,
     toggleColorScheme,
     close,
-  ]);
+   locale,]);
 
-  const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups, locale]);
 
   React.useEffect(() => {
     setActiveIndex(0);
@@ -331,6 +332,7 @@ export function CommandPalette() {
 }
 
 function PaletteThumb({ item }: { item: PaletteItem }) {
+  useLocale();
   const image = useComposerAvatar(item.composerId, item.image);
   if (item.icon) {
     return (

@@ -1,4 +1,4 @@
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, type PlayerSlot, useComparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
 
@@ -95,6 +95,7 @@ function sameFrame(a: Frame, b: Frame): boolean {
  * 오가도 재생이 끊기지 않는다.
  */
 export function ComparePlayerHost() {
+  useLocale();
   const current = useComparePlayer((state) => state.current);
   const focus = useComparePlayer((state) => state.focus);
   const fullscreen = useComparePlayer((state) => state.fullscreen);

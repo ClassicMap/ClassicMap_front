@@ -1,3 +1,4 @@
+import { useLocale } from '@/lib/i18n';
 import { isBarePath } from '@/components/navigation/bare-paths';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
 import { MiniPlayerBar } from '@/components/player/mini-player-bar';
@@ -11,6 +12,7 @@ import * as React from 'react';
  * 웹 구현은 root-chrome.web.tsx
  */
 export function RootChrome({ children }: { children: React.ReactNode }) {
+  useLocale();
   const pathname = usePathname();
   return (
     <>

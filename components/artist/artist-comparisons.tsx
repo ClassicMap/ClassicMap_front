@@ -4,7 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import {
   useArtistComparisonPerformances,
   useComparisonPiece,
@@ -60,9 +60,10 @@ function groupByPiece(items: ComparisonPerformance[], artistId: number): PieceGr
  * 곡별로 묶고, 각 구간에 함께 비교되는 연주자를 보여 준다.
  */
 export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: boolean }) {
+  const { locale } = useLocale();
   const query = useArtistComparisonPerformances(artistId);
-  const items = React.useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
-  const groups = React.useMemo(() => groupByPiece(items, artistId), [items, artistId]);
+  const items = React.useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data, locale]);
+  const groups = React.useMemo(() => groupByPiece(items, artistId), [items, artistId, locale]);
   const sectorCount = items.length;
 
   if (query.isLoading) return <SkeletonList rows={4} avatar="none" />;
@@ -114,6 +115,7 @@ export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: 
 }
 
 function GroupHeader({ group }: { group: PieceGroup }) {
+  useLocale();
   // 비교 데이터에는 작곡가 초상이 없어 카탈로그에서 가져온다
   const piece = useComparisonPiece(group.pieceId, group.composerId).data;
   return (
@@ -133,6 +135,7 @@ function GroupHeader({ group }: { group: PieceGroup }) {
 }
 
 function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; artistId: number; wide: boolean }) {
+  useLocale();
   const router = useRouter();
   const peers = useSectorComparisonPerformances(item.sectorId);
   const others = (peers.data ?? [])

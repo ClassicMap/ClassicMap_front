@@ -2,7 +2,7 @@ import { HeroImage, type HeroImageLayout } from '@/components/hero/hero-image';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -29,6 +29,7 @@ interface HeroBannerProps {
  * 아래쪽을 어둡게 눌러 그 위 왼쪽 아래에 이름을 크게 쓴다. 본문 좌우 여백을 뚫고 가장자리까지 채운다.
  */
 export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout = 'cover', focalPoint }: HeroBannerProps) {
+  useLocale();
   const [width, setWidth] = React.useState(0);
   const insets = useSafeAreaInsets();
   const hasImage = Boolean(image);
@@ -97,6 +98,7 @@ export function HeroPlayButton({
   busy?: boolean;
   playing?: boolean;
 }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}

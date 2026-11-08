@@ -1,6 +1,6 @@
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { Icon } from '@/components/ui/icon';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { Volume1Icon, Volume2Icon, VolumeXIcon } from 'lucide-react-native';
 import * as React from 'react';
@@ -8,6 +8,7 @@ import { Pressable, View } from 'react-native';
 
 /** 음소거 버튼 + 볼륨 슬라이더 (웹). 값은 이 브라우저에 남는다 */
 export function VolumeControl({ width = 76 }: { width?: number }) {
+  useLocale();
   const volume = useComparePlayer((state) => state.volume);
   const muted = useComparePlayer((state) => state.muted);
   const level = muted ? 0 : volume;

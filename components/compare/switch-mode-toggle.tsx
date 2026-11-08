@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, type SwitchMode, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
@@ -16,6 +16,7 @@ export const SELECTED_SHADOW = {
 
 /** 연주자를 바꿀 때 어디서 이어 들을지 */
 export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
+  useLocale();
   const mode = useComparePlayer((state) => state.switchMode);
   const options: { value: SwitchMode; label: string; hint: string }[] = [
     { value: 'resume', label: t('이어서'), hint: t('연주자마다 듣던 곳에서 이어요') },

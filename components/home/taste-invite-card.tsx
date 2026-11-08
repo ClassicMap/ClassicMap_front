@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import * as React from 'react';
 import { View } from 'react-native';
 
@@ -11,6 +11,7 @@ interface TasteInviteCardProps {
 
 /** 취향을 아직 안 알려 준 사람에게 홈 위에서 권한다. 가입한 사람은 처음 한 번 전체 화면으로도 연다 */
 export function TasteInviteCard({ onStart, onDismiss }: TasteInviteCardProps) {
+  useLocale();
   const [busy, setBusy] = React.useState(false);
   const dismiss = async () => {
     setBusy(true);

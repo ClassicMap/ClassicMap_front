@@ -20,7 +20,7 @@ import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
 import { useTasteSync } from '@/lib/hooks/useTaste';
 import { installRouteTransitions } from '@/lib/navigation/view-transition';
-import { LocaleProvider, t } from '@/lib/i18n';
+import { LocaleProvider, t, useLocale } from '@/lib/i18n';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -36,6 +36,7 @@ if (!publishableKey) {
 }
 
 export default function RootLayout() {
+  useLocale();
   const { colorScheme } = useColorScheme();
   // 악보 글리프(Bravura)는 화면을 막지 않고 불러온다. 로드 전에는 글리프 자리만 빈다
   useFonts({ Bravura: require('@/assets/fonts/Bravura.otf') });
@@ -66,6 +67,7 @@ SplashScreen.preventAutoHideAsync();
 installRouteTransitions();
 
 function Routes() {
+  useLocale();
   const { isLoaded, userId, getToken } = useAuth();
   const client = useQueryClient();
 

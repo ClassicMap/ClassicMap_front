@@ -52,7 +52,7 @@ import {
   openFirstResult,
   searchComparable,
 } from '@/components/compare/compare-search';
-import { t } from '@/lib/i18n';
+import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import {
@@ -77,23 +77,24 @@ interface CompareMobileCatalogProps {
 
 /** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로. 위 검색 칸으로 바로 찾는다 */
 export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const genreCount = useGenreShelves().shelves.length;
   const comparable = useComparableComposers();
   const repertoire = useRepertoireIds();
   const repertoirePieces = React.useMemo(
     () => countRepertoirePieces(comparable.data?.pieces ?? [], repertoire.pieces),
-    [comparable.data?.pieces, repertoire.pieces]
+    [comparable.data?.pieces, repertoire.pieces, locale]
   );
   const composers = React.useMemo(
     () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
-    [comparable.data?.composers, repertoire.composers, repertoirePieces]
+    [comparable.data?.composers, repertoire.composers, repertoirePieces, locale]
   );
   const [query, setQuery] = React.useState('');
   const searching = query.trim().length > 0;
   const result = React.useMemo(
     () => searchComparable(comparable.data, query, repertoire),
-    [comparable.data, query, repertoire]
+    [comparable.data, query, repertoire, locale]
   );
 
   return (
@@ -217,13 +218,14 @@ interface CompareMobileComposerPiecesProps {
 
 /** 모바일 비교 둘째 단: 한 작곡가의 비교할 수 있는 작품 2열 */
 export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: CompareMobileComposerPiecesProps) {
+  const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const catalog = useComparisonPieces(composerId);
   const repertoire = useRepertoireIds();
   // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
   const pieces = React.useMemo(
     () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
-    [catalog.data, repertoire.pieces]
+    [catalog.data, repertoire.pieces, locale]
   );
   const summary = useComparableComposers().data?.byId.get(composerId);
   const name = summary?.composerName ?? pieces[0]?.composerName;
@@ -356,12 +358,13 @@ interface CompareMobilePieceProps {
  * 영상은 고른 연주 하나만 불러온다. 웹은 잘라 둔 클립, 네이티브는 YouTube 원본의 그 구간.
  */
 export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSelectSector, onFocus }: CompareMobilePieceProps) {
+  const { locale } = useLocale();
   const router = useRouter();
   const headerInset = useTabHeaderInset();
   const scrollInsets = useTabScrollInsets();
   const { canEdit } = useAuth();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data]);
+  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   const repertoireIds = useRepertoireIds();
@@ -371,14 +374,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       repertoireFirst(performancesQuery.data ?? [], (performance) =>
         repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)
       ),
-    [performancesQuery.data, repertoireIds.artists]
+    [performancesQuery.data, repertoireIds.artists, locale]
   );
   const first = performancesQuery.data?.[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const goBack = () => onBack(composerId ?? first?.composerId);
   const images = React.useMemo(
     () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
-    [pieceInfo?.performers]
+    [pieceInfo?.performers, locale]
   );
   const imageOf = (performance: ComparisonPerformance) =>
     primaryCredit(performance)?.imageUrl ?? images.get(primaryCredit(performance)?.artistId ?? 0) ?? null;
@@ -672,6 +675,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
 }
 
 function BackButton({ onPress }: { onPress: () => void }) {
+  useLocale();
   return (
     <Pressable
       onPress={onPress}
@@ -701,6 +705,7 @@ function PerformerRow({
   onMoment: (moment: ListeningMoment) => void;
   curveFloor: number;
 }) {
+  useLocale();
   const credit = primaryCredit(performance);
   const ready = performance.clipStatus === 'ready';
   const duration = clipDurationMs(performance);

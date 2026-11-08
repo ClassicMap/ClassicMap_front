@@ -23,7 +23,7 @@ import { AdminConcertAPI } from '@/lib/api/admin';
 import { ConcertAPI } from '@/lib/api/client';
 import { areaName } from '@/lib/data/areas';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { formatNumber, t } from '@/lib/i18n';
+import { formatNumber, t, useLocale } from '@/lib/i18n';
 import { useConcert } from '@/lib/query/hooks/useConcerts';
 import type { TicketVendor } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ConcertDetailScreen() {
+  useLocale();
   const { id } = useLocalSearchParams<{ id: string }>();
   const concertId = Number(id);
   const router = useRouter();

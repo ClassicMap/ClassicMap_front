@@ -27,7 +27,7 @@ import { useIsFetching } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { formatNumber, msg, t } from '@/lib/i18n';
+import { formatNumber, msg, t, useLocale } from '@/lib/i18n';
 import {
   ActivityIndicator,
   Platform,
@@ -128,6 +128,7 @@ type AlignMode = 'focus' | 'reset';
  * - 좁은 화면은 검색창을 누르면 화면 위로 올린다(모바일 검색 화면처럼 위는 검색창, 아래는 결과).
  */
 export function ComposerWorks(props: ComposerWorksProps) {
+  const { locale } = useLocale();
   const { composerId, composerName, headerAction, scrollRef } = props;
   const { colorScheme } = useColorScheme();
   const { layout } = useBreakpoint();
@@ -165,7 +166,7 @@ export function ComposerWorks(props: ComposerWorksProps) {
     const byGenre = new Map<GenreKey, number>();
     for (const item of resultCatalog.genres) byGenre.set(genreKey(item), item.count);
     return { total: resultCatalog.total, byGenre };
-  }, [searching, resultCatalog]);
+  }, [searching, resultCatalog, locale]);
 
   const alignSearchBlock = React.useCallback(
     (mode: AlignMode) => {
@@ -368,6 +369,7 @@ function GenreChips({
   resultCounts: { total: number; byGenre: ReadonlyMap<GenreKey, number> } | null;
   onChange: (next: GenreKey | 'all') => void;
 }) {
+  useLocale();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
       <Chip
@@ -401,6 +403,7 @@ type RowActions = Pick<
 >;
 
 function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPiece[] }) {
+  useLocale();
   return (
     <View className="border-t border-border">
       {pieces.map((piece) => (
@@ -420,6 +423,7 @@ function Rows({ pieces, ...actions }: RowActions & { pieces: readonly ComposerPi
 }
 
 function GenreHeader({ genre, notableCount }: { genre: GenreKey; notableCount: number }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-2.5">
       <GenreMark genre={genre === 'other' ? null : genre} size={28} />
@@ -434,6 +438,7 @@ function GenrePreview({
   onOpen,
   ...props
 }: ComposerWorksProps & { genre: ComposerCatalogGenre; onOpen: () => void }) {
+  useLocale();
   const key = genreKey(genre);
   const query = useComposerPieces(
     props.composerId,
@@ -487,6 +492,7 @@ function GenreView({
   notableOnly: boolean;
   onNotableOnly: (value: boolean) => void;
 }) {
+  useLocale();
   const key = genreKey(genre);
   const grouped = genre.count >= GROUP_BY_FORM_FROM && genre.forms.length > 1;
   const forms = notableOnly ? genre.forms.filter((form) => form.notableCount > 0) : genre.forms;
@@ -548,6 +554,7 @@ function FormGroup({
   filter: ComposerPieceFilter;
   notableOnly: boolean;
 }) {
+  useLocale();
   const [open, setOpen] = React.useState(false);
   const total = notableOnly ? form.notableCount : form.count;
   const preview = useComposerPieces(props.composerId, filter, {
@@ -593,8 +600,9 @@ function PagedList({
   onCollapse,
   ...props
 }: ComposerWorksProps & { filter: ComposerPieceFilter; bare?: boolean; onCollapse?: () => void }) {
+  const { locale } = useLocale();
   const query = useComposerPieces(props.composerId, filter, { pageSize: PAGE_SIZE });
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
   if (query.isLoading) return <RowsSkeleton count={6} />;
   if (query.isError)
     return (
@@ -632,8 +640,9 @@ function SearchResults({
   onSearchAll: () => void;
   onClear: () => void;
 }) {
-  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
-  const terms = React.useMemo(() => highlightTerms(q), [q]);
+  const { locale } = useLocale();
+  const pieces = React.useMemo(() => query.data?.pages.flat() ?? [], [query.data, locale]);
+  const terms = React.useMemo(() => highlightTerms(q), [q, locale]);
   // 첫 검색에만 자리표시를 보이고, 그 뒤로는 앞 결과를 흐리게 둔 채 새 결과를 기다린다.
   // 결과 수 줄은 어느 때나 같은 자리에 한 줄로 두어 아래 목록이 위아래로 밀리지 않게 한다
   const firstLoad = query.isLoading && pieces.length === 0;
@@ -727,6 +736,7 @@ function SearchResults({
 }
 
 function RowsSkeleton({ count }: { count: number }) {
+  useLocale();
   return (
     <View className="gap-2">
       {Array.from({ length: Math.max(count, 1) }, (_, index) => (
@@ -737,6 +747,7 @@ function RowsSkeleton({ count }: { count: number }) {
 }
 
 function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }) {
+  useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
       <Text variant="bodySm" className="flex-1 text-foreground-muted">
@@ -752,6 +763,7 @@ function RetryRow({ message, onRetry }: { message: string; onRetry: () => void }
 }
 
 function StarCount({ count }: { count: number }) {
+  useLocale();
   return (
     <View
       className="flex-row items-center gap-1"
