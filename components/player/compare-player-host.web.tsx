@@ -13,6 +13,20 @@ interface Placement {
 
 const PARKED: Placement = { kind: 'parked', fit: 'cover', radius: 0, controls: false };
 
+/**
+ * 전체 화면 자리. 연주자 카드의 자리를 그대로 전체 화면으로 띄우면, 연주자를 바꿀 때 그 카드 자리가 빠지면서
+ * 브라우저가 전체 화면을 풀었다. 그래서 루트에 늘 붙어 있는 이 자리로 영상을 옮긴 뒤 이 자리를 전체 화면으로 띄운다.
+ * 옮기는 즉시 화면에 맞춰(contain) 그리고, 전체 화면이 되면 서서히 나타나게 한다.
+ */
+const FULLSCREEN_ROOT_CSS = `
+[data-cm-fsroot] { position: fixed; left: -10000px; top: 0; width: 16px; height: 9px; overflow: hidden; background: #000; }
+[data-cm-fsroot] video { object-fit: contain !important; }
+[data-cm-fsroot]:fullscreen > div { animation: cm-fs-in 320ms ease-out both; }
+[data-cm-fsroot][data-idle] { cursor: none; }
+@keyframes cm-fs-in { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { [data-cm-fsroot]:fullscreen > div { animation: none; } }
+`;
+
 function samePlacement(a: Placement, b: Placement): boolean {
   return a.kind === b.kind && a.fit === b.fit && a.radius === b.radius && a.controls === b.controls;
 }
@@ -66,6 +80,11 @@ export function ComparePlayerHost() {
   const wrapperRef = React.useRef<HTMLDivElement | null>(null);
   const overlayRef = React.useRef<HTMLDivElement | null>(null);
   const parkingRef = React.useRef<HTMLDivElement | null>(null);
+  const fullscreenRootRef = React.useRef<HTMLDivElement | null>(null);
+  /** 전체 화면을 청해 두고 아직 바뀌지 않은 동안. 이때 무대를 다른 자리로 옮기면 안 된다 */
+  const enteringRef = React.useRef(false);
+  /** 지금 자리를 다시 고른다(전체 화면에 실패했을 때 제자리로 돌린다) */
+  const placeRef = React.useRef<(() => void) | null>(null);
   // 정적 렌더링과 어긋나지 않게 무대는 화면에 붙은 뒤 만든다
   const [stage, setStage] = React.useState<HTMLDivElement | null>(null);
   const [placement, setPlacement] = React.useState<Placement>(PARKED);
@@ -93,14 +112,39 @@ export function ComparePlayerHost() {
 
   // 전체 화면·겹칠 자리를 화면들에 빌려준다
   React.useEffect(() => {
-    const wrapper = wrapperRef.current;
     const overlay = overlayRef.current;
-    if (!stage || !wrapper || !overlay) return;
+    const root = fullscreenRootRef.current;
+    if (!stage || !overlay || !root) return;
     const unregister = comparePlayer.registerHost({
       overlay,
-      requestFullscreen: () => wrapper.requestFullscreen(),
+      requestFullscreen: async () => {
+        if (typeof root.requestFullscreen !== 'function') throw new Error('fullscreen unsupported');
+        enteringRef.current = true;
+        moveInto(root, stage);
+        stage.style.borderRadius = '0px';
+        try {
+          await root.requestFullscreen();
+        } catch (error) {
+          enteringRef.current = false;
+          placeRef.current?.();
+          throw error;
+        }
+      },
     });
-    const onChange = () => comparePlayer.reportFullscreen(document.fullscreenElement === wrapper);
+    const onChange = () => {
+      enteringRef.current = false;
+      const inFullscreen = document.fullscreenElement === root;
+      comparePlayer.reportFullscreen(inFullscreen);
+      if (inFullscreen) return;
+      // 전체 화면에서 나오면 바로 제자리(지금 연주자 카드)로 돌리고, 그 카드가 화면 밖이면 보이게 굴린다.
+      // 전체 화면에서 연주자를 바꿨으면 그 카드가 아래에 있을 수 있다
+      placeRef.current?.();
+      requestAnimationFrame(() => {
+        const parent = stage.parentElement;
+        if (!parent || parent === parkingRef.current || parent === comparePlayer.getMiniTarget()) return;
+        parent.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    };
     document.addEventListener('fullscreenchange', onChange);
     return () => {
       unregister();
@@ -161,9 +205,10 @@ export function ComparePlayerHost() {
     };
 
     const place = () => {
-      // 전체 화면이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다.
-      // 전체 화면 요소를 옮기면 전체 화면이 풀리므로 그대로 둔다
-      if (document.fullscreenElement && stage.contains(document.fullscreenElement)) {
+      // 전체 화면(또는 청하는 중)이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다.
+      // 전체 화면 자리에서 꺼내면 전체 화면이 풀리므로 그대로 둔다
+      const root = fullscreenRootRef.current;
+      if (root && (enteringRef.current || document.fullscreenElement === root)) {
         comparePlayer.reportSurface('slot');
         return;
       }
@@ -177,6 +222,7 @@ export function ComparePlayerHost() {
       }
     };
 
+    placeRef.current = place;
     const tick = () => {
       raf = requestAnimationFrame(tick);
       place();
@@ -187,6 +233,7 @@ export function ComparePlayerHost() {
     return () => {
       cancelAnimationFrame(raf);
       unsubscribe();
+      if (placeRef.current === place) placeRef.current = null;
     };
   }, [stage, performanceId]);
 
@@ -198,7 +245,7 @@ export function ComparePlayerHost() {
       aria-hidden={hidden}
       style={
         fullscreen
-          ? { position: 'fixed', inset: 0, background: '#000' }
+          ? { position: 'absolute', inset: 0, background: '#000' }
           : {
               position: 'absolute',
               inset: 0,
@@ -304,6 +351,8 @@ export function ComparePlayerHost() {
           pointerEvents: 'none',
         }}
       />
+      <style>{FULLSCREEN_ROOT_CSS}</style>
+      <div ref={fullscreenRootRef} data-cm-fsroot="" />
       {stage ? createPortal(player, stage) : null}
     </>
   );

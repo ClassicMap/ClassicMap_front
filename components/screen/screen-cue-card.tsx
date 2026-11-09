@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { ServiceLogo, ServiceLogoFor } from '@/components/ui/service-logo';
 import {
   approxTimeText,
   episodeText,
@@ -145,7 +146,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
                 accessibilityRole="link"
                 accessibilityLabel={t('YouTube {channel}에서 장면 보기', { channel: clip.channel })}
                 className="min-w-0 flex-row items-center gap-1 py-1">
-                <Icon as={PlayIcon} size={11} className="text-foreground-subtle" />
+                <ServiceLogo service="youtube" size={12} />
                 <Text variant="micro" numberOfLines={1} className="shrink">
                   YouTube · {clip.channel}
                 </Text>
@@ -199,6 +200,7 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
             onPress={() => openExternal(link.url)}
             accessibilityRole="link"
             className="flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 active:bg-surface-2 web:hover:bg-surface-2">
+            <ServiceLogoFor label={link.label} size={14} />
             <Text className="text-label font-semibold text-foreground">{t('{label}에서 듣기', { label: link.label })}</Text>
             <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
           </Pressable>

@@ -3,6 +3,7 @@ import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { ServiceLogo, serviceFromLabel } from '@/components/ui/service-logo';
 import { usePieceParts } from '@/lib/query/hooks/usePieces';
 import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
@@ -247,6 +248,16 @@ export function PieceRow({
   );
 }
 
+/** 서비스 로고. 모르는 서비스면 바깥 링크 아이콘 */
+function LinkLogo({ label, size }: { label: string; size: number }) {
+  const service = serviceFromLabel(label);
+  return service ? (
+    <ServiceLogo service={service} size={size} />
+  ) : (
+    <Icon as={ExternalLinkIcon} size={size - 1} className="text-foreground-subtle" />
+  );
+}
+
 function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
   useLocale();
   return (
@@ -258,8 +269,8 @@ function ListenLinks({ name, links }: { name: string; links: ListenLink[] }) {
           accessibilityRole="link"
           accessibilityLabel={t('{name} {service}에서 듣기', { name, service: link.label })}
           hitSlop={6}
-          className="flex-row items-center gap-1">
-          <Icon as={ExternalLinkIcon} size={11} className="text-foreground-subtle" />
+          className="flex-row items-center gap-1 web:hover:opacity-80">
+          <LinkLogo label={link.label} size={12} />
           <Text className="text-micro text-foreground-subtle">{link.label}</Text>
         </Pressable>
       ))}

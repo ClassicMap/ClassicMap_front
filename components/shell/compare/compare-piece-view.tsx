@@ -18,6 +18,7 @@ import { GenreLink } from '@/components/piece/genre-link';
 import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
+import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
@@ -50,7 +51,6 @@ import {
   AlertCircleIcon,
   ChevronLeftIcon,
   Columns2Icon as ColumnsIcon,
-  ExternalLinkIcon,
   LayoutGridIcon,
   MaximizeIcon,
   MinimizeIcon,
@@ -605,6 +605,8 @@ export function ComparePieceView({
         createPortal(
           <FullscreenOverlay
             performances={playable}
+            active={active ?? null}
+            sectorName={activeSector?.sectorName ?? null}
             activeId={activeId}
             imageOf={imageOf}
             onPick={start}
@@ -1042,9 +1044,54 @@ function TheaterRow({
   );
 }
 
-/** 전체 화면에서 영상 위에 겹치는 조작부: 연주자 바꾸기·재생·위치·나가기 */
+/** 전체 화면에서 이만큼 아무것도 안 하면(재생 중일 때) 조작부와 커서를 숨긴다 */
+const FULLSCREEN_IDLE_MS = 2500;
+const FULLSCREEN_FADE = 'opacity 320ms ease';
+const WAKE_EVENTS = ['mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+/** 한 번 누름(재생·일시정지)을 두 번 누름(나가기)과 가르려고 이만큼 기다린다 */
+const DOUBLE_CLICK_MS = 250;
+
+/**
+ * 전체 화면 조작부가 보일지. 움직이거나 누르면 보이고, 재생 중에 가만히 두면 서서히 숨는다.
+ * 멈춰 있거나 조작부 위에 마우스가 있으면 계속 보인다. 숨으면 커서도 숨긴다
+ */
+function useFullscreenChrome(playing: boolean) {
+  const [awake, setAwake] = React.useState(true);
+  const [hovering, setHovering] = React.useState(false);
+  // 처음 그릴 때 서서히 나타나게 한 프레임 뒤에 켠다
+  const [entered, setEntered] = React.useState(false);
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => setEntered(true));
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const wake = () => {
+      setAwake(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setAwake(false), FULLSCREEN_IDLE_MS);
+    };
+    wake();
+    for (const name of WAKE_EVENTS) document.addEventListener(name, wake, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+      for (const name of WAKE_EVENTS) document.removeEventListener(name, wake);
+    };
+  }, []);
+  const visible = entered && (awake || !playing || hovering);
+  React.useEffect(() => {
+    const root = document.fullscreenElement;
+    if (!root) return;
+    if (visible) root.removeAttribute('data-idle');
+    else root.setAttribute('data-idle', '');
+    return () => root.removeAttribute('data-idle');
+  }, [visible]);
+  return { visible, setHovering };
+}
+
+/** 전체 화면에서 영상 위에 겹치는 조작부: 지금 연주 이름·연주자 바꾸기·재생·위치·나가기 */
 function FullscreenOverlay({
   performances,
+  active,
+  sectorName,
   activeId,
   imageOf,
   onPick,
@@ -1053,6 +1100,8 @@ function FullscreenOverlay({
   onExit,
 }: {
   performances: ComparisonPerformance[];
+  active: ComparisonPerformance | null;
+  sectorName: string | null;
   activeId: number | null;
   imageOf: (performance: ComparisonPerformance) => string | null;
   onPick: (performance: ComparisonPerformance) => void;
@@ -1062,14 +1111,62 @@ function FullscreenOverlay({
 }) {
   useLocale();
   const progress = useComparePlayer((state) => state.progress);
+  const { visible, setHovering } = useFullscreenChrome(playing);
+  const artist = active ? primaryCredit(active)?.artistName : null;
+  const fade: React.CSSProperties = { opacity: visible ? 1 : 0, transition: FULLSCREEN_FADE };
+  // 두 번 누를 때 앞의 한 번이 재생을 바꾸지 않게, 한 번 누름은 잠깐 기다렸다가 처리한다
+  const clickTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  React.useEffect(() => () => clearTimeout(clickTimer.current), []);
   return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      {/* 영상을 한 번 누르면 재생·일시정지, 두 번 누르면 전체 화면을 나간다 */}
+      <div
+        aria-hidden
+        onClick={() => {
+          clearTimeout(clickTimer.current);
+          clickTimer.current = setTimeout(onTogglePlay, DOUBLE_CLICK_MS);
+        }}
+        onDoubleClick={() => {
+          clearTimeout(clickTimer.current);
+          onExit();
+        }}
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}
+      />
+      <div
+        style={{
+          ...fade,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          padding: '24px 32px 56px',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0))',
+          pointerEvents: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}>
+        {artist ? (
+          <Text numberOfLines={1} className="text-title-3 font-semibold text-white">
+            {artist}
+          </Text>
+        ) : null}
+        {active ? (
+          <Text numberOfLines={1} className="text-body-sm text-white/70">
+            {[active.pieceTitle, sectorName].filter(Boolean).join(' · ')}
+          </Text>
+        ) : null}
+      </div>
     <div
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
       style={{
+        ...fade,
         position: 'absolute',
         left: 0,
         right: 0,
         bottom: 0,
-        pointerEvents: 'auto',
+        pointerEvents: visible ? 'auto' : 'none',
         padding: '48px 32px 24px',
         background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))',
         display: 'flex',
@@ -1133,6 +1230,7 @@ function FullscreenOverlay({
           {t('←→ 연주자 · ⇧←→ 5초 · 스페이스 재생')}
         </Text>
       </View>
+    </div>
     </div>
   );
 }
@@ -1321,7 +1419,7 @@ function PlayerBar({
             rel="noreferrer"
             aria-label={t('YouTube 원본 새 창으로 보기')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
+            <ServiceLogo service="youtube" size={16} />
             {compact ? null : (
               <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
                 {t('YouTube 원본')}

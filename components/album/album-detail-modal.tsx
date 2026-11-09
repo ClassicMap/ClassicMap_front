@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { ServiceLogoFor } from '@/components/ui/service-logo';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
@@ -201,6 +202,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
                       accessibilityRole="link"
                       accessibilityLabel={t('{service}에서 듣기, 새 창으로 열려요', { service: link.service })}
                       className="flex-row items-center gap-3 rounded-xl border border-border px-4 py-3 active:bg-surface-2 web:transition-colors web:hover:border-border-strong web:hover:bg-surface-2">
+                      <ServiceLogoFor label={link.service} size={20} />
                       <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">{link.service}</Text>
                       <Text variant="caption" className="text-primary">
                         {t('듣기')}
