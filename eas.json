@@ -17,6 +17,13 @@
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
       }
+    },
+    "release-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {
