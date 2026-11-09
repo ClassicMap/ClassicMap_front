@@ -4,7 +4,7 @@ export default {
   expo: {
     name: '클래식맵',
     slug: 'ClassicMap_front',
-    version: '1.3.0',
+    version: '1.3.1',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'classicmap-front',
@@ -47,6 +47,16 @@ export default {
       'expo-secure-store',
       'expo-web-browser',
       ['expo-image-picker', { cameraPermission: false, microphonePermission: false }],
+      [
+        'expo-build-properties',
+        {
+          // Play 가 DEX 난독화 비율이 기준(25%) 미만이라고 경고해서 릴리스 빌드에 R8 을 켠다
+          android: {
+            enableMinifyInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
+          },
+        },
+      ],
       './plugins/with-ios-scene-lifecycle',
     ],
     experiments: {
