@@ -1,5 +1,6 @@
 import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
 import {
+  OriginalLanguageNote,
   CastChip,
   CastComparisons,
   IntroImages,
@@ -334,6 +335,7 @@ export default function ConcertDetailScreen() {
               <Text className="mt-3 text-[44px] font-extrabold leading-[48px] tracking-tight text-foreground">
                 {concert.title}
               </Text>
+              <OriginalLanguageNote className="mt-2" />
               {cast.length > 0 ? (
                 <View className="mt-4 flex-row flex-wrap gap-2">
                   {cast.map((item) => (
@@ -373,6 +375,7 @@ export default function ConcertDetailScreen() {
                   <FavoriteButton kind="concerts" id={concert.id} name={concert.title} className="-mr-2 -mt-2" />
                 </View>
                 <Text className="mt-2 text-[21px] font-extrabold leading-7 text-foreground">{concert.title}</Text>
+                <OriginalLanguageNote className="mt-1.5" />
               </View>
             </View>
             {cast.length > 0 ? (

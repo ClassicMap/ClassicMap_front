@@ -3,7 +3,7 @@ import { ConcertCard } from '@/components/concert/concert-card';
 import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/components/concert/concert-filter-bar';
 import type { ArtistChoice } from '@/components/concert/concert-filter-panels';
 import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
-import { monthLabel, parseDay, shortVenue } from '@/components/concert/concert-parts';
+import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -304,6 +304,7 @@ export default function ConcertsScreen() {
             <Text variant="caption" className="mt-1">
               {t('클래식 공연 일정 · KOPIS 공연예술통합전산망 제공')}
             </Text>
+            <OriginalLanguageNote className="mt-1" />
           </View>
           {wide ? <ConcertSearchField value={query} onChange={setQuery} className="w-[300px]" /> : null}
           {canEdit ? (
