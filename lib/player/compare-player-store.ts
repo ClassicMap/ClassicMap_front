@@ -101,6 +101,8 @@ export interface PlayerSlot {
 export interface PlayerHostHandle {
   overlay: HTMLElement;
   requestFullscreen: () => Promise<void>;
+  /** 전체 화면(또는 화면을 덮은 상태)에서 나온다 */
+  exitFullscreen: () => void;
 }
 
 /**
@@ -734,6 +736,10 @@ export const comparePlayer = {
     if (!host) return false;
     void host.requestFullscreen().catch(() => undefined);
     return true;
+  },
+
+  exitFullscreen() {
+    host?.exitFullscreen();
   },
 };
 

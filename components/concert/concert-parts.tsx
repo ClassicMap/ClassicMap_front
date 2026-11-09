@@ -4,6 +4,7 @@ import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { msg, t, useLocale } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/utils/image';
 import { useArtist } from '@/lib/query/hooks/useArtists';
 import {
@@ -12,7 +13,7 @@ import {
 } from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, Concert, ConcertArtist, ConcertImage } from '@/lib/types/models';
 import { type Href, useRouter } from 'expo-router';
-import { Maximize2Icon } from 'lucide-react-native';
+import { LanguagesIcon, Maximize2Icon } from 'lucide-react-native';
 import * as React from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
@@ -42,6 +43,23 @@ const MONTHS = [
 ];
 
 /** 한국어는 숫자 월(`9`→`9월`), 영어는 줄임 월 이름(`Sep`). `{month}월` 자리에 넣는다 */
+/**
+ * 영어 화면에서만 보이는 안내: 공연 제목·공연장·출연 등은 KOPIS 에서 받은 원문(한국어) 그대로다.
+ * 번역하지 않은 이유를 알려 영어 화면에 한국어가 섞여 보이는 것을 오류로 읽지 않게 한다
+ */
+export function OriginalLanguageNote({ className }: { className?: string }) {
+  const { locale } = useLocale();
+  if (locale !== 'en') return null;
+  return (
+    <View className={cn('flex-row items-start gap-1.5', className)}>
+      <Icon as={LanguagesIcon} size={12} className="mt-[3px] text-foreground-subtle" />
+      <Text variant="caption" className="shrink text-foreground-subtle">
+        {t('공연 정보는 KOPIS 원문 그대로 한국어로 보여요.')}
+      </Text>
+    </View>
+  );
+}
+
 export function monthLabel(date: Date): string {
   return t(MONTHS[date.getMonth()]);
 }

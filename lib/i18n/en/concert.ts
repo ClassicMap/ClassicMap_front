@@ -198,6 +198,8 @@ export const CONCERT: Readonly<Record<string, string>> = {
   '공연을 봤다면 눌러서 남겨요': 'If you saw it, tap to rate',
   '공연 수정': 'Edit concert',
   'KOPIS 공연예술통합전산망': 'KOPIS (Korea Performing Arts Box-office Information System)',
+  '공연 정보는 KOPIS 원문 그대로 한국어로 보여요.':
+    'Concert titles, venues and casts are shown as published by KOPIS, in Korean.',
   '공연 정보 출처: {source} · 공연 ID {id}': 'Concert info from {source} · Concert ID {id}',
   '공연 정보 출처: {source}': 'Concert info from {source}',
   // 출연자·소개 이미지
