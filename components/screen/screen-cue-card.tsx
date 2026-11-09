@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { ServiceLogoFor } from '@/components/ui/service-logo';
+import { ServiceLogo, ServiceLogoFor } from '@/components/ui/service-logo';
 import {
   approxTimeText,
   episodeText,
@@ -146,7 +146,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
                 accessibilityRole="link"
                 accessibilityLabel={t('YouTube {channel}에서 장면 보기', { channel: clip.channel })}
                 className="min-w-0 flex-row items-center gap-1 py-1">
-                <Icon as={PlayIcon} size={11} className="text-foreground-subtle" />
+                <ServiceLogo service="youtube" size={12} />
                 <Text variant="micro" numberOfLines={1} className="shrink">
                   YouTube · {clip.channel}
                 </Text>

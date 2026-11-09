@@ -18,6 +18,7 @@ import { GenreLink } from '@/components/piece/genre-link';
 import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
+import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
@@ -50,7 +51,6 @@ import {
   AlertCircleIcon,
   ChevronLeftIcon,
   Columns2Icon as ColumnsIcon,
-  ExternalLinkIcon,
   LayoutGridIcon,
   MaximizeIcon,
   MinimizeIcon,
@@ -1419,7 +1419,7 @@ function PlayerBar({
             rel="noreferrer"
             aria-label={t('YouTube 원본 새 창으로 보기')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <Icon as={ExternalLinkIcon} size={13} className="text-foreground-subtle" />
+            <ServiceLogo service="youtube" size={16} />
             {compact ? null : (
               <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
                 {t('YouTube 원본')}

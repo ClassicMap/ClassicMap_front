@@ -24,6 +24,7 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { OptimizedImage } from '@/components/optimized-image';
 import { Scrim } from '@/components/ui/scrim';
+import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
@@ -59,7 +60,6 @@ import {
   AlertCircleIcon,
   ArrowLeftIcon,
   ChevronRightIcon,
-  ExternalLinkIcon,
   PlayIcon,
   SettingsIcon,
 } from 'lucide-react-native';
@@ -638,9 +638,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           <Pressable
             onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
             accessibilityRole="link"
-            className="flex-row items-center gap-1">
+            className="flex-row items-center gap-1.5">
+            <ServiceLogo service="youtube" size={14} />
             <Text variant="caption">{t('YouTube 원본')}</Text>
-            <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
           </Pressable>
         ) : null}
       </View>
