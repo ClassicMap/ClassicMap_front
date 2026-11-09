@@ -23,8 +23,10 @@ const FULLSCREEN_ROOT_CSS = `
 [data-cm-fsroot] video { object-fit: contain !important; }
 [data-cm-fsroot]:fullscreen > div { animation: cm-fs-in 320ms ease-out both; }
 [data-cm-fsroot][data-idle] { cursor: none; }
+[data-cm-fsroot][data-pseudo] { left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2147483000; }
+[data-cm-fsroot][data-pseudo] > div { animation: cm-fs-in 320ms ease-out both; }
 @keyframes cm-fs-in { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { [data-cm-fsroot]:fullscreen > div { animation: none; } }
+@media (prefers-reduced-motion: reduce) { [data-cm-fsroot]:fullscreen > div, [data-cm-fsroot][data-pseudo] > div { animation: none; } }
 `;
 
 function samePlacement(a: Placement, b: Placement): boolean {
@@ -65,6 +67,38 @@ function isShown(element: HTMLElement): boolean {
   return true;
 }
 
+type WebkitVideo = HTMLVideoElement & { webkitExitFullscreen?: () => void };
+type WebkitElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+type LockableOrientation = ScreenOrientation & {
+  lock?: (orientation: 'landscape') => Promise<void>;
+  unlock?: () => void;
+};
+
+/** 이 요소를 전체 화면으로 띄우는 함수. 영상이 아닌 요소의 전체 화면을 막은 브라우저(아이폰 사파리)면 null */
+function fullscreenRequest(element: HTMLElement): (() => Promise<void>) | null {
+  if (typeof element.requestFullscreen === 'function') return () => element.requestFullscreen();
+  const webkit = (element as WebkitElement).webkitRequestFullscreen;
+  if (typeof webkit === 'function') return async () => webkit.call(element);
+  return null;
+}
+
+/** 손가락으로 쓰는 화면에서 가로 영상이면 전체 화면을 가로로 돌린다(안드로이드). 못 하면 그대로 둔다 */
+function lockLandscape(video: HTMLVideoElement | null) {
+  if (!video || video.videoWidth <= video.videoHeight) return;
+  if (!window.matchMedia?.('(pointer: coarse)').matches) return;
+  const orientation = screen.orientation as LockableOrientation | undefined;
+  orientation?.lock?.('landscape').catch(() => undefined);
+}
+
+function unlockOrientation() {
+  const orientation = screen.orientation as LockableOrientation | undefined;
+  try {
+    orientation?.unlock?.();
+  } catch {
+    // 돌리지 않았으면 풀 것도 없다
+  }
+}
+
 /**
  * 웹 비교 영상은 앱 전체에 <video> 하나다. 라우트 밖(루트)에서 한 번 만든 무대(stage)에 그리고,
  * 그 무대를 비교 화면이 낸 자리(슬롯)나 미니 플레이어의 작은 자리 안으로 DOM 째 옮긴다.
@@ -83,6 +117,11 @@ export function ComparePlayerHost() {
   const fullscreenRootRef = React.useRef<HTMLDivElement | null>(null);
   /** 전체 화면을 청해 두고 아직 바뀌지 않은 동안. 이때 무대를 다른 자리로 옮기면 안 된다 */
   const enteringRef = React.useRef(false);
+  /**
+   * 화면을 덮은 상태. 아이폰 사파리처럼 영상이 아닌 요소의 전체 화면을 막은 브라우저에서는
+   * 전체 화면 자리를 화면에 꽉 차게 고정해 대신한다(연주자 칩·조작부를 그대로 쓴다)
+   */
+  const pseudoRef = React.useRef(false);
   /** 지금 자리를 다시 고른다(전체 화면에 실패했을 때 제자리로 돌린다) */
   const placeRef = React.useRef<(() => void) | null>(null);
   // 정적 렌더링과 어긋나지 않게 무대는 화면에 붙은 뒤 만든다
@@ -115,20 +154,57 @@ export function ComparePlayerHost() {
     const overlay = overlayRef.current;
     const root = fullscreenRootRef.current;
     if (!stage || !overlay || !root) return;
+    // 나온 뒤: 바로 제자리(지금 연주자 카드)로 돌리고, 그 카드가 화면 밖이면 보이게 굴린다.
+    // 전체 화면에서 연주자를 바꿨으면 그 카드가 아래에 있을 수 있다
+    const afterExit = () => {
+      placeRef.current?.();
+      unlockOrientation();
+      requestAnimationFrame(() => {
+        const parent = stage.parentElement;
+        if (!parent || parent === parkingRef.current || parent === comparePlayer.getMiniTarget()) return;
+        parent.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    };
+    const enterPseudo = () => {
+      moveInto(root, stage);
+      stage.style.borderRadius = '0px';
+      root.setAttribute('data-pseudo', '');
+      document.documentElement.style.overflow = 'hidden';
+      pseudoRef.current = true;
+      comparePlayer.reportFullscreen(true);
+    };
+    const leavePseudo = () => {
+      if (!pseudoRef.current) return;
+      pseudoRef.current = false;
+      root.removeAttribute('data-pseudo');
+      document.documentElement.style.overflow = '';
+      comparePlayer.reportFullscreen(false);
+      afterExit();
+    };
     const unregister = comparePlayer.registerHost({
       overlay,
       requestFullscreen: async () => {
-        if (typeof root.requestFullscreen !== 'function') throw new Error('fullscreen unsupported');
+        if (pseudoRef.current || document.fullscreenElement === root) return;
+        const request = fullscreenRequest(root);
+        if (!request) {
+          enterPseudo();
+          return;
+        }
         enteringRef.current = true;
         moveInto(root, stage);
         stage.style.borderRadius = '0px';
         try {
-          await root.requestFullscreen();
-        } catch (error) {
+          await request();
+          lockLandscape(videoRef.current);
+        } catch {
+          // 전체 화면을 거절하면(권한·브라우저 제한) 화면을 덮는 방식으로 대신한다
           enteringRef.current = false;
-          placeRef.current?.();
-          throw error;
+          enterPseudo();
         }
+      },
+      exitFullscreen: () => {
+        if (pseudoRef.current) leavePseudo();
+        else if (document.fullscreenElement === root) void document.exitFullscreen().catch(() => undefined);
       },
     });
     const onChange = () => {
@@ -136,21 +212,36 @@ export function ComparePlayerHost() {
       const inFullscreen = document.fullscreenElement === root;
       comparePlayer.reportFullscreen(inFullscreen);
       if (inFullscreen) return;
-      // 전체 화면에서 나오면 바로 제자리(지금 연주자 카드)로 돌리고, 그 카드가 화면 밖이면 보이게 굴린다.
-      // 전체 화면에서 연주자를 바꿨으면 그 카드가 아래에 있을 수 있다
-      placeRef.current?.();
-      requestAnimationFrame(() => {
-        const parent = stage.parentElement;
-        if (!parent || parent === parkingRef.current || parent === comparePlayer.getMiniTarget()) return;
-        parent.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      });
+      afterExit();
+    };
+    // 화면을 덮은 상태에서는 Esc 로 나간다(진짜 전체 화면은 브라우저가 처리)
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && pseudoRef.current) leavePseudo();
     };
     document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('keydown', onKey);
     return () => {
+      leavePseudo();
       unregister();
       document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('keydown', onKey);
     };
   }, [stage]);
+
+  // 아이폰 사파리는 영상 기본 조작부의 전체 화면 단추를 숨길 수 없다. 그 전체 화면으로 들어가면
+  // 연주자를 바꿀 수 없으니 바로 나와서 이 앱의 전체 화면(화면 덮기)으로 바꾼다
+  React.useEffect(() => {
+    const video = videoRef.current as WebkitVideo | null;
+    if (!video) return;
+    const onBegin = () => {
+      setTimeout(() => {
+        video.webkitExitFullscreen?.();
+        comparePlayer.requestFullscreen();
+      }, 0);
+    };
+    video.addEventListener('webkitbeginfullscreen', onBegin);
+    return () => video.removeEventListener('webkitbeginfullscreen', onBegin);
+  }, [clipUrl, reloadKey]);
 
   // 미디어 손잡이: 지금 트랙이 바뀔 때마다 새로 건다 (요소는 그대로)
   React.useEffect(() => {
@@ -208,7 +299,7 @@ export function ComparePlayerHost() {
       // 전체 화면(또는 청하는 중)이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다.
       // 전체 화면 자리에서 꺼내면 전체 화면이 풀리므로 그대로 둔다
       const root = fullscreenRootRef.current;
-      if (root && (enteringRef.current || document.fullscreenElement === root)) {
+      if (root && (enteringRef.current || pseudoRef.current || document.fullscreenElement === root)) {
         comparePlayer.reportSurface('slot');
         return;
       }
@@ -262,6 +353,8 @@ export function ComparePlayerHost() {
           src={clipUrl}
           playsInline
           controls={placement.controls && !fullscreen}
+          // 기본 조작부의 전체 화면 단추는 영상만 띄워 연주자를 못 바꾼다. 화면 위 전체 화면 단추를 쓴다
+          controlsList="nofullscreen noremoteplayback"
           preload={comparePlayer.getState().restored ? 'metadata' : 'auto'}
           style={{
             width: '100%',

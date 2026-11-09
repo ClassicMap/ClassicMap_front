@@ -1,3 +1,4 @@
+import { FullscreenOverlay } from '@/components/compare/fullscreen-overlay';
 import { FeaturedPairLink, MomentChip, PerformanceNote, resolveFeaturedPair } from '@/components/compare/listening-note';
 import { PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { LoudnessSparkline, sharedFloorDb } from '@/components/compare/loudness-curve';
@@ -53,7 +54,6 @@ import {
   Columns2Icon as ColumnsIcon,
   LayoutGridIcon,
   MaximizeIcon,
-  MinimizeIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
@@ -258,8 +258,8 @@ export function ComparePieceView({
 
   // 전체 화면: 셸 영상을 통째로 띄운다. 연주자를 바꿔도 같은 영상이라 전체 화면이 풀리지 않는다
   const toggleFullscreen = React.useCallback(() => {
-    if (typeof document !== 'undefined' && document.fullscreenElement) {
-      void document.exitFullscreen();
+    if (comparePlayer.getState().fullscreen) {
+      comparePlayer.exitFullscreen();
       return;
     }
     // 아직 고른 연주가 없으면 무대의 연주를 틀면서 띄운다
@@ -1041,197 +1041,6 @@ function TheaterRow({
         </View>
       </View>
     </Pressable>
-  );
-}
-
-/** 전체 화면에서 이만큼 아무것도 안 하면(재생 중일 때) 조작부와 커서를 숨긴다 */
-const FULLSCREEN_IDLE_MS = 2500;
-const FULLSCREEN_FADE = 'opacity 320ms ease';
-const WAKE_EVENTS = ['mousemove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
-/** 한 번 누름(재생·일시정지)을 두 번 누름(나가기)과 가르려고 이만큼 기다린다 */
-const DOUBLE_CLICK_MS = 250;
-
-/**
- * 전체 화면 조작부가 보일지. 움직이거나 누르면 보이고, 재생 중에 가만히 두면 서서히 숨는다.
- * 멈춰 있거나 조작부 위에 마우스가 있으면 계속 보인다. 숨으면 커서도 숨긴다
- */
-function useFullscreenChrome(playing: boolean) {
-  const [awake, setAwake] = React.useState(true);
-  const [hovering, setHovering] = React.useState(false);
-  // 처음 그릴 때 서서히 나타나게 한 프레임 뒤에 켠다
-  const [entered, setEntered] = React.useState(false);
-  React.useEffect(() => {
-    const frame = requestAnimationFrame(() => setEntered(true));
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const wake = () => {
-      setAwake(true);
-      clearTimeout(timer);
-      timer = setTimeout(() => setAwake(false), FULLSCREEN_IDLE_MS);
-    };
-    wake();
-    for (const name of WAKE_EVENTS) document.addEventListener(name, wake, { passive: true });
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(timer);
-      for (const name of WAKE_EVENTS) document.removeEventListener(name, wake);
-    };
-  }, []);
-  const visible = entered && (awake || !playing || hovering);
-  React.useEffect(() => {
-    const root = document.fullscreenElement;
-    if (!root) return;
-    if (visible) root.removeAttribute('data-idle');
-    else root.setAttribute('data-idle', '');
-    return () => root.removeAttribute('data-idle');
-  }, [visible]);
-  return { visible, setHovering };
-}
-
-/** 전체 화면에서 영상 위에 겹치는 조작부: 지금 연주 이름·연주자 바꾸기·재생·위치·나가기 */
-function FullscreenOverlay({
-  performances,
-  active,
-  sectorName,
-  activeId,
-  imageOf,
-  onPick,
-  onTogglePlay,
-  playing,
-  onExit,
-}: {
-  performances: ComparisonPerformance[];
-  active: ComparisonPerformance | null;
-  sectorName: string | null;
-  activeId: number | null;
-  imageOf: (performance: ComparisonPerformance) => string | null;
-  onPick: (performance: ComparisonPerformance) => void;
-  onTogglePlay: () => void;
-  playing: boolean;
-  onExit: () => void;
-}) {
-  useLocale();
-  const progress = useComparePlayer((state) => state.progress);
-  const { visible, setHovering } = useFullscreenChrome(playing);
-  const artist = active ? primaryCredit(active)?.artistName : null;
-  const fade: React.CSSProperties = { opacity: visible ? 1 : 0, transition: FULLSCREEN_FADE };
-  // 두 번 누를 때 앞의 한 번이 재생을 바꾸지 않게, 한 번 누름은 잠깐 기다렸다가 처리한다
-  const clickTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  React.useEffect(() => () => clearTimeout(clickTimer.current), []);
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      {/* 영상을 한 번 누르면 재생·일시정지, 두 번 누르면 전체 화면을 나간다 */}
-      <div
-        aria-hidden
-        onClick={() => {
-          clearTimeout(clickTimer.current);
-          clickTimer.current = setTimeout(onTogglePlay, DOUBLE_CLICK_MS);
-        }}
-        onDoubleClick={() => {
-          clearTimeout(clickTimer.current);
-          onExit();
-        }}
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}
-      />
-      <div
-        style={{
-          ...fade,
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          padding: '24px 32px 56px',
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0))',
-          pointerEvents: 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}>
-        {artist ? (
-          <Text numberOfLines={1} className="text-title-3 font-semibold text-white">
-            {artist}
-          </Text>
-        ) : null}
-        {active ? (
-          <Text numberOfLines={1} className="text-body-sm text-white/70">
-            {[active.pieceTitle, sectorName].filter(Boolean).join(' · ')}
-          </Text>
-        ) : null}
-      </div>
-    <div
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
-      style={{
-        ...fade,
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        pointerEvents: visible ? 'auto' : 'none',
-        padding: '48px 32px 24px',
-        background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 14,
-      }}>
-      <View className="flex-row items-center gap-3">
-        <Pressable
-          onPress={onTogglePlay}
-          accessibilityLabel={playing ? t('일시정지') : t('재생')}
-          className="size-11 items-center justify-center rounded-full bg-white">
-          <Icon as={playing ? PauseIcon : PlayIcon} size={18} className="fill-black text-black" />
-        </Pressable>
-        <Text variant="mono" className="text-white/80">
-          {clipClock(progress.current * 1000)}
-        </Text>
-        <ScrubBar
-          value={progress.duration > 0 ? progress.current / progress.duration : 0}
-          onCommit={(value) => comparePlayer.seek(value * progress.duration)}
-          label={t('재생 위치')}
-          valueText={(value) => clipClock(value * progress.duration * 1000)}
-          disabled={progress.duration <= 0}
-          tooltip
-          fill="#FFFFFF"
-        />
-        <Text variant="mono" className="text-white/80">
-          {clipClock(progress.duration * 1000)}
-        </Text>
-        <Pressable
-          onPress={onExit}
-          accessibilityLabel={t('전체 화면 나가기 (F)')}
-          className="size-11 items-center justify-center rounded-full bg-white/15">
-          <Icon as={MinimizeIcon} size={18} className="text-white" />
-        </Pressable>
-      </View>
-      <View className="flex-row flex-wrap gap-2">
-        {performances.map((performance, index) => {
-          const credit = primaryCredit(performance);
-          const selected = performance.id === activeId;
-          return (
-            <Pressable
-              key={performance.id}
-              onPress={() => onPick(performance)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              className={cn(
-                'h-10 flex-row items-center gap-2 rounded-full pl-1 pr-3.5',
-                selected ? 'bg-primary' : 'bg-white/15'
-              )}>
-              <EntityThumb name={credit?.artistName ?? '?'} image={imageOf(performance)} shape="circle" size={32} />
-              <Text className={cn('text-label font-semibold', selected ? 'text-primary-foreground' : 'text-white')}>
-                {credit?.artistName ?? t('연주 {n}', { n: index + 1 })}
-              </Text>
-              <Text className={cn('font-mono text-micro', selected ? 'text-primary-foreground/80' : 'text-white/60')}>
-                {clipClock(clipDurationMs(performance))}
-              </Text>
-            </Pressable>
-          );
-        })}
-        <Text variant="caption" className="self-center pl-2 text-white/55">
-          {t('←→ 연주자 · ⇧←→ 5초 · 스페이스 재생')}
-        </Text>
-      </View>
-    </div>
-    </div>
   );
 }
 

@@ -9,6 +9,7 @@ import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire
 import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/components/shell/compare/compare-catalog';
 import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
 import { repertoireFirst } from '@/lib/data/library';
+import { MobileFullscreen } from '@/components/compare/mobile-fullscreen';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
@@ -420,6 +421,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
     comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
   };
+  // 전체 화면의 연주자 칩: 바로 그 연주로 바꾼다(같은 연주면 그대로)
+  const pick = (performance: ComparisonPerformance) => {
+    if (!isPlayablePerformance(performance) || performance.id === activeId) return;
+    const queue = performances
+      .filter(isPlayablePerformance)
+      .map((item) => trackFromPerformance(item, imageOf(item)));
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue });
+  };
   // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
   const featured = resolveFeaturedPair(activeSector?.featuredPair ?? null, performances.filter(isPlayablePerformance));
 
@@ -675,6 +684,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       </View>
 
       <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-10" />
+      <MobileFullscreen
+        performances={performances.filter(isPlayablePerformance)}
+        active={active ?? null}
+        sectorName={activeSector?.sectorName ?? null}
+        activeId={activeId}
+        imageOf={imageOf}
+        onPick={pick}
+      />
     </ScrollView>
   );
 }

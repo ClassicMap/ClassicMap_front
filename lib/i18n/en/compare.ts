@@ -55,6 +55,8 @@ export const COMPARE: Readonly<Record<string, string>> = {
   'YouTube 원본 새 창으로 보기': 'Open the original on YouTube in a new window',
   '전체 화면 (F)': 'Full screen (F)',
   '전체 화면 나가기 (F)': 'Exit full screen (F)',
+  '전체 화면': 'Full screen',
+  '전체 화면 나가기': 'Exit full screen',
   '연주자 화면으로': 'Go to performer',
   // 연주 줄
   '{name} 재생': 'Play {name}',
