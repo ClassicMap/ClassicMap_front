@@ -28,15 +28,15 @@ const KNOWN_AREAS: { label: string; value: string; kopisCode: string }[] = [
   { label: msg('area::충남'), value: '충청남도', kopisCode: '44' },
   { label: msg('area::전북'), value: '전북특별자치도', kopisCode: '45' },
   { label: msg('area::전남'), value: '전라남도', kopisCode: '46' },
+  // 2026년 광주·전남이 합쳐진 이름. KOPIS 예매 순위는 코드 29 에 이 지역 순위를 둔다(백엔드가 전국 순위에서 고른다)
+  { label: msg('area::전남광주'), value: '전남광주통합특별시', kopisCode: '29' },
   { label: msg('area::경북'), value: '경상북도', kopisCode: '47' },
   { label: msg('area::경남'), value: '경상남도', kopisCode: '48' },
   { label: msg('area::제주'), value: '제주특별자치도', kopisCode: '50' },
 ];
 
-/** 표에 없어 KOPIS 코드는 모르지만 칩에는 짧게 보일 이름 (행정구역 통합으로 새로 생긴 값) */
-const SHORT_LABELS: Record<string, string> = {
-  전남광주통합특별시: msg('area::전남광주'),
-};
+/** 표에 없어 KOPIS 코드는 모르지만 칩에는 짧게 보일 이름 */
+const SHORT_LABELS: Record<string, string> = {};
 
 /** `area::서울` → `서울` */
 function plainLabel(label: string): string {

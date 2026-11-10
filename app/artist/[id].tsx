@@ -283,7 +283,7 @@ export default function ArtistDetailScreen() {
                         {concert.facilityName}
                       </Text>
                     ) : null}
-                    {concert.status === 'upcoming' ? (
+                    {concert.status === 'upcoming' || concert.status === 'ongoing' ? (
                       <Pressable onPress={() => openTickets(concert)} className="mt-1.5 self-start">
                         <Text variant="label" className="text-primary">
                           {t('예매처 보기')}
