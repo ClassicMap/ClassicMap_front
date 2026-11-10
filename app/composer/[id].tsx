@@ -284,10 +284,12 @@ export default function ComposerDetailScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
-        {/* 배너 전용 가로 그림이 있으면 그걸, 없으면 초상을 폭으로 깐다 */}
+        {/* 배너 전용 가로 그림이 있으면 폭으로 깔고, 없으면 연주자처럼 초상을 오른쪽에 세운다
+            (옛 사진·작은 초상을 폭으로 늘리면 이마와 눈만 크게 남아서) */}
         <HeroBanner
           image={composer.banner?.url ?? composer.avatarUrl}
           focalPoint={composer.banner?.focalPoint}
+          imageLayout={composer.banner ? 'cover' : 'side'}
           title={composer.name}
           meta={[composer.period ? t(composer.period) : '', ...meta].filter(Boolean)}
           wide={wide}
@@ -320,6 +322,8 @@ export default function ComposerDetailScreen() {
         </View>
         {composer.banner ? (
           <PhotoCredit imageUrl={composer.banner.url} credit={composer.banner.credit} centered={false} />
+        ) : composer.avatarUrl ? (
+          <PhotoCredit imageUrl={composer.avatarUrl} credit={composer.avatarCredit} centered={false} />
         ) : null}
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>

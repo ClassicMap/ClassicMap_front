@@ -290,6 +290,7 @@ const mapComposer = (api: any): Composer => {
     pieceCount: api.pieceCount,
     tier: COMPOSER_TIERS.has(api.tier) ? (api.tier as Composer['tier']) : undefined,
     banner: mapBanner(api.banner),
+    avatarCredit: mapImageCredit(api.avatarCredit),
   };
   return mapped;
 };
