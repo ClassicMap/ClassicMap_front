@@ -66,7 +66,8 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
           className={cn(
             'font-black tracking-tight',
             hasImage ? 'text-white' : 'text-foreground',
-            wide ? 'text-[84px] leading-[88px]' : 'text-[40px] leading-[44px]'
+            // 줄 높이가 글자 크기의 1.2배보다 작으면 줄 수 제한(overflow hidden)에 g·y 아래 획이 잘린다
+            wide ? 'text-[84px] leading-[102px]' : 'text-[40px] leading-[49px]'
           )}>
           {title}
         </Text>
