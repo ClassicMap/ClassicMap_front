@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { UserMenu } from '@/components/user-menu';
+import { UserMenu } from '@/features/auth/components/user-menu';
 import { useRouter } from 'expo-router';
 import { ChevronLeftIcon, ChevronRightIcon, MoonStarIcon, PanelLeftIcon, SearchIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';

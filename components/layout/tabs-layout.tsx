@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/shared/icons';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { UserMenu } from '@/components/user-menu';
+import { UserMenu } from '@/features/auth/components/user-menu';
 import { THEME } from '@/lib/theme';
 import { withAlpha } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';

@@ -1,8 +1,8 @@
 import { useLocale } from '@/lib/i18n';
 import { isBarePath } from '@/components/layout/bare-paths';
-import { AutoplayTasteFeed } from '@/components/player/autoplay-taste-feed';
-import { ComparePlayerHost } from '@/components/player/compare-player-host';
-import { MiniPlayerBar } from '@/components/player/mini-player-bar';
+import { AutoplayTasteFeed } from '@/features/player/components/autoplay-taste-feed';
+import { ComparePlayerHost } from '@/features/player/components/compare-player-host';
+import { MiniPlayerBar } from '@/features/player/components/mini-player-bar';
 import { usePathname } from 'expo-router';
 import * as React from 'react';
 

@@ -1,10 +1,10 @@
-import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
-import { RecordingFormModal } from '@/components/admin/RecordingFormModal';
-import { AlbumCard } from '@/components/album/album-card';
-import { AlbumDetailModal } from '@/components/album/album-detail-modal';
-import { ArtistComparisons } from '@/components/artist/artist-comparisons';
-import { FavoriteButton } from '@/components/favorite-button';
-import { TicketVendorsModal } from '@/components/ticket-vendors-modal';
+import { ArtistFormModal } from '@/features/admin/components/artist-form-modal';
+import { RecordingFormModal } from '@/features/admin/components/recording-form-modal';
+import { AlbumCard } from '@/features/album/components/album-card';
+import { AlbumDetailModal } from '@/features/album/components/album-detail-modal';
+import { ArtistComparisons } from '@/features/artist/components/artist-comparisons';
+import { FavoriteButton } from '@/features/library/components/favorite-button';
+import { TicketVendorsModal } from '@/features/concert/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';

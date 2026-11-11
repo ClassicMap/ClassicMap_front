@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
-import { AuthShell } from '@/components/auth/auth-shell';
-import { SignUpForm } from '@/components/sign-up-form';
+import { AuthShell } from '@/features/auth/components/auth-shell';
+import { SignUpForm } from '@/features/auth/components/sign-up-form';
 import { useAuth } from '@clerk/clerk-expo';
 import { type Href, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';

@@ -1,4 +1,4 @@
-import { type OnboardingResult, TasteOnboarding } from '@/components/onboarding/taste-onboarding';
+import { type OnboardingResult, TasteOnboarding } from '@/features/onboarding/components/taste-onboarding';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MyPageAPI } from '@/lib/api/client';
 import { useTaste } from '@/lib/hooks/useTaste';

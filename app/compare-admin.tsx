@@ -1,4 +1,4 @@
-import LegacyCompareScreen from '@/components/compare/legacy-compare-screen';
+import LegacyCompareScreen from '@/features/compare/components/legacy-compare-screen';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { t, useLocale } from '@/lib/i18n';

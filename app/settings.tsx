@@ -1,4 +1,4 @@
-import { ProfileAvatar } from '@/components/profile/profile-parts';
+import { ProfileAvatar } from '@/features/profile/components/profile-parts';
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';

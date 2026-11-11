@@ -1,9 +1,9 @@
 import { OptimizedImage } from '@/components/shared/optimized-image';
-import { titleMeta } from '@/components/screen/labels';
-import { ListPlayButtons } from '@/components/player/list-play-buttons';
-import { ScreenCueCard } from '@/components/screen/screen-cue-card';
-import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
-import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
+import { titleMeta } from '@/features/film/lib/labels';
+import { ListPlayButtons } from '@/features/player/components/list-play-buttons';
+import { ScreenCueCard } from '@/features/film/components/screen-cue-card';
+import { POSTER_ASPECT, ScreenPoster } from '@/features/film/components/screen-poster';
+import { TmdbAttribution } from '@/features/film/components/tmdb-attribution';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';

@@ -1397,7 +1397,7 @@ export function useBreakpoint() {
 **보존해야 할 로직**
 - URL 파라미터 진입(`?composerId=&pieceId=`) 처리
 - `clipStatus !== 'ready'` 필터링 (계약 구현 후 활성화. 현재는 필드가 오지 않음 — 1.6.5)
-- 웹=클립 URL / 네이티브=YouTube IFrame 이중 재생 경로 (`components/performance-video-player.tsx`). **재생 모드 변경은 별도 승인 필요**하므로 이번 리디자인에서 건드리지 않습니다
+- 웹=클립 URL / 네이티브=YouTube IFrame 이중 재생 경로 (`features/player/components/performance-video-player.tsx`). **재생 모드 변경은 별도 승인 필요**하므로 이번 리디자인에서 건드리지 않습니다
 - 관리자 편집/삭제 액션
 
 **파일 분리 제안** (1438줄 해체)
@@ -1558,7 +1558,7 @@ KOPIS 공연 소개 이미지는 **세로로 매우 깁니다**(실측 `221 × 6
 
 - 현재 폼이 화면 전폭입니다. `max-w-[400px] mx-auto` + 상하 중앙 정렬로 변경
 - 데스크톱: 좌측 브랜드 패널(그라디언트 + 로고 + 한 줄 카피) + 우측 폼 2열 스플릿
-- 소셜 로그인 버튼(`components/social-connections.tsx`)의 아이콘·간격 통일
+- 소셜 로그인 버튼(`features/auth/components/social-connections.tsx`)의 아이콘·간격 통일
 
 ### 7.10 관리자 폼 모달 (`components/admin/*`)
 
@@ -1627,11 +1627,11 @@ KOPIS 공연 소개 이미지는 **세로로 매우 깁니다**(실측 `221 × 6
 | 현재 | 작업 |
 |---|---|
 | `components/artist-comparison-section.tsx` | `components/compare/artist-comparison-section.tsx`로 이동, 새 토큰 적용 |
-| `components/sector-chip.tsx` | `components/ui/chip.tsx`로 흡수 후 삭제 |
-| `components/StarRating.tsx` | 토큰화(amber → warning 또는 primary), 크기 variant 추가 |
+| `features/compare/components/sector-chip.tsx` | `components/ui/chip.tsx`로 흡수 후 삭제 |
+| `features/concert/components/star-rating.tsx` | 토큰화(amber → warning 또는 primary), 크기 variant 추가 |
 | `components/shared/optimized-image.tsx` | 스켈레톤 통합, `#f0f0f0` 하드코딩 → `muted` 토큰 |
-| `components/performance-video-player.tsx` | **재생 로직 변경 금지**. 포스터 상태 + 클릭 시 로드 래퍼만 추가 |
-| `components/ticket-vendors-modal.tsx` | `sheet.tsx` 기반으로 교체 |
+| `features/player/components/performance-video-player.tsx` | **재생 로직 변경 금지**. 포스터 상태 + 클릭 시 로드 래퍼만 추가 |
+| `features/concert/components/ticket-vendors-modal.tsx` | `sheet.tsx` 기반으로 교체 |
 | `components/my-page/profile-components.tsx` (714줄) | 컴포넌트별 파일로 분할 |
 | `components/admin/*` | 공통 `FormModal` + `FormField` 도입 |
 
@@ -1724,7 +1724,7 @@ lib/design/
 >
 > | 화면 | 구현 | 비고 |
 > |---|---|---|
-> | 비교 | 데스크톱 `compare.web.tsx`, 모바일·네이티브 `components/compare/compare-mobile.tsx` | 새 비교 API. 구간을 오선 위에 앉힘(Bravura 높은음자리표). 관리 기능은 `/compare-admin`(관리자 전용)으로 옮김 |
+> | 비교 | 데스크톱 `compare.web.tsx`, 모바일·네이티브 `features/compare/components/compare-mobile.tsx` | 새 비교 API. 구간을 오선 위에 앉힘(Bravura 높은음자리표). 관리 기능은 `/compare-admin`(관리자 전용)으로 옮김 |
 > | 홈 | 오늘의 비교 히어로 + 셸프 | 최근 본 작품(기기 저장), 시대로 듣기 → `/timeline?era=` |
 > | 연주자 | 원형 그리드 + 분류 칩 + 검색 | |
 > | 공연·상세 3종·타임라인 | 2차 시안 | 작곡가 상세 작품은 30곡씩 페이지 |
@@ -1849,9 +1849,9 @@ lib/design/
 | `components/ui/button.tsx` | 2.4 | size `xs`, density, `subtle` variant |
 | `components/ui/card.tsx` | 2.4 | 더블링, `interactive` |
 | `components/ui/input.tsx` | 2.4 | density, 아이콘 prop |
-| `components/sector-chip.tsx` | 2.2 | `ui/chip.tsx`로 흡수 후 삭제 |
+| `features/compare/components/sector-chip.tsx` | 2.2 | `ui/chip.tsx`로 흡수 후 삭제 |
 | `components/shared/optimized-image.tsx` | 2.3 | 스켈레톤 통합, `#f0f0f0` 제거 |
-| `components/StarRating.tsx` | 2.x | 토큰화 |
+| `features/concert/components/star-rating.tsx` | 2.x | 토큰화 |
 | `app/+html.tsx` | 3.3 | 레이아웃 선세팅 스크립트, 폰트 preload |
 | `app/(tabs)/_layout.tsx` | 5.2 | 하드코딩 색상 토큰화, 블러 크롬 |
 | `app/(tabs)/_layout.web.tsx` | 3.2 | **신규** 웹 셸 분기 |
@@ -1867,7 +1867,7 @@ lib/design/
 | `app/(auth)/*` | 4.7 | 폭 제한, 스플릿 |
 | `components/admin/*` | 4.8 | 공통 FormModal, 슬라이드오버 |
 | `components/OnboardingModal.tsx` | 4.9 | 인라인 카드로 축소 |
-| `components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
+| `features/player/components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
 | `components/artist-comparison-section.tsx` | 4.5 | 빈 배열이면 섹션 숨김 (버그 D2) |
 | `lib/design/artist-category.ts` | 2.x | **신규** category 라벨·alias 매핑 (C5) |
 | `components/shared/icons/` | 2.x | **작업 완료** 고유 아이콘 8종 + `createClassicIcon`. 4.7절 |

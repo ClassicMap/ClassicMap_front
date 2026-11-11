@@ -5,8 +5,8 @@ import { View } from 'react-native';
 
 import { PageContainer } from '@/components/layout/page-container';
 import { RouteProgress } from '@/components/layout/route-progress';
-import { GlobalPlayerBar } from '@/components/player/global-player-bar';
-import { QueuePanel } from '@/components/player/queue-panel';
+import { GlobalPlayerBar } from '@/features/player/components/global-player-bar';
+import { QueuePanel } from '@/features/player/components/queue-panel';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 

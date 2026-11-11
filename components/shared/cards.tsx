@@ -1,7 +1,7 @@
-import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
-import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
+import { formatShortDay, shortVenue } from '@/features/concert/components/concert-parts';
+import { RepertoireMark, RepertoireThumb } from '@/features/library/components/repertoire-badge';
 import { OptimizedImage } from '@/components/shared/optimized-image';
-import { PieceArt } from '@/components/piece/piece-art';
+import { PieceArt } from '@/features/piece/components/piece-art';
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';

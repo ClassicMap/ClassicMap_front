@@ -1,6 +1,6 @@
-import { AlbumGrid, AlbumShelf } from '@/components/album/album-card';
-import { AlbumDetailModal } from '@/components/album/album-detail-modal';
-import { FilterMenu } from '@/components/concert/concert-filter-bar';
+import { AlbumGrid, AlbumShelf } from '@/features/album/components/album-card';
+import { AlbumDetailModal } from '@/features/album/components/album-detail-modal';
+import { FilterMenu } from '@/features/concert/components/concert-filter-bar';
 import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';

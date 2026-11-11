@@ -1,4 +1,4 @@
-import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
+import { ComposerFormModal } from '@/features/admin/components/composer-form-modal';
 import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 import {
   ComposerGantt,
@@ -8,8 +8,8 @@ import {
   GANTT_PORTRAIT_SPACE,
   GANTT_ROW_HEIGHT,
   type OverflowGroup,
-} from '@/components/timeline/composer-gantt';
-import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/components/timeline/density-strip';
+} from '@/features/timeline/components/composer-gantt';
+import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/features/timeline/components/density-strip';
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';

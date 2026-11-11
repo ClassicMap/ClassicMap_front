@@ -1,9 +1,9 @@
-import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
-import { ConcertCard } from '@/components/concert/concert-card';
-import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/components/concert/concert-filter-bar';
-import type { ArtistChoice } from '@/components/concert/concert-filter-panels';
-import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
-import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/components/concert/concert-parts';
+import { ConcertFormModal } from '@/features/admin/components/concert-form-modal';
+import { ConcertCard } from '@/features/concert/components/concert-card';
+import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/features/concert/components/concert-filter-bar';
+import type { ArtistChoice } from '@/features/concert/components/concert-filter-panels';
+import { FavoriteArtistConcerts } from '@/features/concert/components/favorite-artist-concerts';
+import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/features/concert/components/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/shared/entity-thumb';

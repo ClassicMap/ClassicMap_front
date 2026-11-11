@@ -1,4 +1,4 @@
-import { RepertoireList } from '@/components/library/repertoire-list';
+import { RepertoireList } from '@/features/library/components/repertoire-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';

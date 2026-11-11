@@ -1,4 +1,4 @@
-import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
+import { ConcertFormModal } from '@/features/admin/components/concert-form-modal';
 import {
   OriginalLanguageNote,
   CastChip,
@@ -8,10 +8,10 @@ import {
   concertStatusLabel,
   formatDay,
   parsePrices,
-} from '@/components/concert/concert-parts';
-import { StarRating } from '@/components/StarRating';
-import { FavoriteButton } from '@/components/favorite-button';
-import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/components/ticket-vendors-modal';
+} from '@/features/concert/components/concert-parts';
+import { StarRating } from '@/features/concert/components/star-rating';
+import { FavoriteButton } from '@/features/library/components/favorite-button';
+import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/features/concert/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';

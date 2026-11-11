@@ -1,5 +1,5 @@
-import { RepertoireList } from '@/components/library/repertoire-list';
-import { ProfileAvatar, RatingGrid, type RatingSortKey, StatTile } from '@/components/profile/profile-parts';
+import { RepertoireList } from '@/features/library/components/repertoire-list';
+import { ProfileAvatar, RatingGrid, type RatingSortKey, StatTile } from '@/features/profile/components/profile-parts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -1,6 +1,6 @@
-import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
-import { ArtistFormModal } from '@/components/admin/ArtistFormModal';
-import { PeopleGrid, PeopleShelf, type PersonItem } from '@/components/artists/people-grid';
+import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
+import { ArtistFormModal } from '@/features/admin/components/artist-form-modal';
+import { PeopleGrid, PeopleShelf, type PersonItem } from '@/features/artist/components/people-grid';
 import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';

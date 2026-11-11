@@ -1,9 +1,9 @@
 import { ScrollShelf } from '@/components/shared/shelf';
-import { shortTitleMeta, titleMeta } from '@/components/screen/labels';
-import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
-import { ScreenWorksList } from '@/components/screen/screen-works-list';
-import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
-import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
+import { shortTitleMeta, titleMeta } from '@/features/film/lib/labels';
+import { POSTER_ASPECT, ScreenPoster } from '@/features/film/components/screen-poster';
+import { ScreenWorksList } from '@/features/film/components/screen-works-list';
+import { TmdbAttribution } from '@/features/film/components/tmdb-attribution';
+import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';

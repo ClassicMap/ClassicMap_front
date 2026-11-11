@@ -17,7 +17,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
 import { Kbd } from '@/components/ui/kbd';
-import { titleMeta } from '@/components/screen/labels';
+import { titleMeta } from '@/features/film/lib/labels';
 import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 
 const GROUP_LIMIT = 5;

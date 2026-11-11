@@ -1,4 +1,4 @@
-import { SubPage } from '@/components/account/sub-page';
+import { SubPage } from '@/features/account/components/sub-page';
 import { Text } from '@/components/ui/text';
 import { getLocale, t, useLocale } from '@/lib/i18n';
 import * as React from 'react';

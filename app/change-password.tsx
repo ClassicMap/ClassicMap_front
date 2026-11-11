@@ -1,4 +1,4 @@
-import { FieldMessage, SubPage } from '@/components/account/sub-page';
+import { FieldMessage, SubPage } from '@/features/account/components/sub-page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
