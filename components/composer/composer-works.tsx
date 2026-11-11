@@ -230,17 +230,20 @@ export function ComposerWorks(props: ComposerWorksProps) {
   }, []);
 
   // 「처음 듣는다면」 카드에서 작품을 찾으면 전체 갈래에서 그 제목으로 찾고 검색 칸을 화면 위로 올린다
+  // (같은 key 로 다시 그려질 때 지운 검색어를 되살리지 않도록 key 가 바뀔 때만 돈다)
   const revealKey = props.reveal?.key;
   const revealQuery = props.reveal?.q;
+  const alignRef = React.useRef(alignSearchBlock);
+  alignRef.current = alignSearchBlock;
   React.useEffect(() => {
     if (revealKey === undefined || !revealQuery) return;
     setGenre('all');
     setText(revealQuery);
     setQ(revealQuery);
     // 검색 결과 칸이 자리를 잡은 뒤 옮긴다
-    const timer = setTimeout(() => alignSearchBlock('show'), 50);
+    const timer = setTimeout(() => alignRef.current('show'), 50);
     return () => clearTimeout(timer);
-  }, [revealKey, revealQuery, alignSearchBlock]);
+  }, [revealKey, revealQuery]);
 
   return (
     <View style={{ gap: SECTION_GAP }}>
