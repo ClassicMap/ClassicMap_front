@@ -11,6 +11,8 @@ export function comparePlaylistFor(
   sectors: readonly Pick<ComparisonSector, 'id'>[],
   sectorId: number
 ): Playlist | undefined {
-  if (comparePlayer.getState().current?.sectorId === sectorId) return undefined;
+  const { current, playlist } = comparePlayer.getState();
+  // 재생 목록이 없던 곡(예: 이 기능 전에 저장된 세션)이면 같은 곡이어도 이 작품의 구간들로 채운다
+  if (current?.sectorId === sectorId && playlist) return undefined;
   return sectorPlaylist(pieceId, sectors, sectorId);
 }
