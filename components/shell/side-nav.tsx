@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
-import { type Href, Link, usePathname } from 'expo-router';
+import { type Href, Link, router, usePathname } from 'expo-router';
 import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { msg, t, useLocale } from '@/lib/i18n';
@@ -271,30 +271,24 @@ function Library({ collapsed }: { collapsed: boolean }) {
   );
 
   // 접어도 사진은 제자리에 남고(가운데 30px 선) 글자만 서서히 사라진다. 세로 자리도 그대로라 접고 펼 때 움직이지 않는다
-  // 접히면 글자·안내 링크가 투명해도 좁은 칸 안에 남아 있어서, 눌리지 않게 막는다
-  const fade = cn('cm-fade', collapsed && 'pointer-events-none opacity-0');
+  const fade = cn('cm-fade', collapsed && 'opacity-0');
   return (
     <View className="mt-4 flex-1 border-t border-border pt-4">
       <Text variant="micro" numberOfLines={1} className={cn('px-2.5 pb-2.5 uppercase tracking-widest', fade)}>
         {t('레퍼토리')}
       </Text>
       {!isSignedIn ? (
-        <Link href="/(auth)/sign-in" asChild>
-          <Pressable disabled={collapsed} className={cn('rounded-md px-2.5 py-2 hover:bg-surface-2', fade)}>
-            <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
-              {t('로그인하면 즐겨찾기한 작곡가·연주자가 여기에 모여요.')}
-            </Text>
-          </Pressable>
-        </Link>
+        <FadingAction collapsed={collapsed} href="/(auth)/sign-in" className="px-2.5 py-2">
+          <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
+            {t('로그인하면 즐겨찾기한 작곡가·연주자가 여기에 모여요.')}
+          </Text>
+        </FadingAction>
       ) : favorites.isError ? (
-        <Pressable
-          disabled={collapsed}
-          className={cn('rounded-md px-2.5 py-2 hover:bg-surface-2', fade)}
-          onPress={() => favorites.refetch()}>
+        <FadingAction collapsed={collapsed} onPress={() => favorites.refetch()} className="px-2.5 py-2">
           <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
             {t('즐겨찾기를 못 불러왔어요. 눌러서 다시 시도해 주세요.')}
           </Text>
-        </Pressable>
+        </FadingAction>
       ) : sections.length === 0 && !favorites.isLoading ? (
         <Text variant="caption" className={cn('px-2.5 py-2 text-foreground-muted', fade)} style={{ minWidth: 190 }}>
           {t('작곡가나 연주자를 즐겨찾기하면 여기에 모여요.')}
@@ -314,19 +308,49 @@ function Library({ collapsed }: { collapsed: boolean }) {
                 <LibraryLink key={entry.key} entry={entry} collapsed={collapsed} />
               ))}
               {section.total > section.entries.length ? (
-                <Link href={`/library?kind=${section.kind}` as Href} asChild>
-                  <Pressable disabled={collapsed} className={cn('rounded-md px-2.5 py-1.5 hover:bg-surface-2', fade)}>
-                    <Text numberOfLines={1} className="text-[12px] text-foreground-muted" style={{ minWidth: 150 }}>
-                      {t('{kind} {count}개 더 보기', { kind: t(section.label), count: section.total - section.entries.length })}
-                    </Text>
-                  </Pressable>
-                </Link>
+                <FadingAction
+                  collapsed={collapsed}
+                  href={`/library?kind=${section.kind}` as Href}
+                  className="px-2.5 py-1.5">
+                  <Text numberOfLines={1} className="text-[12px] text-foreground-muted" style={{ minWidth: 150 }}>
+                    {t('{kind} {count}개 더 보기', { kind: t(section.label), count: section.total - section.entries.length })}
+                  </Text>
+                </FadingAction>
               ) : null}
             </View>
           ))}
         </ScrollView>
       )}
     </View>
+  );
+}
+
+/**
+ * 접으면 투명해지는 안내·링크. 투명해도 좁은 칸 안에 남아 있어서, 접힌 동안은 눌리지도 포커스되지도 않게 막는다.
+ * 웹 링크(<a>)는 눌림을 막아도 브라우저가 주소로 가 버려서, 링크 대신 눌렀을 때 이동한다
+ */
+function FadingAction({
+  collapsed,
+  href,
+  onPress,
+  className,
+  children,
+}: {
+  collapsed: boolean;
+  href?: Href;
+  onPress?: () => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Pressable
+      disabled={collapsed}
+      aria-hidden={collapsed}
+      accessibilityRole={href ? 'link' : 'button'}
+      onPress={() => (href ? router.push(href) : onPress?.())}
+      className={cn('cm-fade rounded-md hover:bg-surface-2', className, collapsed && 'opacity-0')}>
+      {children}
+    </Pressable>
   );
 }
 
