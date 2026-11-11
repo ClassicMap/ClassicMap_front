@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import { isArrangementSector, splitEmphasis } from '@/lib/data/comparison';
 import { t, useLocale } from '@/lib/i18n';
-import type { ComparisonSector } from '@/lib/types/models';
+import type { ComparisonSector } from '@/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';

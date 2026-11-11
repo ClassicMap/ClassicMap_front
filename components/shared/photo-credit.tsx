@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/text';
-import type { ImageCredit } from '@/lib/types/models';
+import type { ImageCredit } from '@/types/models';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import * as React from 'react';

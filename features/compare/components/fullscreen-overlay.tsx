@@ -5,7 +5,7 @@ import { Text } from '@/components/ui/text';
 import { clipClock, clipDurationMs, primaryCredit } from '@/lib/data/comparison';
 import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { MinimizeIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';

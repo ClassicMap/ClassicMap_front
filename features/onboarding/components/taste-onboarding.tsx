@@ -14,11 +14,11 @@ import {
   shortPieceTitle,
   SOUND_OPTIONS,
 } from '@/lib/data/taste-labels';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { t, useLocale } from '@/lib/i18n';
-import { TASTE_QUERY_KEYS } from '@/lib/hooks/useTaste';
-import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
-import type { OnboardingPiece, TasteAnswers } from '@/lib/types/models';
+import { TASTE_QUERY_KEYS } from '@/hooks/use-taste';
+import { useComparisonPieces } from '@/lib/query/hooks/use-comparison-performances';
+import type { OnboardingPiece, TasteAnswers } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { CheckIcon, SearchIcon, XIcon } from 'lucide-react-native';

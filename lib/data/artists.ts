@@ -1,4 +1,4 @@
-import { Artist, Performance } from '../types/models';
+import { Artist, Performance } from '@/types/models';
 
 // 아티스트 목 데이터
 export const ARTISTS: Artist[] = [

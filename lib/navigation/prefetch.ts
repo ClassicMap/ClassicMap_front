@@ -1,6 +1,6 @@
 import { defaultComparisonSector, sortComparisonSectors } from '@/lib/data/comparison';
 import { isPieceGenre, type PieceGenre } from '@/lib/design/genre-palette';
-import { artistQueryOptions } from '@/lib/query/hooks/useArtists';
+import { artistQueryOptions } from '@/lib/query/hooks/use-artists';
 import {
   comparableComposersQueryOptions,
   comparisonPieceQueryOptions,
@@ -9,9 +9,9 @@ import {
   genrePiecesQueryOptions,
   pieceSectorsQueryOptions,
   sectorPerformancesQueryOptions,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import { composerQueryOptions } from '@/lib/query/hooks/useComposers';
-import { composerCatalogQueryOptions } from '@/lib/query/hooks/usePieces';
+} from '@/lib/query/hooks/use-comparison-performances';
+import { composerQueryOptions } from '@/lib/query/hooks/use-composers';
+import { composerCatalogQueryOptions } from '@/lib/query/hooks/use-pieces';
 import { type QueryClient, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { Platform } from 'react-native';

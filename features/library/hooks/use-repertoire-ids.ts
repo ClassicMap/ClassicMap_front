@@ -1,5 +1,5 @@
-import { EMPTY_REPERTOIRE_IDS, type RepertoireIds, toRepertoireIds } from '@/lib/data/library';
-import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
+import { EMPTY_REPERTOIRE_IDS, type RepertoireIds, toRepertoireIds } from '@/features/library/lib/library';
+import { useMyRepertoire } from '@/lib/query/hooks/use-recordings';
 import { useAuth } from '@clerk/clerk-expo';
 import * as React from 'react';
 

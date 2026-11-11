@@ -20,7 +20,7 @@
 import { useComposers, useArtists } from '@/lib/query/hooks';
 
 // 또는 개별 import
-import { useComposers } from '@/lib/query/hooks/useComposers';
+import { useComposers } from '@/lib/query/hooks/use-composers';
 ```
 
 ### 2. 목록 조회

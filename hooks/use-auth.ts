@@ -1,4 +1,4 @@
-// lib/hooks/useAuth.ts
+// hooks/use-auth.ts
 // 사용자 권한 확인 훅
 
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';

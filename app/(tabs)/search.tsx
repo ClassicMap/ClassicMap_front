@@ -10,9 +10,9 @@ import { useUnifiedSearch } from '@/features/search/hooks/use-unified-search';
 import { type ArtistCategoryCode, getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { getEraForeground } from '@/lib/design/era-palette';
 import { PERIODS } from '@/lib/data/periods';
-import { useDebounce } from '@/lib/hooks/useDebounce';
-import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
-import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/lib/types/models';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
+import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/types/models';
 import { titleMeta } from '@/features/film/lib/labels';
 import { ScreenPoster } from '@/features/film/components/screen-poster';
 import { msg, t, useLocale } from '@/lib/i18n';
@@ -23,7 +23,7 @@ import { useColorScheme } from 'nativewind';
 import { GenreTiles, useGenreShelves } from '@/features/compare/components/genre-browse';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useTabHeaderInset } from '@/components/layout/tab-chrome';
+import { useTabHeaderInset } from '@/hooks/use-tab-chrome';
 
 type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert' | 'screen';
 

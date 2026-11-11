@@ -1,10 +1,10 @@
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Text } from '@/components/ui/text';
 import { getEraFill, getEraForeground } from '@/lib/design/era-palette';
-import type { PlacedLabeledSpan } from '@/lib/design/timeline-layout';
+import type { PlacedLabeledSpan } from '@/features/timeline/lib/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';
-import type { Composer, Period } from '@/lib/types/models';
+import type { Composer, Period } from '@/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';

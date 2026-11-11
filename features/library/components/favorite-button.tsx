@@ -1,6 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { useFavorite } from '@/hooks/use-favorite';
+import { useFavorite } from '@/features/library/hooks/use-favorite';
 import type { FavoriteTargetType } from '@/lib/api/client';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';

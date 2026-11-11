@@ -11,8 +11,8 @@ import {
   type QueueEntry,
   useComparePlayer,
 } from '@/lib/player/compare-player-store';
-import { findCachedComparisonPiece } from '@/lib/query/hooks/useComparisonPerformances';
-import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { findCachedComparisonPiece } from '@/lib/query/hooks/use-comparison-performances';
+import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import {

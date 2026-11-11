@@ -11,7 +11,7 @@ export {
   useUpdateComposer,
   useDeleteComposer,
   COMPOSER_QUERY_KEYS,
-} from './useComposers';
+} from './use-composers';
 
 // 아티스트 훅
 export {
@@ -21,7 +21,7 @@ export {
   useUpdateArtist,
   useDeleteArtist,
   ARTIST_QUERY_KEYS,
-} from './useArtists';
+} from './use-artists';
 
 // 공연 훅
 export {
@@ -31,7 +31,7 @@ export {
   useUpdateConcert,
   useDeleteConcert,
   CONCERT_QUERY_KEYS,
-} from './useConcerts';
+} from './use-concerts';
 
 // 곡/작품 훅
 export {
@@ -41,7 +41,7 @@ export {
   useUpdatePiece,
   useDeletePiece,
   PIECE_QUERY_KEYS,
-} from './usePieces';
+} from './use-pieces';
 
 // 마이페이지 훅
 export {
@@ -51,4 +51,4 @@ export {
   useUpdateProfileVisibility,
   usePublicProfile,
   MY_PAGE_QUERY_KEYS,
-} from './useMyPage';
+} from './use-my-page';

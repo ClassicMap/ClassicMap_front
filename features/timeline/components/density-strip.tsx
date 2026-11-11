@@ -1,5 +1,5 @@
 import { getEraForeground } from '@/lib/design/era-palette';
-import type { DecadeDensity } from '@/lib/design/timeline-layout';
+import type { DecadeDensity } from '@/features/timeline/lib/timeline-layout';
 import type { ColorScheme } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';
 import * as React from 'react';

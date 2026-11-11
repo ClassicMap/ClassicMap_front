@@ -1,7 +1,7 @@
 import { ComparisonAPI } from '@/lib/api/comparisons';
 import { primaryCredit } from '@/lib/data/comparison';
 import type { Bilingual } from '@/lib/i18n';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance } from '@/types/models';
 
 /**
  * 구간 연주에서 알아낸 두 언어 이름.

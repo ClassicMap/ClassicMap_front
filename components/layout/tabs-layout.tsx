@@ -12,7 +12,7 @@ import { useColorScheme } from 'nativewind';
 import { BlurView } from 'expo-blur';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TAB_CHROME_TRANSLUCENT } from '@/components/layout/tab-chrome';
+import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
 import { runRouteTransition } from '@/lib/navigation/view-transition';
 
 /**

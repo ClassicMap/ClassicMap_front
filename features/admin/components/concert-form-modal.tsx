@@ -18,9 +18,9 @@ import {
 } from '@/features/admin/components/form-picker';
 import { Text } from '@/components/ui/text';
 import { AdminConcertAPI } from '@/lib/api/admin';
-import { useVenueSearch } from '@/lib/hooks/useVenueSearch';
+import { useVenueSearch } from '@/features/admin/hooks/use-venue-search';
 import { msg, t, useLocale } from '@/lib/i18n';
-import type { Concert } from '@/lib/types/models';
+import type { Concert } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';

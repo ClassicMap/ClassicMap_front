@@ -31,8 +31,8 @@ import {
   useComparisonPiece,
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, FeaturedPair } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, FeaturedPair } from '@/types/models';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {

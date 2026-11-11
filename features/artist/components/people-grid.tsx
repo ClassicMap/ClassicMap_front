@@ -1,5 +1,5 @@
 import { useLocale } from '@/lib/i18n';
-import { PersonCard } from '@/components/shared/cards';
+import { PersonCard } from '@/features/home/components/cards';
 import { Skeleton } from '@/components/ui/skeleton';
 import * as React from 'react';
 import { type LayoutChangeEvent, ScrollView, View } from 'react-native';

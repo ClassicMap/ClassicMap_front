@@ -15,7 +15,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { AdminArtistAPI } from '@/lib/api/admin';
 import { t, useLocale } from '@/lib/i18n';
-import type { Artist } from '@/lib/types/models';
+import type { Artist } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { PlusIcon, TrashIcon } from 'lucide-react-native';

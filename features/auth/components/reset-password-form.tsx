@@ -3,7 +3,7 @@ import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { translateClerkError } from '@/lib/clerk/error-translator';
+import { translateClerkError } from '@/features/auth/lib/error-translator';
 import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
 import { type Href, router } from 'expo-router';

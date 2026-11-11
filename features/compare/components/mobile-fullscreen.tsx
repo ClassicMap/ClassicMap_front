@@ -1,4 +1,4 @@
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance } from '@/types/models';
 
 export interface MobileFullscreenProps {
   performances: ComparisonPerformance[];

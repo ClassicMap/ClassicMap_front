@@ -3,8 +3,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
 import { YoutubeThumb } from '@/features/film/components/youtube-thumb';
-import type { ScreenThumbs } from '@/lib/types/models';
-import { tmdbImageUrl } from '@/lib/utils/tmdb';
+import type { ScreenThumbs } from '@/types/models';
+import { tmdbImageUrl } from '@/features/film/lib/tmdb';
 import * as React from 'react';
 import { Animated, Platform, View } from 'react-native';
 

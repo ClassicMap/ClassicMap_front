@@ -8,7 +8,7 @@ import type {
   FeaturedPair,
   ListeningMoment,
   PerformanceListeningNote,
-} from '@/lib/types/models';
+} from '@/types/models';
 import { cn } from '@/lib/utils';
 import { ChevronRightIcon, PlayIcon } from 'lucide-react-native';
 import * as React from 'react';

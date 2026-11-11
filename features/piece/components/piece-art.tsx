@@ -2,7 +2,7 @@ import { EntityThumb } from '@/components/shared/entity-thumb';
 import { FallbackArt } from '@/components/shared/fallback-art';
 import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Scrim } from '@/components/ui/scrim';
-import type { ComparisonPiecePerformer } from '@/lib/types/models';
+import type { ComparisonPiecePerformer } from '@/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Image, Pressable, View } from 'react-native';

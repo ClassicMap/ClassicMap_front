@@ -12,7 +12,7 @@ import {
   type RecordingSort,
 } from '@/lib/api/client';
 import { t } from '@/lib/i18n';
-import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/use-my-page';
 
 export const ALBUM_PAGE_SIZE = 24;
 const NEW_ALBUM_DAYS = 90;

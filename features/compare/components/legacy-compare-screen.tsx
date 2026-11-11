@@ -27,15 +27,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
-import { useAuth } from '@/lib/hooks/useAuth';
-import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount } from '@/lib/types/models';
+import { useAuth } from '@/hooks/use-auth';
+import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount } from '@/types/models';
 import { PerformanceFormModal } from '@/features/admin/components/performance-form-modal';
 import { SectorFormModal } from '@/features/admin/components/sector-form-modal';
 import { SectorChip, AddSectorChip } from '@/features/compare/components/sector-chip';
 import { PerformanceVideoPlayer } from '@/features/player/components/performance-video-player';
 import { getImageUrl } from '@/lib/utils/image';
-import { getAllPeriods } from '@/lib/data/mockDTO';
-import { useComposers } from '@/lib/query/hooks/useComposers';
+import { getAllPeriods } from '@/features/compare/lib/mock-dto';
+import { useComposers } from '@/lib/query/hooks/use-composers';
 
 interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];

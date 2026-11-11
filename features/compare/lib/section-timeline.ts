@@ -5,7 +5,7 @@
  * 구간의 실제 `startMs` / `endMs`를 그대로 가로 위치로 쓰면 둘 다 한 번에 읽힙니다.
  */
 
-import { clipClock } from '../data/comparison';
+import { clipClock } from '@/lib/data/comparison';
 
 export type SectionClip = { startMs: number; endMs: number };
 

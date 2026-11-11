@@ -9,8 +9,8 @@ import { queryClient } from '@/lib/query/client';
 import {
   pieceSectorsQueryOptions,
   sectorPerformancesQueryOptions,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece, ComparisonSector } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, ComparisonPiece, ComparisonSector } from '@/types/models';
 import { pieceMeta } from '@/lib/player/autoplay';
 
 /**

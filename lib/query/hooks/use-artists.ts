@@ -1,7 +1,7 @@
 import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
 import { AdminArtistAPI } from '@/lib/api/admin';
-import type { Artist } from '@/lib/types/models';
+import type { Artist } from '@/types/models';
 
 /**
  * 쿼리 키 상수

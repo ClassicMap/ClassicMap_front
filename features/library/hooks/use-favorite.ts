@@ -1,7 +1,7 @@
 import { type FavoriteGroups, type FavoriteTargetType, MyPageAPI } from '@/lib/api/client';
 import { t } from '@/lib/i18n';
-import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/useMyPage';
-import { useMyFavoriteRecordings } from '@/lib/query/hooks/useRecordings';
+import { MY_PAGE_QUERY_KEYS, useMyFavorites } from '@/lib/query/hooks/use-my-page';
+import { useMyFavoriteRecordings } from '@/lib/query/hooks/use-recordings';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

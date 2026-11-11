@@ -11,15 +11,15 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
 import {
   useFeaturedScreenCues,
   usePrefetchScreenTitle,
   useScreenTitles,
   useScreenTitleSearch,
-} from '@/lib/query/hooks/useScreen';
-import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-screen';
+import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, SearchIcon, XIcon } from 'lucide-react-native';

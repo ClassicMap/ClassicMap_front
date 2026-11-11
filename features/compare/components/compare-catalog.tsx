@@ -13,8 +13,8 @@ import { CompareIcon } from '@/components/shared/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { RepertoireMark, RepertoireThumb } from '@/features/library/components/repertoire-badge';
-import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
-import { repertoireFirst } from '@/lib/data/library';
+import { useRepertoireIds } from '@/features/library/hooks/use-repertoire-ids';
+import { repertoireFirst } from '@/features/library/lib/library';
 import {
   CompareSearchField,
   CompareSearchResults,
@@ -25,8 +25,8 @@ import {
   type ComparableComposer,
   useComparableComposers,
   useComparisonPieces,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPiece, ComparisonPiecePerformer } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPiece, ComparisonPiecePerformer } from '@/types/models';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';

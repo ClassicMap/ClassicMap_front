@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Edit2 as EditIcon, Plus as PlusIcon } from 'lucide-react-native';
 import { t, useLocale } from '@/lib/i18n';
-import type { PerformanceSectorWithCount } from '@/lib/types/models';
+import type { PerformanceSectorWithCount } from '@/types/models';
 
 interface SectorChipProps {
   sector: PerformanceSectorWithCount;

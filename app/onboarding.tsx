@@ -1,10 +1,10 @@
 import { type OnboardingResult, TasteOnboarding } from '@/features/onboarding/components/taste-onboarding';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MyPageAPI } from '@/lib/api/client';
-import { useTaste } from '@/lib/hooks/useTaste';
+import { useTaste } from '@/hooks/use-taste';
 import { t, useLocale } from '@/lib/i18n';
-import { MY_PAGE_QUERY_KEYS } from '@/lib/query/hooks/useMyPage';
-import type { OnboardingStatus } from '@/lib/types/models';
+import { MY_PAGE_QUERY_KEYS } from '@/lib/query/hooks/use-my-page';
+import type { OnboardingStatus } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';

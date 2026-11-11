@@ -1,4 +1,4 @@
-import { Composer } from '../types/models';
+import { Composer } from '@/types/models';
 
 // 작곡가 목 데이터 (database_schema.sql과 동일한 구조)
 export const COMPOSERS: Composer[] = [

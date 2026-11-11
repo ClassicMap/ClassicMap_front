@@ -2,7 +2,7 @@ import { primaryCredit } from '@/lib/data/comparison';
 import { comparePlayer, type ComparePlayerTrack, type PlaylistItem, useComparePlayer } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { pickLead, pickSector } from '@/lib/player/playlist';
-import { usePieceComparisonSectors, useSectorComparisonPerformances } from '@/lib/query/hooks/useComparisonPerformances';
+import { usePieceComparisonSectors, useSectorComparisonPerformances } from '@/lib/query/hooks/use-comparison-performances';
 import * as React from 'react';
 
 /**

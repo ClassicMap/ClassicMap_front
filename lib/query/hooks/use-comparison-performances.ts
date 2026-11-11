@@ -10,7 +10,7 @@ import {
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
 import type { PieceGenre } from '@/lib/design/genre-palette';
-import type { ComparisonPerformance, ComparisonPiece, ComparisonPiecePerformer, HomeRecommendations } from '@/lib/types/models';
+import type { ComparisonPerformance, ComparisonPiece, ComparisonPiecePerformer, HomeRecommendations } from '@/types/models';
 
 const PAGE_SIZE = 10;
 

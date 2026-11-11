@@ -9,8 +9,8 @@ import {
   useArtistComparisonPerformances,
   useComparisonPiece,
   useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronRightIcon } from 'lucide-react-native';

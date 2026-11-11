@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { ScreenThumbQuality, ScreenThumbs } from '@/lib/types/models';
+import type { ScreenThumbQuality, ScreenThumbs } from '@/types/models';
 import * as React from 'react';
 import { Animated, Image, type LayoutChangeEvent, PixelRatio, Platform, View } from 'react-native';
 

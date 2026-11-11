@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
-import { useDebounce } from './useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 
 export function useArtistSearch(query: string, enabled: boolean = true) {
   const debouncedQuery = useDebounce(query, 300);

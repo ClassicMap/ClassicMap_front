@@ -12,7 +12,7 @@ import {
   PIECE_QUERY_KEYS,
   useComposerCatalog,
   useComposerPieces,
-} from '@/lib/query/hooks/usePieces';
+} from '@/lib/query/hooks/use-pieces';
 import type {
   ComposerCatalogForm,
   ComposerCatalogGenre,
@@ -20,7 +20,7 @@ import type {
   ComposerPieceFilter,
   ComposerPieceSort,
   Piece,
-} from '@/lib/types/models';
+} from '@/types/models';
 import { SearchIcon, XIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { THEME } from '@/lib/theme';
@@ -29,8 +29,8 @@ import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { formatNumber, msg, t, useLocale } from '@/lib/i18n';
-import { scrollInnerView } from '@/lib/utils/scroll-inner-view';
-import { searchWords, wordVariants } from '@/lib/utils/search-terms';
+import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
+import { searchWords, wordVariants } from '@/features/composer/lib/search-terms';
 import {
   ActivityIndicator,
   Platform,

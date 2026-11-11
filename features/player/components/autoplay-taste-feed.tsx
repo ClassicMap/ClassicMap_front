@@ -1,7 +1,7 @@
-import { useTaste } from '@/lib/hooks/useTaste';
+import { useTaste } from '@/hooks/use-taste';
 import { candidateFromPiece, tasteGenres } from '@/lib/player/autoplay';
 import { comparePlayer } from '@/lib/player/compare-player-store';
-import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
+import { useHomeRecommendations } from '@/lib/query/hooks/use-home-recommendations';
 import * as React from 'react';
 
 /**

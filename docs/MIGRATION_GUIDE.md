@@ -210,7 +210,7 @@ import { API } from '@/lib/api/client';
 // After
 import { useHook } from '@/lib/query/hooks';
 // 또는
-import { useComposers } from '@/lib/query/hooks/useComposers';
+import { useComposers } from '@/lib/query/hooks/use-composers';
 ```
 
 ### 2. 상태 제거

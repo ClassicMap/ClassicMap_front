@@ -12,7 +12,7 @@ import {
 import { FORM_INVALID_MESSAGE, FormModal } from '@/features/admin/components/form-modal';
 import { AdminPieceAPI } from '@/lib/api/admin';
 import { msg, t, useLocale } from '@/lib/i18n';
-import type { Piece } from '@/lib/types/models';
+import type { Piece } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as React from 'react';
 

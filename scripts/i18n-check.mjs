@@ -11,15 +11,15 @@ const SOURCE_DIRS = ['app', 'components', 'features', 'hooks', 'lib'];
 // 목업과 사전 자체는 뺀다
 const SKIP = [
   'lib/i18n/',
-  'lib/data/mockDatabase.ts',
-  'lib/data/mockDTO.ts',
+  'lib/data/mock-database.ts',
+  'features/compare/lib/mock-dto.ts',
   'lib/api/mock-db.ts',
   // 쓰지 않는 목업 데이터
   'lib/data/composers.ts',
   'lib/data/artists.ts',
   'lib/data/pieces.ts',
   // 검색 낱말 묶음(화면 문구가 아니다)
-  'lib/utils/search-terms.ts',
+  'features/composer/lib/search-terms.ts',
 ];
 const HANGUL = /[가-힣]/;
 

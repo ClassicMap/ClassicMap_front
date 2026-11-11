@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
-import type { Concert } from '@/lib/types/models';
+import type { Concert } from '@/types/models';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';

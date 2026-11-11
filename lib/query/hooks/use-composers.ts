@@ -1,7 +1,7 @@
 import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ComposerAPI } from '@/lib/api/client';
 import { AdminComposerAPI } from '@/lib/api/admin';
-import type { Composer } from '@/lib/types/models';
+import type { Composer } from '@/types/models';
 
 /**
  * 쿼리 키 상수

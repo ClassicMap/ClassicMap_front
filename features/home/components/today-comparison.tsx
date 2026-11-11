@@ -18,8 +18,8 @@ import { t, useLocale } from '@/lib/i18n';
 import {
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, ComparisonPiece } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { PlayIcon } from 'lucide-react-native';
 import * as React from 'react';

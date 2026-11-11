@@ -10,15 +10,15 @@ import {
   SCREEN_USAGE_LABELS,
   youtubeClipUrl,
 } from '@/features/film/lib/labels';
-import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useScreen';
+import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/use-screen';
 import type { PlaylistItem } from '@/lib/player/compare-player-store';
-import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
+import type { ScreenCue, ScreenStreamingLinks } from '@/types/models';
 import { getLocale, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useLeadPerformance } from '@/features/film/hooks/use-lead-performance';
 import { YoutubeThumb } from '@/features/film/components/youtube-thumb';
-import { tmdbImageUrl } from '@/lib/utils/tmdb';
+import { tmdbImageUrl } from '@/features/film/lib/tmdb';
 import { type Href, useRouter } from 'expo-router';
 import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';

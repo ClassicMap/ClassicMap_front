@@ -1,4 +1,4 @@
-// lib/hooks/useTaste.ts
+// hooks/use-taste.ts
 // 사용자 취향. 로그인하면 서버(/me/taste), 아니면 이 기기에 둔다.
 
 import { MyPageAPI } from '@/lib/api/client';
@@ -17,7 +17,7 @@ import {
   readGuestTaste,
   writeGuestTaste,
 } from '@/lib/data/guest-taste';
-import type { OnboardingStatus, TasteAnswers, TasteProfile } from '@/lib/types/models';
+import type { OnboardingStatus, TasteAnswers, TasteProfile } from '@/types/models';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';

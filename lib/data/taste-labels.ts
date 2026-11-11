@@ -1,5 +1,5 @@
 import { msg } from '@/lib/i18n';
-import type { ListeningLevel, PlayerInstrument, TasteSound } from '@/lib/types/models';
+import type { ListeningLevel, PlayerInstrument, TasteSound } from '@/types/models';
 
 /** 온보딩 첫 질문의 답. short 는 설정 칩에 쓴다. 글자는 그리는 쪽에서 t() 로 옮긴다 */
 export const LEVEL_OPTIONS: readonly { key: ListeningLevel; label: string; short: string }[] = [

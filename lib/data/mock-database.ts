@@ -8,7 +8,7 @@ import type {
   ComposerMajorPiece, 
   Artist, 
   Performance 
-} from '@/lib/types/models';
+} from '@/types/models';
 
 // ============================================
 // 1. 작곡가 (Composers)

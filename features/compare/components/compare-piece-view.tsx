@@ -26,13 +26,13 @@ import { ServiceLogo } from '@/components/shared/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
-import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
+import { useRepertoireIds } from '@/features/library/hooks/use-repertoire-ids';
 import {
   useComparisonPiece,
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import { useArtist } from '@/lib/query/hooks/useArtists';
+} from '@/lib/query/hooks/use-comparison-performances';
+import { useArtist } from '@/lib/query/hooks/use-artists';
 import {
   clipClock,
   clipDurationMs,
@@ -45,9 +45,9 @@ import {
 } from '@/lib/data/comparison';
 import { comparePlayer, type ComparePlayerTrack, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
-import { repertoireFirst } from '@/lib/data/library';
-import type { ComparisonPerformance, ListeningMoment } from '@/lib/types/models';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { repertoireFirst } from '@/features/library/lib/library';
+import type { ComparisonPerformance, ListeningMoment } from '@/types/models';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { useIsFocused } from '@react-navigation/native';
 import { type Href, useRouter } from 'expo-router';

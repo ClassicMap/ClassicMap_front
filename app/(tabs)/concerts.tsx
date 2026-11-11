@@ -13,7 +13,7 @@ import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { BoxofficeAPI, type BoxofficeConcert } from '@/lib/api/client';
-import { normalizeAreas } from '@/lib/data/areas';
+import { normalizeAreas } from '@/features/concert/lib/areas';
 import {
   type ConcertFilter,
   type ConcertFilterParams,
@@ -25,14 +25,14 @@ import {
   toConcertFilterParams,
   toDayString,
 } from '@/lib/data/concert-filters';
-import { getRankForeground } from '@/lib/design/rank-palette';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { getRankForeground } from '@/features/concert/lib/rank-palette';
+import { useAuth } from '@/hooks/use-auth';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
-import { useArtist } from '@/lib/query/hooks/useArtists';
-import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
-import type { Concert } from '@/lib/types/models';
+import { useArtist } from '@/lib/query/hooks/use-artists';
+import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/use-concerts';
+import { useMyFavorites } from '@/lib/query/hooks/use-my-page';
+import type { Concert } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
@@ -40,7 +40,7 @@ import { AlertCircleIcon, PlusIcon, SearchXIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
-import { useTabScrollInsets } from '@/components/layout/tab-chrome';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 
 /** 걸러낸 결과가 이보다 적으면 다음 페이지를 더 불러온다 */
 const MIN_VISIBLE = 12;

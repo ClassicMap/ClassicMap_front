@@ -2,7 +2,7 @@ import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClie
 import * as React from 'react';
 
 import { ScreenAPI } from '@/lib/api/screen';
-import type { ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
+import type { ScreenTitleKind, ScreenTitleSummary } from '@/types/models';
 
 const PAGE_SIZE = 24;
 const STALE_MS = 5 * 60_000;

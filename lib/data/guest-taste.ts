@@ -5,7 +5,7 @@ import {
   PLAYER_INSTRUMENTS,
   TASTE_SOUNDS,
 } from '@/lib/api/taste';
-import type { OnboardingStatus, TasteAnswers } from '@/lib/types/models';
+import type { OnboardingStatus, TasteAnswers } from '@/types/models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**

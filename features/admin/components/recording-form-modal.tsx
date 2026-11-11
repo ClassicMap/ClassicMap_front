@@ -12,7 +12,7 @@ import { ImageUploadField } from '@/features/admin/components/form-image';
 import { FORM_INVALID_MESSAGE, FormModal } from '@/features/admin/components/form-modal';
 import { AdminRecordingAPI } from '@/lib/api/admin';
 import { msg, t, useLocale } from '@/lib/i18n';
-import type { Recording } from '@/lib/types/models';
+import type { Recording } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as ImagePicker from 'expo-image-picker';
 import * as React from 'react';

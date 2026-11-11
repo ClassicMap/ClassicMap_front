@@ -3,7 +3,7 @@ import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
 import { THEME, withAlpha } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';
-import type { LoudnessProfile } from '@/lib/types/models';
+import type { LoudnessProfile } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';

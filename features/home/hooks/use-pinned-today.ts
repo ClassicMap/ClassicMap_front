@@ -1,5 +1,5 @@
 import { getLocale, relocalize, useLocale } from '@/lib/i18n';
-import type { RecommendedPiece } from '@/lib/types/models';
+import type { RecommendedPiece } from '@/types/models';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as React from 'react';
 

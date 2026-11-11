@@ -3,7 +3,7 @@ import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
-import { type FavoriteArtistRef, useFavoriteArtistConcerts } from '@/lib/query/hooks/useConcerts';
+import { type FavoriteArtistRef, useFavoriteArtistConcerts } from '@/lib/query/hooks/use-concerts';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 

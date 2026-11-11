@@ -9,9 +9,9 @@ import {
   libraryKindLabel,
   type LibraryEntry,
   type LibraryKind,
-} from '@/lib/data/library';
+} from '@/features/library/lib/library';
 import { getLocale, msg, t, useLocale } from '@/lib/i18n';
-import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';

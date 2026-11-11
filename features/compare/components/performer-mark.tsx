@@ -1,7 +1,7 @@
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { primaryCredit } from '@/lib/data/comparison';
 import { t, useLocale } from '@/lib/i18n';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance } from '@/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { View } from 'react-native';

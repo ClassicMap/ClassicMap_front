@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/icon';
 import { MoreLink } from '@/components/ui/more-link';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
-import type { ComposerHighlight, ComposerHighlightPart } from '@/lib/types/models';
+import type { ComposerHighlight, ComposerHighlightPart } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';

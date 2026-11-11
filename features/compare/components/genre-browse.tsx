@@ -1,4 +1,4 @@
-import { PieceCard } from '@/components/shared/cards';
+import { PieceCard } from '@/features/home/components/cards';
 import { ListPlayButtons } from '@/features/player/components/list-play-buttons';
 import { ScrollShelf } from '@/components/shared/shelf';
 import { OptimizedImage } from '@/components/shared/optimized-image';
@@ -12,8 +12,8 @@ import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
-import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPiece } from '@/lib/types/models';
+import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPiece } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { AlertCircleIcon, ChevronLeftIcon } from 'lucide-react-native';
 import * as React from 'react';

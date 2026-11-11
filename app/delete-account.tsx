@@ -8,7 +8,7 @@ import { clearAllData } from '@/lib/api/mock-db';
 import { t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useAuth as useAppAuth } from '@/lib/hooks/useAuth';
+import { useAuth as useAppAuth } from '@/hooks/use-auth';
 import { type Href, Redirect, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Linking, View } from 'react-native';

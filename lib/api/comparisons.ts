@@ -16,7 +16,7 @@ import type {
   PerformanceCredit,
   PerformanceCreditRole,
   PerformanceListeningNote,
-} from '@/lib/types/models';
+} from '@/types/models';
 
 const CLIP_STATUSES: ReadonlySet<string> = new Set([
   'pending',

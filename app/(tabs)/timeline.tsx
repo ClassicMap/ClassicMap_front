@@ -1,5 +1,5 @@
 import { ComposerFormModal } from '@/features/admin/components/composer-form-modal';
-import { useTabScrollInsets } from '@/components/layout/tab-chrome';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import {
   ComposerGantt,
   GANTT_DOT_SPACE,
@@ -26,11 +26,11 @@ import {
   placeLabeledSpans,
   yearTicks,
   type LabeledSpanInput,
-} from '@/lib/design/timeline-layout';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
-import { useAllComposers } from '@/lib/query/hooks/useComposers';
-import type { Composer, Period } from '@/lib/types/models';
+} from '@/features/timeline/lib/timeline-layout';
+import { useAuth } from '@/hooks/use-auth';
+import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/use-comparison-performances';
+import { useAllComposers } from '@/lib/query/hooks/use-composers';
+import type { Composer, Period } from '@/types/models';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';

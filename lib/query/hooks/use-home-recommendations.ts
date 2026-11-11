@@ -1,6 +1,6 @@
 import { useRecentPieces } from '@/hooks/use-recent-pieces';
 import { type GuestSignals, TasteAPI } from '@/lib/api/taste';
-import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
+import { TASTE_QUERY_KEYS, useTaste } from '@/hooks/use-taste';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import * as React from 'react';
 

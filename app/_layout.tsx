@@ -18,7 +18,7 @@ import { queryClient } from '@/lib/query/client';
 import { RootChrome } from '@/components/layout/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
-import { useTasteSync } from '@/lib/hooks/useTaste';
+import { useTasteSync } from '@/hooks/use-taste';
 import { installRouteTransitions } from '@/lib/navigation/view-transition';
 import { LocaleProvider, t, useLocale } from '@/lib/i18n';
 

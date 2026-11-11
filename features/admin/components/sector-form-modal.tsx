@@ -12,7 +12,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { AdminPerformanceSectorAPI } from '@/lib/api/admin';
 import { t, useLocale } from '@/lib/i18n';
-import type { PerformanceSectorWithCount } from '@/lib/types/models';
+import type { PerformanceSectorWithCount } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import { Trash2 as TrashIcon } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';

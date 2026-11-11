@@ -10,7 +10,7 @@ import { getEraColor } from '@/lib/design/era-palette';
 import { genreStyle } from '@/lib/design/genre-palette';
 import { t, useLocale } from '@/lib/i18n';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
-import type { ComparisonPiece, Concert, Period } from '@/lib/types/models';
+import type { ComparisonPiece, Concert, Period } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';

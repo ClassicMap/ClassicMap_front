@@ -3,9 +3,9 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/features/search/hooks/use-unified-search';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
-import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
+import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
 import { type PrefetchTarget, prefetchTarget } from '@/lib/navigation/prefetch';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useCommandPalette } from './command-palette-context';
 import { Kbd } from '@/components/ui/kbd';
 import { titleMeta } from '@/features/film/lib/labels';
-import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
+import { tmdbImageUrl, youtubeClipThumbnail } from '@/features/film/lib/tmdb';
 
 const GROUP_LIMIT = 5;
 /** 고른 줄에 이만큼 머물면 그 화면 데이터를 미리 받는다 (화살표로 훑을 때는 부르지 않는다) */

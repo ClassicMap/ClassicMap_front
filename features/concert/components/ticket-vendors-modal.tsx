@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { t, useLocale } from '@/lib/i18n';
-import type { TicketVendor } from '@/lib/types/models';
+import type { TicketVendor } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { ChevronRightIcon, ExternalLinkIcon, TicketIcon, XIcon } from 'lucide-react-native';

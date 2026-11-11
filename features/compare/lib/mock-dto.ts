@@ -10,7 +10,7 @@ import type {
   ComposerWithPieces,
   PieceWithPerformances,
   PerformanceWithArtist,
-} from '@/lib/types/models';
+} from '@/types/models';
 
 import {
   MOCK_COMPOSERS,
@@ -23,7 +23,7 @@ import {
   getMajorPiecesByComposerId,
   getPerformancesByPieceId,
   getPiecesByComposerId,
-} from './mockDatabase';
+} from '@/lib/data/mock-database';
 
 // ============================================
 // Composer DTOs

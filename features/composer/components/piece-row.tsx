@@ -4,8 +4,8 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { ServiceLogo, serviceFromLabel } from '@/components/shared/service-logo';
-import { usePieceParts } from '@/lib/query/hooks/usePieces';
-import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
+import { usePieceParts } from '@/lib/query/hooks/use-pieces';
+import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/types/models';
 import { cn } from '@/lib/utils';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { THEME } from '@/lib/theme';
@@ -13,7 +13,7 @@ import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, T
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
-import { termPattern } from '@/lib/utils/search-terms';
+import { termPattern } from '@/features/composer/lib/search-terms';
 import { Linking, Pressable, View } from 'react-native';
 
 interface ListenLink {

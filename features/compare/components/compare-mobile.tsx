@@ -7,8 +7,8 @@ import { SectorGuide, SectorTypeBadge } from '@/features/compare/components/sect
 import { PieceScreenStrip } from '@/features/film/components/piece-screen-strip';
 import { RepertoireMark, RepertoireThumb } from '@/features/library/components/repertoire-badge';
 import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/features/compare/components/compare-catalog';
-import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
-import { repertoireFirst } from '@/lib/data/library';
+import { useRepertoireIds } from '@/features/library/hooks/use-repertoire-ids';
+import { repertoireFirst } from '@/features/library/lib/library';
 import { MobileFullscreen } from '@/features/compare/components/mobile-fullscreen';
 import { PlayerSlot } from '@/features/player/components/player-slot';
 import { SwitchModeToggle } from '@/features/compare/components/switch-mode-toggle';
@@ -42,15 +42,15 @@ import {
   youtubeThumbnailUrl,
   youtubeWatchUrl,
 } from '@/lib/data/comparison';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 import {
   useComparableComposers,
   useComparisonPiece,
   useComparisonPieces,
   usePieceComparisonSectors,
   useSectorComparisonPerformances,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece, ListeningMoment } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, ComparisonPiece, ListeningMoment } from '@/types/models';
 import {
   CompareSearchField,
   CompareSearchResults,
@@ -71,7 +71,7 @@ import { GenreTiles, useGenreShelves } from '@/features/compare/components/genre
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { useTabHeaderInset, useTabScrollInsets } from '@/components/layout/tab-chrome';
+import { useTabHeaderInset, useTabScrollInsets } from '@/hooks/use-tab-chrome';
 
 interface CompareMobileCatalogProps {
   onOpenGenre: (genre: PieceGenre) => void;

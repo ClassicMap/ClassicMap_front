@@ -1,10 +1,10 @@
-import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/components/shared/cards';
+import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/features/home/components/cards';
 import { TasteInviteCard } from '@/features/home/components/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/shared/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/features/home/components/today-comparison';
 import { useGenreShelves } from '@/features/compare/components/genre-browse';
 import { Chip } from '@/components/ui/chip';
-import { usePinnedToday } from '@/hooks/use-pinned-today';
+import { usePinnedToday } from '@/features/home/hooks/use-pinned-today';
 import { GENRE_STYLES, type PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
@@ -17,14 +17,14 @@ import { PERIODS } from '@/lib/data/periods';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { PREFERENCE_ERAS, SOUND_OPTIONS, soundOfArtistCategory } from '@/lib/data/taste-labels';
 import { TasteAPI } from '@/lib/api/taste';
-import { TASTE_QUERY_KEYS, useTaste } from '@/lib/hooks/useTaste';
-import { useArtists } from '@/lib/query/hooks/useArtists';
-import { useComparisonPieces, useGenrePieces } from '@/lib/query/hooks/useComparisonPerformances';
-import { useRecommendedComposers } from '@/lib/query/hooks/useComposers';
-import { useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
+import { TASTE_QUERY_KEYS, useTaste } from '@/hooks/use-taste';
+import { useArtists } from '@/lib/query/hooks/use-artists';
+import { useComparisonPieces, useGenrePieces } from '@/lib/query/hooks/use-comparison-performances';
+import { useRecommendedComposers } from '@/lib/query/hooks/use-composers';
+import { useFilteredConcerts } from '@/lib/query/hooks/use-concerts';
 import { DEFAULT_CONCERT_FILTER, periodRange } from '@/lib/data/concert-filters';
-import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
+import { useHomeRecommendations } from '@/lib/query/hooks/use-home-recommendations';
+import { useMyFavorites } from '@/lib/query/hooks/use-my-page';
 import type {
   Artist,
   Composer,
@@ -32,7 +32,7 @@ import type {
   HomeRecommendations,
   RecommendationShelfKey,
   TasteSound,
-} from '@/lib/types/models';
+} from '@/types/models';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
@@ -41,7 +41,7 @@ import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { useTabScrollInsets } from '@/components/layout/tab-chrome';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 
 /** 이번 실행에서 취향 묻기를 이미 열었는지. 뒤로 나가도 같은 실행 안에서는 다시 열지 않는다 */
 let onboardingOpened = false;

@@ -1,7 +1,7 @@
 import { clipDurationMs, primaryCredit } from '@/lib/data/comparison';
 import { t } from '@/lib/i18n';
 import type { ComparePlayerTrack } from '@/lib/player/compare-player-store';
-import type { ComparisonPerformance } from '@/lib/types/models';
+import type { ComparisonPerformance } from '@/types/models';
 
 /** 재생 규칙: 클립이 준비된 연주만 재생 UI를 둔다 (clipStatus !== 'ready'는 재생하지 않는다) */
 export function isPlayablePerformance(performance: ComparisonPerformance): boolean {

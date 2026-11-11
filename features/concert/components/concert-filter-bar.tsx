@@ -14,7 +14,7 @@ import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
-import { type AreaOption, areaName } from '@/lib/data/areas';
+import { type AreaOption, areaName } from '@/features/concert/lib/areas';
 import {
   type ConcertFilter,
   type ConcertInstrumentKey,

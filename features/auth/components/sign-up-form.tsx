@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { translateClerkError } from '@/lib/clerk/error-translator';
+import { translateClerkError } from '@/features/auth/lib/error-translator';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
 import { Link, router } from 'expo-router';

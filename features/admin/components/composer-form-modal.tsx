@@ -12,7 +12,7 @@ import { ImageUrlField } from '@/features/admin/components/form-image';
 import { FORM_INVALID_MESSAGE, FormModal } from '@/features/admin/components/form-modal';
 import { AdminComposerAPI } from '@/lib/api/admin';
 import { msg, t, useLocale } from '@/lib/i18n';
-import type { Composer } from '@/lib/types/models';
+import type { Composer } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as React from 'react';
 

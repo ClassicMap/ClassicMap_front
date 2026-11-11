@@ -251,7 +251,7 @@ rating  : 문자열 86건("0.0") · null 99건   ← 타입은 number로 선언�
 - **`category`가 영문 slug입니다.** 보고서 7.2의 한글 필터 칩(`피아노 / 바이올린 …`)은 그대로 쓸 수 없습니다. 표시용 한글 라벨 ↔ 값 매핑 테이블이 필요합니다.
 - **`orchestra` 47건**은 사람이 아닙니다. 아바타 원형·생년·국적 표시를 그대로 적용하면 어색합니다.
 - `피아니스트`(5) / `피아노`(4) 9건은 **`pianist`로 정규화되어야 할 데이터 오염**입니다.
-- `rating`이 문자열 또는 null인데 `lib/types/models.ts`는 `rating: number`로 선언합니다. `Number(...)` 변환이 이미 화면 곳곳에 있으나, 타입 차원에서 `string | number | null`로 좁히는 편이 안전합니다.
+- `rating`이 문자열 또는 null인데 `types/models.ts`는 `rating: number`로 선언합니다. `Number(...)` 변환이 이미 화면 곳곳에 있으나, 타입 차원에서 `string | number | null`로 좁히는 편이 안전합니다.
 
 #### 1.6.4 작품 — **B6 해소**
 
@@ -336,7 +336,7 @@ rating  : 문자열 86건("0.0") · null 99건   ← 타입은 number로 선언�
 |---|---|---|
 | **D1** | **공연 지역 필터가 동작하지 않음** | `concerts.tsx:264`의 `AREA_CODE_MAP` 키는 축약형(`서울`, `부산`)인데 `/concerts/areas`는 풀네임(`서울특별시`, `부산광역시`)을 반환 → `AREA_CODE_MAP[city]`가 항상 `undefined` → 박스오피스 TOP3가 언제나 전국 기준 |
 | **D2** | **아티스트 상세의 "이 아티스트의 연주 비교"가 항상 빈 상태** | `/artists/{id}/comparison-performances`가 빈 배열 반환. 임윤찬(187)은 `/artists/187/performances`로는 연주 4개가 나오는데 comparison 경로로는 0개 |
-| **D3** | **`PeriodAPI.getAll()`이 항상 실패** | `/periods` **404**. 화면은 로컬 `getAllPeriods()`(`lib/data/mockDTO.ts`)를 쓰고 있어 표면화되지 않은 죽은 코드 |
+| **D3** | **`PeriodAPI.getAll()`이 항상 실패** | `/periods` **404**. 화면은 로컬 `getAllPeriods()`(`features/compare/lib/mock-dto.ts`)를 쓰고 있어 표면화되지 않은 죽은 코드 |
 
 부가 데이터 품질 이슈:
 - `/concerts/areas` 응답에 `"대구광역시, 대구광역시"`, `"대전광역시, 대전광역시"` 중복 문자열과 `"전남광주통합특별시"` 비표준 값이 섞여 있습니다.
@@ -676,7 +676,7 @@ ClassicMap은 "클래식 음악 입문자를 위한 로드맵"이며, 다른 클
 현재 `concerts.tsx`에 하드코딩된 금·은·동을 토큰화합니다.
 
 ```ts
-// lib/design/rank-palette.ts
+// features/concert/lib/rank-palette.ts
 export const RANK_PALETTE = {
   1: { base: '#D4AF37', onDark: '#E8C766', onLight: '#8A6E12' },
   2: { base: '#B8B8BD', onDark: '#D2D2D6', onLight: '#6B6B70' },
@@ -860,7 +860,7 @@ lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 �
 - 타임라인 길이는 **마지막 구간의 끝**입니다. `Piece.durationMinutes`를 쓰지 않는 이유는 실연 영상이 그보다 길기 때문입니다(라흐 3번 표기 40분, 임윤찬 실연 42:32).
 - 연주자마다 시각이 다르므로 **한 연주를 기준으로 그리고 A/B를 바꾸면 다시 계산**합니다.
 - 좁은 구간은 실제로 아주 좁습니다(최소 26px). 폭을 부풀려 왜곡하지 않고, 투명 의사요소로 **클릭 영역만 44px로 확보**합니다.
-- 계산은 `lib/design/section-timeline.ts`의 `placeSections()` / `movementBoundaries()`입니다.
+- 계산은 `features/compare/lib/section-timeline.ts`의 `placeSections()` / `movementBoundaries()`입니다.
 - **구간 블록은 1번선과 5번선 *사이*에 넣습니다**(`top: 1px; height: 39px`). 오선 밖으로 튀어나와도, 오선 높이에 딱 맞춰도 어긋나 보입니다. 딱 맞추면 바깥 두 줄이 **블록 테두리를 겸하게 되어** 구간 밖에서는 회색 선, 안에서는 금색 면의 경계로 성격이 바뀝니다. 사이에 넣으면 두 줄이 어디서나 그냥 선으로 남습니다.
 - **구간 블록에 `border-radius`를 주지 않습니다.** 모서리가 하필 1번선·5번선 위에 앉아 선 끝을 4px 얼룩으로 번지게 합니다.
 
@@ -1740,7 +1740,7 @@ lib/design/
 >
 > **진행 (2026-09-29 오후)**
 >
-> - 5.1 헤더 반투명 완료(iOS만). 헤더 배경은 블러 위에 배경색(라이트 72%, 다크 80%)을 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 비칩니다. 탭 화면은 `useTabScrollInsets`(`components/layout/tab-chrome.ts`)로 헤더 높이만큼 `contentInset`을 둡니다.
+> - 5.1 헤더 반투명 완료(iOS만). 헤더 배경은 블러 위에 배경색(라이트 72%, 다크 80%)을 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 비칩니다. 탭 화면은 `useTabScrollInsets`(`hooks/use-tab-chrome.ts`)로 헤더 높이만큼 `contentInset`을 둡니다.
 > - `withAlpha()`가 `hsl(H S L / A)`를 내서 네이티브에서 색이 무시되던 것을 `hsla(...)`로 고쳤습니다.
 > - 5.3 iOS 시뮬레이터(iPhone 17, iOS 27) 확인: 탭 5개·상세 3종·연주자·타임라인·비교 상세·로그인 화면을 라이트/다크로 캡처해 봤고 레이아웃 깨짐은 없었습니다. 안드로이드는 에뮬레이터가 없어 미확인입니다.
 > - **iOS 27 차단 이슈**: Xcode 27 SDK로 빌드하면 앱이 실행 즉시 종료됩니다(`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). SDK 54 네이티브 템플릿이 UIScene 라이프사이클을 쓰지 않기 때문입니다. 로컬 확인은 `ios/`(gitignore)에 SceneDelegate를 임시로 붙여서 했습니다. 저장소에 반영하려면 config plugin 또는 Expo SDK 업그레이드가 필요합니다. 같은 빌드에서 일부 Pod의 최소 배포 버전(12.4·13.4)이 Xcode 27 하한(15.0)보다 낮아 빌드가 실패하는 것도 함께 풀어야 합니다.
@@ -1873,7 +1873,7 @@ lib/design/
 | `components/shared/icons/` | 2.x | **작업 완료** 고유 아이콘 8종 + `createClassicIcon`. 4.7절 |
 | `lib/design/tokens.ts` | 1.2 | **작업 완료** JS 쪽 색상 단일 소스. `global.css`와 값을 함께 유지 |
 | `features/compare/lib/smufl.ts` | — | **작업 완료** SMuFL 글리프 · 조표 계산. 4.7.6절 |
-| `lib/design/section-timeline.ts` | — | **작업 완료** 구간 위치 계산. 4.7.5절 |
+| `features/compare/lib/section-timeline.ts` | — | **작업 완료** 구간 위치 계산. 4.7.5절 |
 | `features/compare/components/notation-glyph.tsx` | — | **작업 완료** 악보 글리프 렌더 |
 | `assets/fonts/` | — | **작업 완료** Bravura otf/woff2 + OFL 라이선스. 5.7절 |
 | `app/(tabs)/_layout.web.tsx` | 3.2 | **신규 · 웹 전용** 사이드바 셸. 5.2절 |

@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-query';
 import { PieceAPI } from '@/lib/api/client';
 import { AdminPieceAPI } from '@/lib/api/admin';
-import type { ComposerPieceFilter, Piece } from '@/lib/types/models';
+import type { ComposerPieceFilter, Piece } from '@/types/models';
 
 /**
  * 쿼리 키 상수

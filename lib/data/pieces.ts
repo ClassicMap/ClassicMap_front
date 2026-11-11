@@ -1,4 +1,4 @@
-import { Piece, ComposerMajorPiece } from '../types/models';
+import { Piece, ComposerMajorPiece } from '@/types/models';
 
 // 곡 목 데이터
 export const PIECES: Piece[] = [

@@ -1,4 +1,4 @@
-import type { ColorScheme } from './tokens';
+import type { ColorScheme } from '@/lib/design/tokens';
 
 /** 박스오피스 순위 색 (설계 문서 4.1.4). 1~3위 외에는 undefined를 돌려 토큰 색을 쓴다. */
 const RANK_PALETTE = {

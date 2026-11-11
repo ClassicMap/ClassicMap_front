@@ -6,12 +6,12 @@ import { Text } from '@/components/ui/text';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { getImageUrl } from '@/lib/utils/image';
-import { useArtist } from '@/lib/query/hooks/useArtists';
+import { useArtist } from '@/lib/query/hooks/use-artists';
 import {
   useArtistComparisonPerformances,
   useComparisonPiece,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, Concert, ConcertArtist, ConcertImage } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, Concert, ConcertArtist, ConcertImage } from '@/types/models';
 import { type Href, useRouter } from 'expo-router';
 import { LanguagesIcon, Maximize2Icon } from 'lucide-react-native';
 import * as React from 'react';

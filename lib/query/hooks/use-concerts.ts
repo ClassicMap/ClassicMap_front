@@ -1,7 +1,7 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import { ArtistAPI, ConcertAPI, type ConcertArtistOption } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
-import type { Artist, Concert } from '@/lib/types/models';
+import type { Artist, Concert } from '@/types/models';
 import {
   type ConcertFilter,
   type DayRange,

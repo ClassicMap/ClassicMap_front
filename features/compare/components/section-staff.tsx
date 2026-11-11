@@ -1,10 +1,10 @@
 import { NotationGlyph } from '@/features/compare/components/notation-glyph';
 import { Text } from '@/components/ui/text';
 import { isWholeWorkSector, primaryCredit } from '@/lib/data/comparison';
-import { placeSections } from '@/lib/design/section-timeline';
+import { placeSections } from '@/features/compare/lib/section-timeline';
 import { t, useLocale } from '@/lib/i18n';
-import { useAllSectorPerformances } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
+import { useAllSectorPerformances } from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, ComparisonSector } from '@/types/models';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';

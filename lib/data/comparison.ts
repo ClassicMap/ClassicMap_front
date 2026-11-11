@@ -4,7 +4,7 @@ import type {
   ComparisonPiece,
   ComparisonSector,
   PerformanceCredit,
-} from '../types/models';
+} from '@/types/models';
 
 /** 밀리초를 `분:초`로 */
 export function clipClock(ms: number): string {

@@ -18,9 +18,9 @@ import {
 import { Text } from '@/components/ui/text';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { PerformanceSectorAPI } from '@/lib/api/client';
-import { useArtistSearch } from '@/lib/hooks/useArtistSearch';
+import { useArtistSearch } from '@/features/admin/hooks/use-artist-search';
 import { t, useLocale } from '@/lib/i18n';
-import type { Performance, PerformanceSectorWithCount } from '@/lib/types/models';
+import type { Performance, PerformanceSectorWithCount } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import * as React from 'react';
 

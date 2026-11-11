@@ -4,7 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import type { ConcertArtistOption } from '@/lib/api/client';
-import type { AreaOption } from '@/lib/data/areas';
+import type { AreaOption } from '@/features/concert/lib/areas';
 import {
   AREA_REGIONS,
   CONCERT_GENRES,
@@ -17,9 +17,9 @@ import {
   periodRange,
 } from '@/lib/data/concert-filters';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { t, useLocale } from '@/lib/i18n';
-import { useConcertArtistOptions } from '@/lib/query/hooks/useConcerts';
+import { useConcertArtistOptions } from '@/lib/query/hooks/use-concerts';
 import { cn } from '@/lib/utils';
 import { CheckIcon, HeartIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';

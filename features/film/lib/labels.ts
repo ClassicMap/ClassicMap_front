@@ -1,5 +1,5 @@
 import { msg, t } from '@/lib/i18n';
-import type { ScreenCueUsage, ScreenTitleKind } from '@/lib/types/models';
+import type { ScreenCueUsage, ScreenTitleKind } from '@/types/models';
 
 /** 표시만 해 둔 문구다. 그릴 때 t() 로 옮긴다 */
 export const SCREEN_KIND_LABELS: Record<ScreenTitleKind, string> = {

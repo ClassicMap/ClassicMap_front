@@ -1,16 +1,16 @@
 import { AlbumGrid, AlbumShelf } from '@/features/album/components/album-card';
 import { AlbumDetailModal } from '@/features/album/components/album-detail-modal';
 import { FilterMenu } from '@/features/concert/components/concert-filter-bar';
-import { useTabScrollInsets } from '@/components/layout/tab-chrome';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useRepertoireIds } from '@/hooks/use-repertoire-ids';
+import { useRepertoireIds } from '@/features/library/hooks/use-repertoire-ids';
 import { isApiUnavailable, type RecordingListItem, type RecordingSort } from '@/lib/api/client';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
 import {
   type AlbumBrowseFilters,
@@ -19,7 +19,7 @@ import {
   useAlbumLabels,
   useNewAlbumsForMe,
   useRepertoireArtistAlbums,
-} from '@/lib/query/hooks/useRecordings';
+} from '@/lib/query/hooks/use-recordings';
 import { cn } from '@/lib/utils';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
