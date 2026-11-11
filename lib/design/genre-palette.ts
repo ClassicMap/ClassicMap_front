@@ -1,6 +1,7 @@
 import { msg } from '@/lib/i18n';
 /**
- * 작품 장르 7종 (2026-11-07 사용자 결정). 원곡 편성 기준으로 서버가 `genre` 로 준다.
+ * 작품 장르 7종 (2026-11-07 사용자 결정) + 사운드트랙(2026-11-11, 영화·드라마·게임 음악).
+ * 원곡 편성 기준으로 서버가 `genre` 로 준다.
  * 시대 색처럼 데이터 카테고리 전용이라 버튼·보더 같은 UI 크롬에는 쓰지 않는다.
  * 사용처: 둘러보기·비교 탭의 장르 타일. 작품 그림(연주자 사진)에는 덧칠하지 않는다.
  */
@@ -12,6 +13,7 @@ export const PIECE_GENRES = [
   'orchestral',
   'stage',
   'vocal',
+  'screen',
 ] as const;
 
 export type PieceGenre = (typeof PIECE_GENRES)[number];
@@ -31,6 +33,7 @@ export const GENRE_STYLES: Record<PieceGenre, GenreStyle> = {
   orchestral: { key: 'orchestral', label: msg('관현악'), color: '#3F6F9A' },
   stage: { key: 'stage', label: msg('오페라·발레'), color: '#8C3F5A' },
   vocal: { key: 'vocal', label: msg('성악'), color: '#7466A8' },
+  screen: { key: 'screen', label: msg('사운드트랙'), color: '#2E7D86' },
 };
 
 export function isPieceGenre(value: unknown): value is PieceGenre {

@@ -1041,7 +1041,8 @@ export const PieceAPI = {
   ): Promise<ComposerPiece[]> {
     if (USE_REAL_API) {
       const query = new URLSearchParams({ offset: String(params.offset), limit: String(params.limit) });
-      if (params.genre) query.append('genre', params.genre);
+      // '기타'(장르 없음)는 'unclassified' 로 묻는다. 옛 앱이 쓰는 'other' 는 서버가 사운드트랙까지 묶어 준다.
+      if (params.genre) query.append('genre', params.genre === 'other' ? 'unclassified' : params.genre);
       if (params.form) query.append('form', params.form);
       if (params.sort) query.append('sort', params.sort);
       if (params.q?.trim()) query.append('q', params.q.trim());

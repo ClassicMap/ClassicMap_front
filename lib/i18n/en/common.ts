@@ -94,5 +94,6 @@ export const COMMON: Readonly<Record<string, string>> = {
   관현악: 'Orchestral',
   '오페라·발레': 'Opera & ballet',
   성악: 'Vocal',
+  사운드트랙: 'Soundtracks',
   교향곡: 'Symphonies',
 };
