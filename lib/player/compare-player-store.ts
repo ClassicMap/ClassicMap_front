@@ -864,10 +864,9 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
     if (options.play) media.play();
   }
   flushSession();
-  if (!sameSong) {
-    refillQueue();
-    ensureAutoplay();
-  }
+  if (!sameSong) refillQueue();
+  // 같은 곡에서 새 목록을 틀어 자동 재생 목록이 비워졌을 수도 있다. 넉넉하면 아무것도 하지 않는다
+  ensureAutoplay();
 }
 
 /** 곡이 바뀌었음을 비교 화면에 알린다(그 작품 화면이면 그 구간으로 따라간다) */
