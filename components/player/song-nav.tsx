@@ -44,9 +44,12 @@ function faceWindow(size: number, position: number, max: number): [number, numbe
  */
 export function PerformerStepper({
   compact = false,
+  maxFaces = compact ? MAX_FACES_COMPACT : MAX_FACES,
   className,
 }: {
   compact?: boolean;
+  /** 한 번에 보일 얼굴 수. 0이면 ‹ ›만 둔다(연주자 카드가 바로 위에 있는 비교 화면의 좁은 바) */
+  maxFaces?: number;
   className?: string;
 }) {
   const { locale } = useLocale();
@@ -61,7 +64,7 @@ export function PerformerStepper({
     position >= 0
       ? t('연주자 {n}/{total}', { n: position + 1, total: size })
       : t('연주자 {total}명', { total: size });
-  const [from, to] = faceWindow(size, position, compact ? MAX_FACES_COMPACT : MAX_FACES);
+  const [from, to] = maxFaces > 0 ? faceWindow(size, position, maxFaces) : [0, 0];
   const faceSize = compact ? 24 : 28;
   const hoveredName = tracks.find((track) => track.performanceId === hovered)?.artistName;
   return (
@@ -113,7 +116,7 @@ export function PerformerStepper({
           );
         })}
       </View>
-      {to - from < size && position >= 0 ? (
+      {maxFaces > 0 && to - from < size && position >= 0 ? (
         <Text variant="mono" className="pl-1 text-caption text-foreground-muted">
           {`${position + 1}/${size}`}
         </Text>

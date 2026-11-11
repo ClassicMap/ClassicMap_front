@@ -1129,7 +1129,8 @@ function PlayerBar({
               </Text>
             </View>
             <View className="shrink-0 flex-row items-center gap-2">
-              <PerformerStepper compact={compact} />
+              {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
+              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} />
               {focusButton}
             </View>
           </>
