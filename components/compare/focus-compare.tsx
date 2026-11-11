@@ -141,6 +141,18 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     return () => comparePlayer.setFocus(null);
   }, [focus, screenFocused]);
 
+  // 이 구간을 듣다가 들어왔으면 연주자마다 듣던 자리에서 잇고, 다른 곡을 듣다가(또는 아무것도 안 듣다가)
+  // 들어왔으면 두 연주 모두 처음부터 튼다. 영상이 위치를 읽기 전에 정해 둔다
+  const aId = a?.id;
+  const bId = b?.id;
+  const focusSectorId = a?.sectorId;
+  React.useLayoutEffect(() => {
+    if (aId === undefined || bId === undefined) return;
+    if (comparePlayer.getState().current?.sectorId === focusSectorId) return;
+    comparePlayer.rememberPosition(aId, 0);
+    comparePlayer.rememberPosition(bId, 0);
+  }, [aId, bId, focusSectorId]);
+
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
       <EmptyState
@@ -277,14 +289,16 @@ function FocusStage(props: FocusStageProps) {
   const handOff = React.useCallback(() => {
     const latest = engineRef.current;
     const positions = latest.positions();
-    comparePlayer.rememberPosition(a.id, positions.a, clipDurationMs(a) / 1000);
-    comparePlayer.rememberPosition(b.id, positions.b, clipDurationMs(b) / 1000);
     const current = latest.side === 'a' ? a : b;
+    const other = latest.side === 'a' ? b : a;
+    // 떠나 있는 동안 앱 플레이어가 다른 곡으로 넘어갔어도 듣던 쪽은 듣던 자리에서 넘긴다.
+    // 다른 곡에서 넘어오면 스토어가 이 곡의 옛 위치를 버리므로, 소리 안 나던 쪽 위치는 넘긴 뒤에 적는다
     comparePlayer.select(trackFromPerformance(current, imageOf(current)), {
       play: latest.playing,
-      mode: 'resume',
+      startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
     });
+    comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
   }, [a, b, imageOf, queue]);
 
   const exit = React.useCallback(() => {
@@ -996,8 +1010,7 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
           return;
         }
         const performance = key === 'a' ? a : b;
-        comparePlayer.rememberPosition(performance.id, target);
-        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, mode: 'resume' });
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, startAt: target });
       },
     }),
     // adjusted: 소리 안 나는 쪽을 조정하면 그 위치를 다시 읽는다

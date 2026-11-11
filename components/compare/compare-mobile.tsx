@@ -405,7 +405,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       return;
     }
     if (performance.id === activeId && comparePlayer.togglePlay()) return;
-    // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
+    // 재생 바의 다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));
@@ -418,8 +418,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));
-    comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
-    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+      play: true,
+      queue,
+      startAt: moment.offsetMs / 1000,
+    });
   };
   // 전체 화면의 연주자 칩: 바로 그 연주로 바꾼다(같은 연주면 그대로)
   const pick = (performance: ComparisonPerformance) => {

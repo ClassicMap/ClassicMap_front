@@ -76,7 +76,6 @@ export const SCREEN: Readonly<Record<string, string>> = {
   '{work} 장면 스틸': '{work} scene still',
   '{work}이 나오는 장면': 'Scene featuring {work}',
   '이 장면에서 나와요': 'Heard in this scene',
-  '장면 설명에 결말이 드러나요. 눌러서 펼쳐요.': 'This scene note gives away the ending. Tap to show it.',
   '근거 {count}개': '{count} source|{count} sources',
   'cue::1차': 'Primary',
   'cue::2차': 'Secondary',

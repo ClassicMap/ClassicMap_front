@@ -30,6 +30,8 @@ export function GlobalPlayerBar() {
   const surface = useComparePlayer((state) => state.surface);
   const focus = useComparePlayer((state) => state.focus);
   const queueSize = useComparePlayer((state) => state.queue.length);
+  // 이전 곡으로 돌아와 있으면 다음 버튼이 지나온 곡으로 다시 간다. 아니면 같은 구간의 다음 연주자
+  const hasLater = useComparePlayer((state) => state.forward.length > 0);
   const progress = useComparePlayer((state) => state.progress);
   const [scrub, setScrub] = React.useState<number | null>(null);
   const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
@@ -38,6 +40,7 @@ export function GlobalPlayerBar() {
   const duration = progress.duration || current.durationSec;
   const shownSeconds = scrub !== null ? scrub * duration : progress.current;
   const goToCompare = () => router.navigate(compareHrefFor(current));
+  const canNext = hasLater || queueSize >= 2;
 
   return (
     <View className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
@@ -64,11 +67,11 @@ export function GlobalPlayerBar() {
       </View>
       <View className="flex-[1.3] items-center gap-1.5">
         <View className="flex-row items-center gap-4">
+          {/* 듣던 중이면 처음으로, 막 시작한 참이면 방금 전에 듣던 곡으로 */}
           <Pressable
-            accessibilityLabel={t('이전 연주자')}
-            disabled={queueSize < 2}
-            onPress={() => comparePlayer.step(-1)}
-            className={cn('size-8 items-center justify-center rounded-full', queueSize < 2 && 'opacity-40')}>
+            accessibilityLabel={t('이전 곡')}
+            onPress={() => comparePlayer.previous()}
+            className="size-8 items-center justify-center rounded-full">
             <Icon as={SkipBackIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
           </Pressable>
           <Pressable
@@ -78,10 +81,10 @@ export function GlobalPlayerBar() {
             <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
           </Pressable>
           <Pressable
-            accessibilityLabel={t('다음 연주자')}
-            disabled={queueSize < 2}
-            onPress={() => comparePlayer.step(1)}
-            className={cn('size-8 items-center justify-center rounded-full', queueSize < 2 && 'opacity-40')}>
+            accessibilityLabel={hasLater ? t('다음 곡') : t('다음 연주자')}
+            disabled={!canNext}
+            onPress={() => comparePlayer.next()}
+            className={cn('size-8 items-center justify-center rounded-full', !canNext && 'opacity-40')}>
             <Icon as={SkipForwardIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
           </Pressable>
         </View>
