@@ -10,7 +10,10 @@ export async function playPiece(
   target: { pieceId: number; sectorId?: number | null },
   list?: readonly { pieceId: number }[]
 ): Promise<boolean> {
-  const resolved = await resolvePlaylistItem({ pieceId: target.pieceId, sectorId: target.sectorId ?? null });
+  const resolved = await resolvePlaylistItem({
+    pieceId: target.pieceId,
+    sectorId: target.sectorId ?? null,
+  });
   if (!resolved) return false;
   comparePlayer.select(resolved.track, {
     play: true,

@@ -14,7 +14,9 @@ import { Pressable, View } from 'react-native';
 export function useSongNav() {
   useLocale();
   const hasNext = useComparePlayer((state) =>
-    Boolean(state.current && state.playlist && state.playlist.index < state.playlist.items.length - 1)
+    Boolean(
+      state.current && state.playlist && state.playlist.index < state.playlist.items.length - 1
+    )
   );
   const sections = useComparePlayer((state) => state.playlist?.kind === 'compare');
   return {
@@ -27,7 +29,13 @@ export function useSongNav() {
 /**
  * 같은 곡의 다른 연주로 넘기는 ‹ 연주자 2/3 › 묶음. 곡 넘기기(⏮ ⏭)와 나눠, 연주자는 여기서만 바꾼다
  */
-export function PerformerStepper({ compact = false, className }: { compact?: boolean; className?: string }) {
+export function PerformerStepper({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
   useLocale();
   const size = useComparePlayer((state) => state.queue.length);
   const position = useComparePlayer((state) => {
@@ -35,10 +43,16 @@ export function PerformerStepper({ compact = false, className }: { compact?: boo
     return id === undefined ? -1 : state.queue.findIndex((track) => track.performanceId === id);
   });
   if (size < 2) return null;
-  const label = position >= 0 ? t('연주자 {n}/{total}', { n: position + 1, total: size }) : t('연주자 {total}명', { total: size });
+  const label =
+    position >= 0
+      ? t('연주자 {n}/{total}', { n: position + 1, total: size })
+      : t('연주자 {total}명', { total: size });
   return (
     <View
-      className={cn('h-8 shrink-0 flex-row items-center rounded-full border border-border-strong', className)}
+      className={cn(
+        'h-8 shrink-0 flex-row items-center rounded-full border border-border-strong',
+        className
+      )}
       accessibilityRole="toolbar"
       accessibilityLabel={label}>
       <Pressable
@@ -81,7 +95,8 @@ export function useFollowSongNav(
   React.useEffect(() => {
     if (navigation.seq === seen.current) return;
     seen.current = navigation.seq;
-    if (!enabled || navigation.pieceId !== pieceId || navigation.sectorId === activeSectorId) return;
+    if (!enabled || navigation.pieceId !== pieceId || navigation.sectorId === activeSectorId)
+      return;
     onSelectSector(navigation.sectorId);
   }, [navigation, pieceId, activeSectorId, onSelectSector, enabled]);
 }

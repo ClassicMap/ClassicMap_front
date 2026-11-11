@@ -40,7 +40,8 @@ export function MiniPlayerBar() {
   // 밀기: 글자 줄만 손가락을 따라 움직인다(네이티브 영상은 루트에서 자리 좌표로 그려서 같이 움직이지 않는다)
   const dragX = React.useRef(new Animated.Value(0)).current;
   const swipe = React.useMemo(() => {
-    const settle = () => Animated.spring(dragX, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start();
+    const settle = () =>
+      Animated.spring(dragX, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start();
     return PanResponder.create({
       // 옆으로 뚜렷하게 움직일 때만 가져간다. 그냥 누르면 아래 누르기(비교 화면으로)가 받는다
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
@@ -68,43 +69,61 @@ export function MiniPlayerBar() {
   const canToggle = Platform.OS === 'web' || hasMedia;
 
   return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', left: 8, right: 8, bottom, zIndex: 30 }}>
+    <View
+      pointerEvents="box-none"
+      style={{ position: 'absolute', left: 8, right: 8, bottom, zIndex: 30 }}>
       <View className="overflow-hidden rounded-xl border border-border bg-surface-2 shadow-lg shadow-black/30">
         <View className="h-[60px] flex-row items-center gap-3 pl-2 pr-1.5">
-          <Pressable
-            {...swipe.panHandlers}
-            onPress={goToCompare}
-            accessibilityRole="link"
-            accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}
-            accessibilityHint={t('옆으로 밀면 이전·다음 곡으로 넘어가요')}
-            className="min-w-0 flex-1 flex-row items-center gap-3">
-            {current.videoId || Platform.OS === 'web' ? (
-              <MiniVideoTarget width={80} height={45} />
-            ) : (
-              <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={40} />
-            )}
-            <Animated.View className="min-w-0 flex-1" style={{ transform: [{ translateX: dragX }] }}>
-              <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-                {current.artistName}
-              </Text>
-              <Text variant="caption" numberOfLines={1}>
-                {restored ? t('이어 듣기 · {sector}', { sector: current.sectorName }) : `${current.sectorName} · ${current.pieceTitle}`}
-              </Text>
-            </Animated.View>
-          </Pressable>
+          {/* 밀기는 감싼 칸이 받는다. Pressable 은 자기 누르기 신호로 넘겨받은 손잡이를 덮어쓴다 */}
+          <View {...swipe.panHandlers} style={{ flex: 1, minWidth: 0 }}>
+            <Pressable
+              onPress={goToCompare}
+              accessibilityRole="link"
+              accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}
+              accessibilityHint={t('옆으로 밀면 이전·다음 곡으로 넘어가요')}
+              className="min-w-0 flex-1 flex-row items-center gap-3">
+              {current.videoId || Platform.OS === 'web' ? (
+                <MiniVideoTarget width={80} height={45} />
+              ) : (
+                <EntityThumb
+                  name={current.artistName}
+                  image={current.artistImageUrl}
+                  shape="circle"
+                  size={40}
+                />
+              )}
+              <Animated.View style={{ flex: 1, minWidth: 0, transform: [{ translateX: dragX }] }}>
+                <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
+                  {current.artistName}
+                </Text>
+                <Text variant="caption" numberOfLines={1}>
+                  {restored
+                    ? t('이어 듣기 · {sector}', { sector: current.sectorName })
+                    : `${current.sectorName} · ${current.pieceTitle}`}
+                </Text>
+              </Animated.View>
+            </Pressable>
+          </View>
           <Pressable
             onPress={() => {
               if (!canToggle || !comparePlayer.togglePlay()) goToCompare();
             }}
             accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             className="size-11 items-center justify-center rounded-full">
-            <Icon as={playing ? PauseIcon : PlayIcon} size={20} className="fill-foreground text-foreground" />
+            <Icon
+              as={playing ? PauseIcon : PlayIcon}
+              size={20}
+              className="fill-foreground text-foreground"
+            />
           </Pressable>
           <Pressable
             onPress={() => comparePlayer.next()}
             disabled={!nav.hasNext}
             accessibilityLabel={nav.nextLabel}
-            className={cn('size-10 items-center justify-center rounded-full', !nav.hasNext && 'opacity-30')}>
+            className={cn(
+              'size-10 items-center justify-center rounded-full',
+              !nav.hasNext && 'opacity-30'
+            )}>
             <Icon as={SkipForwardIcon} size={18} className="fill-foreground text-foreground" />
           </Pressable>
           <Pressable

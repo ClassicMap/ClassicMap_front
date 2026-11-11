@@ -1,8 +1,15 @@
-import { defaultComparisonSector, primaryCredit, sortComparisonSectors } from '@/lib/data/comparison';
+import {
+  defaultComparisonSector,
+  primaryCredit,
+  sortComparisonSectors,
+} from '@/lib/data/comparison';
 import type { ComparePlayerTrack, Playlist, PlaylistItem } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { queryClient } from '@/lib/query/client';
-import { pieceSectorsQueryOptions, sectorPerformancesQueryOptions } from '@/lib/query/hooks/useComparisonPerformances';
+import {
+  pieceSectorsQueryOptions,
+  sectorPerformancesQueryOptions,
+} from '@/lib/query/hooks/useComparisonPerformances';
 import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
 
 /**
@@ -11,7 +18,10 @@ import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models
  */
 
 /** 틀 구간: 정해 준 구간, 없으면 연주가 있는 구간 가운데 비교 화면이 처음 여는 구간 */
-export function pickSector(sectors: readonly ComparisonSector[], sectorId?: number | null): ComparisonSector | undefined {
+export function pickSector(
+  sectors: readonly ComparisonSector[],
+  sectorId?: number | null
+): ComparisonSector | undefined {
   const sorted = sortComparisonSectors(sectors);
   if (sectorId) return sorted.find((sector) => sector.id === sectorId);
   return defaultComparisonSector(sorted.filter((sector) => sector.readyPerformanceCount > 0));
@@ -26,7 +36,9 @@ export function pickLead(
   preferArtistId?: number | null
 ): ComparisonPerformance | undefined {
   if (preferArtistId != null) {
-    const same = playable.find((performance) => primaryCredit(performance)?.artistId === preferArtistId);
+    const same = playable.find(
+      (performance) => primaryCredit(performance)?.artistId === preferArtistId
+    );
     if (same) return same;
   }
   const featured = sector?.featuredPair?.performanceIds[0];
@@ -62,8 +74,14 @@ export async function resolvePlaylistItem(
 }
 
 /** 작품 목록(홈 선반·작곡가 화면·비교 둘러보기)을 재생 목록으로. 이 작품이 목록에 없으면 이 곡 하나만 */
-export function pieceListPlaylist(pieceId: number, list?: readonly { pieceId: number }[]): Playlist {
-  const items = list && list.length > 0 ? list.map((piece) => ({ pieceId: piece.pieceId, sectorId: null })) : [];
+export function pieceListPlaylist(
+  pieceId: number,
+  list?: readonly { pieceId: number }[]
+): Playlist {
+  const items =
+    list && list.length > 0
+      ? list.map((piece) => ({ pieceId: piece.pieceId, sectorId: null }))
+      : [];
   const index = items.findIndex((item) => item.pieceId === pieceId);
   if (index < 0) return { kind: 'list', items: [{ pieceId, sectorId: null }], index: 0 };
   return { kind: 'list', items, index };
