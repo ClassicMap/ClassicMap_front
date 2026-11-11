@@ -65,3 +65,23 @@ export function PerformerStepper({ compact = false, className }: { compact?: boo
     </View>
   );
 }
+
+/**
+ * 재생 바의 이전·다음 곡으로 이 작품의 다른 구간이 재생되면 비교 화면도 그 구간으로 따라간다.
+ * 구간 칩을 눌러 다른 구간을 보는 건 그대로 둔다(재생은 바뀌지 않으니 따라가지 않는다)
+ */
+export function useFollowSongNav(
+  pieceId: number,
+  activeSectorId: number | undefined,
+  onSelectSector: (sectorId: number) => void,
+  enabled: boolean
+) {
+  const navigation = useComparePlayer((state) => state.navigation);
+  const seen = React.useRef(navigation.seq);
+  React.useEffect(() => {
+    if (navigation.seq === seen.current) return;
+    seen.current = navigation.seq;
+    if (!enabled || navigation.pieceId !== pieceId || navigation.sectorId === activeSectorId) return;
+    onSelectSector(navigation.sectorId);
+  }, [navigation, pieceId, activeSectorId, onSelectSector, enabled]);
+}

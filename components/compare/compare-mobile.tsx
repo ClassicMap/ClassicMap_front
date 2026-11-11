@@ -12,6 +12,9 @@ import { repertoireFirst } from '@/lib/data/library';
 import { MobileFullscreen } from '@/components/compare/mobile-fullscreen';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
+import { useFollowSongNav } from '@/components/player/song-nav';
+import { comparePlaylistFor } from '@/lib/player/compare-playlist';
+import { useIsFocused } from '@react-navigation/native';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { Badge } from '@/components/ui/badge';
@@ -368,6 +371,8 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
   const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
+  // 탭을 옮겨도 이 화면은 뒤에 살아 있다. 재생 바를 따라 구간을 옮기는 건 보일 때만
+  const screenFocused = useIsFocused();
   const repertoireIds = useRepertoireIds();
   // 레퍼토리에 담은 연주자를 앞으로
   const performances = React.useMemo(
@@ -409,7 +414,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));
-    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue });
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+      play: true,
+      queue,
+      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+    });
   };
   // 들을 곳: 그 연주를 그 지점부터 튼다
   const playAt = (performance: ComparisonPerformance, moment: ListeningMoment) => {
@@ -422,6 +431,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       play: true,
       queue,
       startAt: moment.offsetMs / 1000,
+      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
     });
   };
   // 전체 화면의 연주자 칩: 바로 그 연주로 바꾼다(같은 연주면 그대로)
@@ -430,8 +440,14 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));
-    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue });
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+      play: true,
+      queue,
+      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+    });
   };
+  // 재생 바(미니 플레이어)의 이전·다음 곡으로 이 작품의 다른 구간이 재생되면 화면도 그 구간으로 따라간다
+  useFollowSongNav(pieceId, activeSector?.id, onSelectSector, screenFocused);
   // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
   const featured = resolveFeaturedPair(activeSector?.featuredPair ?? null, performances.filter(isPlayablePerformance));
 

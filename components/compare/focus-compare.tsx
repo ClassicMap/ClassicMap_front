@@ -20,6 +20,7 @@ import {
   supportingCredits,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
+import { comparePlaylistFor } from '@/lib/player/compare-playlist';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { crossfade, type Fade, fadeSeconds, type SwitchCause } from '@/lib/player/crossfade';
 import { type AlignedClip, fineClock, followRate, sameMoment } from '@/lib/player/focus-align';
@@ -297,9 +298,10 @@ function FocusStage(props: FocusStageProps) {
       play: latest.playing,
       startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
+      playlist: comparePlaylistFor(current.pieceId, sectors, current.sectorId),
     });
     comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
-  }, [a, b, imageOf, queue]);
+  }, [a, b, imageOf, queue, sectors]);
 
   const exit = React.useCallback(() => {
     handOff();
@@ -947,7 +949,7 @@ function useWebFocusEngine(
 // ─── 네이티브: 플레이어 하나. 전환은 스토어가 위치를 잡아 준다 ──────────────────
 
 function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null): FocusEngine {
-  const { a, b, imageOf, startPlaying } = props;
+  const { a, b, imageOf, startPlaying, sectors } = props;
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
   const progress = useComparePlayer((state) => state.progress);
@@ -968,7 +970,10 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
     if (Platform.OS === 'web') return;
     const state = comparePlayer.getState().current;
     if (state?.performanceId !== a.id && state?.performanceId !== b.id) {
-      comparePlayer.select(trackFromPerformance(a, imageOf(a)), { play: startPlaying });
+      comparePlayer.select(trackFromPerformance(a, imageOf(a)), {
+        play: startPlaying,
+        playlist: comparePlaylistFor(a.pieceId, sectors, a.sectorId),
+      });
     }
     // 처음 한 번만
     // eslint-disable-next-line react-hooks/exhaustive-deps
