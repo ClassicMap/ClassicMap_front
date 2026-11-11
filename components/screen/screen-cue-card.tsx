@@ -46,17 +46,14 @@ interface ScreenCueCardProps {
 export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps) {
   useLocale();
   const router = useRouter();
-  const [showSpoiler, setShowSpoiler] = React.useState(false);
   const [showEvidence, setShowEvidence] = React.useState(false);
   const [picking, setPicking] = React.useState(false);
   const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)].filter(Boolean).join(' · ');
-  // 스포일러 장면은 설명을 펼치기 전까지 스틸도 숨긴다
-  const hidden = cue.spoiler && !showSpoiler;
-  const still = hidden ? null : tmdbImageUrl(cue.stillPath, 'w780');
+  const still = tmdbImageUrl(cue.stillPath, 'w780');
   // 장면 그림은 사람이 확인한 공식 클립에만 사진으로 둔다(sceneFrame). 영상은 아래 'YouTube · 채널'로 연다
   const clip = cue.officialClip;
   const sceneFrame = clip?.sceneFrame ?? null;
-  const clipScene = Boolean(clip && sceneFrame) && !still && !hidden;
+  const clipScene = Boolean(clip && sceneFrame) && !still;
   const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
@@ -110,16 +107,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
           ) : null}
         </View>
 
-        {cue.spoiler && !showSpoiler ? (
-          <Pressable
-            onPress={() => setShowSpoiler(true)}
-            accessibilityRole="button"
-            className="rounded-md border border-dashed border-border-strong px-3 py-2">
-            <Text variant="caption">{t('장면 설명에 결말이 드러나요. 눌러서 펼쳐요.')}</Text>
-          </Pressable>
-        ) : (
-          <ExpandableText text={cue.sceneNote} lines={2} variant="bodySm" className="text-foreground-muted" />
-        )}
+        <ExpandableText text={cue.sceneNote} lines={2} variant="bodySm" className="text-foreground-muted" />
 
         <ListenAction cue={cue} onOpenCompare={openCompare} />
 
@@ -139,7 +127,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
                 <Text variant="micro">{t('스틸 고르기')}</Text>
               </Pressable>
             ) : null}
-            {/* 공식 클립 출처. 장면이 스포일러로 가려져 있어도 링크는 남긴다 */}
+            {/* 공식 클립 출처 */}
             {clip ? (
               <Pressable
                 onPress={openClip}
