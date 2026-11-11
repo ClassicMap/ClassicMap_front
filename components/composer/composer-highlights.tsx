@@ -130,7 +130,7 @@ function HighlightCard({
           </Text>
         ) : null}
         {highlight.reason ? (
-          <Text variant="caption" numberOfLines={2}>
+          <Text variant="caption" numberOfLines={3}>
             {highlight.reason}
           </Text>
         ) : null}
