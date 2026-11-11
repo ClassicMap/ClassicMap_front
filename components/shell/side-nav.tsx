@@ -187,7 +187,7 @@ function NavLink({
             accessibilityRole="button"
             accessibilityLabel={t('빠른 검색 열기')}
             disabled={collapsed}
-            className={cn('cm-fade', collapsed && 'opacity-0')}
+            className={cn('cm-fade', collapsed && 'pointer-events-none opacity-0')}
             onPress={(event) => {
               event.preventDefault();
               onOpenPalette();
@@ -271,7 +271,8 @@ function Library({ collapsed }: { collapsed: boolean }) {
   );
 
   // 접어도 사진은 제자리에 남고(가운데 30px 선) 글자만 서서히 사라진다. 세로 자리도 그대로라 접고 펼 때 움직이지 않는다
-  const fade = cn('cm-fade', collapsed && 'opacity-0');
+  // 접히면 글자·안내 링크가 투명해도 좁은 칸 안에 남아 있어서, 눌리지 않게 막는다
+  const fade = cn('cm-fade', collapsed && 'pointer-events-none opacity-0');
   return (
     <View className="mt-4 flex-1 border-t border-border pt-4">
       <Text variant="micro" numberOfLines={1} className={cn('px-2.5 pb-2.5 uppercase tracking-widest', fade)}>
@@ -340,9 +341,9 @@ function LibraryLink({ entry, collapsed }: { entry: LibraryEntry; collapsed: boo
         {...hover}
         accessibilityRole="link"
         accessibilityLabel={entry.title}
-        className="flex-row items-center gap-3 rounded-md px-1.5 py-[5px] hover:bg-surface-2">
+        className="flex-row items-center gap-3 rounded-md px-[3px] py-[7px] hover:bg-surface-2">
         <View className="shrink-0">
-          <LibraryThumb entry={entry} size={32} />
+          <LibraryThumb entry={entry} />
         </View>
         <View className={cn('cm-fade min-w-0 flex-1', collapsed && 'opacity-0')} style={{ minWidth: 140 }}>
           <Text numberOfLines={1} className="text-[13px] font-semibold">
