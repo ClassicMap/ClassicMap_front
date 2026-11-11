@@ -1061,6 +1061,8 @@ interface PlayerBarProps {
 
 /** 재생 바가 이보다 좁으면 버튼 글자를 접는다 (px) */
 const BAR_COMPACT_WIDTH = 1080;
+/** 이보다 좁으면 연주자 묶음과 소리 막대도 접는다 (px) */
+const BAR_TIGHT_WIDTH = 820;
 
 /**
  * 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다.
@@ -1089,6 +1091,8 @@ function PlayerBar({
   // 좌우를 같은 폭으로 두어 가운데 재생 조작이 정확히 가운데 온다. 좁으면 버튼 글자를 접는다
   const [barWidth, setBarWidth] = React.useState(0);
   const compact = barWidth > 0 && barWidth < BAR_COMPACT_WIDTH;
+  // 대기열 패널까지 열어 아주 좁으면 이름 칸을 남기려고 연주자 묶음(위 카드에 있음)과 소리 막대를 접는다
+  const tight = barWidth > 0 && barWidth < BAR_TIGHT_WIDTH;
 
   const focusButton = (
     <Pressable
@@ -1131,7 +1135,7 @@ function PlayerBar({
             </View>
             <View className="shrink-0 flex-row items-center gap-2">
               {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
-              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} spot={false} />
+              {tight ? null : <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} spot={false} />}
               {focusButton}
             </View>
           </>
@@ -1195,7 +1199,7 @@ function PlayerBar({
       </View>
       {/* 오른쪽: 소리·화면·원본 */}
       <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
-        <VolumeControl width={compact ? 56 : 76} />
+        <VolumeControl width={tight ? 0 : compact ? 56 : 76} />
         <QueueButton />
         <Pressable
           onPress={onFullscreen}

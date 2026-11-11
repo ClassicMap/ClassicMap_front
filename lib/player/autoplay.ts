@@ -84,10 +84,11 @@ function candidateFromPerformance(performance: ComparisonPerformance): AutoplayC
   };
 }
 
-/** 이름이 길면 성(마지막 낱말)만 */
+/** 이름이 길면 성(마지막 낱말)만. 한 글자로 줄면(요요 마 → 마) 이름 전체 */
 function shortName(name: string): string {
   const parts = name.trim().split(/\s+/);
-  return parts.length > 1 ? parts[parts.length - 1] : name;
+  const last = parts[parts.length - 1];
+  return parts.length > 1 && last.length >= 2 ? last : name.trim();
 }
 
 async function firstPage<T>(load: () => Promise<{ pages: readonly T[][] }>): Promise<readonly T[]> {
