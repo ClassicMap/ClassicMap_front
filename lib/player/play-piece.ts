@@ -1,26 +1,25 @@
-import { defaultComparisonSector, primaryCredit, sortComparisonSectors } from '@/lib/data/comparison';
 import { comparePlayer } from '@/lib/player/compare-player-store';
-import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
-import { pieceSectorsQueryOptions, sectorPerformancesQueryOptions } from '@/lib/query/hooks/useComparisonPerformances';
-import type { QueryClient } from '@tanstack/react-query';
+import { pieceListPlaylist, resolvePlaylistItem } from '@/lib/player/playlist';
 
 /**
- * 작품을 그 자리에서 바로 재생한다(스포티파이 카드·머리 재생 버튼). 비교 화면이 처음 여는 구간의
- * 연주들을 차례 목록으로 싣고 첫 연주부터 튼다. 영상은 하단 플레이바(미니 플레이어)에 뜬다.
- * 재생할 연주가 없으면 false.
+ * 작품을 그 자리에서 바로 재생한다(스포티파이 카드·머리 재생 버튼). 비교 화면이 처음 여는 구간의 대표 연주부터
+ * 처음부터 튼다. `list`를 주면 그 목록이 재생 목록이 되어 재생 바의 이전·다음 곡이 그 순서를 따르고,
+ * 곡이 끝나면 다음 곡으로 넘어간다. 영상은 하단 플레이바(미니 플레이어)에 뜬다. 재생할 연주가 없으면 false.
  */
 export async function playPiece(
-  queryClient: QueryClient,
-  target: { pieceId: number; sectorId?: number | null }
+  target: { pieceId: number; sectorId?: number | null },
+  list?: readonly { pieceId: number }[]
 ): Promise<boolean> {
-  const sectors = await queryClient.fetchQuery(pieceSectorsQueryOptions(target.pieceId));
-  const sorted = sortComparisonSectors(sectors ?? []);
-  const sector = sorted.find((item) => item.id === target.sectorId) ?? defaultComparisonSector(sorted);
-  if (!sector) return false;
-  const performances = await queryClient.fetchQuery(sectorPerformancesQueryOptions(sector.id));
-  const playable = (performances ?? []).filter(isPlayablePerformance);
-  if (playable.length === 0) return false;
-  const queue = playable.map((performance) => trackFromPerformance(performance, primaryCredit(performance)?.imageUrl ?? null));
-  comparePlayer.select(queue[0], { play: true, queue, mode: 'resume' });
+  const resolved = await resolvePlaylistItem({
+    pieceId: target.pieceId,
+    sectorId: target.sectorId ?? null,
+  });
+  if (!resolved) return false;
+  comparePlayer.select(resolved.track, {
+    play: true,
+    queue: resolved.queue,
+    startAt: 0,
+    playlist: pieceListPlaylist(target.pieceId, list),
+  });
   return true;
 }

@@ -18,7 +18,9 @@ import { Equalizer } from '@/components/ui/equalizer';
 import { GenreLink } from '@/components/piece/genre-link';
 import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, NextSectionIcon, PrevSectionIcon, SwitchTakeIcon } from '@/components/ui/icons';
+import { CompareIcon } from '@/components/ui/icons';
+import { PerformerStepper, useFollowSongNav, useSongNav } from '@/components/player/song-nav';
+import { comparePlaylistFor } from '@/lib/player/compare-playlist';
 import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -59,6 +61,8 @@ import {
   PlusIcon,
   RectangleHorizontalIcon,
   SettingsIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -189,8 +193,12 @@ export function ComparePieceView({
   );
   const choose = React.useCallback(
     (performance: ComparisonPerformance) =>
-      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue }),
-    [imageOf, queue]
+      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+        play: true,
+        queue,
+        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+      }),
+    [imageOf, queue, pieceId, sectors]
   );
 
   // 1:1 비교 고르기: 지금 연주(A)는 고정, 다른 연주 하나를 고르면 집중 비교로 간다
@@ -229,9 +237,10 @@ export function ComparePieceView({
         play: true,
         queue,
         startAt: moment.offsetMs / 1000,
+        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
       });
     },
-    [imageOf, queue]
+    [imageOf, queue, pieceId, sectors]
   );
 
   // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
@@ -253,11 +262,8 @@ export function ComparePieceView({
     [activeId, playable, choose, stale]
   );
 
-  const sectorIndex = sectors.findIndex((sector) => sector.id === activeSector?.id);
-  const goSector = (direction: 1 | -1) => {
-    const next = sectors[sectorIndex + direction];
-    if (next) onSelectSector(next.id);
-  };
+  // 재생 바의 이전·다음 곡으로 이 작품의 다른 구간이 재생되면 화면도 그 구간으로 따라간다
+  useFollowSongNav(pieceId, activeSector?.id, onSelectSector, screenFocused);
 
   // 전체 화면: 셸 영상을 통째로 띄운다. 연주자를 바꿔도 같은 영상이라 전체 화면이 풀리지 않는다
   const toggleFullscreen = React.useCallback(() => {
@@ -653,13 +659,7 @@ export function ComparePieceView({
         active={active}
         activeImage={active ? imageOf(active) : null}
         playing={playing}
-        canPrevSector={sectorIndex > 0}
-        canNextSector={sectorIndex >= 0 && sectorIndex < sectors.length - 1}
-        onPrevSector={() => goSector(-1)}
-        onNextSector={() => goSector(1)}
         onTogglePlay={togglePlay}
-        onNextTake={() => switchTake(1)}
-        canSwitch={playable.length >= 2}
         onFullscreen={toggleFullscreen}
         canFocus={canFocus}
         picking={picking}
@@ -1051,13 +1051,7 @@ interface PlayerBarProps {
   active: ComparisonPerformance | undefined;
   activeImage: string | null;
   playing: boolean;
-  canPrevSector: boolean;
-  canNextSector: boolean;
-  onPrevSector: () => void;
-  onNextSector: () => void;
   onTogglePlay: () => void;
-  onNextTake: () => void;
-  canSwitch: boolean;
   onFullscreen: () => void;
   canFocus: boolean;
   picking: boolean;
@@ -1067,18 +1061,16 @@ interface PlayerBarProps {
 /** 재생 바가 이보다 좁으면 버튼 글자를 접는다 (px) */
 const BAR_COMPACT_WIDTH = 1080;
 
-/** 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다 */
+/**
+ * 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다.
+ * 다른 화면의 재생 바와 같은 뜻이다. ⏮ ⏭는 재생 목록을 따라 곡(여기서 틀었으면 이 작품의 구간)을 넘기고,
+ * 연주자는 이름 옆 ‹ ›로 바꾼다
+ */
 function PlayerBar({
   active,
   activeImage,
   playing,
-  canPrevSector,
-  canNextSector,
-  onPrevSector,
-  onNextSector,
   onTogglePlay,
-  onNextTake,
-  canSwitch,
   onFullscreen,
   canFocus,
   picking,
@@ -1117,24 +1109,7 @@ function PlayerBar({
       )}
     </Pressable>
   );
-  const nextButton = (
-    <Pressable
-      accessibilityLabel={t('다음 연주자')}
-      onPress={onNextTake}
-      disabled={!canSwitch}
-      className={cn(
-        'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border border-border-strong web:hover:bg-surface-2',
-        compact ? 'w-8 justify-center' : 'px-3',
-        !canSwitch && 'opacity-40'
-      )}>
-      <SwitchTakeIcon size={15} className="text-foreground" />
-      {compact ? null : (
-        <Text numberOfLines={1} className="text-label text-foreground">
-          {t('다음 연주자')}
-        </Text>
-      )}
-    </Pressable>
-  );
+  const nav = useSongNav();
 
   return (
     <View
@@ -1154,7 +1129,8 @@ function PlayerBar({
               </Text>
             </View>
             <View className="shrink-0 flex-row items-center gap-2">
-              {nextButton}
+              {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
+              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} />
               {focusButton}
             </View>
           </>
@@ -1172,12 +1148,13 @@ function PlayerBar({
       {/* 가운데: 재생 조작 */}
       <View className={cn('items-center gap-1.5', compact ? 'w-[300px]' : 'w-[380px]')}>
         <View className="flex-row items-center gap-4">
+          {/* 3초 넘게 들었으면 처음으로, 그 안이면 재생 목록의 이전 곡(구간)으로 */}
           <Pressable
-            accessibilityLabel={t('이전 구간')}
-            disabled={!canPrevSector}
-            onPress={onPrevSector}
-            className={cn('size-8 items-center justify-center rounded-full', !canPrevSector && 'opacity-40')}>
-            <PrevSectionIcon size={18} className="text-foreground-muted" />
+            accessibilityLabel={nav.prevLabel}
+            disabled={!active}
+            onPress={() => comparePlayer.previous()}
+            className={cn('size-8 items-center justify-center rounded-full', !active && 'opacity-40')}>
+            <Icon as={SkipBackIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
           </Pressable>
           <Pressable
             accessibilityLabel={playing ? t('일시정지') : t('재생')}
@@ -1186,11 +1163,11 @@ function PlayerBar({
             <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
           </Pressable>
           <Pressable
-            accessibilityLabel={t('다음 구간')}
-            disabled={!canNextSector}
-            onPress={onNextSector}
-            className={cn('size-8 items-center justify-center rounded-full', !canNextSector && 'opacity-40')}>
-            <NextSectionIcon size={18} className="text-foreground-muted" />
+            accessibilityLabel={nav.nextLabel}
+            disabled={!active || !nav.hasNext}
+            onPress={() => comparePlayer.next()}
+            className={cn('size-8 items-center justify-center rounded-full', (!active || !nav.hasNext) && 'opacity-40')}>
+            <Icon as={SkipForwardIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
           </Pressable>
         </View>
         <View className="w-full flex-row items-center gap-2.5">

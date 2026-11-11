@@ -5,7 +5,6 @@ import { TrackIndex } from '@/components/piece/track-index';
 import { GenreLink } from '@/components/piece/genre-link';
 import { performerNamesLine } from '@/lib/data/comparison';
 import { playPiece } from '@/lib/player/play-piece';
-import { useQueryClient } from '@tanstack/react-query';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -366,6 +365,7 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
                 piece={piece}
                 inRepertoire={repertoire.pieces.has(piece.pieceId)}
                 repertoireArtists={repertoire.artists}
+                list={pieces}
                 onPress={() => onOpen(piece)}
               />
             ))}
@@ -391,18 +391,20 @@ function PieceRow({
   piece,
   inRepertoire,
   repertoireArtists,
+  list,
   onPress,
 }: {
   index: number;
   piece: ComparisonPiece;
   inRepertoire: boolean;
   repertoireArtists: ReadonlySet<number>;
+  /** 이 줄이 놓인 목록. 재생하면 이 목록이 재생 목록이 된다 */
+  list: readonly ComparisonPiece[];
   onPress: () => void;
 }) {
   useLocale();
-  const queryClient = useQueryClient();
   const playHere = () => {
-    playPiece(queryClient, { pieceId: piece.pieceId })
+    playPiece({ pieceId: piece.pieceId }, list)
       .then((played) => !played && onPress())
       .catch(() => onPress());
   };

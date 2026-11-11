@@ -11,6 +11,7 @@ import {
   youtubeClipUrl,
 } from '@/components/screen/labels';
 import { useScreenStillCandidates, useSetCueStill } from '@/lib/query/hooks/useScreen';
+import type { PlaylistItem } from '@/lib/player/compare-player-store';
 import type { ScreenCue, ScreenStreamingLinks } from '@/lib/types/models';
 import { getLocale, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -40,10 +41,12 @@ interface ScreenCueCardProps {
   titleId: number;
   /** 관리자에게만 스틸 고르기를 보인다 */
   canPickStill: boolean;
+  /** 작품 페이지에서 들을 수 있는 곡들과 이 곡의 자리. 바로 듣기를 누르면 이 목록이 재생 목록이 된다 */
+  playlist?: { items: readonly PlaylistItem[]; index: number };
 }
 
 /** 작품 페이지의 장면 카드. 들을 길은 같은 대목 비교 → 같은 곡 비교 → 스트리밍 링크 순 */
-export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps) {
+export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCueCardProps) {
   useLocale();
   const router = useRouter();
   const [showEvidence, setShowEvidence] = React.useState(false);
@@ -109,7 +112,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
 
         <ExpandableText text={cue.sceneNote} lines={2} variant="bodySm" className="text-foreground-muted" />
 
-        <ListenAction cue={cue} onOpenCompare={openCompare} />
+        <ListenAction cue={cue} playlist={playlist} onOpenCompare={openCompare} />
 
         <View className="flex-row items-center justify-between gap-3">
           <Pressable
@@ -169,11 +172,26 @@ export function ScreenCueCard({ cue, titleId, canPickStill }: ScreenCueCardProps
   );
 }
 
-function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (sectorId?: number) => void }) {
+function ListenAction({
+  cue,
+  playlist,
+  onOpenCompare,
+}: {
+  cue: ScreenCue;
+  playlist?: { items: readonly PlaylistItem[]; index: number };
+  onOpenCompare: (sectorId?: number) => void;
+}) {
   useLocale();
   const listen = cue.listen;
   if (listen.kind === 'sector' || listen.kind === 'piece') {
-    return <QuickListen cue={cue} sectorId={listen.kind === 'sector' ? listen.sectorId : undefined} onOpenCompare={onOpenCompare} />;
+    return (
+      <QuickListen
+        cue={cue}
+        sectorId={listen.kind === 'sector' ? listen.sectorId : undefined}
+        playlist={playlist}
+        onOpenCompare={onOpenCompare}
+      />
+    );
   }
   if (listen.kind === 'external') {
     const links = PLATFORM_LINKS.flatMap((platform) => {
@@ -200,21 +218,24 @@ function ListenAction({ cue, onOpenCompare }: { cue: ScreenCue; onOpenCompare: (
 }
 
 /**
- * 대표 연주를 아래 재생바에서 바로 튼다. 듣다가 '다른 연주와 비교'로 넘어가면 같은 연주가 그대로 이어진다.
+ * 대표 연주를 아래 재생바에서 바로 튼다. 작품 페이지의 곡들이 재생 목록이 되어 끝나면 다음 곡으로 이어진다.
+ * 듣다가 '다른 연주와 비교'로 넘어가면 같은 연주가 그대로 이어진다.
  * 영화에 나온 대목과 같은 구간이 없으면 같은 곡의 다른 구간 대표 연주를 들려준다
  */
 function QuickListen({
   cue,
   sectorId,
+  playlist,
   onOpenCompare,
 }: {
   cue: ScreenCue;
   sectorId?: number;
+  playlist?: { items: readonly PlaylistItem[]; index: number };
   onOpenCompare: (sectorId?: number) => void;
 }) {
   useLocale();
   const sameSector = sectorId !== undefined;
-  const lead = useLeadPerformance(cue.pieceId, sectorId);
+  const lead = useLeadPerformance(cue.pieceId, sectorId, playlist);
   const action = lead.playing ? t('cue::일시정지') : t('cue::바로 듣기');
   const playLabel = lead.loading
     ? t('연주 불러오는 중…')

@@ -1,5 +1,6 @@
 import { MiniVideoTarget } from '@/components/player/mini-video-target';
 import { compareHrefFor, useSettled } from '@/components/player/player-bar-helpers';
+import { PerformerStepper, useSongNav } from '@/components/player/song-nav';
 import { VolumeControl } from '@/components/player/volume-control';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
 import { EntityThumb } from '@/components/ui/entity-thumb';
@@ -15,9 +16,13 @@ import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, XIcon } from 'lucid
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
+/** 바가 이보다 넓어야 연주자 묶음에 「연주자 2/3」 글자를 둔다 (px) */
+const STEPPER_LABEL_MIN_WIDTH = 1100;
+
 /**
  * 데스크톱 셸 하단 플레이바. 비교 화면 밖에서 듣고 있을 때만 뜬다 (비교 화면 안에서는 그 화면의 재생 바가 맡는다).
  * 연주자·제목을 누르면 그 비교 화면으로 돌아가 같은 자리에서 이어진다.
+ * ⏮ ⏭는 재생 목록을 따라 곡을 넘기고, 연주자는 오른쪽 ‹ 연주자 n/m ›로 바꾼다.
  */
 export function GlobalPlayerBar() {
   const { locale } = useLocale();
@@ -29,37 +34,55 @@ export function GlobalPlayerBar() {
   const restored = useComparePlayer((state) => state.restored);
   const surface = useComparePlayer((state) => state.surface);
   const focus = useComparePlayer((state) => state.focus);
-  const queueSize = useComparePlayer((state) => state.queue.length);
-  // 이전 곡으로 돌아와 있으면 다음 버튼이 지나온 곡으로 다시 간다. 아니면 같은 구간의 다음 연주자
-  const hasLater = useComparePlayer((state) => state.forward.length > 0);
+  const nav = useSongNav();
   const progress = useComparePlayer((state) => state.progress);
   const [scrub, setScrub] = React.useState<number | null>(null);
+  // 바가 좁으면 연주자 묶음의 글자를 접는다
+  const [barWidth, setBarWidth] = React.useState(0);
+  const compact = barWidth > 0 && barWidth < STEPPER_LABEL_MIN_WIDTH;
   const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
 
   if (!current || !visible) return null;
   const duration = progress.duration || current.durationSec;
   const shownSeconds = scrub !== null ? scrub * duration : progress.current;
   const goToCompare = () => router.navigate(compareHrefFor(current));
-  const canNext = hasLater || queueSize >= 2;
 
   return (
-    <View className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
+    <View
+      onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
+      className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
       <View className="min-w-0 flex-1 flex-row items-center gap-3">
-        <Pressable onPress={goToCompare} accessibilityRole="link" accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}>
+        <Pressable
+          onPress={goToCompare}
+          accessibilityRole="link"
+          accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}>
           <MiniVideoTarget width={96} height={54} />
         </Pressable>
-        <Pressable onPress={goToCompare} accessibilityRole="link" className="min-w-0 flex-1 flex-row items-center gap-2.5">
-          <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={32} />
+        <Pressable
+          onPress={goToCompare}
+          accessibilityRole="link"
+          className="min-w-0 flex-1 flex-row items-center gap-2.5">
+          <EntityThumb
+            name={current.artistName}
+            image={current.artistImageUrl}
+            shape="circle"
+            size={32}
+          />
           <View className="min-w-0 flex-1">
             <View className="flex-row items-center gap-1.5">
               <Equalizer playing={playing} size={11} />
-              <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground web:hover:underline">
+              <Text
+                numberOfLines={1}
+                className="shrink text-body-sm font-semibold text-foreground web:hover:underline">
                 {current.artistName}
               </Text>
             </View>
             <Text variant="caption" numberOfLines={1}>
               {restored
-                ? t('이어 듣기 · {sector} · {title}', { sector: current.sectorName, title: current.pieceTitle })
+                ? t('이어 듣기 · {sector} · {title}', {
+                    sector: current.sectorName,
+                    title: current.pieceTitle,
+                  })
                 : `${current.sectorName} · ${current.pieceTitle}`}
             </Text>
           </View>
@@ -67,25 +90,40 @@ export function GlobalPlayerBar() {
       </View>
       <View className="flex-[1.3] items-center gap-1.5">
         <View className="flex-row items-center gap-4">
-          {/* 듣던 중이면 처음으로, 막 시작한 참이면 방금 전에 듣던 곡으로 */}
+          {/* 3초 넘게 들었으면 처음으로, 그 안이면 재생 목록의 이전 곡으로 */}
           <Pressable
-            accessibilityLabel={t('이전 곡')}
+            accessibilityLabel={nav.prevLabel}
             onPress={() => comparePlayer.previous()}
             className="size-8 items-center justify-center rounded-full">
-            <Icon as={SkipBackIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
+            <Icon
+              as={SkipBackIcon}
+              size={16}
+              className="fill-foreground-muted text-foreground-muted"
+            />
           </Pressable>
           <Pressable
             accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             onPress={() => comparePlayer.togglePlay()}
             className="size-9 items-center justify-center rounded-full bg-foreground web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95">
-            <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
+            <Icon
+              as={playing ? PauseIcon : PlayIcon}
+              size={16}
+              className="fill-background text-background"
+            />
           </Pressable>
           <Pressable
-            accessibilityLabel={hasLater ? t('다음 곡') : t('다음 연주자')}
-            disabled={!canNext}
+            accessibilityLabel={nav.nextLabel}
+            disabled={!nav.hasNext}
             onPress={() => comparePlayer.next()}
-            className={cn('size-8 items-center justify-center rounded-full', !canNext && 'opacity-40')}>
-            <Icon as={SkipForwardIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
+            className={cn(
+              'size-8 items-center justify-center rounded-full',
+              !nav.hasNext && 'opacity-40'
+            )}>
+            <Icon
+              as={SkipForwardIcon}
+              size={16}
+              className="fill-foreground-muted text-foreground-muted"
+            />
           </Pressable>
         </View>
         <View className="w-full flex-row items-center gap-2.5">
@@ -100,7 +138,9 @@ export function GlobalPlayerBar() {
               comparePlayer.seek(value * duration);
             }}
             label={t('재생 위치')}
-            valueText={(value) => `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`}
+            valueText={(value) =>
+              `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`
+            }
             step={duration > 0 ? 5 / duration : 0.05}
             disabled={duration <= 0}
             tooltip
@@ -111,6 +151,7 @@ export function GlobalPlayerBar() {
         </View>
       </View>
       <View className="flex-1 flex-row items-center justify-end gap-2.5">
+        <PerformerStepper compact={compact} />
         <VolumeControl />
         <Pressable
           onPress={() => comparePlayer.close()}

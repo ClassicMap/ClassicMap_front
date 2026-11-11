@@ -374,6 +374,7 @@ export default function HomeScreen() {
                   piece={piece}
                   width={width}
                   reason={piece.reasons[0]}
+                  list={shelf.items}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />
@@ -390,6 +391,7 @@ export default function HomeScreen() {
                   piece={piece}
                   width={width}
                   reason={piece.reasons[0]}
+                  list={shelf.items.slice(0, 6)}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />
@@ -425,7 +427,9 @@ export default function HomeScreen() {
             minItemWidth={168}
             gap={gap}
             keyOf={(piece) => piece.pieceId}
-            renderItem={(piece, width) => <PieceCard piece={piece} width={width} onPress={() => openPiece(piece)} />}
+            renderItem={(piece, width) => (
+              <PieceCard piece={piece} width={width} list={shelfPieces} onPress={() => openPiece(piece)} />
+            )}
           />
         ) : (
           <Grid
@@ -433,7 +437,9 @@ export default function HomeScreen() {
             columns={3}
             gap={gap}
             keyOf={(piece) => piece.pieceId}
-            renderItem={(piece, width) => <PieceCard piece={piece} width={width} onPress={() => openPiece(piece)} />}
+            renderItem={(piece, width) => (
+              <PieceCard piece={piece} width={width} list={shelfPieces.slice(0, 6)} onPress={() => openPiece(piece)} />
+            )}
           />
         )}
       </Section>
