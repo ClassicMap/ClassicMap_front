@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
+import { shell, useShell } from '@/lib/layout/shell-state';
 import {
   comparePlayer,
   type ComparePlayerTrack,
@@ -27,16 +28,15 @@ import {
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
-/** 재생 바의 대기열 버튼. 데스크톱은 오른쪽 패널을 열고 닫는다(모바일은 onPress 로 시트를 연다) */
-export function QueueButton({ onPress }: { onPress?: () => void }) {
+/** 재생 바의 대기열 버튼. 셸의 오른쪽 대기열 패널을 열고 닫는다 */
+export function QueueButton() {
   useLocale();
-  const open = useComparePlayer((state) => state.queueOpen);
-  const active = !onPress && open;
+  const active = useShell((state) => state.queueOpen);
   return (
     <Pressable
-      onPress={onPress ?? (() => comparePlayer.setQueueOpen(!open))}
+      onPress={() => shell.toggleQueue()}
       accessibilityRole="button"
-      aria-selected={active}
+      aria-expanded={active}
       accessibilityLabel={t('재생 대기열')}
       className={cn(
         'cm-tint size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',

@@ -1,5 +1,7 @@
 /** 영어 사전: 내비게이션·상단 바·빠른 검색·화면 틀. 키는 화면의 한국어 원문 그대로, 값은 영어. */
 export const SHELL: Readonly<Record<string, string>> = {
+  '주 메뉴': 'Main menu',
+  '재생 바': 'Player bar',
   홈: 'Home',
   검색: 'Search',
   비교: 'Compare',
