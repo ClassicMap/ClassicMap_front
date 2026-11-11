@@ -16,8 +16,16 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
   useLocale();
   const { nav } = useBreakpoint();
   const pathname = usePathname();
-  if (isBarePath(pathname)) return <>{children}</>;
-  // 비교 영상은 앱 전체에 하나만 두고 라우트 밖에 둔다. 화면을 오가도, 창 폭이 바뀌어도 같은 요소라 재생이 이어진다
+  // 비교 영상은 앱 전체에 하나만 두고 라우트 밖에 둔다. 화면을 오가도, 창 폭이 바뀌어도 같은 요소라 재생이 이어진다.
+  // 로그인·가입 같은 단독 화면도 영상(host)은 같은 열쇠로 남겨 듣던 곡이 끊기지 않게 한다(재생 바만 없다)
+  if (isBarePath(pathname)) {
+    return (
+      <>
+        <React.Fragment key="content">{children}</React.Fragment>
+        <ComparePlayerHost key="host" />
+      </>
+    );
+  }
   return (
     <>
       <React.Fragment key="content">
