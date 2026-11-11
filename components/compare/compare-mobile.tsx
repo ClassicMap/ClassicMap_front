@@ -405,7 +405,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       return;
     }
     if (performance.id === activeId && comparePlayer.togglePlay()) return;
-    // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
+    // 재생 바의 다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));

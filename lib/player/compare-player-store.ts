@@ -46,6 +46,12 @@ export interface ComparePlayerTrack {
  */
 export type SwitchMode = 'resume' | 'align';
 
+/** 듣다가 떠난 곡. 재생 바의 이전·다음 곡으로 돌아갈 때 그 구간의 연주 목록까지 되살린다 */
+export interface PlayerHistoryEntry {
+  track: ComparePlayerTrack;
+  queue: readonly ComparePlayerTrack[];
+}
+
 /** 웹 셸의 영상이 지금 어디에 떠 있는지. 'slot'이면 비교 화면 안, 'mini'면 미니 플레이어 */
 export type PlayerSurface = 'slot' | 'mini' | 'none';
 
@@ -65,8 +71,12 @@ export interface ComparePlayerState {
   crossfade: boolean;
   /** 비교 화면 크게 보기 */
   theater: boolean;
-  /** 같은 구간의 재생 가능한 연주들. 미니 플레이어의 이전·다음 연주자에 쓴다 */
+  /** 같은 구간의 재생 가능한 연주들. 재생 바의 다음 연주자에 쓴다 */
   queue: readonly ComparePlayerTrack[];
+  /** 듣다가 떠난 곡들. 방금 떠난 곡이 맨 끝이고, 재생 바의 이전 곡이 여기로 돌아간다 */
+  back: readonly PlayerHistoryEntry[];
+  /** 이전 곡으로 돌아오면서 지나온 곡들. 재생 바의 다음 곡이 여기로 다시 간다 */
+  forward: readonly PlayerHistoryEntry[];
   /** 새로고침 뒤 되살린 트랙이라 아직 한 번도 재생하지 않았다 */
   restored: boolean;
   surface: PlayerSurface;
@@ -133,6 +143,10 @@ const END_MARGIN_SEC = 0.75;
 /** 연주별 위치는 최근 것만 이만큼 남긴다 */
 const MAX_POSITIONS = 200;
 const SAVE_THROTTLE_MS = 2000;
+/** 재생 바의 이전 버튼: 이보다 더 들었으면 지금 곡을 처음으로 돌리고, 아니면 이전 곡으로 간다 */
+const RESTART_SEC = 3;
+/** 떠난 곡은 최근 것만 이만큼 기억한다 */
+const MAX_HISTORY = 50;
 
 function readStored(key: string): string | null {
   if (Platform.OS !== 'web') return null;
@@ -272,6 +286,8 @@ let state: ComparePlayerState = {
   crossfade: readStored(CROSSFADE_KEY) === 'on',
   theater: false,
   queue: [],
+  back: [],
+  forward: [],
   restored: false,
   surface: 'none',
   fullscreen: false,
@@ -453,54 +469,86 @@ function notifySurface() {
   surfaceListeners.forEach((listener) => listener());
 }
 
+/** 지금 곡을 떠날 때 기록에 남길 것. 차례 목록이 이 곡 것이 아니면 버린다 */
+function leavingEntry(): PlayerHistoryEntry | null {
+  const { current, queue } = state;
+  if (!current) return null;
+  const own = queue.some((item) => item.performanceId === current.performanceId);
+  return { track: current, queue: own ? queue : [] };
+}
+
+/** 기록에서 지금 곡이 아닌 가장 최근 곡을 꺼낸다. 남은 기록과 함께 돌려준다 */
+function takeOther(
+  stack: readonly PlayerHistoryEntry[],
+  sectorId: number
+): { entry: PlayerHistoryEntry; rest: PlayerHistoryEntry[] } | null {
+  for (let index = stack.length - 1; index >= 0; index -= 1) {
+    if (stack[index].track.sectorId !== sectorId) return { entry: stack[index], rest: stack.slice(0, index) };
+  }
+  return null;
+}
+
+interface SelectOptions {
+  play: boolean;
+  queue?: readonly ComparePlayerTrack[];
+  mode?: SwitchMode;
+  startAt?: number;
+}
+
+/**
+ * 연주를 고른다. `history`는 재생 바의 이전·다음 곡이 기록을 따라 옮길 때만 준다.
+ * 그 밖에는 곡이 바뀌면 떠나는 곡을 기록에 쌓고, 지나온 곡(다음 곡)은 비운다
+ */
+function selectTrack(
+  track: ComparePlayerTrack,
+  options: SelectOptions,
+  history?: Pick<ComparePlayerState, 'back' | 'forward'>
+) {
+  const { current, progress } = state;
+  if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
+    savePosition(current.performanceId, progress.current, progress.duration);
+  }
+  const sameSong = current?.sectorId === track.sectorId;
+  const leaving = sameSong ? null : leavingEntry();
+  beginListening(track);
+  const start =
+    options.startAt !== undefined
+      ? clampPosition(options.startAt, track.durationSec)
+      : sameSong
+        ? startPositionFor(track, options.mode ?? state.switchMode)
+        : 0;
+  listen.lastSec = start;
+  savePosition(track.performanceId, start);
+  // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
+  const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
+  setState({
+    current: track,
+    playIntent: options.play && !sameMedia ? track.performanceId : null,
+    progress: { current: start, duration: track.durationSec },
+    restored: false,
+    // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
+    queue: options.queue ?? (sameSong ? state.queue : []),
+    ...(history ?? (leaving ? { back: [...state.back, leaving].slice(-MAX_HISTORY), forward: [] } : null)),
+  });
+  if (sameMedia && media) {
+    media.seek(start);
+    if (options.play) media.play();
+  }
+  flushSession();
+}
+
 export const comparePlayer = {
   getState,
   subscribe,
 
   /**
    * 연주를 고른다. `play`면 미디어가 붙는 대로 재생한다 (사용자가 누른 경우).
-   * 떠나는 연주의 위치는 먼저 적어 둔다. `queue`를 주면 미니 플레이어의 이전·다음이 그 순서를 따른다.
+   * 떠나는 연주의 위치는 먼저 적어 둔다. `queue`를 주면 재생 바의 다음 연주자가 그 순서를 따른다.
    * 듣던 구간 안에서 연주자만 바꾸면 전환 방식대로 이어 듣고, 다른 곡(구간)을 틀면 처음부터 튼다.
    * `startAt`(초)을 주면 어느 쪽이든 그 지점부터 튼다 (들을 곳)
    */
-  select(
-    track: ComparePlayerTrack,
-    options: {
-      play: boolean;
-      queue?: readonly ComparePlayerTrack[];
-      mode?: SwitchMode;
-      startAt?: number;
-    }
-  ) {
-    const { current, progress } = state;
-    if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
-      savePosition(current.performanceId, progress.current, progress.duration);
-    }
-    const sameSong = current?.sectorId === track.sectorId;
-    beginListening(track);
-    const start =
-      options.startAt !== undefined
-        ? clampPosition(options.startAt, track.durationSec)
-        : sameSong
-          ? startPositionFor(track, options.mode ?? state.switchMode)
-          : 0;
-    listen.lastSec = start;
-    savePosition(track.performanceId, start);
-    // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
-    const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
-    setState({
-      current: track,
-      playIntent: options.play && !sameMedia ? track.performanceId : null,
-      progress: { current: start, duration: track.durationSec },
-      restored: false,
-      // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
-      queue: options.queue ?? (sameSong ? state.queue : []),
-    });
-    if (sameMedia && media) {
-      media.seek(start);
-      if (options.play) media.play();
-    }
-    flushSession();
+  select(track: ComparePlayerTrack, options: SelectOptions) {
+    selectTrack(track, options);
   },
 
   /** 들은 기록 신호를 받는다. 떼는 함수를 돌려준다 */
@@ -511,13 +559,43 @@ export const comparePlayer = {
     };
   },
 
-  /** 미니 플레이어의 이전·다음 연주자 (같은 구간 안에서 돈다) */
-  step(direction: 1 | -1) {
-    const { queue, current } = state;
-    if (queue.length < 2 || !current) return;
+  /**
+   * 재생 바의 이전 버튼. 조금이라도 들었으면 지금 곡을 처음으로 돌리고,
+   * 막 시작한 참에 누르면 방금 전에 듣던 곡으로 돌아가 처음부터 튼다. 돌아갈 곡이 없으면 처음으로만 돌린다
+   */
+  previous() {
+    const { current, progress, back, forward } = state;
+    if (!current) return;
+    const earlier = progress.current > RESTART_SEC ? null : takeOther(back, current.sectorId);
+    if (!earlier) {
+      comparePlayer.seek(0);
+      return;
+    }
+    const leaving = leavingEntry();
+    selectTrack(
+      earlier.entry.track,
+      { play: true, queue: earlier.entry.queue, startAt: 0 },
+      { back: earlier.rest, forward: leaving ? [...forward, leaving] : [...forward] }
+    );
+  },
+
+  /** 재생 바의 다음 버튼. 이전 곡으로 돌아와 있으면 지나온 곡으로 다시 가고, 아니면 같은 구간의 다음 연주자로 넘긴다 */
+  next() {
+    const { current, queue, back, forward } = state;
+    if (!current) return;
+    const later = takeOther(forward, current.sectorId);
+    if (later) {
+      const leaving = leavingEntry();
+      selectTrack(
+        later.entry.track,
+        { play: true, queue: later.entry.queue, startAt: 0 },
+        { back: leaving ? [...back, leaving].slice(-MAX_HISTORY) : [...back], forward: later.rest }
+      );
+      return;
+    }
+    if (queue.length < 2) return;
     const index = queue.findIndex((track) => track.performanceId === current.performanceId);
-    const next = queue[(index + direction + queue.length) % queue.length];
-    comparePlayer.select(next, { play: true });
+    selectTrack(queue[(index + 1) % queue.length], { play: true });
   },
 
   /** 같은 연주를 다시 누르면 재생·일시정지 */
@@ -540,12 +618,21 @@ export const comparePlayer = {
     media?.pause();
   },
 
-  /** 미니 플레이어의 ✕: 멈추고 비운다. 연주별 위치는 남긴다 */
+  /** 미니 플레이어의 ✕: 멈추고 비운다. 연주별 위치는 남기고, 닫은 곡은 이전 곡 기록에 남긴다 */
   close() {
     const { current, progress } = state;
     media?.pause();
     if (current && progress.duration > 0) savePosition(current.performanceId, progress.current, progress.duration);
-    setState({ current: null, playing: false, playIntent: null, queue: [], restored: false, progress: { current: 0, duration: 0 } });
+    const leaving = leavingEntry();
+    setState({
+      current: null,
+      playing: false,
+      playIntent: null,
+      queue: [],
+      restored: false,
+      progress: { current: 0, duration: 0 },
+      ...(leaving ? { back: [...state.back, leaving].slice(-MAX_HISTORY), forward: [] } : null),
+    });
     dirty = true;
     flushSession();
   },

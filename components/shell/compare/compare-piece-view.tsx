@@ -182,7 +182,7 @@ export function ComparePieceView({
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
   const staged = active ?? playable[0];
 
-  // 미니 플레이어의 이전·다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
+  // 재생 바의 다음 연주자도 이 구간의 재생 가능한 연주를 이 순서로 돈다
   const queue = React.useMemo<ComparePlayerTrack[]>(
     () => playable.map((performance) => trackFromPerformance(performance, imageOf(performance))),
     [playable, imageOf, locale]
