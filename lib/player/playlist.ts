@@ -98,3 +98,11 @@ export function sectorPlaylist(
   if (index < 0) return { kind: 'compare', items: [{ pieceId, sectorId }], index: 0 };
   return { kind: 'compare', items, index };
 }
+
+/** 한 구간의 재생 가능한 연주들(연주자 넘기기 차례). 새로고침 뒤 되살린 곡의 차례를 다시 채울 때 쓴다 */
+export async function resolveSectorQueue(sectorId: number): Promise<ComparePlayerTrack[]> {
+  const performances = await queryClient.fetchQuery(sectorPerformancesQueryOptions(sectorId));
+  return (performances ?? [])
+    .filter(isPlayablePerformance)
+    .map((performance) => trackFromPerformance(performance, imageOf(performance)));
+}

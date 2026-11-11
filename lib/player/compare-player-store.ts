@@ -2,7 +2,7 @@ import { sectorNames } from '@/lib/data/legacy-names';
 import { type NameSidecar } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
-import { resolvePlaylistItem } from '@/lib/player/playlist';
+import { resolvePlaylistItem, resolveSectorQueue } from '@/lib/player/playlist';
 import type { ClipAlignment } from '@/lib/types/models';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
@@ -430,6 +430,18 @@ function fillLegacyNames() {
   });
 }
 
+/** 되살린 곡은 연주자 차례가 없다(저장하지 않는다). 그 구간의 연주를 받아 연주자 넘기기를 되살린다 */
+function refillQueue() {
+  const track = state.current;
+  if (!track || state.queue.length > 0) return;
+  void resolveSectorQueue(track.sectorId)
+    .then((queue) => {
+      if (state.current?.performanceId !== track.performanceId || state.queue.length > 0 || queue.length === 0) return;
+      setState({ queue });
+    })
+    .catch(() => undefined);
+}
+
 // 네이티브는 저장소가 비동기라 켜진 뒤 되살린다. 그 사이에 고른 연주가 있으면 위치만 합친다
 if (Platform.OS !== 'web') {
   void AsyncStorage.getItem(SESSION_KEY)
@@ -440,6 +452,7 @@ if (Platform.OS !== 'web') {
       if (state.current) setState({ positions: merged });
       else setState({ ...patch, positions: merged });
       fillLegacyNames();
+      refillQueue();
     })
     .catch(() => undefined);
   AppState.addEventListener('change', (next) => {
@@ -447,6 +460,7 @@ if (Platform.OS !== 'web') {
   });
 } else if (typeof window !== 'undefined') {
   fillLegacyNames();
+  refillQueue();
   window.addEventListener('pagehide', flushSession);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushSession();
