@@ -40,7 +40,7 @@ export interface ComparePlayerTrack {
 }
 
 /**
- * 연주자를 바꿀 때 어디서 이어 들을지.
+ * 듣던 구간 안에서 연주자를 바꿀 때 어디서 이어 들을지. 다른 곡(구간)으로 넘어가면 늘 처음부터 튼다.
  * - resume: 연주자마다 듣던 자리에서 이어 듣는다 (기본)
  * - align: 방금 듣던 지점과 같은 마디로 맞춰 듣는다 (정렬 지도, 없으면 같은 비율 지점)
  */
@@ -460,6 +460,8 @@ export const comparePlayer = {
   /**
    * 연주를 고른다. `play`면 미디어가 붙는 대로 재생한다 (사용자가 누른 경우).
    * 떠나는 연주의 위치는 먼저 적어 둔다. `queue`를 주면 미니 플레이어의 이전·다음이 그 순서를 따른다.
+   * 듣던 구간 안에서 연주자만 바꾸면 전환 방식대로 이어 듣고, 다른 곡(구간)을 틀면 처음부터 튼다.
+   * `startAt`(초)을 주면 어느 쪽이든 그 지점부터 튼다 (들을 곳)
    */
   select(
     track: ComparePlayerTrack,
@@ -467,14 +469,21 @@ export const comparePlayer = {
       play: boolean;
       queue?: readonly ComparePlayerTrack[];
       mode?: SwitchMode;
+      startAt?: number;
     }
   ) {
     const { current, progress } = state;
     if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
       savePosition(current.performanceId, progress.current, progress.duration);
     }
+    const sameSong = current?.sectorId === track.sectorId;
     beginListening(track);
-    const start = startPositionFor(track, options.mode ?? state.switchMode);
+    const start =
+      options.startAt !== undefined
+        ? clampPosition(options.startAt, track.durationSec)
+        : sameSong
+          ? startPositionFor(track, options.mode ?? state.switchMode)
+          : 0;
     listen.lastSec = start;
     savePosition(track.performanceId, start);
     // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
@@ -484,7 +493,8 @@ export const comparePlayer = {
       playIntent: options.play && !sameMedia ? track.performanceId : null,
       progress: { current: start, duration: track.durationSec },
       restored: false,
-      ...(options.queue ? { queue: options.queue } : null),
+      // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
+      queue: options.queue ?? (sameSong ? state.queue : []),
     });
     if (sameMedia && media) {
       media.seek(start);

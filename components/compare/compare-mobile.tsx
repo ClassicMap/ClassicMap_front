@@ -418,8 +418,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     const queue = performances
       .filter(isPlayablePerformance)
       .map((item) => trackFromPerformance(item, imageOf(item)));
-    comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
-    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
+    comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+      play: true,
+      queue,
+      startAt: moment.offsetMs / 1000,
+    });
   };
   // 전체 화면의 연주자 칩: 바로 그 연주로 바꾼다(같은 연주면 그대로)
   const pick = (performance: ComparisonPerformance) => {

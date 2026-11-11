@@ -280,9 +280,10 @@ function FocusStage(props: FocusStageProps) {
     comparePlayer.rememberPosition(a.id, positions.a, clipDurationMs(a) / 1000);
     comparePlayer.rememberPosition(b.id, positions.b, clipDurationMs(b) / 1000);
     const current = latest.side === 'a' ? a : b;
+    // 떠나 있는 동안 앱 플레이어가 다른 곡으로 넘어갔어도 듣던 쪽은 듣던 자리에서 넘긴다
     comparePlayer.select(trackFromPerformance(current, imageOf(current)), {
       play: latest.playing,
-      mode: 'resume',
+      startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
     });
   }, [a, b, imageOf, queue]);
@@ -996,8 +997,7 @@ function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: Loo
           return;
         }
         const performance = key === 'a' ? a : b;
-        comparePlayer.rememberPosition(performance.id, target);
-        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, mode: 'resume' });
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, startAt: target });
       },
     }),
     // adjusted: 소리 안 나는 쪽을 조정하면 그 위치를 다시 읽는다

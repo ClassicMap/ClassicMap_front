@@ -225,8 +225,11 @@ export function ComparePieceView({
     (performance: ComparisonPerformance, moment: ListeningMoment) => {
       if (!isPlayablePerformance(performance)) return;
       setPicking(false);
-      comparePlayer.rememberPosition(performance.id, moment.offsetMs / 1000);
-      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, queue, mode: 'resume' });
+      comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+        play: true,
+        queue,
+        startAt: moment.offsetMs / 1000,
+      });
     },
     [imageOf, queue]
   );
