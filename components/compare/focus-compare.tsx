@@ -53,6 +53,10 @@ type Side = 'a' | 'b';
 type FocusMode = 'align' | 'resume';
 /** 동시 재생에서 이만큼 어긋나면 소리 안 나는 쪽을 그 자리로 옮긴다 */
 const TOGETHER_DRIFT_SEC = 0.25;
+/** 1:1 로 넘겨받을 때 이 화면 영상이 이 안에 소리를 못 내면 앱 플레이어만 멈춘다 */
+const TAKEOVER_TIMEOUT_MS = 6000;
+/** 넘겨받는 순간 앱 플레이어 위치와 이만큼 어긋나 있으면 그 자리로 맞춘다 */
+const TAKEOVER_DRIFT_SEC = 0.3;
 /** 자동 번갈아 듣기 간격(초). 0은 끔 */
 type AutoInterval = 0 | 2 | 4 | 8;
 /** 반복 구간. 구간 안 상대 위치(0~1)라 '같은 지점'에서는 두 연주에 같은 대목으로 걸린다 */
@@ -132,15 +136,26 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     });
   }, [a, b, sectors, allSectors, locale]);
 
-  // 집중 비교가 보이는 동안 셸 영상은 쉬고 미니 플레이어도 숨는다.
+  // 집중 비교가 보이는 동안 셸 영상은 이 화면에 재생을 넘기고 미니 플레이어도 숨는다.
   // 탭 화면은 떠나도 뒤에 살아 있으므로 마운트가 아니라 화면 포커스를 따른다
   const screenFocused = useIsFocused();
-  const wasPlaying = React.useRef(comparePlayer.getState().playing);
   React.useEffect(() => {
     if (!screenFocused) return;
     comparePlayer.setFocus({ a: focus[0], b: focus[1] });
     return () => comparePlayer.setFocus(null);
   }, [focus, screenFocused]);
+
+  // 구간을 바꿔 무대를 새로 그려도 듣던 쪽과 재생 여부를 잇는다
+  const carry = React.useRef<FocusStart | null>(null);
+  // 뒤로 가기·다른 화면 링크처럼 나가기 버튼을 거치지 않고 이 화면이 사라져도 듣던 쪽을 앱 플레이어에 넘긴다.
+  // 레이아웃 정리 단계라 아직 두 영상이 문서에 붙어 있어 위치를 읽을 수 있다. 구간을 바꿀 때(무대만 바뀜)는 넘기지 않는다
+  const handOffRef = React.useRef<(() => void) | null>(null);
+  React.useLayoutEffect(
+    () => () => {
+      if (Platform.OS === 'web') handOffRef.current?.();
+    },
+    []
+  );
 
   // 이 구간을 듣다가 들어왔으면 연주자마다 듣던 자리에서 잇고, 다른 곡을 듣다가(또는 아무것도 안 듣다가)
   // 들어왔으면 두 연주 모두 처음부터 튼다. 영상이 위치를 읽기 전에 정해 둔다
@@ -153,6 +168,17 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     comparePlayer.rememberPosition(aId, 0);
     comparePlayer.rememberPosition(bId, 0);
   }, [aId, bId, focusSectorId]);
+
+  // 두 연주를 그릴 수 없으면(불러오기 실패·비교할 수 없는 쌍) 넘겨받을 영상이 없으니 셸 영상을 멈춘다.
+  // 이 화면에서는 재생 바가 숨어 있어 소리만 남기 때문이다
+  const loading = sectorsQuery.isLoading || performancesQuery.isLoading;
+  const blocked =
+    sectorsQuery.isError ||
+    performancesQuery.isError ||
+    (!loading && (!a || !b || !isPlayablePerformance(a) || !isPlayablePerformance(b)));
+  React.useEffect(() => {
+    if (Platform.OS === 'web' && screenFocused && blocked) comparePlayer.pause();
+  }, [blocked, screenFocused]);
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
@@ -204,7 +230,8 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
       a={a}
       b={b}
       imageOf={imageOf}
-      startPlaying={wasPlaying.current}
+      carry={carry}
+      handOffRef={handOffRef}
       screenFocused={screenFocused}
       sectors={sectors}
       activeSectorId={activeSector?.id}
@@ -223,11 +250,20 @@ interface SectorRow {
   loading: boolean;
 }
 
+/** 무대를 열 때 어느 쪽을 틀고 있을지 */
+interface FocusStart {
+  playing: boolean;
+  side: Side;
+}
+
 interface FocusStageProps {
   a: ComparisonPerformance;
   b: ComparisonPerformance;
   imageOf: (performance: ComparisonPerformance) => string | null;
-  startPlaying: boolean;
+  /** 앞 무대(같은 1:1 의 다른 구간)에서 듣던 쪽과 재생 여부. 처음 연 무대면 null */
+  carry: React.MutableRefObject<FocusStart | null>;
+  /** 화면이 사라질 때 부를 넘기기 함수를 여기에 걸어 둔다 */
+  handOffRef: React.MutableRefObject<(() => void) | null>;
   /** 이 화면이 지금 보이는지. 탭을 옮기거나 위에 다른 화면이 쌓이면 false */
   screenFocused: boolean;
   sectors: { id: number; sectorName: string }[];
@@ -277,17 +313,46 @@ function FocusStage(props: FocusStageProps) {
   const [editingLoop, setEditingLoop] = React.useState(false);
   // 동시 재생(웹만): 두 영상을 같은 지점에서 함께 틀고 소리는 한쪽만 낸다
   const [together, setTogether] = React.useState(false);
+  // 앱 플레이어에서 듣던 연주가 이 둘 가운데 하나면 그쪽부터, 듣던 중이었으면 이어서 튼다
+  const [start] = React.useState<FocusStart>(() => {
+    if (props.carry.current) return props.carry.current;
+    const player = comparePlayer.getState();
+    return {
+      // 막 고른 연주가 아직 싣는 중이어도 틀려던 것으로 본다
+      playing: player.playing || player.playIntent !== null,
+      side: player.current?.performanceId === b.id ? 'b' : 'a',
+    };
+  });
 
-  const web = useWebFocusEngine(props, mode, loop, auto, together);
-  const native = useNativeFocusEngine(props, mode, loop);
+  const web = useWebFocusEngine(props, start, mode, loop, auto, together);
+  const native = useNativeFocusEngine(props, start, mode, loop);
   const engine = Platform.OS === 'web' ? web.engine : native;
   const active = engine.side === 'a' ? a : b;
   // 위치가 바뀔 때마다 새 engine이 오므로 타이머·단축키는 최신 engine을 ref로 본다
   const engineRef = React.useRef(engine);
   engineRef.current = engine;
+  const webRef = React.useRef(web);
+  webRef.current = web;
 
-  // 두 연주의 위치를 스토어에 남기고, 듣던 쪽 연주를 앱 플레이어에 넘긴다
+  // 구간을 바꿔 새 무대를 열면 이 무대에서 듣던 쪽·재생 여부로 시작한다(처음 그린 값은 아직 아무것도 안 튼 상태라 건너뛴다)
+  const reported = React.useRef(false);
+  React.useEffect(() => {
+    if (!reported.current) {
+      reported.current = true;
+      return;
+    }
+    props.carry.current = { playing: engine.playing, side: engine.side };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.playing, engine.side]);
+
+  /** 이 무대가 재생을 맡고 있다. 앱 플레이어에 넘기면 false, 화면에 돌아와 다시 맡으면 true */
+  const ownsPlayback = React.useRef(true);
+
+  // 두 연주의 위치를 스토어에 남기고, 듣던 쪽 연주를 앱 플레이어에 넘긴다. 한 번 떠날 때 한 번만 넘긴다
+  // (넘긴 뒤 앱 플레이어가 다른 곡으로 넘어갔으면 그걸 되돌리지 않는다)
   const handOff = React.useCallback(() => {
+    if (!ownsPlayback.current) return;
+    ownsPlayback.current = false;
     const latest = engineRef.current;
     const positions = latest.positions();
     const current = latest.side === 'a' ? a : b;
@@ -295,13 +360,24 @@ function FocusStage(props: FocusStageProps) {
     // 떠나 있는 동안 앱 플레이어가 다른 곡으로 넘어갔어도 듣던 쪽은 듣던 자리에서 넘긴다.
     // 다른 곡에서 넘어오면 스토어가 이 곡의 옛 위치를 버리므로, 소리 안 나던 쪽 위치는 넘긴 뒤에 적는다
     comparePlayer.select(trackFromPerformance(current, imageOf(current)), {
-      play: latest.playing,
+      // 이 화면 영상이 아직 소리를 내기 전(앱 플레이어가 잇고 있는 중)이면 그대로 재생 중으로 넘긴다
+      play: latest.playing || (Platform.OS === 'web' && webRef.current.takingOver()),
       startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
       playlist: comparePlaylistFor(current.pieceId, sectors, current.sectorId),
     });
     comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
+    // 넘긴 뒤에는 이 화면 영상이 앱 플레이어를 멈추지 않는다
+    if (Platform.OS === 'web') webRef.current.suspend();
   }, [a, b, imageOf, queue, sectors]);
+
+  const { handOffRef } = props;
+  React.useLayoutEffect(() => {
+    handOffRef.current = handOff;
+    return () => {
+      if (handOffRef.current === handOff) handOffRef.current = null;
+    };
+  }, [handOff, handOffRef]);
 
   const exit = React.useCallback(() => {
     handOff();
@@ -317,10 +393,10 @@ function FocusStage(props: FocusStageProps) {
     focusedBefore.current = screenFocused;
     if (Platform.OS !== 'web') return;
     if (screenFocused) {
+      ownsPlayback.current = true;
       web.resume();
     } else {
       handOff();
-      web.suspend();
     }
     // 포커스가 바뀔 때만 넘긴다
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -616,22 +692,64 @@ function FocusStage(props: FocusStageProps) {
 
 function useWebFocusEngine(
   props: FocusStageProps,
+  start: FocusStart,
   mode: FocusMode,
   loop: LoopRange | null,
   auto: AutoInterval,
   together: boolean
 ) {
-  const { a, b, startPlaying } = props;
+  const { a, b } = props;
   const refs = React.useRef<Record<Side, HTMLVideoElement | null>>({ a: null, b: null });
-  const [side, setSide] = React.useState<Side>('a');
+  const [side, setSide] = React.useState<Side>(start.side);
   const [playing, setPlaying] = React.useState(false);
   const [sideProgress, setSideProgress] = React.useState<Record<Side, SideProgress>>({
     a: { current: 0, duration: clipDurationMs(a) / 1000 },
     b: { current: 0, duration: clipDurationMs(b) / 1000 },
   });
   const progress = sideProgress[side];
-  const sideRef = React.useRef<Side>('a');
+  const sideRef = React.useRef<Side>(start.side);
   sideRef.current = side;
+
+  /**
+   * 넘겨받기: 이 화면 영상이 소리를 내기 시작할 때까지 앱 플레이어(셸 영상)가 그대로 울리고, 소리가 나는 순간
+   * 같은 자리로 맞춘 뒤 앱 플레이어를 멈춘다. 그래서 1:1 로 들어가도 소리가 끊기지 않는다.
+   * 이 화면 영상이 끝내 소리를 못 내면(느린 망·재생 거절) 잠시 뒤 앱 플레이어만 멈춘다
+   */
+  const takeover = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const releaseShell = React.useCallback(() => {
+    if (takeover.current === null) return;
+    clearTimeout(takeover.current);
+    takeover.current = null;
+    comparePlayer.pause();
+  }, []);
+  const holdShell = React.useCallback(() => {
+    if (takeover.current !== null) clearTimeout(takeover.current);
+    takeover.current = setTimeout(releaseShell, TAKEOVER_TIMEOUT_MS);
+  }, [releaseShell]);
+  /** 넘겨받기를 그만둔다. 앱 플레이어는 건드리지 않는다(재생을 앱 플레이어에 넘겼을 때) */
+  const dropTakeover = React.useCallback(() => {
+    if (takeover.current !== null) clearTimeout(takeover.current);
+    takeover.current = null;
+  }, []);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (start.playing) holdShell();
+    else comparePlayer.pause();
+    return dropTakeover;
+    // 무대를 열 때 한 번만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** 지금 소리 나는 쪽 영상이 소리를 내기 시작했다. 넘겨받는 중이면 앱 플레이어 자리로 맞추고 멈춘다 */
+  const onSideSounding = (key: Side, video: HTMLVideoElement) => {
+    if (key !== sideRef.current || takeover.current === null) return;
+    const live = comparePlayer.livePosition(performancesRef.current[key].id);
+    if (live !== null && Math.abs(live - video.currentTime) > TAKEOVER_DRIFT_SEC && live < video.duration) {
+      video.currentTime = live;
+    }
+    releaseShell();
+  };
   const loopRef = React.useRef(loop);
   loopRef.current = loop;
   const volume = useComparePlayer((state) => state.volume);
@@ -771,6 +889,8 @@ function useWebFocusEngine(
       progress,
       togglePlay: () => {
         finishFade();
+        // 넘겨받는 중에 직접 조작하면 앱 플레이어는 바로 멈추고 이 화면이 맡는다
+        releaseShell();
         const video = get(sideRef.current);
         if (!video) return;
         if (video.paused) void video.play().then(() => togetherRef.current && follow()).catch(() => setPlaying(false));
@@ -781,6 +901,7 @@ function useWebFocusEngine(
       },
       switchTo: (target: Side, cause: SwitchCause = 'manual') => {
         finishFade();
+        releaseShell();
         const from = get(sideRef.current);
         const to = get(target);
         if (!from || !to || target === sideRef.current) return;
@@ -866,6 +987,7 @@ function useWebFocusEngine(
       },
       playAt: (target: Side, seconds: number) => {
         finishFade();
+        releaseShell();
         const from = get(sideRef.current);
         const to = get(target);
         if (!to) return;
@@ -888,31 +1010,44 @@ function useWebFocusEngine(
 
   /** 화면을 떠날 때: 두 영상을 멈춘다 (재생은 앱 플레이어가 이어 간다) */
   const suspend = React.useCallback(() => {
+    dropTakeover();
     fadeRef.current?.finish();
     (['a', 'b'] as const).forEach((key) => refs.current[key]?.pause());
-  }, []);
+  }, [dropTakeover]);
 
-  /** 돌아왔을 때: 앱 플레이어가 이어 간 연주·위치에서 다시 이 화면 영상으로 튼다 */
+  /** 돌아왔을 때: 앱 플레이어가 이어 간 연주·위치에서 다시 이 화면 영상으로 넘겨받는다 */
   const resume = React.useCallback(() => {
     const state = comparePlayer.getState();
     (['a', 'b'] as const).forEach((key) => {
       const video = refs.current[key];
-      const position = comparePlayer.positionFor(key === 'a' ? a.id : b.id);
+      const id = key === 'a' ? a.id : b.id;
+      const position = comparePlayer.livePosition(id) ?? comparePlayer.positionFor(id);
       if (!video || !(position > 0)) return;
       if (!Number.isFinite(video.duration) || position < video.duration) video.currentTime = position;
     });
     const currentId = state.current?.performanceId;
     const target: Side | null = currentId === a.id ? 'a' : currentId === b.id ? 'b' : null;
-    // 떠나 있는 동안 다른 연주로 넘어갔으면 소리 쪽은 그대로 두고 틀지 않는다
-    if (!target) return;
+    // 떠나 있는 동안 다른 연주로 넘어갔으면 소리 쪽은 그대로 두고 틀지 않는다(앱 플레이어는 이 화면에서 쉰다)
+    if (!target || !state.playing) {
+      comparePlayer.pause();
+      if (target) {
+        sideRef.current = target;
+        setSide(target);
+      }
+      return;
+    }
     sideRef.current = target;
     setSide(target);
     (['a', 'b'] as const).forEach((key) => {
       const video = refs.current[key];
       if (video) video.muted = key === target ? state.muted : true;
     });
-    if (state.playing) void refs.current[target]?.play().catch(() => setPlaying(false));
-  }, [a.id, b.id]);
+    holdShell();
+    void refs.current[target]?.play().catch(() => {
+      setPlaying(false);
+      releaseShell();
+    });
+  }, [a.id, b.id, dropTakeover, holdShell, releaseShell]);
 
   const renderVideo = (key: Side) => {
     const performance = key === 'a' ? a : b;
@@ -929,13 +1064,18 @@ function useWebFocusEngine(
           const video = event.currentTarget;
           video.muted = key === sideRef.current ? comparePlayer.getState().muted : true;
           video.volume = comparePlayer.getState().volume;
-          // 비교 화면에서 듣던 자리에서 시작한다
-          const resume = comparePlayer.positionFor(performance.id);
+          // 앱 플레이어에서 지금 나오는 연주면 그 자리, 아니면 비교 화면에서 듣던 자리에서 시작한다
+          const resume = comparePlayer.livePosition(performance.id) ?? comparePlayer.positionFor(performance.id);
           if (resume > 0 && resume < video.duration) video.currentTime = resume;
-          if (key === 'a' && startPlaying && sideRef.current === 'a') {
-            void video.play().catch(() => setPlaying(false));
+          if (key === start.side && start.playing && sideRef.current === key && takeover.current !== null) {
+            void video.play().catch(() => {
+              setPlaying(false);
+              releaseShell();
+            });
           }
         }}
+        onPlaying={(event) => onSideSounding(key, event.currentTarget)}
+        onError={() => key === sideRef.current && releaseShell()}
         onPlay={() => key === sideRef.current && setPlaying(true)}
         onPause={() => key === sideRef.current && setPlaying(false)}
         onEnded={() => key === sideRef.current && setPlaying(false)}
@@ -943,13 +1083,22 @@ function useWebFocusEngine(
     );
   };
 
-  return { engine, renderVideo, suspend, resume };
+  /** 아직 넘겨받는 중이다(앱 플레이어가 소리를 잇고 있다) */
+  const takingOver = React.useCallback(() => takeover.current !== null, []);
+
+  return { engine, renderVideo, suspend, resume, takingOver };
 }
 
 // ─── 네이티브: 플레이어 하나. 전환은 스토어가 위치를 잡아 준다 ──────────────────
 
-function useNativeFocusEngine(props: FocusStageProps, mode: FocusMode, loop: LoopRange | null): FocusEngine {
-  const { a, b, imageOf, startPlaying, sectors } = props;
+function useNativeFocusEngine(
+  props: FocusStageProps,
+  start: FocusStart,
+  mode: FocusMode,
+  loop: LoopRange | null
+): FocusEngine {
+  const { a, b, imageOf, sectors } = props;
+  const startPlaying = start.playing;
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
   const progress = useComparePlayer((state) => state.progress);

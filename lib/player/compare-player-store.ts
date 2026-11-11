@@ -111,6 +111,8 @@ export interface ComparePlayerMedia {
   pause: () => void;
   seek: (seconds: number) => void;
   applyVolume: (volume: number, muted: boolean) => void;
+  /** 지금 재생 위치(초). 진행 알림보다 촘촘해야 할 때(1:1 비교로 넘겨줄 때) 읽는다 */
+  currentTime?: () => number;
 }
 
 /** 비교 화면이 셸 영상에 내주는 자리 (웹) */
@@ -679,6 +681,14 @@ export const comparePlayer = {
     selectTrack(queue[(index + direction + queue.length) % queue.length], { play: true });
   },
 
+  /** 같은 곡의 연주자 묶음에서 이 연주로 바로 간다(연주자 사진을 눌렀을 때) */
+  choosePerformer(performanceId: number) {
+    const track = state.queue.find((item) => item.performanceId === performanceId);
+    if (!track || !state.current || track.performanceId === state.current.performanceId) return;
+    navToken += 1;
+    selectTrack(track, { play: true });
+  },
+
   /** 같은 연주를 다시 누르면 재생·일시정지 */
   togglePlay() {
     if (!media) return false;
@@ -778,12 +788,12 @@ export const comparePlayer = {
   },
 
   /**
-   * 집중 비교를 열고 닫는다. 웹은 여는 동안 셸 영상이 멈추고 집중 비교 화면의 두 영상이 재생을 맡는다.
-   * 네이티브는 루트의 영상 하나가 집중 비교 자리로 옮겨 가 그대로 이어진다
+   * 집중 비교를 열고 닫는다. 웹은 집중 비교 화면의 두 영상이 재생을 맡는데, 그 영상이 소리를 내기 시작할 때까지
+   * 셸 영상이 이어서 울리다가 집중 비교 화면이 멈춘다(끊기지 않게). 네이티브는 루트의 영상 하나가
+   * 집중 비교 자리로 옮겨 가 그대로 이어진다
    */
   setFocus(focus: { a: number; b: number } | null) {
     if (focus && visit) visit.engaged = true;
-    if (focus && state.playing && Platform.OS === 'web') media?.pause();
     setState({ focus });
   },
 
@@ -841,6 +851,12 @@ export const comparePlayer = {
   /** 이 연주를 붙일 때 어디서부터 틀지 (초) */
   positionFor(performanceId: number): number {
     return state.positions[performanceId] ?? 0;
+  },
+
+  /** 이 연주가 지금 앱 플레이어에서 나오고 있으면 그 위치(초), 아니면 null */
+  livePosition(performanceId: number): number | null {
+    if (state.current?.performanceId !== performanceId || media?.performanceId !== performanceId) return null;
+    return media.currentTime?.() ?? state.progress.current;
   },
 
   /** 화면의 미디어를 건다. 떼는 함수를 돌려준다 */

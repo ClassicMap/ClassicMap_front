@@ -261,13 +261,11 @@ export function ComparePlayerHost() {
         video.volume = volume;
         video.muted = muted;
       },
+      currentTime: () => video.currentTime,
     });
   }, [stage, performanceId, reloadKey]);
 
-  // 집중 비교가 열리면 쉰다
-  React.useEffect(() => {
-    if (focus) videoRef.current?.pause();
-  }, [focus]);
+  // 집중 비교가 열려도 바로 쉬지 않는다. 집중 비교 화면의 영상이 소리를 내기 시작하면 그 화면이 멈춘다
 
   // 자리 고르기: 보이는 슬롯 → 미니 자리 → 주차. 자리가 바뀔 때만 무대를 옮긴다.
   // 자리가 등록·해제되면 바로(같은 커밋 안에서) 옮겨, 사라지는 자리와 함께 영상이 문서에서 빠지지 않게 한다.
