@@ -404,7 +404,7 @@ function PieceRow({
 }) {
   useLocale();
   const playHere = () => {
-    playPiece({ pieceId: piece.pieceId }, list)
+    playPiece({ pieceId: piece.pieceId }, list, t('비교할 수 있는 작품'))
       .then((played) => !played && onPress())
       .catch(() => onPress());
   };

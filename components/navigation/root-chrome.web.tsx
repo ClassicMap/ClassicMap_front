@@ -1,6 +1,7 @@
 import { useLocale } from '@/lib/i18n';
 import { isBarePath } from '@/components/navigation/bare-paths';
 import { RouteProgress } from '@/components/navigation/route-progress';
+import { AutoplayTasteFeed } from '@/components/player/autoplay-taste-feed';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
 import { MiniPlayerBar } from '@/components/player/mini-player-bar';
 import { AppShell } from '@/components/shell/app-shell';
@@ -34,6 +35,7 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
       {nav === 'tabs' ? <MiniPlayerBar key="mini" /> : null}
       {nav === 'tabs' ? <RouteProgress key="progress" placement="viewport" /> : null}
       <ComparePlayerHost key="host" />
+      <AutoplayTasteFeed key="taste" />
     </>
   );
 }

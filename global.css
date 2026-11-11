@@ -308,6 +308,98 @@
   }
 }
 
+/* 재생 대기열: 패널은 폭이 늘고 줄며 본문을 밀고, 안쪽은 옆에서 미끄러져 들어온다.
+   줄은 새로 생길 때 살짝 올라오고, 뺄 때 옆으로 비켜 사라진다. 모바일 시트는 아래에서 올라온다 */
+@layer components {
+  .cm-dock {
+    transition:
+      width 300ms var(--ease-settle),
+      margin-left 300ms var(--ease-settle);
+  }
+  .cm-dock-inner {
+    animation: cm-dock-in 300ms var(--ease-settle) backwards;
+    transition:
+      opacity 200ms var(--ease-settle),
+      transform 300ms var(--ease-settle);
+  }
+  .cm-dock-closing {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  @keyframes cm-dock-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  .cm-row-in {
+    animation: cm-row-in 260ms var(--ease-settle) backwards;
+  }
+  @keyframes cm-row-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  .cm-row-out {
+    opacity: 0;
+    transform: translateX(16px);
+    transition:
+      opacity 180ms var(--ease-settle),
+      transform 180ms var(--ease-settle);
+  }
+  .cm-fade {
+    transition: opacity 240ms var(--ease-settle);
+  }
+  .cm-turn {
+    transition: transform 200ms var(--ease-settle);
+  }
+  /* 사이드바: 폭이 줄고 늘며, 펼칠 때 글자가 조금 늦게 나타난다 */
+  .cm-side {
+    transition: width 260ms var(--ease-settle);
+  }
+  .cm-reveal {
+    animation: cm-fade-in 220ms var(--ease-settle) 90ms backwards;
+  }
+  .cm-tint {
+    transition:
+      background-color 200ms var(--ease-settle),
+      border-color 200ms var(--ease-settle),
+      color 200ms var(--ease-settle);
+  }
+  .cm-sheet-up {
+    animation: cm-sheet-up 320ms var(--ease-settle) backwards;
+  }
+  @keyframes cm-sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+  .cm-backdrop-in {
+    animation: cm-fade-in 240ms var(--ease-settle) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cm-dock,
+    .cm-dock-inner,
+    .cm-row-out,
+    .cm-fade,
+    .cm-turn,
+    .cm-side,
+    .cm-tint {
+      transition: none;
+    }
+    .cm-reveal {
+      animation: none;
+    }
+    .cm-dock-inner,
+    .cm-row-in,
+    .cm-sheet-up,
+    .cm-backdrop-in {
+      animation: none;
+    }
+  }
+}
+
 /* ───────── 화면 전환 ─────────
    공모전헌터 모션 원칙: ease-settle(cubic-bezier(0.22, 1, 0.36, 1)), 들어오기는 짧게, 나가기는 더 짧게,
    transform·opacity 만 움직이고 움직임 줄이기면 모두 끈다. 이동 자체는 lib/navigation/view-transition.web.ts

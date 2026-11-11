@@ -1,5 +1,6 @@
 import { MiniVideoTarget } from '@/components/player/mini-video-target';
 import { compareHrefFor, useSettled } from '@/components/player/player-bar-helpers';
+import { QueueButton, RepeatButton, ShuffleButton } from '@/components/player/queue-panel';
 import { PerformerStepper, useSongNav } from '@/components/player/song-nav';
 import { VolumeControl } from '@/components/player/volume-control';
 import { ScrubBar } from '@/components/shell/compare/scrub-bar';
@@ -16,8 +17,80 @@ import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, XIcon } from 'lucid
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
-/** 바가 이보다 넓어야 연주자 묶음에 「연주자 2/3」 글자를 둔다 (px) */
-const STEPPER_LABEL_MIN_WIDTH = 1100;
+/**
+ * 바 배치. 가운데 재생 조작이 늘 바 한가운데 오도록 왼쪽(지금 곡)과 오른쪽(연주자·같은 지점·소리·대기열)을 같은 폭으로 나눈다.
+ * 오른쪽 칸에 들어가는 만큼만 보이고, 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 소리 막대 → 셔플·반복 → 영상 순서로 접는다
+ */
+interface BarLayout {
+  center: number;
+  video: { width: number; height: number } | null;
+  faces: number;
+  spotLabel: boolean;
+  modes: boolean;
+  volume: number;
+  /** 오른쪽 칸에 이만큼은 있어야 한다 (px) */
+  needs: number;
+}
+
+const LAYOUTS: readonly BarLayout[] = [
+  {
+    center: 400,
+    video: { width: 96, height: 54 },
+    faces: 5,
+    spotLabel: true,
+    modes: true,
+    volume: 76,
+    needs: 560,
+  },
+  {
+    center: 400,
+    video: { width: 96, height: 54 },
+    faces: 3,
+    spotLabel: true,
+    modes: true,
+    volume: 76,
+    needs: 470,
+  },
+  {
+    center: 380,
+    video: { width: 96, height: 54 },
+    faces: 3,
+    spotLabel: false,
+    modes: true,
+    volume: 76,
+    needs: 400,
+  },
+  {
+    center: 360,
+    video: { width: 80, height: 45 },
+    faces: 3,
+    spotLabel: false,
+    modes: true,
+    volume: 0,
+    needs: 320,
+  },
+  {
+    center: 300,
+    video: { width: 64, height: 36 },
+    faces: 0,
+    spotLabel: false,
+    modes: false,
+    volume: 0,
+    needs: 220,
+  },
+  { center: 240, video: null, faces: 0, spotLabel: false, modes: false, volume: 0, needs: 0 },
+];
+
+/** 바 안쪽 여백(좌우 16)과 칸 사이 간격(16 두 번) */
+const BAR_CHROME = 64;
+
+function layoutFor(width: number): BarLayout {
+  if (width === 0) return LAYOUTS[1];
+  return (
+    LAYOUTS.find((layout) => (width - BAR_CHROME - layout.center) / 2 >= layout.needs) ??
+    LAYOUTS[LAYOUTS.length - 1]
+  );
+}
 
 /**
  * 데스크톱 셸 하단 플레이바. 비교 화면 밖에서 듣고 있을 때만 뜬다 (비교 화면 안에서는 그 화면의 재생 바가 맡는다).
@@ -37,9 +110,10 @@ export function GlobalPlayerBar() {
   const nav = useSongNav();
   const progress = useComparePlayer((state) => state.progress);
   const [scrub, setScrub] = React.useState<number | null>(null);
-  // 바가 좁으면 연주자 묶음의 글자를 접는다
+  // 바가 좁으면 차례로 접는다
   const [barWidth, setBarWidth] = React.useState(0);
-  const compact = barWidth > 0 && barWidth < STEPPER_LABEL_MIN_WIDTH;
+  const layout = layoutFor(barWidth);
+  const video = layout.video;
   const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
 
   if (!current || !visible) return null;
@@ -50,14 +124,16 @@ export function GlobalPlayerBar() {
   return (
     <View
       onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
-      className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
-      <View className="min-w-0 flex-1 flex-row items-center gap-3">
-        <Pressable
-          onPress={goToCompare}
-          accessibilityRole="link"
-          accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}>
-          <MiniVideoTarget width={96} height={54} />
-        </Pressable>
+      className="cm-rise h-[76px] flex-row items-center gap-4 rounded-[9px] bg-surface-1 px-4">
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
+        {video ? (
+          <Pressable
+            onPress={goToCompare}
+            accessibilityRole="link"
+            accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}>
+            <MiniVideoTarget width={video.width} height={video.height} />
+          </Pressable>
+        ) : null}
         <Pressable
           onPress={goToCompare}
           accessibilityRole="link"
@@ -88,9 +164,11 @@ export function GlobalPlayerBar() {
           </View>
         </Pressable>
       </View>
-      <View className="flex-[1.3] items-center gap-1.5">
+      <View className="shrink-0 items-center gap-1.5" style={{ width: layout.center }}>
         <View className="flex-row items-center gap-4">
-          {/* 3초 넘게 들었으면 처음으로, 그 안이면 재생 목록의 이전 곡으로 */}
+          {/* 좁으면 셔플·반복은 대기열 패널 위에만 둔다 */}
+          {layout.modes ? <ShuffleButton /> : null}
+          {/* 3초 넘게 들었으면 처음으로, 그 안이면 들은 순서의 이전 곡으로 */}
           <Pressable
             accessibilityLabel={nav.prevLabel}
             onPress={() => comparePlayer.previous()}
@@ -125,6 +203,7 @@ export function GlobalPlayerBar() {
               className="fill-foreground-muted text-foreground-muted"
             />
           </Pressable>
+          {layout.modes ? <RepeatButton /> : null}
         </View>
         <View className="w-full flex-row items-center gap-2.5">
           <Text variant="mono" className="w-10 text-right text-foreground-muted">
@@ -150,9 +229,10 @@ export function GlobalPlayerBar() {
           </Text>
         </View>
       </View>
-      <View className="flex-1 flex-row items-center justify-end gap-2.5">
-        <PerformerStepper compact={compact} />
-        <VolumeControl />
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
+        <PerformerStepper compact={!layout.spotLabel} maxFaces={layout.faces} />
+        <VolumeControl width={layout.volume} />
+        <QueueButton />
         <Pressable
           onPress={() => comparePlayer.close()}
           accessibilityLabel={t('플레이어 닫기')}

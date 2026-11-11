@@ -35,6 +35,7 @@ export function PieceCard({
   onDismiss,
   hideGenre = false,
   list,
+  listName,
 }: {
   piece: ComparisonPiece;
   width: number;
@@ -47,6 +48,8 @@ export function PieceCard({
   hideGenre?: boolean;
   /** 이 카드가 놓인 목록(선반). 재생하면 이 목록이 재생 목록이 되어 다음 곡으로 이어진다 */
   list?: readonly ComparisonPiece[];
+  /** 대기열 패널에 보일 그 목록 이름(선반 제목) */
+  listName?: string;
 }) {
   useLocale();
   const confirmDismiss = onDismiss
@@ -61,7 +64,7 @@ export function PieceCard({
   const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === piece.pieceId);
   // 그 자리에서 바로 튼다(영상은 하단 플레이바). 틀 연주가 없으면 비교 화면을 연다
   const playHere = () => {
-    playPiece({ pieceId: piece.pieceId }, list)
+    playPiece({ pieceId: piece.pieceId }, list, listName)
       .then((played) => !played && onPress())
       .catch(() => onPress());
   };

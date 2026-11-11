@@ -5,7 +5,7 @@ import { TodayComparison, type TodayComparisonTarget } from '@/components/home/t
 import { useGenreShelves } from '@/components/compare/genre-browse';
 import { Chip } from '@/components/ui/chip';
 import { usePinnedToday } from '@/hooks/use-pinned-today';
-import type { PieceGenre } from '@/lib/design/genre-palette';
+import { GENRE_STYLES, type PieceGenre } from '@/lib/design/genre-palette';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -180,6 +180,9 @@ export default function HomeScreen() {
     () => (shelfGenre ? (genreQuery.data?.pages[0] ?? []) : allShelfPieces),
     [allShelfPieces, genreQuery.data, shelfGenre, locale]
   );
+  const catalogName = shelfGenre
+    ? t('비교할 수 있는 작품 · {genre}', { genre: t(GENRE_STYLES[shelfGenre].label) })
+    : t('비교할 수 있는 작품');
 
   const favoriteArtistIds = React.useMemo(
     () =>
@@ -375,6 +378,7 @@ export default function HomeScreen() {
                   width={width}
                   reason={piece.reasons[0]}
                   list={shelf.items}
+                  listName={t(SHELF_TITLES[shelf.key])}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />
@@ -392,6 +396,7 @@ export default function HomeScreen() {
                   width={width}
                   reason={piece.reasons[0]}
                   list={shelf.items.slice(0, 6)}
+                  listName={t(SHELF_TITLES[shelf.key])}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />
@@ -428,7 +433,7 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(piece) => piece.pieceId}
             renderItem={(piece, width) => (
-              <PieceCard piece={piece} width={width} list={shelfPieces} onPress={() => openPiece(piece)} />
+              <PieceCard piece={piece} width={width} list={shelfPieces} listName={catalogName} onPress={() => openPiece(piece)} />
             )}
           />
         ) : (
@@ -438,7 +443,7 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(piece) => piece.pieceId}
             renderItem={(piece, width) => (
-              <PieceCard piece={piece} width={width} list={shelfPieces.slice(0, 6)} onPress={() => openPiece(piece)} />
+              <PieceCard piece={piece} width={width} list={shelfPieces.slice(0, 6)} listName={catalogName} onPress={() => openPiece(piece)} />
             )}
           />
         )}

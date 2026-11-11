@@ -20,7 +20,8 @@ import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { PerformerStepper, useFollowSongNav, useSongNav } from '@/components/player/song-nav';
-import { comparePlaylistFor } from '@/lib/player/compare-playlist';
+import { compareQueueFor } from '@/lib/player/compare-playlist';
+import { QueueButton } from '@/components/player/queue-panel';
 import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -196,7 +197,7 @@ export function ComparePieceView({
       comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
         play: true,
         queue,
-        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+        ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
       }),
     [imageOf, queue, pieceId, sectors]
   );
@@ -237,7 +238,7 @@ export function ComparePieceView({
         play: true,
         queue,
         startAt: moment.offsetMs / 1000,
-        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+        ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
       });
     },
     [imageOf, queue, pieceId, sectors]
@@ -347,9 +348,9 @@ export function ComparePieceView({
         {/* 머리: 작품은 사각. 크게 보기에서는 영상에 자리를 내주려 줄인다 */}
         <View className="flex-row items-end gap-6">
           {pieceTitle ? (
-            // 작품 그림: 대표 연주의 음반 표지 (스포티파이 앨범 머리)
+            // 작품 그림: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다)
             <PieceArt
-              coverVideoId={pieceInfo?.coverVideoId}
+              coverVideoId={composerAvatar ? null : pieceInfo?.coverVideoId}
               fallbackImage={composerAvatar}
               fallbackName={composerName ?? pieceTitle}
               size={theater ? 72 : 136}
@@ -1060,6 +1061,8 @@ interface PlayerBarProps {
 
 /** 재생 바가 이보다 좁으면 버튼 글자를 접는다 (px) */
 const BAR_COMPACT_WIDTH = 1080;
+/** 이보다 좁으면 연주자 묶음과 소리 막대도 접는다 (px) */
+const BAR_TIGHT_WIDTH = 820;
 
 /**
  * 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다.
@@ -1088,6 +1091,8 @@ function PlayerBar({
   // 좌우를 같은 폭으로 두어 가운데 재생 조작이 정확히 가운데 온다. 좁으면 버튼 글자를 접는다
   const [barWidth, setBarWidth] = React.useState(0);
   const compact = barWidth > 0 && barWidth < BAR_COMPACT_WIDTH;
+  // 대기열 패널까지 열어 아주 좁으면 이름 칸을 남기려고 연주자 묶음(위 카드에 있음)과 소리 막대를 접는다
+  const tight = barWidth > 0 && barWidth < BAR_TIGHT_WIDTH;
 
   const focusButton = (
     <Pressable
@@ -1130,7 +1135,7 @@ function PlayerBar({
             </View>
             <View className="shrink-0 flex-row items-center gap-2">
               {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
-              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} />
+              {tight ? null : <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} spot={false} />}
               {focusButton}
             </View>
           </>
@@ -1194,7 +1199,8 @@ function PlayerBar({
       </View>
       {/* 오른쪽: 소리·화면·원본 */}
       <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
-        <VolumeControl width={compact ? 56 : 76} />
+        <VolumeControl width={tight ? 0 : compact ? 56 : 76} />
+        <QueueButton />
         <Pressable
           onPress={onFullscreen}
           accessibilityLabel={t('전체 화면 (F)')}

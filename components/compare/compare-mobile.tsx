@@ -13,7 +13,7 @@ import { MobileFullscreen } from '@/components/compare/mobile-fullscreen';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SwitchModeToggle } from '@/components/compare/switch-mode-toggle';
 import { useFollowSongNav } from '@/components/player/song-nav';
-import { comparePlaylistFor } from '@/lib/player/compare-playlist';
+import { compareQueueFor } from '@/lib/player/compare-playlist';
 import { useIsFocused } from '@react-navigation/native';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
@@ -417,7 +417,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
       play: true,
       queue,
-      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+      ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
     });
   };
   // 들을 곳: 그 연주를 그 지점부터 튼다
@@ -431,7 +431,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       play: true,
       queue,
       startAt: moment.offsetMs / 1000,
-      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+      ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
     });
   };
   // 전체 화면의 연주자 칩: 바로 그 연주로 바꾼다(같은 연주면 그대로)
@@ -443,7 +443,7 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
     comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
       play: true,
       queue,
-      playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+      ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
     });
   };
   // 재생 바(미니 플레이어)의 이전·다음 곡으로 이 작품의 다른 구간이 재생되면 화면도 그 구간으로 따라간다
@@ -518,11 +518,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         </View>
       </View>
 
-      {/* 머리: 작품은 사각. 음반 연결이 없어 작곡가 초상을 쓴다 */}
+      {/* 머리: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다) */}
       <View className="mt-3 flex-row items-end gap-4">
         {title ? (
           <PieceArt
-            coverVideoId={pieceInfo?.coverVideoId}
+            coverVideoId={pieceInfo?.composerAvatarUrl ? null : pieceInfo?.coverVideoId}
             fallbackImage={pieceInfo?.composerAvatarUrl}
             fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
             size={88}

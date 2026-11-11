@@ -45,8 +45,30 @@ export function youtubeThumbnailUrl(performance: ComparisonPerformance): string 
  */
 export function sortComparisonSectors(sectors: readonly ComparisonSector[]): ComparisonSector[] {
   return [...sectors].sort(
-    (a, b) => Number(isWholeWorkSector(b)) - Number(isWholeWorkSector(a)) || (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+    (a, b) =>
+      Number(isWholeWorkSector(b)) - Number(isWholeWorkSector(a)) ||
+      (a.displayOrder ?? 0) - (b.displayOrder ?? 0) ||
+      // 순서 값이 같으면(대부분 0) 악장 순서로. 같은 악장이면 두 구간 모두 마디를 알 때만 마디 순서, 아니면 받은 순서 그대로
+      movementNumber(a) - movementNumber(b) ||
+      measureOrder(a, b)
   );
+}
+
+const ROMAN: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
+
+/** 구간 이름에서 악장 번호(「3악장」, 「III. Allegro」). 모르면 맨 뒤 */
+function movementNumber(sector: Pick<ComparisonSector, 'sectorName' | 'sectorNameEn'>): number {
+  const korean = sector.sectorName.match(/(\d+)\s*악장/);
+  if (korean) return Number(korean[1]);
+  const roman = sector.sectorNameEn?.match(/^\s*(X|IX|VIII|VII|VI|V|IV|III|II|I)\./);
+  if (roman) return ROMAN[roman[1]] ?? Number.MAX_SAFE_INTEGER;
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function measureOrder(a: Pick<ComparisonSector, 'measureStart'>, b: Pick<ComparisonSector, 'measureStart'>): number {
+  const left = Number.parseInt(a.measureStart ?? '', 10);
+  const right = Number.parseInt(b.measureStart ?? '', 10);
+  return Number.isFinite(left) && Number.isFinite(right) ? left - right : 0;
 }
 
 /** 곡 전체를 한 구간으로 비교하는 구간 */

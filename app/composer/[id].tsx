@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
 import { PhotoCredit } from '@/components/hero/photo-credit';
-import { playPiece } from '@/lib/player/play-piece';
+import { playList, playPiece } from '@/lib/player/play-piece';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { PieceArt } from '@/components/piece/piece-art';
 import { TrackIndex } from '@/components/piece/track-index';
@@ -50,6 +50,7 @@ import {
   EditIcon,
   ExternalLinkIcon,
   PlusIcon,
+  ShuffleIcon,
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
@@ -243,11 +244,12 @@ export default function ComposerDetailScreen() {
     .map((keyword) => keyword.trim())
     .filter(Boolean);
   const firstComparable = comparable[0];
+  const listName = t('{name} 작품', { name: composer.name });
   // 머리 재생: 첫 비교 작품을 그 자리에서 튼다. 틀 연주가 없으면 비교 화면으로 간다
   const playFirst = () => {
     if (!firstComparable) return;
     setStarting(true);
-    playPiece({ pieceId: firstComparable.pieceId }, comparable)
+    playPiece({ pieceId: firstComparable.pieceId }, comparable, listName)
       .then((played) => !played && openCompare(firstComparable.pieceId))
       .catch(() => openCompare(firstComparable.pieceId))
       .finally(() => setStarting(false));
@@ -318,6 +320,15 @@ export default function ComposerDetailScreen() {
               onPress={playingHere || pausedHere ? () => comparePlayer.togglePlay() : playFirst}
             />
           ) : null}
+          {comparable.length > 1 ? (
+            <Pressable
+              onPress={() => void playList(comparable, { shuffle: true, name: listName })}
+              accessibilityRole="button"
+              accessibilityLabel={t('{name} 셔플로 듣기', { name: listName })}
+              className="size-12 items-center justify-center rounded-full border border-border-strong web:hover:bg-surface-2">
+              <Icon as={ShuffleIcon} size={20} className="text-foreground" />
+            </Pressable>
+          ) : null}
           <FavoriteButton kind="composers" id={composer.id} name={composer.name} variant="labeled" />
           {canEdit ? (
             <>
@@ -371,7 +382,7 @@ export default function ComposerDetailScreen() {
                       wide={wide}
                       onPress={() => openCompare(piece.pieceId)}
                       onPlay={() =>
-                        void playPiece({ pieceId: piece.pieceId }, comparable)
+                        void playPiece({ pieceId: piece.pieceId }, comparable, listName)
                           .then((played) => !played && openCompare(piece.pieceId))
                           .catch(() => openCompare(piece.pieceId))
                       }

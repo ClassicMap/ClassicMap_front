@@ -1,5 +1,6 @@
 import { useLocale } from '@/lib/i18n';
 import { isBarePath } from '@/components/navigation/bare-paths';
+import { AutoplayTasteFeed } from '@/components/player/autoplay-taste-feed';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
 import { MiniPlayerBar } from '@/components/player/mini-player-bar';
 import { usePathname } from 'expo-router';
@@ -19,6 +20,7 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
       {children}
       {isBarePath(pathname) ? null : <MiniPlayerBar />}
       <ComparePlayerHost />
+      <AutoplayTasteFeed />
     </>
   );
 }
