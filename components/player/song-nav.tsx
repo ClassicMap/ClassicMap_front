@@ -1,6 +1,7 @@
+import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { t, useLocale } from '@/lib/i18n';
+import { relocalize, t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
@@ -26,8 +27,20 @@ export function useSongNav() {
   };
 }
 
+/** 연주자 묶음에 한 번에 보일 얼굴 수. 더 많으면 지금 연주자 둘레만 보이고 「2/8」을 붙인다 */
+const MAX_FACES = 5;
+const MAX_FACES_COMPACT = 3;
+
+/** 지금 연주자가 가운데 오도록 보일 얼굴 범위를 고른다 */
+function faceWindow(size: number, position: number, max: number): [number, number] {
+  if (size <= max) return [0, size];
+  const start = Math.max(0, Math.min(size - max, Math.max(0, position) - Math.floor(max / 2)));
+  return [start, start + max];
+}
+
 /**
- * 같은 곡의 다른 연주로 넘기는 ‹ 연주자 2/3 › 묶음. 곡 넘기기(⏮ ⏭)와 나눠, 연주자는 여기서만 바꾼다
+ * 같은 곡의 다른 연주로 넘기는 ‹ 얼굴들 › 묶음. 곡 넘기기(⏮ ⏭)와 나눠, 연주자는 여기서만 바꾼다.
+ * 연주자 사진을 늘어놓고 지금 연주자에 테를 둘러, 누가 몇 명 있는지 한눈에 보고 사진을 눌러 바로 바꾼다
  */
 export function PerformerStepper({
   compact = false,
@@ -36,17 +49,21 @@ export function PerformerStepper({
   compact?: boolean;
   className?: string;
 }) {
-  useLocale();
-  const size = useComparePlayer((state) => state.queue.length);
-  const position = useComparePlayer((state) => {
-    const id = state.current?.performanceId;
-    return id === undefined ? -1 : state.queue.findIndex((track) => track.performanceId === id);
-  });
+  const { locale } = useLocale();
+  const queue = useComparePlayer((state) => state.queue);
+  const currentId = useComparePlayer((state) => state.current?.performanceId ?? null);
+  const [hovered, setHovered] = React.useState<number | null>(null);
+  const tracks = React.useMemo(() => queue.map((track) => relocalize(track)), [queue, locale]);
+  const size = tracks.length;
   if (size < 2) return null;
+  const position = tracks.findIndex((track) => track.performanceId === currentId);
   const label =
     position >= 0
       ? t('연주자 {n}/{total}', { n: position + 1, total: size })
       : t('연주자 {total}명', { total: size });
+  const [from, to] = faceWindow(size, position, compact ? MAX_FACES_COMPACT : MAX_FACES);
+  const faceSize = compact ? 22 : 24;
+  const hoveredName = tracks.find((track) => track.performanceId === hovered)?.artistName;
   return (
     <View
       className={cn(
@@ -63,11 +80,43 @@ export function PerformerStepper({
         className="h-full w-7 items-center justify-center rounded-l-full web:hover:bg-surface-2">
         <Icon as={ChevronLeftIcon} size={15} className="text-foreground" />
       </Pressable>
-      {compact ? null : (
-        <Text numberOfLines={1} className="px-0.5 text-label text-foreground">
-          {label}
+      <View className="flex-row items-center gap-0.5">
+        {tracks.slice(from, to).map((track) => {
+          const selected = track.performanceId === currentId;
+          return (
+            <Pressable
+              key={track.performanceId}
+              onPress={() => comparePlayer.choosePerformer(track.performanceId)}
+              onHoverIn={() => setHovered(track.performanceId)}
+              onHoverOut={() =>
+                setHovered((value) => (value === track.performanceId ? null : value))
+              }
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={
+                selected
+                  ? t('지금 연주자 {name}', { name: track.artistName })
+                  : t('{name} 연주로 바꾸기', { name: track.artistName })
+              }
+              className={cn(
+                'rounded-full border-2 web:transition-opacity web:duration-fast',
+                selected ? 'border-primary' : 'border-transparent opacity-55 web:hover:opacity-100'
+              )}>
+              <EntityThumb
+                name={track.artistName}
+                image={track.artistImageUrl}
+                shape="circle"
+                size={faceSize}
+              />
+            </Pressable>
+          );
+        })}
+      </View>
+      {to - from < size && position >= 0 ? (
+        <Text variant="mono" className="pl-1 text-caption text-foreground-muted">
+          {`${position + 1}/${size}`}
         </Text>
-      )}
+      ) : null}
       <Pressable
         onPress={() => comparePlayer.stepPerformer(1)}
         accessibilityRole="button"
@@ -76,6 +125,18 @@ export function PerformerStepper({
         className="h-full w-7 items-center justify-center rounded-r-full web:hover:bg-surface-2">
         <Icon as={ChevronRightIcon} size={15} className="text-foreground" />
       </Pressable>
+      {/* 사진에 마우스를 올리면 그 연주자 이름을 묶음 위에 띄운다 */}
+      {hoveredName ? (
+        <View
+          className="absolute bottom-full left-[-64px] right-[-64px] mb-2 items-center"
+          style={{ pointerEvents: 'none' }}>
+          <View className="rounded-md bg-foreground px-2 py-1">
+            <Text numberOfLines={1} className="text-caption font-semibold text-background">
+              {hoveredName}
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
