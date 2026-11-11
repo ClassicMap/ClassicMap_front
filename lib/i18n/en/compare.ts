@@ -238,6 +238,7 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '자동 재생 · 취향에 맞춘 곡': 'Autoplay · picked for your taste',
   '자동 재생이 꺼져 있어요. 목록이 끝나면 멈춰요.': 'Autoplay is off. Playback stops at the end of the list.',
   '반복(전체)이 켜져 있어 자동 재생은 쉬어요.': 'Repeat all is on, so autoplay is paused.',
+  '비슷한 곡을 찾지 못했어요.': "Couldn't find similar pieces.",
   '비슷한 곡을 고르는 중이에요.': 'Picking similar pieces…',
   '곡을 틀면 비슷한 곡이 이어져요.': 'Play something and similar pieces will follow.',
   '같은 지점에서 연주자 바꾸기': 'Switch performers at the same spot',

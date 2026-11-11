@@ -47,7 +47,7 @@ export function SameSpotToggle({ compact = false }: { compact?: boolean }) {
       accessibilityLabel={t('같은 지점에서 연주자 바꾸기')}
       hitSlop={4}
       className={cn(
-        'h-full flex-row items-center gap-1.5 rounded-r-full border-l border-border pl-2.5 pr-3 web:hover:bg-surface-2',
+        'cm-tint h-full flex-row items-center gap-1.5 rounded-r-full border-l border-border pl-2.5 pr-3 web:hover:bg-surface-2',
         compact && 'pl-2 pr-2.5'
       )}>
       <Icon

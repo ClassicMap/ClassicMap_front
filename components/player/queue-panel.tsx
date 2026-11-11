@@ -1,6 +1,7 @@
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Equalizer } from '@/components/ui/equalizer';
 import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
 import {
@@ -14,7 +15,6 @@ import { findCachedComparisonPiece } from '@/lib/query/hooks/useComparisonPerfor
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronDownIcon,
   ChevronRightIcon,
   InfinityIcon,
   ListMusicIcon,
@@ -38,7 +38,7 @@ export function QueueButton({ onPress }: { onPress?: () => void }) {
       aria-selected={active}
       accessibilityLabel={t('재생 대기열')}
       className={cn(
-        'size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',
+        'cm-tint size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',
         active && 'bg-primary-muted'
       )}>
       <Icon
@@ -114,7 +114,7 @@ function ModeButton({
       aria-checked={role === 'switch' ? on : undefined}
       accessibilityLabel={`${label}: ${state}`}
       className={cn(
-        'min-w-0 flex-1 items-center gap-0.5 rounded-lg border py-1.5',
+        'cm-tint min-w-0 flex-1 items-center gap-0.5 rounded-lg border py-1.5',
         on ? 'border-primary bg-primary-muted' : 'border-border bg-surface-2 web:hover:bg-surface-3'
       )}>
       <Icon as={icon} size={15} className={on ? 'text-primary' : 'text-foreground-muted'} />
@@ -162,10 +162,17 @@ interface RowProps {
   now?: boolean;
   past?: boolean;
   playing?: boolean;
+  /** 흐리게(자동 재생이 꺼졌을 때 골라 둔 곡) */
+  dimmed?: boolean;
+  /** 나가는 중(빼기·비우기·접기). 옆으로 비켜 사라진다 */
+  leaving?: boolean;
   label: string;
   onPress?: () => void;
   onRemove?: () => void;
 }
+
+/** 줄이 사라지는 애니메이션 길이(ms). 이만큼 기다렸다가 실제로 뺀다 */
+const LEAVE_MS = 180;
 
 function Row({
   title,
@@ -176,20 +183,26 @@ function Row({
   now,
   past,
   playing,
+  dimmed,
+  leaving,
   label,
   onPress,
   onRemove,
 }: RowProps) {
+  const [removing, setRemoving] = React.useState(false);
+  const out = leaving || removing;
   return (
     <View
       className={cn(
-        'flex-row items-center',
+        'cm-row-in cm-fade flex-row items-center',
         now && 'bg-primary-muted',
-        !now && 'web:hover:bg-surface-2'
+        !now && !dimmed && 'web:hover:bg-surface-2',
+        dimmed && 'opacity-40',
+        out && 'cm-row-out'
       )}>
       <Pressable
         onPress={onPress}
-        disabled={!onPress}
+        disabled={!onPress || dimmed || out}
         accessibilityRole="button"
         accessibilityLabel={label}
         className={cn(
@@ -224,7 +237,11 @@ function Row({
       </Pressable>
       {onRemove ? (
         <Pressable
-          onPress={onRemove}
+          onPress={() => {
+            if (removing) return;
+            setRemoving(true);
+            setTimeout(onRemove, LEAVE_MS);
+          }}
           accessibilityRole="button"
           accessibilityLabel={t('{title} 대기열에서 빼기', { title })}
           hitSlop={6}
@@ -232,6 +249,19 @@ function Row({
           <Icon as={XIcon} size={13} className="text-foreground-muted" />
         </Pressable>
       ) : null}
+    </View>
+  );
+}
+
+/** 자동 재생 곡을 고르는 동안 보이는 빈 줄 */
+function RowSkeleton() {
+  return (
+    <View className="flex-row items-center gap-3 px-4 py-1.5">
+      <Skeleton className="size-10 rounded-md" />
+      <View className="flex-1 gap-1.5">
+        <Skeleton className="h-3 w-3/4" />
+        <Skeleton className="h-2.5 w-1/3" />
+      </View>
     </View>
   );
 }
@@ -280,9 +310,37 @@ function useItemRow() {
   );
 }
 
+/** 같은 곡이 목록에 두 번 있어도 줄 열쇠가 겹치지 않게(줄이 옮겨 가도 다시 나타나지 않게) 작품·구간·몇 번째로 만든다 */
+function stableKeys(
+  items: readonly { pieceId: number; sectorId: number | null }[],
+  prefix: string
+): string[] {
+  const seen = new Map<string, number>();
+  return items.map((item) => {
+    const base = `${prefix}-${item.pieceId}-${item.sectorId ?? 0}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return `${base}-${count}`;
+  });
+}
+
+/** 닫힌 뒤에도 잠깐(나가는 애니메이션 동안) 그려 둔다 */
+function useLingering(value: boolean, ms: number): boolean {
+  const [lingering, setLingering] = React.useState(value);
+  React.useEffect(() => {
+    if (value) {
+      setLingering(true);
+      return;
+    }
+    const timer = setTimeout(() => setLingering(false), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return value || lingering;
+}
+
 /**
  * 재생 대기열. 위에서부터 들은 곡 → 지금 재생 → 다음에 재생 → 이어서 재생 → 자동 재생.
- * 줄을 누르면 그 곡부터 틀고, 그 사이 곡은 건너뛴다
+ * 줄을 누르면 그 곡부터 틀고, 그 사이 곡은 건너뛴다. 줄은 생길 때 살짝 올라오고 뺄 때 옆으로 비켜 사라진다
  */
 export function QueuePanel({ onClose }: { onClose?: () => void }) {
   useLocale();
@@ -293,12 +351,29 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const playlist = useComparePlayer((state) => state.playlist);
   const autoplay = useComparePlayer((state) => state.autoplay);
   const autoplayItems = useComparePlayer((state) => state.autoplayItems);
+  const autoplayStatus = useComparePlayer((state) => state.autoplayStatus);
   const shuffle = useComparePlayer((state) => state.shuffle);
   const repeat = useComparePlayer((state) => state.repeat);
   const [showHistory, setShowHistory] = React.useState(false);
+  const historyMounted = useLingering(showHistory, LEAVE_MS);
+  const [clearing, setClearing] = React.useState(false);
   const itemRow = useItemRow();
   const remaining = playlist ? playlist.items.slice(playlist.index + 1) : [];
+  const remainingKeys = stableKeys(remaining, 's');
+  const autoplayKeys = stableKeys(autoplayItems, 'a');
   const sourceName = playlist?.name ?? t('재생 목록');
+  const repeatAll = repeat === 'all' && Boolean(playlist?.items.length);
+  // 자동 재생이 꺼졌거나 전체 반복이면 골라 둔 곡을 흐리게 남겨 둔다(갑자기 사라지지 않게)
+  const autoplayPaused = !autoplay || repeatAll;
+
+  const clear = () => {
+    if (clearing) return;
+    setClearing(true);
+    setTimeout(() => {
+      comparePlayer.clearQueue();
+      setClearing(false);
+    }, LEAVE_MS);
+  };
 
   return (
     <View className="flex-1 bg-surface-1">
@@ -307,10 +382,10 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
           <Text className="text-body font-bold text-foreground">{t('재생 대기열')}</Text>
           <View className="flex-row items-center gap-1">
             <Pressable
-              onPress={() => comparePlayer.clearQueue()}
+              onPress={clear}
               accessibilityRole="button"
               accessibilityLabel={t('대기열 비우기')}
-              className="rounded-full px-2 py-1 web:hover:bg-surface-2">
+              className="cm-tint rounded-full px-2 py-1 web:hover:bg-surface-2">
               <Text className="text-label font-semibold text-primary">{t('비우기')}</Text>
             </Pressable>
             {onClose ? (
@@ -318,7 +393,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
                 onPress={onClose}
                 accessibilityRole="button"
                 accessibilityLabel={t('대기열 닫기')}
-                className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+                className="cm-tint size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
                 <Icon as={XIcon} size={16} className="text-foreground-muted" />
               </Pressable>
             ) : null}
@@ -355,22 +430,22 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             onPress={() => setShowHistory((value) => !value)}
             accessibilityRole="button"
             aria-expanded={showHistory}
-            className="flex-row items-center gap-1.5 px-4 pb-1 pt-2.5">
-            <Icon
-              as={showHistory ? ChevronDownIcon : ChevronRightIcon}
-              size={14}
-              className="text-foreground-muted"
-            />
+            className="cm-tint flex-row items-center gap-1.5 px-4 pb-1 pt-2.5">
+            <View
+              className="cm-turn"
+              style={{ transform: [{ rotate: showHistory ? '90deg' : '0deg' }] }}>
+              <Icon as={ChevronRightIcon} size={14} className="text-foreground-muted" />
+            </View>
             <Text className="text-label font-semibold text-foreground-muted">
               {t('들은 곡 {count}', { count: history.length })}
             </Text>
           </Pressable>
         ) : null}
-        {showHistory
+        {historyMounted
           ? history.map((entry: QueueEntry, index) => (
               <Row
                 key={`h-${index}-${entry.track.performanceId}`}
-                {...trackRow(entry.track, { past: true })}
+                {...trackRow(entry.track, { past: true, leaving: !showHistory })}
                 onPress={() => comparePlayer.playFromQueue('history', index)}
               />
             ))
@@ -378,7 +453,10 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
 
         <SectionTitle title={t('지금 재생')} />
         {current ? (
-          <Row {...trackRow(current, { now: true, playing })} />
+          <Row
+            key={`now-${current.performanceId}`}
+            {...trackRow(current, { now: true, playing })}
+          />
         ) : (
           <Note>{t('재생 중인 곡이 없어요.')}</Note>
         )}
@@ -388,8 +466,8 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             <SectionTitle title={t('다음에 재생')} />
             {forward.map((entry, index) => (
               <Row
-                key={`f-${index}-${entry.track.performanceId}`}
-                {...trackRow(entry.track, {})}
+                key={`f-${entry.track.performanceId}-${index}`}
+                {...trackRow(entry.track, { leaving: clearing })}
                 onPress={() => comparePlayer.playFromQueue('forward', index)}
                 onRemove={() => comparePlayer.removeFromQueue('forward', index)}
               />
@@ -406,9 +484,10 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             const row = itemRow(item);
             return (
               <Row
-                key={`s-${index}-${item.pieceId}-${item.sectorId ?? 0}`}
+                key={remainingKeys[index]}
                 {...row}
                 reason={undefined}
+                leaving={clearing}
                 label={`${row.title} ${row.subtitle}`}
                 onPress={() => comparePlayer.playFromQueue('source', index)}
                 onRemove={() => comparePlayer.removeFromQueue('source', index)}
@@ -416,34 +495,56 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             );
           })
         ) : (
-          <Note>
-            {repeat === 'all' && playlist?.items.length
-              ? t('반복(전체): 끝나면 목록 처음으로 돌아가요.')
-              : t('목록 끝이에요.')}
-          </Note>
+          <View className="cm-row-in">
+            <Note>
+              {repeatAll ? t('반복(전체): 끝나면 목록 처음으로 돌아가요.') : t('목록 끝이에요.')}
+            </Note>
+          </View>
         )}
 
         <SectionTitle title={t('자동 재생 · 취향에 맞춘 곡')} />
-        {!autoplay ? (
-          <Note>{t('자동 재생이 꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
-        ) : repeat === 'all' && playlist?.items.length ? (
-          <Note>{t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}</Note>
-        ) : autoplayItems.length ? (
+        {autoplayPaused ? (
+          <View className="cm-row-in">
+            <Note>
+              {!autoplay
+                ? t('자동 재생이 꺼져 있어요. 목록이 끝나면 멈춰요.')
+                : t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}
+            </Note>
+          </View>
+        ) : null}
+        {autoplayItems.length ? (
           autoplayItems.map((item, index) => {
             const row = itemRow(item);
             return (
               <Row
-                key={`a-${index}-${item.pieceId}`}
+                key={autoplayKeys[index]}
                 {...row}
+                dimmed={autoplayPaused}
                 label={`${row.title} ${row.subtitle} ${row.reason ?? ''}`.trim()}
                 onPress={() => comparePlayer.playFromQueue('autoplay', index)}
               />
             );
           })
+        ) : autoplayPaused ? null : autoplayStatus === 'empty' ? (
+          <View className="cm-row-in flex-row flex-wrap items-center gap-x-2 px-4 pb-2 pt-0.5">
+            <Text className="text-caption text-foreground-subtle">
+              {t('비슷한 곡을 찾지 못했어요.')}
+            </Text>
+            <Pressable
+              onPress={() => comparePlayer.retryAutoplay()}
+              accessibilityRole="button"
+              className="rounded-full px-1.5 py-0.5 web:hover:bg-surface-2">
+              <Text className="text-caption font-semibold text-primary">{t('다시 시도')}</Text>
+            </Pressable>
+          </View>
+        ) : current ? (
+          <View accessibilityLabel={t('비슷한 곡을 고르는 중이에요.')}>
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
+          </View>
         ) : (
-          <Note>
-            {current ? t('비슷한 곡을 고르는 중이에요.') : t('곡을 틀면 비슷한 곡이 이어져요.')}
-          </Note>
+          <Note>{t('곡을 틀면 비슷한 곡이 이어져요.')}</Note>
         )}
       </ScrollView>
     </View>

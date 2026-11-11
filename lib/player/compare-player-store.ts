@@ -129,6 +129,8 @@ export interface ComparePlayerState {
   autoplay: boolean;
   /** 자동 재생으로 이어질 곡(앞에서부터). 지금 곡이 바뀔 때마다 다시 고른다 */
   autoplayItems: readonly PlaylistItem[];
+  /** 자동 재생 곡을 고르는 중인지, 골랐는지, 못 찾았는지 */
+  autoplayStatus: 'idle' | 'loading' | 'ready' | 'empty';
   shuffle: boolean;
   repeat: RepeatMode;
   /** 데스크톱 대기열 패널이 열려 있다 */
@@ -425,6 +427,7 @@ let state: ComparePlayerState = {
   forward: [],
   autoplay: readStored(AUTOPLAY_KEY) !== 'off',
   autoplayItems: [],
+  autoplayStatus: 'idle',
   shuffle: readStored(SHUFFLE_KEY) === 'on',
   repeat: (() => {
     const stored = readStored(REPEAT_KEY);
@@ -780,7 +783,7 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
     // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
     queue: options.queue ?? (sameSong ? state.queue : []),
     ...patch,
-    ...(sameSong ? null : { autoplayItems: [] }),
+    ...(sameSong ? null : { autoplayItems: [], autoplayStatus: state.autoplay ? 'loading' : 'idle' }),
   });
   if (sameMedia && media) {
     media.seek(start);
@@ -891,16 +894,19 @@ async function computeAutoplay(): Promise<readonly PlaylistItem[]> {
 function refreshAutoplay() {
   const token = ++autoplayToken;
   if (!state.autoplay || !state.current) {
-    if (state.autoplayItems.length) setState({ autoplayItems: [] });
+    if (state.autoplayItems.length || state.autoplayStatus !== 'idle') setState({ autoplayItems: [], autoplayStatus: 'idle' });
     return;
   }
   const basis = state.current.performanceId;
+  // 이미 골라 둔 곡이 있으면 새로 고르는 동안에도 그대로 보인다(깜빡이지 않게)
+  if (!state.autoplayItems.length) setState({ autoplayStatus: 'loading' });
+  const settle = (items: readonly PlaylistItem[]) => {
+    if (token !== autoplayToken || state.current?.performanceId !== basis) return;
+    setState({ autoplayItems: items, autoplayStatus: items.length ? 'ready' : 'empty' });
+  };
   void computeAutoplay()
-    .then((items) => {
-      if (token !== autoplayToken || state.current?.performanceId !== basis) return;
-      setState({ autoplayItems: items });
-    })
-    .catch(() => undefined);
+    .then(settle)
+    .catch(() => settle([]));
 }
 
 export const comparePlayer = {
@@ -1112,6 +1118,12 @@ export const comparePlayer = {
   setAutoplay(on: boolean) {
     writeStored(AUTOPLAY_KEY, on ? 'on' : 'off');
     setState({ autoplay: on });
+    // 끌 때는 골라 둔 곡을 지우지 않는다(패널에서 흐리게 남겨 두고, 다시 켜면 바로 쓴다)
+    if (on && !state.autoplayItems.length) refreshAutoplay();
+  },
+
+  /** 자동 재생 곡을 다시 고른다(못 찾았을 때 「다시 시도」) */
+  retryAutoplay() {
     refreshAutoplay();
   },
 
@@ -1162,6 +1174,7 @@ export const comparePlayer = {
       history: [],
       forward: [],
       autoplayItems: [],
+      autoplayStatus: 'idle',
       restored: false,
       progress: { current: 0, duration: 0 },
     });

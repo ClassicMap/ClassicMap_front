@@ -18,65 +18,79 @@ import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
 /**
- * 바 너비에 따라 접는 단계. 가운데 재생 조작은 폭을 고정하고, 오른쪽(연주자·같은 지점·소리·대기열)은 내용만큼,
- * 왼쪽(지금 곡)이 남는 폭을 쓴다. 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 셔플·반복 → 소리 막대 → 영상 순서로 접는다
+ * 바 배치. 가운데 재생 조작이 늘 바 한가운데 오도록 왼쪽(지금 곡)과 오른쪽(연주자·같은 지점·소리·대기열)을 같은 폭으로 나눈다.
+ * 오른쪽 칸에 들어가는 만큼만 보이고, 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 소리 막대 → 셔플·반복 → 영상 순서로 접는다
  */
-type BarLevel = 'full' | 'wide' | 'medium' | 'narrow' | 'tiny';
-
-function barLevel(width: number): BarLevel {
-  if (width === 0 || width >= 1320) return 'full';
-  if (width >= 1180) return 'wide';
-  if (width >= 1000) return 'medium';
-  if (width >= 760) return 'narrow';
-  return 'tiny';
+interface BarLayout {
+  center: number;
+  video: { width: number; height: number } | null;
+  faces: number;
+  spotLabel: boolean;
+  modes: boolean;
+  volume: number;
+  /** 오른쪽 칸에 이만큼은 있어야 한다 (px) */
+  needs: number;
 }
 
-/** 단계마다: 가운데 폭, 영상 크기, 연주자 사진 수, 「같은 지점」 글자, 셔플·반복, 소리 막대 */
-const LAYOUT: Record<
-  BarLevel,
+const LAYOUTS: readonly BarLayout[] = [
   {
-    center: number;
-    video: { width: number; height: number } | null;
-    faces: number;
-    spotLabel: boolean;
-    modes: boolean;
-    volume: number;
-  }
-> = {
-  full: {
-    center: 360,
+    center: 400,
     video: { width: 96, height: 54 },
     faces: 5,
     spotLabel: true,
     modes: true,
     volume: 76,
+    needs: 560,
   },
-  wide: {
-    center: 360,
+  {
+    center: 400,
     video: { width: 96, height: 54 },
     faces: 3,
     spotLabel: true,
     modes: true,
     volume: 76,
+    needs: 470,
   },
-  medium: {
-    center: 320,
+  {
+    center: 380,
+    video: { width: 96, height: 54 },
+    faces: 3,
+    spotLabel: false,
+    modes: true,
+    volume: 76,
+    needs: 400,
+  },
+  {
+    center: 360,
     video: { width: 80, height: 45 },
     faces: 3,
     spotLabel: false,
     modes: true,
     volume: 0,
+    needs: 320,
   },
-  narrow: {
-    center: 280,
+  {
+    center: 300,
     video: { width: 64, height: 36 },
     faces: 0,
     spotLabel: false,
     modes: false,
     volume: 0,
+    needs: 220,
   },
-  tiny: { center: 240, video: null, faces: 0, spotLabel: false, modes: false, volume: 0 },
-};
+  { center: 240, video: null, faces: 0, spotLabel: false, modes: false, volume: 0, needs: 0 },
+];
+
+/** 바 안쪽 여백(좌우 16)과 칸 사이 간격(16 두 번) */
+const BAR_CHROME = 64;
+
+function layoutFor(width: number): BarLayout {
+  if (width === 0) return LAYOUTS[1];
+  return (
+    LAYOUTS.find((layout) => (width - BAR_CHROME - layout.center) / 2 >= layout.needs) ??
+    LAYOUTS[LAYOUTS.length - 1]
+  );
+}
 
 /**
  * 데스크톱 셸 하단 플레이바. 비교 화면 밖에서 듣고 있을 때만 뜬다 (비교 화면 안에서는 그 화면의 재생 바가 맡는다).
@@ -96,9 +110,9 @@ export function GlobalPlayerBar() {
   const nav = useSongNav();
   const progress = useComparePlayer((state) => state.progress);
   const [scrub, setScrub] = React.useState<number | null>(null);
-  // 바가 좁으면(창이 좁거나 대기열 패널을 열면) 차례로 접는다
+  // 바가 좁으면 차례로 접는다
   const [barWidth, setBarWidth] = React.useState(0);
-  const layout = LAYOUT[barLevel(barWidth)];
+  const layout = layoutFor(barWidth);
   const video = layout.video;
   const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
 
@@ -110,8 +124,8 @@ export function GlobalPlayerBar() {
   return (
     <View
       onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
-      className="cm-rise h-[76px] flex-row items-center gap-4 border-t border-border bg-surface-1 px-4">
-      <View className="min-w-0 flex-1 flex-row items-center gap-3">
+      className="cm-rise h-[76px] flex-row items-center gap-4 rounded-[9px] bg-surface-1 px-4">
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
         {video ? (
           <Pressable
             onPress={goToCompare}
@@ -215,7 +229,7 @@ export function GlobalPlayerBar() {
           </Text>
         </View>
       </View>
-      <View className="shrink-0 flex-row items-center justify-end gap-2.5">
+      <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
         <PerformerStepper compact={!layout.spotLabel} maxFaces={layout.faces} />
         <VolumeControl width={layout.volume} />
         <QueueButton />

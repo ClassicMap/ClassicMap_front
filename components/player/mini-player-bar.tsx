@@ -149,9 +149,9 @@ export function MiniPlayerBar() {
       <Modal
         visible={queueVisible}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setQueueVisible(false)}>
-        <View className="flex-1 justify-end bg-black/40">
+        <View className="cm-backdrop-in flex-1 justify-end bg-black/40">
           <Pressable
             className="flex-1"
             onPress={() => setQueueVisible(false)}
@@ -159,7 +159,7 @@ export function MiniPlayerBar() {
             accessibilityLabel={t('대기열 닫기')}
           />
           <View
-            className="overflow-hidden rounded-t-2xl bg-surface-1"
+            className="cm-sheet-up overflow-hidden rounded-t-2xl bg-surface-1"
             style={{ height: '82%', paddingBottom: insets.bottom }}>
             <QueuePanel onClose={() => setQueueVisible(false)} />
           </View>
