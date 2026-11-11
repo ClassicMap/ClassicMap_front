@@ -42,7 +42,7 @@ interface ScreenCueCardProps {
   /** 관리자에게만 스틸 고르기를 보인다 */
   canPickStill: boolean;
   /** 작품 페이지에서 들을 수 있는 곡들과 이 곡의 자리. 바로 듣기를 누르면 이 목록이 재생 목록이 된다 */
-  playlist?: { items: readonly PlaylistItem[]; index: number };
+  playlist?: { items: readonly PlaylistItem[]; index: number; name?: string };
 }
 
 /** 작품 페이지의 장면 카드. 들을 길은 같은 대목 비교 → 같은 곡 비교 → 스트리밍 링크 순 */
@@ -178,7 +178,7 @@ function ListenAction({
   onOpenCompare,
 }: {
   cue: ScreenCue;
-  playlist?: { items: readonly PlaylistItem[]; index: number };
+  playlist?: { items: readonly PlaylistItem[]; index: number; name?: string };
   onOpenCompare: (sectorId?: number) => void;
 }) {
   useLocale();
@@ -230,7 +230,7 @@ function QuickListen({
 }: {
   cue: ScreenCue;
   sectorId?: number;
-  playlist?: { items: readonly PlaylistItem[]; index: number };
+  playlist?: { items: readonly PlaylistItem[]; index: number; name?: string };
   onOpenCompare: (sectorId?: number) => void;
 }) {
   useLocale();

@@ -1,5 +1,6 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { titleMeta } from '@/components/screen/labels';
+import { ListPlayButtons } from '@/components/player/list-play-buttons';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
@@ -52,10 +53,23 @@ export default function FilmTitleScreen() {
     const entries: { cueId: number; item: PlaylistItem }[] = [];
     for (const cue of title?.cues ?? []) {
       if (cue.pieceId === null || (cue.listen.kind !== 'sector' && cue.listen.kind !== 'piece')) continue;
-      entries.push({ cueId: cue.id, item: { pieceId: cue.pieceId, sectorId: cue.listen.kind === 'sector' ? cue.listen.sectorId : null } });
+      entries.push({
+        cueId: cue.id,
+        item: {
+          pieceId: cue.pieceId,
+          sectorId: cue.listen.kind === 'sector' ? cue.listen.sectorId : null,
+          meta: {
+            title: cue.partLabel ? `${cue.workTitle} · ${cue.partLabel}` : cue.workTitle,
+            composer: cue.composerName,
+            image: null,
+          },
+        },
+      });
     }
     return { items: entries.map((entry) => entry.item), indexOf: new Map(entries.map((entry, index) => [entry.cueId, index])) };
   }, [title?.cues]);
+
+  const listName = t('『{title}』 속 클래식', { title: head?.titleKo ?? '' });
 
   if (isLoading && !head) {
     return (
@@ -150,6 +164,7 @@ export default function FilmTitleScreen() {
           <Text variant="headline" className="mb-3 mt-8">
             {t('나온 클래식 {count}곡', { count: title ? title.cues.length : head.cueCount })}
           </Text>
+          <ListPlayButtons items={listenable.items} name={listName} className="mb-4" />
           {title ? (
             <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
               {title.cues.map((cue) => (
@@ -160,7 +175,7 @@ export default function FilmTitleScreen() {
                     canPickStill={isAdmin}
                     playlist={
                       listenable.indexOf.has(cue.id)
-                        ? { items: listenable.items, index: listenable.indexOf.get(cue.id) ?? 0 }
+                        ? { items: listenable.items, index: listenable.indexOf.get(cue.id) ?? 0, name: listName }
                         : undefined
                     }
                   />

@@ -14,7 +14,7 @@ import * as React from 'react';
 export function useLeadPerformance(
   pieceId: number | null,
   sectorId?: number,
-  list?: { items: readonly PlaylistItem[]; index: number }
+  list?: { items: readonly PlaylistItem[]; index: number; name?: string }
 ) {
   const sectors = usePieceComparisonSectors(pieceId ?? undefined);
   const sector = React.useMemo(() => pickSector(sectors.data ?? [], sectorId) ?? null, [sectors.data, sectorId]);
@@ -34,7 +34,7 @@ export function useLeadPerformance(
     const queue: ComparePlayerTrack[] = playable.map((performance) => trackFromPerformance(performance, imageOf(performance)));
     const playlist =
       list && list.index >= 0
-        ? { kind: 'list' as const, items: list.items, index: list.index }
+        ? { kind: 'list' as const, items: list.items, index: list.index, name: list.name }
         : { kind: 'list' as const, items: [{ pieceId, sectorId: targetSectorId ?? null }], index: 0 };
     comparePlayer.select(trackFromPerformance(lead, imageOf(lead)), { play: true, queue, playlist });
   }, [lead, isCurrent, playable, list, pieceId, targetSectorId]);

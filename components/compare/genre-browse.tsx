@@ -1,4 +1,5 @@
 import { PieceCard } from '@/components/home/cards';
+import { ListPlayButtons } from '@/components/player/list-play-buttons';
 import { ScrollShelf } from '@/components/home/shelf';
 import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
@@ -210,6 +211,7 @@ export function CompareGenrePieces({
       <Text variant="bodySm" className="mt-2 text-foreground-muted">
         {count !== undefined ? t('비교할 수 있는 작품 {count}곡', { count }) : ' '}
       </Text>
+      <ListPlayButtons items={pieces} name={t(style.label)} className="mt-4" />
       {/* 다른 장르로 바로 넘어가는 칩 (스포티파이 홈 칩 꼴) */}
       <ScrollShelf gap={8} className="mt-5">
         {shelves.map((item) => (
@@ -252,7 +254,14 @@ export function CompareGenrePieces({
             <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
               {pieces.map((piece) => (
                 <View key={piece.pieceId} style={{ width: itemWidth }}>
-                  <PieceCard piece={piece} width={itemWidth} hideGenre list={pieces} onPress={() => onOpen(piece)} />
+                  <PieceCard
+                    piece={piece}
+                    width={itemWidth}
+                    hideGenre
+                    list={pieces}
+                    listName={t(style.label)}
+                    onPress={() => onOpen(piece)}
+                  />
                 </View>
               ))}
             </View>
