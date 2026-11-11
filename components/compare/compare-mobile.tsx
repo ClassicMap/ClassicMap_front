@@ -518,11 +518,11 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         </View>
       </View>
 
-      {/* 머리: 작품은 사각. 음반 연결이 없어 작곡가 초상을 쓴다 */}
+      {/* 머리: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다) */}
       <View className="mt-3 flex-row items-end gap-4">
         {title ? (
           <PieceArt
-            coverVideoId={pieceInfo?.coverVideoId}
+            coverVideoId={pieceInfo?.composerAvatarUrl ? null : pieceInfo?.coverVideoId}
             fallbackImage={pieceInfo?.composerAvatarUrl}
             fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
             size={88}

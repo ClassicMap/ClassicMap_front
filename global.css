@@ -354,6 +354,13 @@
   .cm-turn {
     transition: transform 200ms var(--ease-settle);
   }
+  /* 사이드바: 폭이 줄고 늘며, 펼칠 때 글자가 조금 늦게 나타난다 */
+  .cm-side {
+    transition: width 260ms var(--ease-settle);
+  }
+  .cm-reveal {
+    animation: cm-fade-in 220ms var(--ease-settle) 90ms backwards;
+  }
   .cm-tint {
     transition:
       background-color 200ms var(--ease-settle),
@@ -377,8 +384,12 @@
     .cm-row-out,
     .cm-fade,
     .cm-turn,
+    .cm-side,
     .cm-tint {
       transition: none;
+    }
+    .cm-reveal {
+      animation: none;
     }
     .cm-dock-inner,
     .cm-row-in,

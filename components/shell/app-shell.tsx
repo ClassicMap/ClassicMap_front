@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { CommandPalette } from './command-palette';
 import { CommandPaletteProvider } from './command-palette-context';
 import { SideNav } from './side-nav';
+import { useSidebarCollapsed } from './sidebar-state';
 import { TopBar } from './top-bar';
 
 /**
@@ -22,11 +23,12 @@ import { TopBar } from './top-bar';
  */
 export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; children: React.ReactNode }) {
   useLocale();
+  const sidebarCollapsed = useSidebarCollapsed();
   return (
     <CommandPaletteProvider>
       <View className="h-full flex-1 gap-2 bg-background p-2" style={{ height: '100vh' } as object}>
         <View className="min-h-0 flex-1 flex-row gap-2">
-          <SideNav collapsed={nav === 'rail'} />
+          <SideNav collapsed={nav === 'rail' || sidebarCollapsed} canToggle={nav === 'full'} />
           <View className="min-w-0 flex-1 overflow-hidden rounded-[9px] bg-surface-1">
             <RouteProgress placement="panel" />
             <TopBar />

@@ -348,9 +348,9 @@ export function ComparePieceView({
         {/* 머리: 작품은 사각. 크게 보기에서는 영상에 자리를 내주려 줄인다 */}
         <View className="flex-row items-end gap-6">
           {pieceTitle ? (
-            // 작품 그림: 대표 연주의 음반 표지 (스포티파이 앨범 머리)
+            // 작품 그림: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다)
             <PieceArt
-              coverVideoId={pieceInfo?.coverVideoId}
+              coverVideoId={composerAvatar ? null : pieceInfo?.coverVideoId}
               fallbackImage={composerAvatar}
               fallbackName={composerName ?? pieceTitle}
               size={theater ? 72 : 136}

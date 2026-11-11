@@ -11,12 +11,13 @@ import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
 import { type Href, Link, usePathname } from 'expo-router';
-import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
+import { DiscIcon, HomeIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
+import { setSidebarCollapsed } from './sidebar-state';
 import { Kbd, modKeyLabel } from './kbd';
 
 type NavIconProps = { size: number; className: string };
@@ -54,21 +55,45 @@ const NAV_ITEMS: NavItem[] = [
 /** 사이드바 레퍼토리는 종류마다 최근 몇 개만. 나머지는 레퍼토리 탭에서 */
 const LIBRARY_PER_SECTION = 4;
 
-export function SideNav({ collapsed }: { collapsed: boolean }) {
+/**
+ * 데스크톱 사이드바. 창이 좁으면 아이콘만 남기고(rail), 넓으면 사용자가 접고 펼 수 있다(접은 상태는 이 브라우저에 남는다).
+ * 폭은 부드럽게 줄고 늘며, 펼칠 때 글자가 뒤따라 나타난다
+ */
+export function SideNav({ collapsed, canToggle = false }: { collapsed: boolean; canToggle?: boolean }) {
   useLocale();
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
   const queryClient = useQueryClient();
+  const toggle = canToggle ? (
+    <Pressable
+      onPress={() => setSidebarCollapsed(!collapsed)}
+      accessibilityRole="button"
+      accessibilityLabel={collapsed ? t('사이드바 펼치기') : t('사이드바 접기')}
+      className="cm-tint size-8 items-center justify-center rounded-md web:hover:bg-surface-2">
+      <Icon
+        as={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon}
+        size={18}
+        className="text-foreground-muted"
+      />
+    </Pressable>
+  ) : null;
 
   return (
     <View
       className={cn(
-        'shrink-0 rounded-[9px] bg-surface-1 py-4',
+        'cm-side shrink-0 overflow-hidden rounded-[9px] bg-surface-1 py-4',
         collapsed ? 'w-[60px] items-center px-2' : 'w-[232px] px-2.5'
       )}>
-      <View className={cn('flex-row items-center gap-2.5 pb-5', collapsed ? 'justify-center' : 'px-2.5')}>
+      <View
+        className={cn(
+          'flex-row items-center gap-2.5 pb-5',
+          collapsed ? 'flex-col justify-center gap-3' : 'px-2.5'
+        )}>
         <BrandLogo size={28} />
-        {!collapsed && <Text className="text-[15px] font-bold tracking-tight">ClassicMap</Text>}
+        {!collapsed && (
+          <Text className="cm-reveal flex-1 text-[15px] font-bold tracking-tight">ClassicMap</Text>
+        )}
+        {toggle}
       </View>
 
       {NAV_ITEMS.map((item) => {
@@ -91,8 +116,9 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
               })}
               {!collapsed && (
                 <Text
+                  numberOfLines={1}
                   className={cn(
-                    'flex-1 text-[13.5px] font-semibold',
+                    'cm-reveal flex-1 text-[13.5px] font-semibold',
                     active ? 'text-foreground' : 'text-foreground-muted'
                   )}>
                   {t(item.label)}
@@ -115,7 +141,11 @@ export function SideNav({ collapsed }: { collapsed: boolean }) {
       })}
 
 
-      {!collapsed && <Library />}
+      {!collapsed && (
+        <View className="cm-reveal min-h-0 flex-1">
+          <Library />
+        </View>
+      )}
     </View>
   );
 }
