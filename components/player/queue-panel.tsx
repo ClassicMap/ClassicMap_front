@@ -364,6 +364,20 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
     { key: 'history', label: t('최근 재생') },
   ];
 
+  // 「이어서 재생」은 남은 목록 곡이 있을 때만 보이고, 비우기 단추는 보이는 첫 칸(다음에 재생 또는 이어서 재생)에 둔다
+  const showSource = remaining.length > 0 || repeatAll;
+  const clearAction = (
+    <Pressable
+      onPress={() => comparePlayer.clearQueue()}
+      accessibilityRole="button"
+      accessibilityLabel={t('대기열 비우기')}
+      className="rounded-full px-1 py-0.5">
+      <Text className="text-label font-semibold text-foreground-muted web:hover:text-foreground">
+        {t('비우기')}
+      </Text>
+    </Pressable>
+  );
+
   return (
     <View className="flex-1 bg-surface-1">
       <View className="flex-row items-center gap-5 px-4 pb-1 pt-4">
@@ -427,7 +441,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             </Section>
 
             {forward.length ? (
-              <Section title={t('다음에 재생')}>
+              <Section title={t('다음에 재생')} action={showSource ? undefined : clearAction}>
                 {forward.map((entry, index) => (
                   <Row
                     key={`f-${entry.track.performanceId}-${index}`}
@@ -440,23 +454,11 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
             ) : null}
 
             {/* 다음에 나올 목록 곡이 있을 때만 보인다(스포티파이 「다음: ~」). 끝난 목록은 남기지 않는다 */}
-            {remaining.length || repeatAll ? (
+            {showSource ? (
               <Section
                 title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
                 detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
-                action={
-                  remaining.length || forward.length ? (
-                    <Pressable
-                      onPress={() => comparePlayer.clearQueue()}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('대기열 비우기')}
-                      className="rounded-full px-1 py-0.5">
-                      <Text className="text-label font-semibold text-foreground-muted web:hover:text-foreground">
-                        {t('비우기')}
-                      </Text>
-                    </Pressable>
-                  ) : undefined
-                }>
+                action={remaining.length || forward.length ? clearAction : undefined}>
                 {remaining.length ? (
                   remaining.map((item, index) => (
                     <Row
