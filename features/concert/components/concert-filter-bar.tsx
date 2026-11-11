@@ -28,7 +28,6 @@ import {
 } from '@/lib/data/concert-filters';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { TriggerRef } from '@rn-primitives/popover';
 import {
   CalendarDaysIcon,
   ChevronDownIcon,
@@ -103,21 +102,25 @@ export interface FilterMenuProps {
 
 export function FilterMenu({ label, value, leading, width, children }: FilterMenuProps) {
   useLocale();
-  const triggerRef = React.useRef<TriggerRef>(null);
-  const close = React.useCallback(() => triggerRef.current?.close(), []);
+  const [open, setOpen] = React.useState(false);
+  const close = React.useCallback(() => setOpen(false), []);
   const active = value !== undefined;
   return (
-    <Popover>
-      <PopoverTrigger ref={triggerRef} asChild>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={active ? `${label}: ${value}` : label}
-          className={cn(
-            'h-9 shrink-0 flex-row items-center gap-1.5 rounded-full border pl-3 pr-2.5 web:transition-colors',
-            active
-              ? 'border-primary bg-primary-muted'
-              : 'border-border bg-surface-1 active:bg-surface-2 web:hover:bg-surface-2'
-          )}>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={active ? `${label}: ${value}` : label}
+            className={cn(
+              'h-9 shrink-0 flex-row items-center gap-1.5 rounded-full border pl-3 pr-2.5 web:transition-colors',
+              active
+                ? 'border-primary bg-primary-muted'
+                : 'border-border bg-surface-1 active:bg-surface-2 web:hover:bg-surface-2'
+            )}
+          />
+        }>
+        <>
           {leading}
           <Text
             numberOfLines={1}
@@ -125,7 +128,7 @@ export function FilterMenu({ label, value, leading, width, children }: FilterMen
             {value ?? label}
           </Text>
           <Icon as={ChevronDownIcon} size={14} className={active ? 'text-foreground' : 'text-foreground-subtle'} />
-        </Pressable>
+        </>
       </PopoverTrigger>
       <PopoverContent align="start" side="bottom" sideOffset={8} className="p-3" style={{ width }}>
         <Text variant="micro" className="mb-2 px-1 uppercase tracking-wider">
