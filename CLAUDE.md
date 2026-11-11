@@ -27,6 +27,9 @@
 - 컴포넌트는 `function` 선언으로 쓰고 `forwardRef` 를 쓰지 않습니다. `cva` 는 variant 가 있는 `components/ui` 프리미티브에만 쓰고 `<이름>Variants` 로 함께 내보냅니다.
 - 플랫폼별 구현은 `app/` 밖에 두고 짝 파일(`x.tsx` + `x.web.tsx`)을 함께 옮깁니다.
 - Tailwind 는 v3 입니다. v4 문법(`data-open:`, `origin-(--x)`, `outline-hidden`)을 쓰지 않습니다.
+- 겹침 순서는 이름으로 씁니다(`z-raised`, `z-overlay`, `LAYER.floating` …). 값은 `lib/design/layers.json` 한곳에 있고 숫자를 직접 쓰지 않습니다.
+- 셸은 영역(`components/layout/shell.tsx`), 크기(`lib/layout/shell-layout.ts`), 상태(`lib/layout/shell-state.ts`)를 한곳씩에서 정합니다. 사이드바 접힘·대기열 열림을 다른 곳에 두지 않습니다.
+- 영상 요소(`ComparePlayerHost`)는 루트(`root-chrome`)에 같은 key 로 둡니다. 셸 안으로 옮기면 창 폭이 바뀔 때 재생이 끊깁니다.
 
 ## UI 문구
 
