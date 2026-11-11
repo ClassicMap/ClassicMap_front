@@ -4,6 +4,7 @@ import { QueuePanel } from '@/features/player/components/queue-panel';
 import { useSongNav } from '@/features/player/components/song-nav';
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Text } from '@/components/ui/text';
 import { LAYER } from '@/lib/design/layers';
 import { relocalize, t, useLocale } from '@/lib/i18n';
@@ -13,7 +14,7 @@ import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-sto
 import { useRouter, useSegments } from 'expo-router';
 import { ListMusicIcon, PauseIcon, PlayIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Animated, Modal, PanResponder, Platform, Pressable, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** 미니 플레이어를 이만큼(px) 밀면 이전·다음 곡으로 넘어간다 */
@@ -151,25 +152,15 @@ export function MiniPlayerBar() {
           <View className="h-full bg-primary" style={{ width: `${ratio * 100}%` }} />
         </View>
       </View>
-      <Modal
-        visible={queueVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQueueVisible(false)}>
-        <View className="cm-backdrop-in flex-1 justify-end bg-black/40">
-          <Pressable
-            className="flex-1"
-            onPress={() => setQueueVisible(false)}
-            accessibilityRole="button"
-            accessibilityLabel={t('대기열 닫기')}
-          />
-          <View
-            className="cm-sheet-up overflow-hidden rounded-t-2xl bg-surface-1"
-            style={{ height: '82%', paddingBottom: insets.bottom }}>
-            <QueuePanel onClose={() => setQueueVisible(false)} />
-          </View>
-        </View>
-      </Modal>
+      <Sheet open={queueVisible} onOpenChange={setQueueVisible}>
+        <SheetContent
+          side="bottom"
+          aria-label={t('재생 대기열')}
+          closeLabel={t('대기열 닫기')}
+          style={{ height: '82%', paddingBottom: insets.bottom }}>
+          <QueuePanel onClose={() => setQueueVisible(false)} />
+        </SheetContent>
+      </Sheet>
     </View>
   );
 }
