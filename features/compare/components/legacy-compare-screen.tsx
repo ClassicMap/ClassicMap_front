@@ -41,7 +41,7 @@ interface ComposerWithPieces extends Composer {
   majorPieces?: Piece[];
 }
 
-export default function CompareScreen() {
+export function LegacyCompareScreen() {
   const { locale } = useLocale();
   const params = useLocalSearchParams();
   const router = useRouter();
