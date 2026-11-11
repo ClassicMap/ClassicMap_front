@@ -856,6 +856,14 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
     // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
     queue: options.queue ?? (sameSong ? state.queue : []),
     ...patch,
+    // 직접 고른 곡이 자동 재생 목록에도 있으면 거기서 뺀다(같은 곡이 두 번 나오지 않게)
+    ...(sameSong
+      ? null
+      : {
+          autoplayItems: (patch.autoplayItems ?? state.autoplayItems).filter(
+            (item) => item.pieceId !== track.pieceId
+          ),
+        }),
   });
   // 자동 재생 목록을 새로 만들게 됐으면 고르던 결과는 버린다
   if (patch.autoplayItems && patch.autoplayItems.length === 0) autoplayToken += 1;
@@ -958,10 +966,13 @@ async function advance(): Promise<boolean> {
     return playFromSource(playlist, 0, { history: nextHistory, forward: [] });
   }
   if (!state.autoplay) return false;
-  // 자동 재생 목록의 맨 앞부터 차례로 튼다. 아직 없으면 지금 만든다
-  const picks = state.autoplayItems.length
-    ? state.autoplayItems
-    : await buildAutoplay(AUTOPLAY_LENGTH, []);
+  // 자동 재생 목록의 맨 앞부터 차례로 튼다. 아직 없으면 지금 만든다(그사이 따로 고르던 것은 버린다)
+  let picks = state.autoplayItems;
+  if (!picks.length) {
+    autoplayToken += 1;
+    picks = await buildAutoplay(AUTOPLAY_LENGTH, []);
+    if (!picks.length) setState({ autoplayStatus: 'empty' });
+  }
   return playItems(
     picks.map((item, index) => ({
       item,
@@ -1043,9 +1054,9 @@ function ensureAutoplay() {
   }
   const settle = (items: readonly PlaylistItem[]) => {
     if (token !== autoplayToken) return;
-    // 고르는 사이 목록이 줄었을 수 있어 지금 목록 뒤에 붙이고, 겹치는 곡은 뺀다
-    const have = new Set(state.autoplayItems.map((item) => item.pieceId));
-    const merged = [...state.autoplayItems, ...items.filter((item) => !have.has(item.pieceId))];
+    // 고르는 사이 곡이 넘어갔을 수 있어 지금 목록 뒤에 붙이고, 지금 곡·들은 곡·대기열·목록에 이미 있는 곡은 뺀다
+    const known = knownPieces(state.autoplayItems);
+    const merged = [...state.autoplayItems, ...items.filter((item) => !known.has(item.pieceId))];
     setState({ autoplayItems: merged, autoplayStatus: merged.length ? 'ready' : 'empty' });
     dirty = true;
     scheduleSave();
