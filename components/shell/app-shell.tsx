@@ -43,7 +43,9 @@ export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; chi
 function QueueDock() {
   const open = useComparePlayer((state) => state.queueOpen);
   const hasCurrent = useComparePlayer((state) => state.current !== null);
-  if (!open || !hasCurrent) return null;
+  // 1:1 비교 중에는 그 화면이 재생을 맡으므로 대기열을 숨긴다(줄을 누르면 두 소리가 겹친다)
+  const focus = useComparePlayer((state) => state.focus !== null);
+  if (!open || !hasCurrent || focus) return null;
   return (
     <View className="w-[320px] shrink-0 overflow-hidden rounded-[9px] bg-surface-1">
       <QueuePanel onClose={() => comparePlayer.setQueueOpen(false)} />

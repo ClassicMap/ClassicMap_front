@@ -740,7 +740,13 @@ function userQueuePatch(track: ComparePlayerTrack, options: SelectOptions): Queu
   if (options.playlist !== undefined) {
     // 셔플 중이면 새 목록은 지금 곡 다음부터 섞는다(이미 섞인 목록에서 자리만 옮기면 그대로)
     const next =
-      options.playlist && state.shuffle && !options.playlist.original ? shuffleAround(options.playlist) : options.playlist;
+      options.playlist &&
+      state.shuffle &&
+      !options.playlist.original &&
+      // 같은 목록에서 자리만 옮기는 거면(비교 화면 카드) 다시 섞지 않는다
+      options.playlist.items !== state.playlist?.items
+        ? shuffleAround(options.playlist)
+        : options.playlist;
     return { playlist: next, origin: next ? 'source' : 'insert', history: nextHistory, forward: [] };
   }
   if (options.insert) return { playlist, origin: 'insert', history: nextHistory, forward };
