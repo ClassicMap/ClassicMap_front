@@ -1,20 +1,26 @@
 import { MiniVideoTarget } from '@/components/player/mini-video-target';
 import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/player-bar-helpers';
+import { useSongNav } from '@/components/player/song-nav';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { useRouter, useSegments } from 'expo-router';
-import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
+import { PauseIcon, PlayIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Animated, PanResponder, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+/** 미니 플레이어를 이만큼(px) 밀면 이전·다음 곡으로 넘어간다 */
+const SWIPE_DISTANCE = 56;
 
 /**
  * 모바일(좁은 웹·네이티브) 미니 플레이어. 비교 화면 밖에서 듣고 있을 때 탭바 바로 위에 뜬다.
  * 누르면 그 비교 화면으로 돌아가 같은 연주가 같은 자리에서 이어진다.
  * 왼쪽 작은 자리에 재생 중인 영상이 그대로 옮겨 와 뜬다 (웹은 셸 영상, 네이티브는 루트의 YouTube).
+ * ⏭는 재생 목록의 다음 곡, 왼쪽으로 밀면 다음 곡·오른쪽으로 밀면 이전 곡이다.
  */
 export function MiniPlayerBar() {
   const { locale } = useLocale();
@@ -30,6 +36,24 @@ export function MiniPlayerBar() {
   const focus = useComparePlayer((state) => state.focus);
   const progress = useComparePlayer((state) => state.progress);
   const hasMedia = useComparePlayer((state) => state.mediaAttached);
+  const nav = useSongNav();
+  // 밀기: 글자 줄만 손가락을 따라 움직인다(네이티브 영상은 루트에서 자리 좌표로 그려서 같이 움직이지 않는다)
+  const dragX = React.useRef(new Animated.Value(0)).current;
+  const swipe = React.useMemo(() => {
+    const settle = () => Animated.spring(dragX, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start();
+    return PanResponder.create({
+      // 옆으로 뚜렷하게 움직일 때만 가져간다. 그냥 누르면 아래 누르기(비교 화면으로)가 받는다
+      onMoveShouldSetPanResponderCapture: (_event, gesture) =>
+        Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+      onPanResponderMove: (_event, gesture) => dragX.setValue(gesture.dx),
+      onPanResponderRelease: (_event, gesture) => {
+        if (gesture.dx <= -SWIPE_DISTANCE) comparePlayer.next();
+        else if (gesture.dx >= SWIPE_DISTANCE) comparePlayer.previousSong();
+        settle();
+      },
+      onPanResponderTerminate: settle,
+    });
+  }, [dragX]);
 
   // 영상이 비교 화면 자리에 떠 있지 않으면 띄운다 (다른 화면이거나, 비교 화면이 다른 작품을 보고 있을 때)
   const wanted = Boolean(current) && !focus && surface !== 'slot';
@@ -48,23 +72,25 @@ export function MiniPlayerBar() {
       <View className="overflow-hidden rounded-xl border border-border bg-surface-2 shadow-lg shadow-black/30">
         <View className="h-[60px] flex-row items-center gap-3 pl-2 pr-1.5">
           <Pressable
+            {...swipe.panHandlers}
             onPress={goToCompare}
             accessibilityRole="link"
             accessibilityLabel={t('{name} 비교 화면으로', { name: current.artistName })}
+            accessibilityHint={t('옆으로 밀면 이전·다음 곡으로 넘어가요')}
             className="min-w-0 flex-1 flex-row items-center gap-3">
             {current.videoId || Platform.OS === 'web' ? (
               <MiniVideoTarget width={80} height={45} />
             ) : (
               <EntityThumb name={current.artistName} image={current.artistImageUrl} shape="circle" size={40} />
             )}
-            <View className="min-w-0 flex-1">
+            <Animated.View className="min-w-0 flex-1" style={{ transform: [{ translateX: dragX }] }}>
               <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
                 {current.artistName}
               </Text>
               <Text variant="caption" numberOfLines={1}>
                 {restored ? t('이어 듣기 · {sector}', { sector: current.sectorName }) : `${current.sectorName} · ${current.pieceTitle}`}
               </Text>
-            </View>
+            </Animated.View>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -73,6 +99,13 @@ export function MiniPlayerBar() {
             accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             className="size-11 items-center justify-center rounded-full">
             <Icon as={playing ? PauseIcon : PlayIcon} size={20} className="fill-foreground text-foreground" />
+          </Pressable>
+          <Pressable
+            onPress={() => comparePlayer.next()}
+            disabled={!nav.hasNext}
+            accessibilityLabel={nav.nextLabel}
+            className={cn('size-10 items-center justify-center rounded-full', !nav.hasNext && 'opacity-30')}>
+            <Icon as={SkipForwardIcon} size={18} className="fill-foreground text-foreground" />
           </Pressable>
           <Pressable
             onPress={() => comparePlayer.close()}

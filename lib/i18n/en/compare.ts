@@ -172,6 +172,7 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '다음 연주자': 'Next performer',
   '연주자 {n}/{total}': 'Performer {n}/{total}',
   '연주자 {total}명': '{total} performers',
+  '옆으로 밀면 이전·다음 곡으로 넘어가요': 'Swipe sideways for the previous or next piece',
   '이전 구간': 'Previous section',
   '다음 구간': 'Next section',
   '플레이어 닫기': 'Close player',
