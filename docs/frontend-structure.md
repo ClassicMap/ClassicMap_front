@@ -117,6 +117,7 @@ hooks/                    공용 훅 (use-breakpoint, use-auth, use-debounce …
 lib/                      공용 코드
   api/ query/ data/       서버 통신, 쿼리 훅(lib/query/hooks), 화면 모델 변환
   player/                 재생 엔진(스토어·재생 목록·자동 재생)
+  layout/                 셸의 크기와 상태(shell-layout, shell-state)
   design/ i18n/ navigation/ utils/
   utils.ts theme.ts
 types/                    공용 타입(models.ts)과 전역 선언(*.d.ts)
@@ -195,19 +196,22 @@ components/ui/popover/
 ## 6. 셸
 
 ```
-ShellProvider          상태 한곳: 내비 모양(tabs·rail·full), 사이드바 접힘, 대기열 열림
-└ Shell                영역 한곳: 행 [본문 줄 | 재생바], 본문 줄의 열 [사이드바 | 본문 | 대기열]
-   ├ Sidebar           접힘·펼침, 현재 위치, 키보드 이동
-   ├ ShellMain         상단바 + 본문(여기만 스크롤)
-   ├ QueueDock         오른쪽 대기열 자리
-   └ PlayerDock        하단 재생바 자리
+AppShell (components/layout/app-shell.tsx)      영역에 무엇을 넣을지 정합니다
+└ Shell                 화면 높이에 고정. 세로로 [ShellBody | ShellFooter]
+   ├ ShellBody          가로로 [사이드바 | ShellMain | ShellAside]
+   │  ├ AppSidebar      Sidebar 파트(sidebar.tsx)로 조립한 메뉴·레퍼토리
+   │  ├ ShellMain       상단바 + 본문(여기만 스크롤)
+   │  └ ShellAside      오른쪽 대기열 자리. 열면 본문을 밀어냅니다
+   └ ShellFooter        하단 재생바 자리. 화면 폭 전체
 ```
 
-- 크기는 상수 한곳(`lib/layout/shell-layout.ts`)에 둡니다: 사이드바 232 / 접힘 60, 대기열 320, 재생바 76, 간격 8.
-- 레이아웃 상태는 재생 상태와 나눕니다. 사이드바 접힘은 브라우저에 남깁니다(`classicmap.sidebar-collapsed`).
-- 대기열 열림은 셸이 가집니다. 재생바의 대기열 단추와 모바일 시트가 같은 상태를 봅니다.
+- 영역은 `components/layout/shell.tsx`, 크기는 `lib/layout/shell-layout.ts`(사이드바 232 / 접힘 60, 대기열 320, 재생바 76, 간격 8), 상태는 `lib/layout/shell-state.ts` 한곳씩에서 정합니다.
+- 레이아웃 상태는 재생 상태(`lib/player`)와 나눕니다. `shell-state` 가 사이드바 접힘(`classicmap.sidebar-collapsed`), 넓은 창의 대기열 열림(`classicmap.player.queue-open`), 좁은 화면의 대기열 시트 열림(남기지 않음)을 가집니다. 재생바의 대기열 단추와 미니 플레이어가 이 값을 봅니다.
+- 재생바가 보일 조건은 `features/player/components/player-bar-helpers.ts` 의 `usePlayerBarVisible` 한곳입니다. 셸은 보일 때만 재생바 자리를 둡니다.
+- 사이드바는 shadcn Sidebar 의 파트(`Sidebar`, `SidebarLink`, `SidebarAction`, `SidebarRail`, `SidebarTooltip`, `SidebarTrigger`)를 따릅니다. ⌘/Ctrl+B 로 접고 펴고, ↑↓·Home·End 로 메뉴 사이를 옮기며, 지금 위치는 `aria-current="page"` 입니다.
 - 좁은 화면(1024px 미만)은 하단 탭 + 미니 플레이어를 유지합니다. 조사한 사례 다수는 서랍이지만, 이 작업은 화면 모양을 바꾸지 않는 리팩터링이라 그대로 둡니다(서랍 전환은 따로 정할 일입니다).
-- 영상 요소(`ComparePlayerHost`)는 셸 밖 루트에 같은 key 로 남깁니다. 창 폭이 바뀌거나 단독 화면을 오가도 재생이 끊기지 않게 하는 장치라 위치를 바꾸지 않습니다.
+- 영상 요소(`ComparePlayerHost`)는 셸 밖 루트(`root-chrome`)에 같은 key 로 남깁니다. 창 폭이 바뀌거나 단독 화면을 오가도 재생이 끊기지 않게 하는 장치라 위치를 바꾸지 않습니다.
+- 화면 단축키가 글 쓰는 중인지 가릴 때는 `lib/utils/is-typing-target.ts` 를 씁니다. 태그 이름으로 직접 가리면 슬라이더(`<input type="range">`)에 포커스가 있을 때 단축키가 죽습니다.
 
 ## 7. 2026-11-12 현황 진단
 
