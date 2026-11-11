@@ -2,6 +2,7 @@ import { sectorNames } from '@/lib/data/legacy-names';
 import { type NameSidecar } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
+import { resolvePlaylistItem } from '@/lib/player/playlist';
 import type { ClipAlignment } from '@/lib/types/models';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
@@ -46,10 +47,22 @@ export interface ComparePlayerTrack {
  */
 export type SwitchMode = 'resume' | 'align';
 
-/** 듣다가 떠난 곡. 재생 바의 이전·다음 곡으로 돌아갈 때 그 구간의 연주 목록까지 되살린다 */
-export interface PlayerHistoryEntry {
-  track: ComparePlayerTrack;
-  queue: readonly ComparePlayerTrack[];
+/** 재생 목록의 한 곡(작품의 한 구간). 어느 연주로 틀지는 그 곡 차례가 올 때 정한다 */
+export interface PlaylistItem {
+  pieceId: number;
+  /** 정해진 구간. 없으면 그 작품에서 처음 여는 구간 */
+  sectorId: number | null;
+}
+
+/**
+ * 재생을 누른 화면의 곡 목록. 재생 바의 이전·다음 곡이 이 순서를 따른다.
+ * - list: 영화·홈·작곡가·둘러보기 목록. 곡이 끝나면 다음 곡으로 넘어간다
+ * - compare: 비교 화면의 구간들. 한 구간을 여러 연주로 듣는 곳이라 끝나면 멈춘다
+ */
+export interface Playlist {
+  kind: 'list' | 'compare';
+  items: readonly PlaylistItem[];
+  index: number;
 }
 
 /** 웹 셸의 영상이 지금 어디에 떠 있는지. 'slot'이면 비교 화면 안, 'mini'면 미니 플레이어 */
@@ -71,12 +84,15 @@ export interface ComparePlayerState {
   crossfade: boolean;
   /** 비교 화면 크게 보기 */
   theater: boolean;
-  /** 같은 구간의 재생 가능한 연주들. 재생 바의 다음 연주자에 쓴다 */
+  /** 지금 곡(구간)의 재생 가능한 연주들. 재생 바의 이전·다음 연주자가 이 순서를 돈다 */
   queue: readonly ComparePlayerTrack[];
-  /** 듣다가 떠난 곡들. 방금 떠난 곡이 맨 끝이고, 재생 바의 이전 곡이 여기로 돌아간다 */
-  back: readonly PlayerHistoryEntry[];
-  /** 이전 곡으로 돌아오면서 지나온 곡들. 재생 바의 다음 곡이 여기로 다시 간다 */
-  forward: readonly PlayerHistoryEntry[];
+  /** 재생을 누른 화면의 곡 목록. 없으면 이전·다음 곡이 없다 */
+  playlist: Playlist | null;
+  /**
+   * 재생 바의 이전·다음 곡(또는 끝나서 넘어감)으로 곡이 바뀔 때마다 늘어난다.
+   * 그 작품의 비교 화면이 열려 있으면 화면도 그 구간으로 따라간다
+   */
+  navigation: { seq: number; pieceId: number; sectorId: number };
   /** 새로고침 뒤 되살린 트랙이라 아직 한 번도 재생하지 않았다 */
   restored: boolean;
   surface: PlayerSurface;
@@ -145,8 +161,8 @@ const MAX_POSITIONS = 200;
 const SAVE_THROTTLE_MS = 2000;
 /** 재생 바의 이전 버튼: 이보다 더 들었으면 지금 곡을 처음으로 돌리고, 아니면 이전 곡으로 간다 */
 const RESTART_SEC = 3;
-/** 떠난 곡은 최근 것만 이만큼 기억한다 */
-const MAX_HISTORY = 50;
+/** 틀 연주가 없는 곡을 건너뛰며 찾을 때 이만큼까지만 본다 */
+const MAX_SKIP = 5;
 
 function readStored(key: string): string | null {
   if (Platform.OS !== 'web') return null;
@@ -178,6 +194,21 @@ interface StoredSession {
   current: ComparePlayerTrack | null;
   /** [performanceId, 초] 오래된 것부터 */
   positions: [number, number][];
+  playlist: Playlist | null;
+}
+
+function isPlaylist(value: unknown): value is Playlist {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  if (record.kind !== 'list' && record.kind !== 'compare') return false;
+  if (!Array.isArray(record.items) || typeof record.index !== 'number') return false;
+  const items = record.items as unknown[];
+  if (record.index < 0 || record.index >= items.length) return false;
+  return items.every((item) => {
+    if (!item || typeof item !== 'object') return false;
+    const entry = item as Record<string, unknown>;
+    return typeof entry.pieceId === 'number' && (entry.sectorId === null || typeof entry.sectorId === 'number');
+  });
 }
 
 function isTrack(value: unknown): value is ComparePlayerTrack {
@@ -202,7 +233,7 @@ function parseSession(raw: string | null): StoredSession | null {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
-    const record = parsed as { current?: unknown; positions?: unknown };
+    const record = parsed as { current?: unknown; positions?: unknown; playlist?: unknown };
     const positions = Array.isArray(record.positions)
       ? record.positions.filter(
           (entry): entry is [number, number] =>
@@ -213,7 +244,8 @@ function parseSession(raw: string | null): StoredSession | null {
             Number.isFinite(entry[1])
         )
       : [];
-    return { current: isTrack(record.current) ? record.current : null, positions };
+    const current = isTrack(record.current) ? record.current : null;
+    return { current, positions, playlist: current && isPlaylist(record.playlist) ? record.playlist : null };
   } catch {
     return null;
   }
@@ -233,7 +265,7 @@ function serializeSession(): string {
   const positions: [number, number][] = keep
     .filter((id) => state.positions[id] !== undefined)
     .map((id) => [id, Math.round(state.positions[id] * 10) / 10]);
-  return JSON.stringify({ current: state.current, positions } satisfies StoredSession);
+  return JSON.stringify({ current: state.current, positions, playlist: state.playlist } satisfies StoredSession);
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -267,6 +299,7 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
   return {
     positions,
     current,
+    playlist: session.playlist,
     restored: current !== null,
     progress: { current: resumeAt, duration: current?.durationSec ?? 0 },
   };
@@ -286,8 +319,8 @@ let state: ComparePlayerState = {
   crossfade: readStored(CROSSFADE_KEY) === 'on',
   theater: false,
   queue: [],
-  back: [],
-  forward: [],
+  playlist: null,
+  navigation: { seq: 0, pieceId: 0, sectorId: 0 },
   restored: false,
   surface: 'none',
   fullscreen: false,
@@ -484,47 +517,29 @@ function notifySurface() {
   surfaceListeners.forEach((listener) => listener());
 }
 
-/** 지금 곡을 떠날 때 기록에 남길 것. 차례 목록이 이 곡 것이 아니면 버린다 */
-function leavingEntry(): PlayerHistoryEntry | null {
-  const { current, queue } = state;
-  if (!current) return null;
-  const own = queue.some((item) => item.performanceId === current.performanceId);
-  return { track: current, queue: own ? queue : [] };
-}
-
-/** 기록에서 지금 곡이 아닌 가장 최근 곡을 꺼낸다. 남은 기록과 함께 돌려준다 */
-function takeOther(
-  stack: readonly PlayerHistoryEntry[],
-  sectorId: number
-): { entry: PlayerHistoryEntry; rest: PlayerHistoryEntry[] } | null {
-  for (let index = stack.length - 1; index >= 0; index -= 1) {
-    if (stack[index].track.sectorId !== sectorId) return { entry: stack[index], rest: stack.slice(0, index) };
-  }
-  return null;
-}
-
 interface SelectOptions {
   play: boolean;
   queue?: readonly ComparePlayerTrack[];
   mode?: SwitchMode;
   startAt?: number;
+  /** 재생을 누른 화면의 곡 목록. 주지 않으면 같은 곡일 때만 지금 목록을 잇는다 */
+  playlist?: Playlist | null;
 }
 
 /**
- * 연주를 고른다. `history`는 재생 바의 이전·다음 곡이 기록을 따라 옮길 때만 준다.
- * 그 밖에는 곡이 바뀌면 떠나는 곡을 기록에 쌓고, 지나온 곡(다음 곡)은 비운다
+ * 재생 바의 이전·다음 곡이 고르는 중인 곡. 사용자가 그사이 다른 연주를 고르거나 닫으면 늘어나서,
+ * 늦게 도착한 결과가 사용자의 선택을 덮지 않게 한다
  */
-function selectTrack(
-  track: ComparePlayerTrack,
-  options: SelectOptions,
-  history?: Pick<ComparePlayerState, 'back' | 'forward'>
-) {
+let navToken = 0;
+/** 끝나서 다음 곡으로 넘기는 중인 연주 */
+let advancedFrom: number | null = null;
+
+function selectTrack(track: ComparePlayerTrack, options: SelectOptions) {
   const { current, progress } = state;
   if (current && current.performanceId !== track.performanceId && progress.duration > 0) {
     savePosition(current.performanceId, progress.current, progress.duration);
   }
   const sameSong = current?.sectorId === track.sectorId;
-  const leaving = sameSong ? null : leavingEntry();
   // 새 곡이면 이 곡의 다른 연주자에 남은 옛 위치도 버린다. 연주자를 바꿔 이어 듣는 건 이번에 듣는 동안만이다
   if (!sameSong && options.queue) forgetPositions(options.queue.map((item) => item.performanceId));
   beginListening(track);
@@ -545,13 +560,47 @@ function selectTrack(
     restored: false,
     // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
     queue: options.queue ?? (sameSong ? state.queue : []),
-    ...(history ?? (leaving ? { back: [...state.back, leaving].slice(-MAX_HISTORY), forward: [] } : null)),
+    playlist: options.playlist !== undefined ? options.playlist : sameSong ? state.playlist : null,
   });
   if (sameMedia && media) {
     media.seek(start);
     if (options.play) media.play();
   }
   flushSession();
+}
+
+/** 재생 목록에서 이 곡 다음(또는 앞)으로 갈 곡이 있다 */
+function hasNeighbor(playlist: Playlist | null, direction: 1 | -1): boolean {
+  if (!playlist) return false;
+  const index = playlist.index + direction;
+  return index >= 0 && index < playlist.items.length;
+}
+
+/**
+ * 재생 목록의 이웃 곡으로 간다. 같은 연주자가 그 곡에도 있으면 그 연주로, 없으면 그 곡의 대표 연주로 처음부터 튼다.
+ * 틀 연주가 없는 곡은 같은 방향으로 건너뛴다. 갈 곳이 없으면 false
+ */
+async function stepPlaylist(direction: 1 | -1): Promise<boolean> {
+  const { playlist, current } = state;
+  if (!playlist || !current) return false;
+  const token = ++navToken;
+  for (let index = playlist.index + direction, tries = 0; index >= 0 && index < playlist.items.length && tries < MAX_SKIP; index += direction, tries += 1) {
+    let resolved: Awaited<ReturnType<typeof resolvePlaylistItem>> = null;
+    try {
+      resolved = await resolvePlaylistItem(playlist.items[index], current.artistId);
+    } catch {
+      resolved = null;
+    }
+    // 그사이 다른 연주를 골랐거나 닫았다
+    if (token !== navToken) return false;
+    if (!resolved) continue;
+    selectTrack(resolved.track, { play: true, queue: resolved.queue, startAt: 0, playlist: { ...playlist, index } });
+    setState({
+      navigation: { seq: state.navigation.seq + 1, pieceId: resolved.track.pieceId, sectorId: resolved.track.sectorId },
+    });
+    return true;
+  }
+  return false;
 }
 
 export const comparePlayer = {
@@ -565,6 +614,7 @@ export const comparePlayer = {
    * `startAt`(초)을 주면 어느 쪽이든 그 지점부터 튼다 (들을 곳)
    */
   select(track: ComparePlayerTrack, options: SelectOptions) {
+    navToken += 1;
     selectTrack(track, options);
   },
 
@@ -577,42 +627,42 @@ export const comparePlayer = {
   },
 
   /**
-   * 재생 바의 이전 버튼. 조금이라도 들었으면 지금 곡을 처음으로 돌리고,
-   * 막 시작한 참에 누르면 방금 전에 듣던 곡으로 돌아가 처음부터 튼다. 돌아갈 곡이 없으면 처음으로만 돌린다
+   * 재생 바의 이전 버튼. 3초 넘게 들었으면 지금 곡을 처음으로 돌리고, 그 안이면 재생 목록의 이전 곡으로 간다.
+   * 목록 맨 앞이거나 목록이 없으면 처음으로만 돌린다
    */
   previous() {
-    const { current, progress, back, forward } = state;
+    const { current, progress, playlist } = state;
     if (!current) return;
-    const earlier = progress.current > RESTART_SEC ? null : takeOther(back, current.sectorId);
-    if (!earlier) {
+    if (progress.current > RESTART_SEC || !hasNeighbor(playlist, -1)) {
       comparePlayer.seek(0);
       return;
     }
-    const leaving = leavingEntry();
-    selectTrack(
-      earlier.entry.track,
-      { play: true, queue: earlier.entry.queue, startAt: 0 },
-      { back: earlier.rest, forward: leaving ? [...forward, leaving] : [...forward] }
-    );
+    void stepPlaylist(-1);
   },
 
-  /** 재생 바의 다음 버튼. 이전 곡으로 돌아와 있으면 지나온 곡으로 다시 가고, 아니면 같은 구간의 다음 연주자로 넘긴다 */
-  next() {
-    const { current, queue, back, forward } = state;
-    if (!current) return;
-    const later = takeOther(forward, current.sectorId);
-    if (later) {
-      const leaving = leavingEntry();
-      selectTrack(
-        later.entry.track,
-        { play: true, queue: later.entry.queue, startAt: 0 },
-        { back: leaving ? [...back, leaving].slice(-MAX_HISTORY) : [...back], forward: later.rest }
-      );
+  /** 재생 목록의 이전 곡으로 바로 간다(미니 플레이어를 오른쪽으로 밀 때). 맨 앞이면 처음으로 */
+  previousSong() {
+    if (!state.current) return;
+    if (!hasNeighbor(state.playlist, -1)) {
+      comparePlayer.seek(0);
       return;
     }
-    if (queue.length < 2) return;
+    void stepPlaylist(-1);
+  },
+
+  /** 재생 바의 다음 버튼. 재생 목록의 다음 곡으로 간다 */
+  next() {
+    if (!state.current || !hasNeighbor(state.playlist, 1)) return;
+    void stepPlaylist(1);
+  },
+
+  /** 같은 곡의 이전·다음 연주자. 듣던 자리는 연주자 전환 방식(이어서·같은 지점)을 따른다 */
+  stepPerformer(direction: 1 | -1) {
+    const { queue, current } = state;
+    if (queue.length < 2 || !current) return;
     const index = queue.findIndex((track) => track.performanceId === current.performanceId);
-    selectTrack(queue[(index + 1) % queue.length], { play: true });
+    navToken += 1;
+    selectTrack(queue[(index + direction + queue.length) % queue.length], { play: true });
   },
 
   /** 같은 연주를 다시 누르면 재생·일시정지 */
@@ -635,20 +685,20 @@ export const comparePlayer = {
     media?.pause();
   },
 
-  /** 미니 플레이어의 ✕: 멈추고 비운다. 연주별 위치는 남기고, 닫은 곡은 이전 곡 기록에 남긴다 */
+  /** 재생 바의 ✕: 멈추고 재생 목록까지 비운다. 연주별 위치는 남긴다 */
   close() {
     const { current, progress } = state;
+    navToken += 1;
     media?.pause();
     if (current && progress.duration > 0) savePosition(current.performanceId, progress.current, progress.duration);
-    const leaving = leavingEntry();
     setState({
       current: null,
       playing: false,
       playIntent: null,
       queue: [],
+      playlist: null,
       restored: false,
       progress: { current: 0, duration: 0 },
-      ...(leaving ? { back: [...state.back, leaving].slice(-MAX_HISTORY), forward: [] } : null),
     });
     dirty = true;
     flushSession();
@@ -750,7 +800,16 @@ export const comparePlayer = {
       noteFinished(track, total, total);
     }
     savePosition(performanceId, 0);
-    if (state.current?.performanceId === performanceId) setState({ playing: false });
+    if (state.current?.performanceId !== performanceId) return;
+    setState({ playing: false });
+    // 목록에서 튼 곡이면 다음 곡으로 넘어간다. 비교 화면에서 튼 곡은 멈춘다.
+    // 앱은 끝을 두 번 알릴 때가 있어 같은 연주에서 한 번만 넘긴다
+    const { playlist } = state;
+    if (playlist?.kind !== 'list' || !hasNeighbor(playlist, 1) || advancedFrom === performanceId) return;
+    advancedFrom = performanceId;
+    void stepPlaylist(1).finally(() => {
+      if (advancedFrom === performanceId) advancedFrom = null;
+    });
   },
 
   /** 사용자가 고른 재생 의도를 미디어가 가져갔다 */

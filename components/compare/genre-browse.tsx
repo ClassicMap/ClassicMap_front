@@ -252,7 +252,7 @@ export function CompareGenrePieces({
             <View className="flex-row flex-wrap" style={{ columnGap: gap, rowGap: gap + 8 }}>
               {pieces.map((piece) => (
                 <View key={piece.pieceId} style={{ width: itemWidth }}>
-                  <PieceCard piece={piece} width={itemWidth} hideGenre onPress={() => onOpen(piece)} />
+                  <PieceCard piece={piece} width={itemWidth} hideGenre list={pieces} onPress={() => onOpen(piece)} />
                 </View>
               ))}
             </View>

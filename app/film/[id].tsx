@@ -12,6 +12,7 @@ import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { t, useLocale } from '@/lib/i18n';
 import { useCachedScreenTitleSummary, useScreenTitle } from '@/lib/query/hooks/useScreen';
+import type { PlaylistItem } from '@/lib/player/compare-player-store';
 import type { ScreenCue } from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { tmdbImageUrl } from '@/lib/utils/tmdb';
@@ -46,6 +47,15 @@ export default function FilmTitleScreen() {
   );
 
   const head = title ?? (isLoading ? cached : undefined);
+  // 바로 들을 수 있는 곡들을 나온 순서대로. 한 곡을 틀면 이 목록이 재생 목록이 된다
+  const listenable = React.useMemo(() => {
+    const entries: { cueId: number; item: PlaylistItem }[] = [];
+    for (const cue of title?.cues ?? []) {
+      if (cue.pieceId === null || (cue.listen.kind !== 'sector' && cue.listen.kind !== 'piece')) continue;
+      entries.push({ cueId: cue.id, item: { pieceId: cue.pieceId, sectorId: cue.listen.kind === 'sector' ? cue.listen.sectorId : null } });
+    }
+    return { items: entries.map((entry) => entry.item), indexOf: new Map(entries.map((entry, index) => [entry.cueId, index])) };
+  }, [title?.cues]);
 
   if (isLoading && !head) {
     return (
@@ -144,7 +154,16 @@ export default function FilmTitleScreen() {
             <View className={cn('gap-3', wide && 'flex-row flex-wrap')}>
               {title.cues.map((cue) => (
                 <View key={cue.id} className={cn(wide && 'w-[calc(50%-6px)]')}>
-                  <ScreenCueCard cue={cue} titleId={title.id} canPickStill={isAdmin} />
+                  <ScreenCueCard
+                    cue={cue}
+                    titleId={title.id}
+                    canPickStill={isAdmin}
+                    playlist={
+                      listenable.indexOf.has(cue.id)
+                        ? { items: listenable.items, index: listenable.indexOf.get(cue.id) ?? 0 }
+                        : undefined
+                    }
+                  />
                 </View>
               ))}
             </View>

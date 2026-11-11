@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { playPiece } from '@/lib/player/play-piece';
-import { useQueryClient } from '@tanstack/react-query';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
@@ -35,6 +34,7 @@ export function PieceCard({
   reason,
   onDismiss,
   hideGenre = false,
+  list,
 }: {
   piece: ComparisonPiece;
   width: number;
@@ -45,6 +45,8 @@ export function PieceCard({
   onDismiss?: () => void;
   /** 한 장르만 모인 화면에서는 부제에 장르 대신 연주자 수를 쓴다 */
   hideGenre?: boolean;
+  /** 이 카드가 놓인 목록(선반). 재생하면 이 목록이 재생 목록이 되어 다음 곡으로 이어진다 */
+  list?: readonly ComparisonPiece[];
 }) {
   useLocale();
   const confirmDismiss = onDismiss
@@ -55,12 +57,11 @@ export function PieceCard({
         ])
     : undefined;
   const genre = genreStyle(piece.genre);
-  const queryClient = useQueryClient();
   const isCurrent = useComparePlayer((state) => state.current?.pieceId === piece.pieceId);
   const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === piece.pieceId);
   // 그 자리에서 바로 튼다(영상은 하단 플레이바). 틀 연주가 없으면 비교 화면을 연다
   const playHere = () => {
-    playPiece(queryClient, { pieceId: piece.pieceId })
+    playPiece({ pieceId: piece.pieceId }, list)
       .then((played) => !played && onPress())
       .catch(() => onPress());
   };

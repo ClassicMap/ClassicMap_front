@@ -247,7 +247,7 @@ export default function ComposerDetailScreen() {
   const playFirst = () => {
     if (!firstComparable) return;
     setStarting(true);
-    playPiece(queryClient, { pieceId: firstComparable.pieceId })
+    playPiece({ pieceId: firstComparable.pieceId }, comparable)
       .then((played) => !played && openCompare(firstComparable.pieceId))
       .catch(() => openCompare(firstComparable.pieceId))
       .finally(() => setStarting(false));
@@ -371,7 +371,7 @@ export default function ComposerDetailScreen() {
                       wide={wide}
                       onPress={() => openCompare(piece.pieceId)}
                       onPlay={() =>
-                        void playPiece(queryClient, { pieceId: piece.pieceId })
+                        void playPiece({ pieceId: piece.pieceId }, comparable)
                           .then((played) => !played && openCompare(piece.pieceId))
                           .catch(() => openCompare(piece.pieceId))
                       }
