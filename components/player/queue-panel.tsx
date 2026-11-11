@@ -137,58 +137,68 @@ function Row({
   onRemove,
 }: RowProps) {
   const canHover = useCanHover();
-  const [hovered, setHovered] = React.useState(false);
+  // 빼기 단추는 줄 누름 칸 밖(옆)에 둔다. 안에 두면 빼기를 누를 때 줄의 재생도 같이 눌린다
+  const [hoverMain, setHoverMain] = React.useState(false);
+  const [hoverRemove, setHoverRemove] = React.useState(false);
+  const hovered = hoverMain || hoverRemove;
   const [removing, setRemoving] = React.useState(false);
   // 곡 그림: 연주자 사진(들은 곡·지금 곡) 또는 작곡가 사진, 없으면 대표 영상 그림
   const composerPhoto = useComposerAvatar(composerId, null);
   const picture = composerPhoto ?? image;
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress || removing}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      accessibilityRole="button"
-      accessibilityLabel={label}
+    <View
       className={cn(
-        'cm-fade mx-2 flex-row items-center gap-3 rounded-md px-2 py-1.5',
+        'cm-fade mx-2 flex-row items-center rounded-md',
         hovered && 'bg-surface-2',
         removing && 'cm-row-out'
       )}>
-      <View>
-        <EntityThumb name={imageName} image={picture} shape="square" size={44} />
-        {hovered && onPress && !now ? (
-          <View className="absolute inset-0 items-center justify-center rounded bg-black/45">
-            <Icon as={PlayIcon} size={16} className="fill-white text-white" />
-          </View>
-        ) : null}
-      </View>
-      <View className="min-w-0 flex-1">
-        <Text
-          numberOfLines={1}
-          className={cn('text-body-sm font-semibold', now ? 'text-primary' : 'text-foreground')}>
-          {title}
-        </Text>
-        <Text variant="caption" numberOfLines={1}>
-          {subtitle}
-        </Text>
-      </View>
-      {now ? <Equalizer playing={Boolean(playing)} size={12} /> : null}
-      {onRemove && (hovered || !canHover) ? (
+      <Pressable
+        onPress={onPress}
+        disabled={!onPress || removing}
+        onHoverIn={() => setHoverMain(true)}
+        onHoverOut={() => setHoverMain(false)}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        className="min-w-0 flex-1 flex-row items-center gap-3 py-1.5 pl-2 pr-1">
+        <View>
+          <EntityThumb name={imageName} image={picture} shape="square" size={44} />
+          {hovered && onPress && !now ? (
+            <View className="absolute inset-0 items-center justify-center rounded bg-black/45">
+              <Icon as={PlayIcon} size={16} className="fill-white text-white" />
+            </View>
+          ) : null}
+        </View>
+        <View className="min-w-0 flex-1">
+          <Text
+            numberOfLines={1}
+            className={cn('text-body-sm font-semibold', now ? 'text-primary' : 'text-foreground')}>
+            {title}
+          </Text>
+          <Text variant="caption" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+        {now ? <Equalizer playing={Boolean(playing)} size={12} /> : null}
+      </Pressable>
+      {onRemove ? (
         <Pressable
           onPress={() => {
             if (removing) return;
             setRemoving(true);
             setTimeout(onRemove, LEAVE_MS);
           }}
+          onHoverIn={() => setHoverRemove(true)}
+          onHoverOut={() => setHoverRemove(false)}
           accessibilityRole="button"
           accessibilityLabel={t('{title} 대기열에서 빼기', { title })}
-          hitSlop={6}
-          className="size-7 items-center justify-center rounded-full web:hover:bg-surface-3">
+          className={cn(
+            'mr-1.5 size-7 items-center justify-center rounded-full web:hover:bg-surface-3',
+            !hovered && canHover && 'opacity-0'
+          )}>
           <Icon as={XIcon} size={14} className="text-foreground-muted" />
         </Pressable>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 
