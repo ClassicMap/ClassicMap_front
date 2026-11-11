@@ -1,3 +1,4 @@
+import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { RepertoireMark, RepertoireThumb } from '@/features/library/components/repertoire-badge';
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -80,7 +81,7 @@ export function CompareSearchField({ value, onChange, onSubmit, className }: Com
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (isTypingTarget(target)) return;
       event.preventDefault();
       inputRef.current?.focus();
     };

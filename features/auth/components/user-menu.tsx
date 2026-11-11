@@ -45,7 +45,12 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
 
   if (!isSignedIn) {
     return (
-      <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onLogin}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 rounded-full"
+        accessibilityLabel={t('로그인')}
+        onPress={onLogin}>
         <Icon as={LogInIcon} color={iconColor} className="size-5" />
       </Button>
     );

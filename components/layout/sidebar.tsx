@@ -1,3 +1,4 @@
+import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -49,8 +50,7 @@ const ARROW_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
 /** 사이드바 안에서 ↑↓·Home·End 로 메뉴 사이를 옮긴다 (Tab 은 그대로 다음 요소로) */
 function onSidebarKeyDown(event: React.KeyboardEvent<HTMLElement>) {
   if (!ARROW_KEYS.includes(event.key) || event.altKey || event.metaKey || event.ctrlKey) return;
-  const target = event.target as HTMLElement;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+  if (isTypingTarget(event.target)) return;
   const items = Array.from(
     event.currentTarget.querySelectorAll<HTMLElement>('a[href], [role="link"], [role="button"]')
   ).filter(
@@ -253,12 +253,7 @@ function useSidebarShortcut(enabled: boolean) {
         event.shiftKey
       )
         return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      )
-        return;
+      if (isTypingTarget(event.target)) return;
       event.preventDefault();
       shell.toggleSidebar();
     };

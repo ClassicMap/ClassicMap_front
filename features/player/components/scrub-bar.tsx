@@ -27,6 +27,9 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 /** 누른 자리 그대로 가도록 값의 눈금은 촘촘하게 두고, 키보드 한 칸(step)은 따로 처리한다 */
 const POINTER_STEP = 0.001;
 
+/** PageUp/PageDown 은 ←→ 의 몇 배를 가나 */
+const LARGE_STEPS = 2;
+
 /**
  * 재생 위치·볼륨 슬라이더. 누른 자리로 바로 가고 끌면 따라간다. 평소에는 얇은 줄이고 마우스를 올리거나
  * 끌거나 키보드로 포커스하면 줄이 굵어지고 손잡이가 보인다.
@@ -46,11 +49,18 @@ export function ScrubBar({
   useLocale();
   const [dragValue, setDragValue] = React.useState<number | null>(null);
   const shown = dragValue ?? clamp(value);
+  // 끄는 중에 꺼지면(곡이 바뀌어 길이를 모르는 순간 등) 놓음 알림 없이 끝나므로 끌던 값을 버린다
+  React.useEffect(() => {
+    if (disabled) setDragValue(null);
+  }, [disabled]);
 
   const onThumbKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     let next: number | null = null;
     if (event.key === 'ArrowRight' || event.key === 'ArrowUp') next = value + step;
     else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') next = value - step;
+    // 값의 범위가 0~1 이라 Base UI 의 기본 큰 걸음(10)을 그대로 두면 한 번에 끝으로 간다
+    else if (event.key === 'PageUp') next = value + step * LARGE_STEPS;
+    else if (event.key === 'PageDown') next = value - step * LARGE_STEPS;
     else if (event.key === 'Home' || event.key === 'End') event.stopPropagation();
     if (next === null) return;
     event.preventDefault();
@@ -66,6 +76,7 @@ export function ScrubBar({
       min={0}
       max={1}
       step={POINTER_STEP}
+      largeStep={step * LARGE_STEPS}
       disabled={disabled}
       aria-label={label}
       getAriaValueText={valueText}

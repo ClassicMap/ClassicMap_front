@@ -59,7 +59,11 @@ function Slider({
         setDragValue(null);
         latest.current.onValueCommitted?.(valueAt(origin.current + gesture.dx));
       },
-      onPanResponderTerminate: () => setDragValue(null),
+      // 다른 제스처(스크롤 등)에 넘어가면 끌던 자리에서 놓은 것으로 친다(쓰는 쪽의 끄는 중 상태가 풀리게)
+      onPanResponderTerminate: (_event, gesture) => {
+        setDragValue(null);
+        latest.current.onValueCommitted?.(valueAt(origin.current + gesture.dx));
+      },
     });
   }, []);
 
