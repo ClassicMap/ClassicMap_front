@@ -62,12 +62,13 @@ export function PerformerStepper({
       ? t('연주자 {n}/{total}', { n: position + 1, total: size })
       : t('연주자 {total}명', { total: size });
   const [from, to] = faceWindow(size, position, compact ? MAX_FACES_COMPACT : MAX_FACES);
-  const faceSize = compact ? 22 : 24;
+  const faceSize = compact ? 24 : 28;
   const hoveredName = tracks.find((track) => track.performanceId === hovered)?.artistName;
   return (
     <View
       className={cn(
-        'h-8 shrink-0 flex-row items-center rounded-full border border-border-strong',
+        'shrink-0 flex-row items-center rounded-full border border-border-strong',
+        compact ? 'h-9' : 'h-10',
         className
       )}
       accessibilityRole="toolbar"
