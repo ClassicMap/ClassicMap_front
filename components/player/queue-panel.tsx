@@ -439,39 +439,38 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               </Section>
             ) : null}
 
-            <Section
-              title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
-              detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
-              action={
-                remaining.length || forward.length ? (
-                  <Pressable
-                    onPress={() => comparePlayer.clearQueue()}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('대기열 비우기')}
-                    className="rounded-full px-1 py-0.5">
-                    <Text className="text-label font-semibold text-foreground-muted web:hover:text-foreground">
-                      {t('비우기')}
-                    </Text>
-                  </Pressable>
-                ) : undefined
-              }>
-              {remaining.length ? (
-                remaining.map((item, index) => (
-                  <Row
-                    key={remainingKeys[index]}
-                    {...itemRow(item)}
-                    onPress={() => comparePlayer.playFromQueue('source', index)}
-                    onRemove={() => comparePlayer.removeFromQueue('source', index)}
-                  />
-                ))
-              ) : (
-                <Note>
-                  {repeatAll
-                    ? t('반복(전체): 끝나면 목록 처음으로 돌아가요.')
-                    : t('목록 끝이에요.')}
-                </Note>
-              )}
-            </Section>
+            {/* 다음에 나올 목록 곡이 있을 때만 보인다(스포티파이 「다음: ~」). 끝난 목록은 남기지 않는다 */}
+            {remaining.length || repeatAll ? (
+              <Section
+                title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
+                detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
+                action={
+                  remaining.length || forward.length ? (
+                    <Pressable
+                      onPress={() => comparePlayer.clearQueue()}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('대기열 비우기')}
+                      className="rounded-full px-1 py-0.5">
+                      <Text className="text-label font-semibold text-foreground-muted web:hover:text-foreground">
+                        {t('비우기')}
+                      </Text>
+                    </Pressable>
+                  ) : undefined
+                }>
+                {remaining.length ? (
+                  remaining.map((item, index) => (
+                    <Row
+                      key={remainingKeys[index]}
+                      {...itemRow(item)}
+                      onPress={() => comparePlayer.playFromQueue('source', index)}
+                      onRemove={() => comparePlayer.removeFromQueue('source', index)}
+                    />
+                  ))
+                ) : (
+                  <Note>{t('반복(전체): 끝나면 목록 처음으로 돌아가요.')}</Note>
+                )}
+              </Section>
+            ) : null}
 
             <Section
               title={t('자동 재생')}

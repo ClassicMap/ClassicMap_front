@@ -99,14 +99,20 @@ export function SideNav({ collapsed, canToggle = false }: { collapsed: boolean; 
 
   return (
     <HoverLabelContext.Provider value={setHoverLabel}>
+      {/* 접고 펼 때 로고·아이콘·사진은 제자리(가운데 30px 선)에 그대로 있고 폭만 줄고 늘며, 글자는 서서히 사라진다 */}
       <View
         className={cn(
-          'cm-side relative shrink-0 overflow-hidden rounded-[9px] bg-surface-1 py-4',
-          collapsed ? 'w-[60px] items-center px-2' : 'w-[232px] px-2.5'
+          'cm-side relative shrink-0 overflow-hidden rounded-[9px] bg-surface-1 px-2 py-4',
+          collapsed ? 'w-[60px]' : 'w-[232px]'
         )}>
-        <View className={cn('flex-row items-center gap-2.5 pb-5', collapsed ? 'justify-center' : 'px-2.5')}>
+        <View className="flex-row items-center gap-2.5 px-2 pb-5">
           <BrandLogo size={28} />
-          {!collapsed && <Text className="cm-reveal text-[15px] font-bold tracking-tight">ClassicMap</Text>}
+          <Text
+            numberOfLines={1}
+            className={cn('cm-fade text-[15px] font-bold tracking-tight', collapsed && 'opacity-0')}
+            style={{ minWidth: 120 }}>
+            ClassicMap
+          </Text>
         </View>
 
         {NAV_ITEMS.map((item) => (
@@ -154,28 +160,29 @@ function NavLink({
         accessibilityLabel={t(item.label)}
         accessibilityState={{ selected: active }}
         className={cn(
-          'h-10 flex-row items-center gap-3.5 rounded-md transition-colors duration-instant',
-          collapsed ? 'w-10 justify-center' : 'px-2.5',
+          'h-10 flex-row items-center gap-3.5 rounded-md px-3 transition-colors duration-instant',
           active ? 'bg-surface-3' : 'hover:bg-surface-2'
         )}>
         {item.renderIcon({
           size: 20,
           className: active ? 'text-foreground' : 'text-foreground-muted',
         })}
-        {!collapsed && (
-          <Text
-            numberOfLines={1}
-            className={cn(
-              'cm-reveal flex-1 text-[13.5px] font-semibold',
-              active ? 'text-foreground' : 'text-foreground-muted'
-            )}>
-            {t(item.label)}
-          </Text>
-        )}
-        {!collapsed && item.href === '/search' ? (
+        <Text
+          numberOfLines={1}
+          className={cn(
+            'cm-fade flex-1 text-[13.5px] font-semibold',
+            active ? 'text-foreground' : 'text-foreground-muted',
+            collapsed && 'opacity-0'
+          )}
+          style={{ minWidth: 110 }}>
+          {t(item.label)}
+        </Text>
+        {item.href === '/search' ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('빠른 검색 열기')}
+            disabled={collapsed}
+            className={cn('cm-fade', collapsed && 'opacity-0')}
             onPress={(event) => {
               event.preventDefault();
               onOpenPalette();
@@ -252,81 +259,58 @@ function Library({ collapsed }: { collapsed: boolean }) {
   const { locale } = useLocale();
   const { isSignedIn } = useAuth();
   const favorites = useMyRepertoire(isSignedIn === true);
-  const queryClient = useQueryClient();
 
   const sections = React.useMemo(
     () => (favorites.data ? groupLibraryEntries(buildLibraryEntries(favorites.data), LIBRARY_PER_SECTION) : []),
     [favorites.data, locale]
   );
 
-  // 접으면 담아 둔 작곡가·연주자를 사진만 세로로 늘어놓는다(스포티파이 접힌 보관함처럼)
-  if (collapsed) {
-    const entries = sections.flatMap((section) => section.entries);
-    if (entries.length === 0) return null;
-    return (
-      <View className="mt-4 flex-1 items-center border-t border-border pt-4">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="items-center gap-2">
-          {entries.map((entry) => (
-            <CollapsedLibraryLink key={entry.key} entry={entry} />
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
-
+  // 접어도 사진은 제자리에 남고(가운데 30px 선) 글자만 서서히 사라진다. 세로 자리도 그대로라 접고 펼 때 움직이지 않는다
+  const fade = cn('cm-fade', collapsed && 'opacity-0');
   return (
-    <View className="cm-reveal mt-4 flex-1 border-t border-border pt-4">
-      <Text variant="micro" className="px-2.5 pb-2.5 uppercase tracking-widest">
+    <View className="mt-4 flex-1 border-t border-border pt-4">
+      <Text variant="micro" numberOfLines={1} className={cn('px-2.5 pb-2.5 uppercase tracking-widest', fade)}>
         {t('레퍼토리')}
       </Text>
       {!isSignedIn ? (
         <Link href="/(auth)/sign-in" asChild>
-          <Pressable className="rounded-md px-2.5 py-2 hover:bg-surface-2">
-            <Text variant="caption" className="text-foreground-muted">
+          <Pressable disabled={collapsed} className={cn('rounded-md px-2.5 py-2 hover:bg-surface-2', fade)}>
+            <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
               {t('로그인하면 즐겨찾기한 작곡가·연주자가 여기에 모여요.')}
             </Text>
           </Pressable>
         </Link>
       ) : favorites.isError ? (
-        <Pressable className="rounded-md px-2.5 py-2 hover:bg-surface-2" onPress={() => favorites.refetch()}>
-          <Text variant="caption" className="text-foreground-muted">
+        <Pressable
+          disabled={collapsed}
+          className={cn('rounded-md px-2.5 py-2 hover:bg-surface-2', fade)}
+          onPress={() => favorites.refetch()}>
+          <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
             {t('즐겨찾기를 못 불러왔어요. 눌러서 다시 시도해 주세요.')}
           </Text>
         </Pressable>
       ) : sections.length === 0 && !favorites.isLoading ? (
-        <Text variant="caption" className="px-2.5 py-2 text-foreground-muted">
+        <Text variant="caption" className={cn('px-2.5 py-2 text-foreground-muted', fade)} style={{ minWidth: 190 }}>
           {t('작곡가나 연주자를 즐겨찾기하면 여기에 모여요.')}
         </Text>
       ) : (
-        <ScrollView className="-mx-1" showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false}>
           {sections.map((section) => (
             <View key={section.kind} className="mb-2.5">
               {/* 사람·작품·공연이 섞이지 않게 종류별로 묶는다. 악기는 연주자 행 부제로 보인다 */}
-              <View className="mx-1 flex-row items-baseline gap-1.5 px-2 pb-1 pt-1">
-                <Text className="text-[11.5px] font-semibold text-foreground-subtle">{t(section.label)}</Text>
+              <View className={cn('flex-row items-baseline gap-1.5 px-2.5 pb-1 pt-1', fade)}>
+                <Text numberOfLines={1} className="text-[11.5px] font-semibold text-foreground-subtle">
+                  {t(section.label)}
+                </Text>
                 <Text className="text-[11px] text-foreground-subtle/70">{section.total}</Text>
               </View>
               {section.entries.map((entry) => (
-                <Link key={entry.key} href={entry.href as Href} asChild>
-                  <Pressable
-                    {...createPrefetchHandlers(queryClient, prefetchTargetFromHref(entry.href))}
-                    className="mx-1 flex-row items-center gap-3 rounded-md px-2 py-[7px] hover:bg-surface-2">
-                    <LibraryThumb entry={entry} />
-                    <View className="min-w-0 flex-1">
-                      <Text numberOfLines={1} className="text-[13px] font-semibold">
-                        {entry.title}
-                      </Text>
-                      <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
-                        {entry.subtitle}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </Link>
+                <LibraryLink key={entry.key} entry={entry} collapsed={collapsed} />
               ))}
               {section.total > section.entries.length ? (
                 <Link href={`/library?kind=${section.kind}` as Href} asChild>
-                  <Pressable className="mx-1 rounded-md px-2 py-1.5 hover:bg-surface-2">
-                    <Text className="text-[12px] text-foreground-muted">
+                  <Pressable disabled={collapsed} className={cn('rounded-md px-2.5 py-1.5 hover:bg-surface-2', fade)}>
+                    <Text numberOfLines={1} className="text-[12px] text-foreground-muted" style={{ minWidth: 150 }}>
                       {t('{kind} {count}개 더 보기', { kind: t(section.label), count: section.total - section.entries.length })}
                     </Text>
                   </Pressable>
@@ -340,16 +324,27 @@ function Library({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function CollapsedLibraryLink({ entry }: { entry: LibraryEntry }) {
-  const hover = useHoverLabel(entry.title, true);
+/** 레퍼토리 한 줄. 사진은 접어도 제자리, 글자는 접으면 사라지고 마우스를 올리면 이름이 뜬다 */
+function LibraryLink({ entry, collapsed }: { entry: LibraryEntry; collapsed: boolean }) {
+  const queryClient = useQueryClient();
+  const hover = useHoverLabel(entry.title, collapsed);
   return (
     <Link href={entry.href as Href} asChild>
       <Pressable
+        {...createPrefetchHandlers(queryClient, prefetchTargetFromHref(entry.href))}
         {...hover}
         accessibilityRole="link"
         accessibilityLabel={entry.title}
-        className="rounded-md p-1 hover:bg-surface-2">
-        <LibraryThumb entry={entry} size={36} />
+        className="flex-row items-center gap-3 rounded-md px-1.5 py-[5px] hover:bg-surface-2">
+        <LibraryThumb entry={entry} size={32} />
+        <View className={cn('cm-fade min-w-0 flex-1', collapsed && 'opacity-0')} style={{ minWidth: 140 }}>
+          <Text numberOfLines={1} className="text-[13px] font-semibold">
+            {entry.title}
+          </Text>
+          <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
+            {entry.subtitle}
+          </Text>
+        </View>
       </Pressable>
     </Link>
   );
