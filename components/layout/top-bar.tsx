@@ -44,7 +44,6 @@ export function TopBar({ sidebarTrigger = false }: { sidebarTrigger?: boolean })
 
   return (
     <View
-      role="banner"
       className="shrink-0 flex-row items-center gap-2.5 px-5"
       style={{ height: SHELL.topBarHeight }}>
       {sidebarTrigger ? <SidebarTrigger className="-ml-2" /> : null}
