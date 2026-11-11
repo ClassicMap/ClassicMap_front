@@ -957,8 +957,11 @@ export const comparePlayer = {
     const lastIndex = found >= 0 ? found : null;
     const leavingIndex = origin === 'source' && playlist && leaving ? placeOf(playlist, leaving.track, leaving.sourceIndex) : -1;
     if (playlist && leaving && leavingIndex >= 0) {
-      if (lastIndex !== null && lastIndex < leavingIndex) nextPlaylist = { ...playlist, index: lastIndex };
-      else if (lastIndex === null) nextPlaylist = { ...playlist, index: leavingIndex - 1 };
+      if (lastIndex !== null && lastIndex < leavingIndex) {
+        nextPlaylist = { ...playlist, index: lastIndex };
+        // 바로 다음 자리가 아니면(셔플을 껐거나 줄을 눌러 건너뛰었으면) ⏭가 방금 곡으로 돌아오게 미뤄 둔다
+        if (leavingIndex !== lastIndex + 1) nextForward = [leaving, ...forward];
+      } else if (lastIndex === null) nextPlaylist = { ...playlist, index: leavingIndex - 1 };
       else {
         // 목록 처음으로 돌아갔던 경우(전체 반복): 지금 곡은 미뤄 두고 목록 자리는 이전 곡으로
         nextForward = [leaving, ...forward];
