@@ -35,7 +35,7 @@ export function QueueButton({ onPress }: { onPress?: () => void }) {
     <Pressable
       onPress={onPress ?? (() => comparePlayer.setQueueOpen(!open))}
       accessibilityRole="button"
-      accessibilityState={{ selected: active }}
+      aria-selected={active}
       accessibilityLabel={t('재생 대기열')}
       className={cn(
         'size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',
@@ -58,7 +58,7 @@ export function ShuffleButton() {
     <Pressable
       onPress={() => comparePlayer.setShuffle(!on)}
       accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
+      aria-checked={on}
       accessibilityLabel={t('셔플')}
       className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
       <Icon as={ShuffleIcon} size={15} className={on ? 'text-primary' : 'text-foreground-muted'} />
@@ -111,7 +111,7 @@ function ModeButton({
     <Pressable
       onPress={onPress}
       accessibilityRole={role}
-      accessibilityState={role === 'switch' ? { checked: on } : undefined}
+      aria-checked={role === 'switch' ? on : undefined}
       accessibilityLabel={`${label}: ${state}`}
       className={cn(
         'min-w-0 flex-1 items-center gap-0.5 rounded-lg border py-1.5',
@@ -354,7 +354,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
           <Pressable
             onPress={() => setShowHistory((value) => !value)}
             accessibilityRole="button"
-            accessibilityState={{ expanded: showHistory }}
+            aria-expanded={showHistory}
             className="flex-row items-center gap-1.5 px-4 pb-1 pt-2.5">
             <Icon
               as={showHistory ? ChevronDownIcon : ChevronRightIcon}

@@ -21,20 +21,61 @@ import { Pressable, View } from 'react-native';
  * 바 너비에 따라 접는 단계. 가운데 재생 조작은 폭을 고정하고, 오른쪽(연주자·같은 지점·소리·대기열)은 내용만큼,
  * 왼쪽(지금 곡)이 남는 폭을 쓴다. 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 셔플·반복 → 소리 막대 → 영상 순서로 접는다
  */
-type BarLevel = 'full' | 'medium' | 'narrow' | 'tiny';
+type BarLevel = 'full' | 'wide' | 'medium' | 'narrow' | 'tiny';
 
 function barLevel(width: number): BarLevel {
-  if (width === 0 || width >= 1180) return 'full';
+  if (width === 0 || width >= 1320) return 'full';
+  if (width >= 1180) return 'wide';
   if (width >= 1000) return 'medium';
   if (width >= 760) return 'narrow';
   return 'tiny';
 }
 
-const VIDEO_SIZE: Record<BarLevel, { width: number; height: number } | null> = {
-  full: { width: 96, height: 54 },
-  medium: { width: 80, height: 45 },
-  narrow: { width: 64, height: 36 },
-  tiny: null,
+/** 단계마다: 가운데 폭, 영상 크기, 연주자 사진 수, 「같은 지점」 글자, 셔플·반복, 소리 막대 */
+const LAYOUT: Record<
+  BarLevel,
+  {
+    center: number;
+    video: { width: number; height: number } | null;
+    faces: number;
+    spotLabel: boolean;
+    modes: boolean;
+    volume: number;
+  }
+> = {
+  full: {
+    center: 360,
+    video: { width: 96, height: 54 },
+    faces: 5,
+    spotLabel: true,
+    modes: true,
+    volume: 76,
+  },
+  wide: {
+    center: 360,
+    video: { width: 96, height: 54 },
+    faces: 3,
+    spotLabel: true,
+    modes: true,
+    volume: 76,
+  },
+  medium: {
+    center: 320,
+    video: { width: 80, height: 45 },
+    faces: 3,
+    spotLabel: false,
+    modes: true,
+    volume: 0,
+  },
+  narrow: {
+    center: 280,
+    video: { width: 64, height: 36 },
+    faces: 0,
+    spotLabel: false,
+    modes: false,
+    volume: 0,
+  },
+  tiny: { center: 240, video: null, faces: 0, spotLabel: false, modes: false, volume: 0 },
 };
 
 /**
@@ -57,9 +98,8 @@ export function GlobalPlayerBar() {
   const [scrub, setScrub] = React.useState<number | null>(null);
   // 바가 좁으면(창이 좁거나 대기열 패널을 열면) 차례로 접는다
   const [barWidth, setBarWidth] = React.useState(0);
-  const level = barLevel(barWidth);
-  const roomy = level === 'full' || level === 'medium';
-  const video = VIDEO_SIZE[level];
+  const layout = LAYOUT[barLevel(barWidth)];
+  const video = layout.video;
   const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
 
   if (!current || !visible) return null;
@@ -110,14 +150,10 @@ export function GlobalPlayerBar() {
           </View>
         </Pressable>
       </View>
-      <View
-        className={cn(
-          'shrink-0 items-center gap-1.5',
-          roomy ? 'w-[360px]' : level === 'narrow' ? 'w-[300px]' : 'w-[240px]'
-        )}>
+      <View className="shrink-0 items-center gap-1.5" style={{ width: layout.center }}>
         <View className="flex-row items-center gap-4">
           {/* 좁으면 셔플·반복은 대기열 패널 위에만 둔다 */}
-          {roomy ? <ShuffleButton /> : null}
+          {layout.modes ? <ShuffleButton /> : null}
           {/* 3초 넘게 들었으면 처음으로, 그 안이면 들은 순서의 이전 곡으로 */}
           <Pressable
             accessibilityLabel={nav.prevLabel}
@@ -153,7 +189,7 @@ export function GlobalPlayerBar() {
               className="fill-foreground-muted text-foreground-muted"
             />
           </Pressable>
-          {roomy ? <RepeatButton /> : null}
+          {layout.modes ? <RepeatButton /> : null}
         </View>
         <View className="w-full flex-row items-center gap-2.5">
           <Text variant="mono" className="w-10 text-right text-foreground-muted">
@@ -180,13 +216,8 @@ export function GlobalPlayerBar() {
         </View>
       </View>
       <View className="shrink-0 flex-row items-center justify-end gap-2.5">
-        {level === 'tiny' ? null : (
-          <PerformerStepper
-            compact={level !== 'full'}
-            maxFaces={level === 'full' ? 5 : level === 'medium' ? 3 : 0}
-          />
-        )}
-        <VolumeControl width={roomy ? 76 : 0} />
+        <PerformerStepper compact={!layout.spotLabel} maxFaces={layout.faces} />
+        <VolumeControl width={layout.volume} />
         <QueueButton />
         <Pressable
           onPress={() => comparePlayer.close()}

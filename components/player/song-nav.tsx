@@ -43,7 +43,7 @@ export function SameSpotToggle({ compact = false }: { compact?: boolean }) {
     <Pressable
       onPress={() => comparePlayer.setSwitchMode(on ? 'resume' : 'align')}
       accessibilityRole="switch"
-      accessibilityState={{ checked: on }}
+      aria-checked={on}
       accessibilityLabel={t('같은 지점에서 연주자 바꾸기')}
       hitSlop={4}
       className={cn(
