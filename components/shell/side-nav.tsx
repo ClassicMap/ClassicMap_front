@@ -106,7 +106,9 @@ export function SideNav({ collapsed, canToggle = false }: { collapsed: boolean; 
           collapsed ? 'w-[60px]' : 'w-[232px]'
         )}>
         <View className="flex-row items-center gap-2.5 px-2 pb-5">
-          <BrandLogo size={28} />
+          <View className="shrink-0">
+            <BrandLogo size={28} />
+          </View>
           <Text
             numberOfLines={1}
             className={cn('cm-fade text-[15px] font-bold tracking-tight', collapsed && 'opacity-0')}
@@ -163,10 +165,13 @@ function NavLink({
           'h-10 flex-row items-center gap-3.5 rounded-md px-3 transition-colors duration-instant',
           active ? 'bg-surface-3' : 'hover:bg-surface-2'
         )}>
-        {item.renderIcon({
-          size: 20,
-          className: active ? 'text-foreground' : 'text-foreground-muted',
-        })}
+        {/* 접힌 좁은 칸에서도 아이콘이 눌려 사라지지 않게 줄어들지 않는 칸에 넣는다 */}
+        <View className="shrink-0">
+          {item.renderIcon({
+            size: 20,
+            className: active ? 'text-foreground' : 'text-foreground-muted',
+          })}
+        </View>
         <Text
           numberOfLines={1}
           className={cn(
@@ -336,7 +341,9 @@ function LibraryLink({ entry, collapsed }: { entry: LibraryEntry; collapsed: boo
         accessibilityRole="link"
         accessibilityLabel={entry.title}
         className="flex-row items-center gap-3 rounded-md px-1.5 py-[5px] hover:bg-surface-2">
-        <LibraryThumb entry={entry} size={32} />
+        <View className="shrink-0">
+          <LibraryThumb entry={entry} size={32} />
+        </View>
         <View className={cn('cm-fade min-w-0 flex-1', collapsed && 'opacity-0')} style={{ minWidth: 140 }}>
           <Text numberOfLines={1} className="text-[13px] font-semibold">
             {entry.title}
