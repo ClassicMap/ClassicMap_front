@@ -1,4 +1,4 @@
-import { HeroImage, type HeroImageLayout } from '@/components/hero/hero-image';
+import { HeroImage, type HeroImageLayout } from '@/components/shared/hero-image';
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';

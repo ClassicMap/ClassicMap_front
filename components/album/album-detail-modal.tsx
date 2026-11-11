@@ -1,10 +1,10 @@
 import { albumBadge, albumDate } from '@/components/album/album-card';
 import { FavoriteButton } from '@/components/favorite-button';
 import { Badge } from '@/components/ui/badge';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { ServiceLogoFor } from '@/components/ui/service-logo';
+import { ServiceLogoFor } from '@/components/shared/service-logo';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { RecordingListItem } from '@/lib/api/client';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';

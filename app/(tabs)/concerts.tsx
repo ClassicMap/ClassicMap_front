@@ -6,9 +6,9 @@ import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-con
 import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/components/concert/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { TicketIcon } from '@/components/ui/icons';
+import { TicketIcon } from '@/components/shared/icons';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';

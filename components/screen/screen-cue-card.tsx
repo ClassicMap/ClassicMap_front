@@ -1,9 +1,9 @@
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/ui/expandable-text';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { ServiceLogo, ServiceLogoFor } from '@/components/ui/service-logo';
+import { ServiceLogo, ServiceLogoFor } from '@/components/shared/service-logo';
 import {
   approxTimeText,
   episodeText,

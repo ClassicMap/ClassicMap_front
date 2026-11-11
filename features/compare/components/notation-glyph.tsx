@@ -1,7 +1,7 @@
 import { useLocale } from '@/lib/i18n';
 import { cssInterop } from 'nativewind';
 import Svg, { type SvgProps, Text as SvgText } from 'react-native-svg';
-import { SMUFL, type SmuflGlyph, staffFontSize } from '@/lib/design/smufl';
+import { SMUFL, type SmuflGlyph, staffFontSize } from '@/features/compare/lib/smufl';
 
 /**
  * SMuFL 악보 글리프 하나를 그립니다.

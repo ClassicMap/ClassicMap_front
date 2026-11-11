@@ -2,7 +2,7 @@ import { MiniVideoTarget } from '@/components/player/mini-video-target';
 import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/player-bar-helpers';
 import { QueuePanel } from '@/components/player/queue-panel';
 import { useSongNav } from '@/components/player/song-nav';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';

@@ -1,6 +1,6 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { Chip } from '@/components/ui/chip';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { RatedConcertListItem } from '@/lib/api/client';

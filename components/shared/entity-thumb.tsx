@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
-import { OptimizedImage } from '@/components/optimized-image';
-import { FallbackArt } from '@/components/ui/fallback-art';
+import { OptimizedImage } from '@/components/shared/optimized-image';
+import { FallbackArt } from '@/components/shared/fallback-art';
 import * as React from 'react';
 
 interface EntityThumbProps {

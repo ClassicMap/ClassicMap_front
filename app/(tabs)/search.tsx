@@ -1,8 +1,8 @@
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, ComposerKindIcon, EraIcon, PerformerKindIcon } from '@/components/ui/icons';
+import { CompareIcon, ComposerKindIcon, EraIcon, PerformerKindIcon } from '@/components/shared/icons';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';

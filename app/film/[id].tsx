@@ -1,4 +1,4 @@
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { titleMeta } from '@/components/screen/labels';
 import { ListPlayButtons } from '@/components/player/list-play-buttons';
 import { ScreenCueCard } from '@/components/screen/screen-cue-card';

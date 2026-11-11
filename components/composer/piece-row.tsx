@@ -3,7 +3,7 @@ import { Chip } from '@/components/ui/chip';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { ServiceLogo, serviceFromLabel } from '@/components/ui/service-logo';
+import { ServiceLogo, serviceFromLabel } from '@/components/shared/service-logo';
 import { usePieceParts } from '@/lib/query/hooks/usePieces';
 import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
 import { cn } from '@/lib/utils';

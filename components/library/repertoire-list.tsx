@@ -1,6 +1,6 @@
 import { FavoriteButton } from '@/components/favorite-button';
 import { Chip } from '@/components/ui/chip';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Text } from '@/components/ui/text';
 import type { FavoriteGroups, FavoriteTargetType } from '@/lib/api/client';
 import {

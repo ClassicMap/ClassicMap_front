@@ -1,4 +1,4 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Text } from '@/components/ui/text';
 import { getEraFill, getEraForeground } from '@/lib/design/era-palette';
 import type { PlacedLabeledSpan } from '@/lib/design/timeline-layout';

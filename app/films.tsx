@@ -1,4 +1,4 @@
-import { ScrollShelf } from '@/components/home/shelf';
+import { ScrollShelf } from '@/components/shared/shelf';
 import { shortTitleMeta, titleMeta } from '@/components/screen/labels';
 import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
 import { ScreenWorksList } from '@/components/screen/screen-works-list';

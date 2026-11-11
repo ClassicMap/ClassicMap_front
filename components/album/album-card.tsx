@@ -1,6 +1,6 @@
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
 import { Badge } from '@/components/ui/badge';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import type { RecordingListItem } from '@/lib/api/client';

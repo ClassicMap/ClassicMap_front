@@ -1,5 +1,5 @@
 import { useLocale } from '@/lib/i18n';
-import { GENRE_ICONS, OtherGenreIcon } from '@/components/ui/icons/genre-icon';
+import { GENRE_ICONS, OtherGenreIcon } from '@/components/shared/icons/genre-icon';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
 import { View } from 'react-native';

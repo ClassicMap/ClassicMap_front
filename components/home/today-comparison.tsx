@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { GenreLink } from '@/components/piece/genre-link';
 import { Scrim } from '@/components/ui/scrim';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';

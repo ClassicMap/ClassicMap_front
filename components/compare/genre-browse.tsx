@@ -1,11 +1,11 @@
-import { PieceCard } from '@/components/home/cards';
+import { PieceCard } from '@/components/shared/cards';
 import { ListPlayButtons } from '@/components/player/list-play-buttons';
-import { ScrollShelf } from '@/components/home/shelf';
-import { OptimizedImage } from '@/components/optimized-image';
+import { ScrollShelf } from '@/components/shared/shelf';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon } from '@/components/ui/icons';
+import { CompareIcon } from '@/components/shared/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';

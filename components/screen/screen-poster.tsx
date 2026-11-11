@@ -1,4 +1,4 @@
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';

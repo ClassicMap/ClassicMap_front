@@ -1,4 +1,4 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { primaryCredit } from '@/lib/data/comparison';
 import { t, useLocale } from '@/lib/i18n';
 import type { ComparisonPerformance } from '@/lib/types/models';

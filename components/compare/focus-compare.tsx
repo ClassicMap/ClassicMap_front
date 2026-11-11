@@ -1,7 +1,7 @@
 import { FeaturedPairNote, PerformanceNote } from '@/components/compare/listening-note';
 import { type Performer, PerformerMark, performerOf } from '@/components/compare/performer-mark';
 import { LoudnessMeasures, LoudnessOverlay } from '@/components/compare/loudness-curve';
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { PlayerSlot } from '@/components/player/player-slot';
 import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
 import { VolumeControl } from '@/components/player/volume-control';

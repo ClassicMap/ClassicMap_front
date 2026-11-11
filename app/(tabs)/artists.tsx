@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { EraIcon } from '@/components/ui/icons';
+import { EraIcon } from '@/components/shared/icons';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';

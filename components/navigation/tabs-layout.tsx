@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { BookmarkIcon, CompassIcon, HomeIcon, MoonStarIcon, SunIcon } from 'lucide-react-native';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, TicketIcon } from '@/components/ui/icons';
+import { CompareIcon, TicketIcon } from '@/components/shared/icons';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/components/user-menu';

@@ -1,6 +1,6 @@
-import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/components/home/cards';
+import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/components/shared/cards';
 import { TasteInviteCard } from '@/components/home/taste-invite-card';
-import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/home/shelf';
+import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/shared/shelf';
 import { TodayComparison, type TodayComparisonTarget } from '@/components/home/today-comparison';
 import { useGenreShelves } from '@/components/compare/genre-browse';
 import { Chip } from '@/components/ui/chip';

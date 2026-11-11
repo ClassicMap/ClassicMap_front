@@ -1,4 +1,4 @@
-import { NotationGlyph } from '@/components/ui/notation-glyph';
+import { NotationGlyph } from '@/features/compare/components/notation-glyph';
 import { Text } from '@/components/ui/text';
 import { isWholeWorkSector, primaryCredit } from '@/lib/data/comparison';
 import { placeSections } from '@/lib/design/section-timeline';

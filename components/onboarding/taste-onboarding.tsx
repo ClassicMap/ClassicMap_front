@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';

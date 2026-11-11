@@ -1,5 +1,5 @@
 import { Icon } from '@/components/ui/icon';
-import { BrandLogo } from '@/components/brand/brand-logo';
+import { BrandLogo } from '@/components/shared/brand-logo';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { t, useLocale } from '@/lib/i18n';

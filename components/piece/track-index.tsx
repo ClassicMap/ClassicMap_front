@@ -1,4 +1,4 @@
-import { Equalizer } from '@/components/ui/equalizer';
+import { Equalizer } from '@/features/player/components/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';

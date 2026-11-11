@@ -1,6 +1,6 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
-import { FallbackArt } from '@/components/ui/fallback-art';
-import { OptimizedImage } from '@/components/optimized-image';
+import { EntityThumb } from '@/components/shared/entity-thumb';
+import { FallbackArt } from '@/components/shared/fallback-art';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Scrim } from '@/components/ui/scrim';
 import type { ComparisonPiecePerformer } from '@/lib/types/models';
 import { cn } from '@/lib/utils';

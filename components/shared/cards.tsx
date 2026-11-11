@@ -1,8 +1,8 @@
 import { formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { RepertoireMark, RepertoireThumb } from '@/components/library/repertoire-badge';
-import { OptimizedImage } from '@/components/optimized-image';
+import { OptimizedImage } from '@/components/shared/optimized-image';
 import { PieceArt } from '@/components/piece/piece-art';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import type { RecentPiece } from '@/hooks/use-recent-pieces';

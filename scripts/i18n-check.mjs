@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const SOURCE_DIRS = ['app', 'components', 'hooks', 'lib'];
+const SOURCE_DIRS = ['app', 'components', 'features', 'hooks', 'lib'];
 // 목업과 사전 자체는 뺀다
 const SKIP = [
   'lib/i18n/',

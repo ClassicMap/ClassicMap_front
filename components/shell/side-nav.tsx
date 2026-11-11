@@ -1,7 +1,7 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, PerformerKindIcon, TicketIcon } from '@/components/ui/icons';
-import { BrandLogo } from '@/components/brand/brand-logo';
+import { CompareIcon, PerformerKindIcon, TicketIcon } from '@/components/shared/icons';
+import { BrandLogo } from '@/components/shared/brand-logo';
 import { Text } from '@/components/ui/text';
 import { buildLibraryEntries, groupLibraryEntries, type LibraryEntry } from '@/lib/data/library';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
@@ -19,7 +19,7 @@ import { createPortal } from 'react-dom';
 
 import { useCommandPalette } from './command-palette-context';
 import { readSidebarCollapsed, setSidebarCollapsed } from './sidebar-state';
-import { Kbd, modKeyLabel } from './kbd';
+import { Kbd, modKeyLabel } from '@/components/ui/kbd';
 
 type NavIconProps = { size: number; className: string };
 

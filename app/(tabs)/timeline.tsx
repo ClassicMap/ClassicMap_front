@@ -13,7 +13,7 @@ import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/components/timeline/densit
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';

@@ -1,4 +1,4 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
@@ -16,7 +16,7 @@ import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { useCommandPalette } from './command-palette-context';
-import { Kbd } from './kbd';
+import { Kbd } from '@/components/ui/kbd';
 import { titleMeta } from '@/components/screen/labels';
 import { tmdbImageUrl, youtubeClipThumbnail } from '@/lib/utils/tmdb';
 

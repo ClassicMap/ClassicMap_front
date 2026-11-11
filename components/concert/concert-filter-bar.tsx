@@ -10,7 +10,7 @@ import {
 import { InstrumentIcon } from '@/components/concert/instrument-icon';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';

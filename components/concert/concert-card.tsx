@@ -1,6 +1,6 @@
 import { concertClock, daysLeft, formatShortDay, shortVenue } from '@/components/concert/concert-parts';
 import { Badge } from '@/components/ui/badge';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
 import type { Concert } from '@/lib/types/models';

@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
 import { Icon } from '@/components/ui/icon';
-import { createClassicIcon } from '@/components/ui/icons';
+import { createClassicIcon } from '@/components/shared/icons';
 import type { ConcertInstrumentKey } from '@/lib/data/concert-filters';
 import {
   AudioLinesIcon,

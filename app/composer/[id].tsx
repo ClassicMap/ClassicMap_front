@@ -1,14 +1,14 @@
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
 import { PieceFormModal } from '@/components/admin/PieceFormModal';
 import { FavoriteButton } from '@/components/favorite-button';
-import { ScrollShelf } from '@/components/home/shelf';
+import { ScrollShelf } from '@/components/shared/shelf';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
-import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
-import { PhotoCredit } from '@/components/hero/photo-credit';
+import { EntityThumb } from '@/components/shared/entity-thumb';
+import { HeroBanner, HeroPlayButton } from '@/components/shared/hero-banner';
+import { PhotoCredit } from '@/components/shared/photo-credit';
 import { playList, playPiece } from '@/lib/player/play-piece';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { PieceArt } from '@/components/piece/piece-art';

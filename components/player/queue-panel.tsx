@@ -1,5 +1,5 @@
-import { EntityThumb } from '@/components/ui/entity-thumb';
-import { Equalizer } from '@/components/ui/equalizer';
+import { EntityThumb } from '@/components/shared/entity-thumb';
+import { Equalizer } from '@/features/player/components/equalizer';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
