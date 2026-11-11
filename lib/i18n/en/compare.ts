@@ -254,4 +254,5 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '취향 추천': 'For your taste',
   '같은 작곡가 · {name}': 'Same composer · {name}',
   '비슷한 편성 · {genre}': 'Similar · {genre}',
+  '취향 · {genre}': 'Your taste · {genre}',
 };

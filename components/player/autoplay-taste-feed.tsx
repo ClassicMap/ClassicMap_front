@@ -1,4 +1,5 @@
-import { candidateFromPiece } from '@/lib/player/autoplay';
+import { useTaste } from '@/lib/hooks/useTaste';
+import { candidateFromPiece, tasteGenres } from '@/lib/player/autoplay';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import { useHomeRecommendations } from '@/lib/query/hooks/useHomeRecommendations';
 import * as React from 'react';
@@ -9,6 +10,7 @@ import * as React from 'react';
  */
 export function AutoplayTasteFeed() {
   const recommendations = useHomeRecommendations().data;
+  const sounds = useTaste().answers.sounds;
   React.useEffect(() => {
     if (!recommendations) return;
     const seen = new Set<number>();
@@ -22,7 +24,7 @@ export function AutoplayTasteFeed() {
         return true;
       })
       .map((piece) => candidateFromPiece(piece, piece.sectorId, piece.reasons[0]));
-    comparePlayer.setTastePool(candidates);
-  }, [recommendations]);
+    comparePlayer.setTastePool(candidates, tasteGenres(sounds));
+  }, [recommendations, sounds]);
   return null;
 }

@@ -11,7 +11,21 @@ import {
   comparisonPiecesQueryOptions,
   genrePiecesQueryOptions,
 } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece } from '@/lib/types/models';
+import type { ComparisonPerformance, ComparisonPiece, TasteSound } from '@/lib/types/models';
+
+/** 취향 묻기의 「끌리는 소리」를 장르로. 이 장르 곡들이 자동 재생의 취향 후보가 된다 */
+const SOUND_GENRES: Record<TasteSound, readonly PieceGenre[]> = {
+  piano: ['piano'],
+  orchestra: ['symphony', 'orchestral'],
+  strings: ['concerto', 'chamber'],
+  voice: ['vocal', 'stage'],
+  ensemble: ['chamber'],
+};
+
+/** 고른 소리들에 맞는 장르(겹치지 않게, 많아야 셋) */
+export function tasteGenres(sounds: readonly TasteSound[]): PieceGenre[] {
+  return [...new Set(sounds.flatMap((sound) => SOUND_GENRES[sound] ?? []))].slice(0, 3);
+}
 
 /**
  * 자동 재생 후보 한 곡. 취향 추천(홈 추천)이나 같은 연주자·작곡가·장르 목록에서 온다.
@@ -117,9 +131,11 @@ export async function pickAutoplay(input: {
   basis: AutoplayBasis;
   exclude: ReadonlySet<number>;
   taste: readonly AutoplayCandidate[];
+  /** 취향 묻기에서 고른 소리의 장르. 서버 추천 다음 취향 후보가 된다 */
+  genres?: readonly PieceGenre[];
   count: number;
 }): Promise<PlaylistItem[]> {
-  const { basis, exclude, taste, count } = input;
+  const { basis, exclude, taste, count, genres = [] } = input;
   const [composerPieces, artistPerformances] = await Promise.all([
     firstPage(() => queryClient.fetchInfiniteQuery(comparisonPiecesQueryOptions(basis.composerId))),
     basis.artistId
@@ -186,7 +202,23 @@ export async function pickAutoplay(input: {
     .map((entry) => ({ entry, rank: entry.score + Math.random() * 0.9 }))
     .sort((a, b) => b.rank - a.rank)
     .map(({ entry }) => entry);
-  const tasteList: Scored[] = taste
+  // 취향 후보: 서버가 이 사람에게 고른 순서 그대로 먼저, 그 뒤에 고른 소리의 장르 곡들(섞어서)
+  const genreTaste = (
+    await Promise.all(
+      genres.map((key) =>
+        firstPage(() => queryClient.fetchInfiniteQuery(genrePiecesQueryOptions(key)))
+      )
+    )
+  ).flatMap((pieces, index) =>
+    pieces.map((piece) =>
+      candidateFromPiece(
+        piece,
+        null,
+        t('취향 · {genre}', { genre: t(genreStyle(genres[index])?.label ?? '') })
+      )
+    )
+  );
+  const tasteList: Scored[] = [...taste, ...shuffle(genreTaste)]
     .filter((candidate) => !exclude.has(candidate.pieceId) && candidate.pieceId !== basis.pieceId)
     .map((candidate) => ({
       candidate,
@@ -220,4 +252,13 @@ export async function pickAutoplay(input: {
     sectorId: candidate.sectorId,
     meta: { ...candidate.meta, reason },
   }));
+}
+
+function shuffle<T>(items: readonly T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }

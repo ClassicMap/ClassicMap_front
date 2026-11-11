@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
 import { type AutoplayBasis, type AutoplayCandidate, pickAutoplay } from '@/lib/player/autoplay';
 import { resolvePlaylistItem, resolveSectorQueue } from '@/lib/player/playlist';
+import type { PieceGenre } from '@/lib/design/genre-palette';
 import type { ClipAlignment } from '@/lib/types/models';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
@@ -265,7 +266,10 @@ interface StoredSession {
 function isPlaylistItem(value: unknown): value is PlaylistItem {
   if (!value || typeof value !== 'object') return false;
   const entry = value as Record<string, unknown>;
-  return typeof entry.pieceId === 'number' && (entry.sectorId === null || typeof entry.sectorId === 'number');
+  return (
+    typeof entry.pieceId === 'number' &&
+    (entry.sectorId === null || typeof entry.sectorId === 'number')
+  );
 }
 
 function isPlaylist(value: unknown): value is Playlist {
@@ -275,7 +279,11 @@ function isPlaylist(value: unknown): value is Playlist {
   if (!Array.isArray(record.items) || typeof record.index !== 'number') return false;
   const items = record.items as unknown[];
   if (record.index < -1 || record.index >= items.length) return false;
-  if (record.original !== undefined && !(Array.isArray(record.original) && record.original.every(isPlaylistItem))) return false;
+  if (
+    record.original !== undefined &&
+    !(Array.isArray(record.original) && record.original.every(isPlaylistItem))
+  )
+    return false;
   return items.every(isPlaylistItem);
 }
 
@@ -288,7 +296,11 @@ function parseEntries(value: unknown): QueueEntry[] {
   return value.filter((entry): entry is QueueEntry => {
     if (!entry || typeof entry !== 'object') return false;
     const record = entry as Record<string, unknown>;
-    return isTrack(record.track) && isOrigin(record.origin) && (record.sourceIndex === null || typeof record.sourceIndex === 'number');
+    return (
+      isTrack(record.track) &&
+      isOrigin(record.origin) &&
+      (record.sourceIndex === null || typeof record.sourceIndex === 'number')
+    );
   });
 }
 
@@ -341,7 +353,10 @@ function parseSession(raw: string | null): StoredSession | null {
       origin: isOrigin(record.origin) ? record.origin : undefined,
       history: parseEntries(record.history).slice(-MAX_HISTORY),
       forward: current ? parseEntries(record.forward) : [],
-      autoplayItems: current && Array.isArray(record.autoplayItems) ? record.autoplayItems.filter(isPlaylistItem) : [],
+      autoplayItems:
+        current && Array.isArray(record.autoplayItems)
+          ? record.autoplayItems.filter(isPlaylistItem)
+          : [],
     };
   } catch {
     return null;
@@ -400,7 +415,7 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
   for (const [id, seconds] of session.positions) positions[id] = seconds;
   positionOrder = session.positions.map(([id]) => id);
   const current = session.current;
-  const resumeAt = current ? positions[current.performanceId] ?? 0 : 0;
+  const resumeAt = current ? (positions[current.performanceId] ?? 0) : 0;
   return {
     positions,
     current,
@@ -488,11 +503,19 @@ function emitListening(kind: ListeningSignal['kind'], track: ComparePlayerTrack)
 /** 이 연주를 듣기 시작한다. 다른 작품으로 넘어가면 떠나는 작품을 짧게 들었는지 본다 */
 function beginListening(track: ComparePlayerTrack) {
   if (visit && visit.pieceId !== track.pieceId) {
-    if (visit.started && !visit.engaged && visit.playedSec < SKIP_SEC) emitListening('skip', visit.lastTrack);
+    if (visit.started && !visit.engaged && visit.playedSec < SKIP_SEC)
+      emitListening('skip', visit.lastTrack);
     visit = null;
   }
   if (!visit) {
-    visit = { pieceId: track.pieceId, playedSec: 0, started: false, engaged: false, lastTrack: track, finished: new Set() };
+    visit = {
+      pieceId: track.pieceId,
+      playedSec: 0,
+      started: false,
+      engaged: false,
+      lastTrack: track,
+      finished: new Set(),
+    };
   }
   visit.lastTrack = track;
   if (listen.performanceId !== track.performanceId) {
@@ -502,7 +525,8 @@ function beginListening(track: ComparePlayerTrack) {
 
 /** 재생 위치가 조금씩 나아간 만큼만 재생 시간으로 센다 */
 function countPlayback(track: ComparePlayerTrack, current: number, total: number) {
-  if (!visit || visit.pieceId !== track.pieceId || listen.performanceId !== track.performanceId) beginListening(track);
+  if (!visit || visit.pieceId !== track.pieceId || listen.performanceId !== track.performanceId)
+    beginListening(track);
   const delta = listen.lastSec === null ? 0 : current - listen.lastSec;
   listen.lastSec = current;
   if (visit && delta > 0 && delta <= MAX_TICK_SEC) {
@@ -540,7 +564,8 @@ function fillLegacyNames() {
   if (!track || track.names) return;
   void sectorNames(track.sectorId).then((names) => {
     const current = state.current;
-    if (!names || !current || current.performanceId !== track.performanceId || current.names) return;
+    if (!names || !current || current.performanceId !== track.performanceId || current.names)
+      return;
     setState({
       current: {
         ...current,
@@ -561,7 +586,12 @@ function refillQueue() {
   if (!track || state.queue.length > 0) return;
   void resolveSectorQueue(track.sectorId)
     .then((queue) => {
-      if (state.current?.performanceId !== track.performanceId || state.queue.length > 0 || queue.length === 0) return;
+      if (
+        state.current?.performanceId !== track.performanceId ||
+        state.queue.length > 0 ||
+        queue.length === 0
+      )
+        return;
       setState({ queue });
     })
     .catch(() => undefined);
@@ -616,7 +646,11 @@ function startPositionFor(
   ) {
     const target = sameMoment(
       progress.current,
-      { id: current.performanceId, lengthSec: progress.duration, alignment: current.alignment ?? null },
+      {
+        id: current.performanceId,
+        lengthSec: progress.duration,
+        alignment: current.alignment ?? null,
+      },
       { id: track.performanceId, lengthSec: track.durationSec, alignment: track.alignment ?? null }
     );
     return clampPosition(target, track.durationSec);
@@ -702,7 +736,11 @@ function shuffled<T>(items: readonly T[]): T[] {
 function shufflePlaylist(playlist: Playlist): Playlist {
   const head = playlist.items.slice(0, playlist.index + 1);
   const rest = playlist.items.slice(playlist.index + 1);
-  return { ...playlist, items: [...head, ...shuffled(rest)], original: playlist.original ?? playlist.items };
+  return {
+    ...playlist,
+    items: [...head, ...shuffled(rest)],
+    original: playlist.original ?? playlist.items,
+  };
 }
 
 /** 새 목록을 셔플로 받는다: 누른 곡을 맨 앞에 두고 나머지를 모두 섞는다(누른 곡 앞의 곡도 빠지지 않게) */
@@ -718,15 +756,25 @@ function unshufflePlaylist(playlist: Playlist): Playlist {
   if (!playlist.original) return playlist;
   const anchor = playlist.items[playlist.index];
   const index = anchor
-    ? playlist.original.findIndex((item) => item.pieceId === anchor.pieceId && item.sectorId === anchor.sectorId)
+    ? playlist.original.findIndex(
+        (item) => item.pieceId === anchor.pieceId && item.sectorId === anchor.sectorId
+      )
     : -1;
   return { kind: playlist.kind, name: playlist.name, items: playlist.original, index };
 }
 
 /** 이 곡이 목록의 어디에 있나. 셔플을 켜고 끄면 적어 둔 자리가 바뀌므로 작품·구간으로 다시 찾는다 */
-function placeOf(playlist: Playlist, track: Pick<ComparePlayerTrack, 'pieceId' | 'sectorId'>, hint: number | null): number {
+function placeOf(
+  playlist: Playlist,
+  track: Pick<ComparePlayerTrack, 'pieceId' | 'sectorId'>,
+  hint: number | null
+): number {
   const matches = (item: PlaylistItem | undefined) =>
-    Boolean(item && item.pieceId === track.pieceId && (item.sectorId === null || item.sectorId === track.sectorId));
+    Boolean(
+      item &&
+      item.pieceId === track.pieceId &&
+      (item.sectorId === null || item.sectorId === track.sectorId)
+    );
   if (hint !== null && matches(playlist.items[hint])) return hint;
   return playlist.items.findIndex(matches);
 }
@@ -743,7 +791,10 @@ function entryOfCurrent(): QueueEntry | null {
   return { track: current, origin, sourceIndex, meta };
 }
 
-function withHistory(history: readonly QueueEntry[], entry: QueueEntry | null): readonly QueueEntry[] {
+function withHistory(
+  history: readonly QueueEntry[],
+  entry: QueueEntry | null
+): readonly QueueEntry[] {
   return entry ? [...history, entry].slice(-MAX_HISTORY) : history;
 }
 
@@ -795,7 +846,8 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
   listen.lastSec = start;
   savePosition(track.performanceId, start);
   // 같은 연주가 이미 붙어 있으면 주소가 그대로라 미디어가 다시 싣지 않는다. 바로 옮기고 튼다
-  const sameMedia = current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
+  const sameMedia =
+    current?.performanceId === track.performanceId && media?.performanceId === track.performanceId;
   setState({
     current: track,
     playIntent: options.play && !sameMedia ? track.performanceId : null,
@@ -820,7 +872,9 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
 
 /** 곡이 바뀌었음을 비교 화면에 알린다(그 작품 화면이면 그 구간으로 따라간다) */
 function announce(track: ComparePlayerTrack) {
-  setState({ navigation: { seq: state.navigation.seq + 1, pieceId: track.pieceId, sectorId: track.sectorId } });
+  setState({
+    navigation: { seq: state.navigation.seq + 1, pieceId: track.pieceId, sectorId: track.sectorId },
+  });
 }
 
 /** 들은 곡·미룬 곡처럼 연주가 정해진 줄을 그대로 튼다 */
@@ -849,7 +903,11 @@ async function playItems(
     // 그사이 다른 연주를 골랐거나 닫았다
     if (token !== navToken) return false;
     if (!resolved) continue;
-    selectTrack(resolved.track, { play: true, queue: resolved.queue, startAt: 0 }, candidates[index].patch(index));
+    selectTrack(
+      resolved.track,
+      { play: true, queue: resolved.queue, startAt: 0 },
+      candidates[index].patch(index)
+    );
     announce(resolved.track);
     return true;
   }
@@ -857,10 +915,18 @@ async function playItems(
 }
 
 /** 이어서 재생의 from 자리부터 차례로 튼다 */
-function playFromSource(playlist: Playlist, from: number, base: Omit<QueuePatch, 'playlist' | 'origin'>) {
+function playFromSource(
+  playlist: Playlist,
+  from: number,
+  base: Omit<QueuePatch, 'playlist' | 'origin'>
+) {
   const items = playlist.items.slice(from).map((item, offset) => ({
     item,
-    patch: (): QueuePatch => ({ ...base, playlist: { ...playlist, index: from + offset }, origin: 'source' }),
+    patch: (): QueuePatch => ({
+      ...base,
+      playlist: { ...playlist, index: from + offset },
+      origin: 'source',
+    }),
   }));
   return playItems(items);
 }
@@ -873,9 +939,17 @@ async function advance(): Promise<boolean> {
   const nextHistory = withHistory(history, entryOfCurrent());
   if (forward.length) {
     const [entry, ...rest] = forward;
-    const at = entry.origin === 'source' && playlist ? placeOf(playlist, entry.track, entry.sourceIndex) : -1;
+    const at =
+      entry.origin === 'source' && playlist
+        ? placeOf(playlist, entry.track, entry.sourceIndex)
+        : -1;
     const nextPlaylist = playlist && at >= 0 ? { ...playlist, index: at } : playlist;
-    playEntry(entry, { playlist: nextPlaylist, origin: at >= 0 ? 'source' : entry.origin === 'source' ? 'insert' : entry.origin, history: nextHistory, forward: rest });
+    playEntry(entry, {
+      playlist: nextPlaylist,
+      origin: at >= 0 ? 'source' : entry.origin === 'source' ? 'insert' : entry.origin,
+      history: nextHistory,
+      forward: rest,
+    });
     return true;
   }
   if (playlist && remainingOf(playlist).length) {
@@ -886,7 +960,9 @@ async function advance(): Promise<boolean> {
   }
   if (!state.autoplay) return false;
   // 자동 재생 목록의 맨 앞부터 차례로 튼다. 아직 없으면 지금 만든다
-  const picks = state.autoplayItems.length ? state.autoplayItems : await buildAutoplay(AUTOPLAY_LENGTH, []);
+  const picks = state.autoplayItems.length
+    ? state.autoplayItems
+    : await buildAutoplay(AUTOPLAY_LENGTH, []);
   return playItems(
     picks.map((item, index) => ({
       item,
@@ -905,6 +981,8 @@ async function advance(): Promise<boolean> {
 
 /** 취향 추천(홈 추천과 같은 것). 루트의 연결 컴포넌트가 채운다 */
 let tastePool: readonly AutoplayCandidate[] = [];
+/** 취향 묻기에서 고른 소리의 장르 */
+let tasteGenrePool: readonly PieceGenre[] = [];
 let autoplayToken = 0;
 
 /** 자동 재생 목록을 만들 때 이미 정해진 곡(들은 곡·지금 곡·대기열·자동 재생 목록)은 빼고 고른다 */
@@ -924,14 +1002,28 @@ function autoplayBasis(existing: readonly PlaylistItem[]): AutoplayBasis | null 
   if (!current) return null;
   const last = existing[existing.length - 1];
   if (!last) return current;
-  return { pieceId: last.pieceId, composerId: last.meta?.composerId ?? current.composerId, artistId: null, artistName: '' };
+  return {
+    pieceId: last.pieceId,
+    composerId: last.meta?.composerId ?? current.composerId,
+    artistId: null,
+    artistName: '',
+  };
 }
 
 /** 자동 재생 곡을 count 개 더 고른다(existing 뒤에 이어질 것) */
-async function buildAutoplay(count: number, existing: readonly PlaylistItem[]): Promise<readonly PlaylistItem[]> {
+async function buildAutoplay(
+  count: number,
+  existing: readonly PlaylistItem[]
+): Promise<readonly PlaylistItem[]> {
   const basis = autoplayBasis(existing);
   if (!basis || count <= 0) return [];
-  return pickAutoplay({ basis, exclude: knownPieces(existing), taste: tastePool, count });
+  return pickAutoplay({
+    basis,
+    exclude: knownPieces(existing),
+    taste: tastePool,
+    genres: tasteGenrePool,
+    count,
+  });
 }
 
 /** 지금 목록을 취향 추천과 함께 만들었는지. 취향 추천 없이 만들었으면 추천이 왔을 때 한 번 다시 만든다 */
@@ -947,7 +1039,7 @@ function ensureAutoplay() {
   if (existing.length >= AUTOPLAY_LOW) return;
   const token = ++autoplayToken;
   if (!existing.length) {
-    autoplayBuiltWithTaste = tastePool.length > 0;
+    autoplayBuiltWithTaste = tastePool.length > 0 || tasteGenrePool.length > 0;
     setState({ autoplayStatus: 'loading' });
   }
   const settle = (items: readonly PlaylistItem[]) => {
@@ -1021,9 +1113,13 @@ export const comparePlayer = {
     const leaving = entryOfCurrent();
     let nextPlaylist = playlist;
     let nextForward = forward;
-    const found = last.origin === 'source' && playlist ? placeOf(playlist, last.track, last.sourceIndex) : -1;
+    const found =
+      last.origin === 'source' && playlist ? placeOf(playlist, last.track, last.sourceIndex) : -1;
     const lastIndex = found >= 0 ? found : null;
-    const leavingIndex = origin === 'source' && playlist && leaving ? placeOf(playlist, leaving.track, leaving.sourceIndex) : -1;
+    const leavingIndex =
+      origin === 'source' && playlist && leaving
+        ? placeOf(playlist, leaving.track, leaving.sourceIndex)
+        : -1;
     if (playlist && leaving && leavingIndex >= 0) {
       if (lastIndex !== null && lastIndex < leavingIndex) {
         nextPlaylist = { ...playlist, index: lastIndex };
@@ -1077,7 +1173,12 @@ export const comparePlayer = {
   hasNext(): boolean {
     const { current, forward, playlist, repeat, autoplay } = state;
     if (!current) return false;
-    return forward.length > 0 || remainingOf(playlist).length > 0 || (repeat === 'all' && Boolean(playlist?.items.length)) || autoplay;
+    return (
+      forward.length > 0 ||
+      remainingOf(playlist).length > 0 ||
+      (repeat === 'all' && Boolean(playlist?.items.length)) ||
+      autoplay
+    );
   },
 
   /** 다음에 나올 곡의 작품(없거나 아직 모르면 null) */
@@ -1102,7 +1203,10 @@ export const comparePlayer = {
     if (section === 'forward') {
       const entry = forward[index];
       if (!entry) return;
-      const at = entry.origin === 'source' && playlist ? placeOf(playlist, entry.track, entry.sourceIndex) : -1;
+      const at =
+        entry.origin === 'source' && playlist
+          ? placeOf(playlist, entry.track, entry.sourceIndex)
+          : -1;
       const nextPlaylist = playlist && at >= 0 ? { ...playlist, index: at } : playlist;
       playEntry(entry, {
         playlist: nextPlaylist,
@@ -1146,7 +1250,9 @@ export const comparePlayer = {
       const items = playlist.items.filter((_, i) => i !== at);
       // 새로고침 뒤에는 같은 객체가 아니라서 작품·구간으로 찾아 하나만 뺀다
       const originalAt = removed
-        ? (playlist.original ?? []).findIndex((item) => item.pieceId === removed.pieceId && item.sectorId === removed.sectorId)
+        ? (playlist.original ?? []).findIndex(
+            (item) => item.pieceId === removed.pieceId && item.sectorId === removed.sectorId
+          )
         : -1;
       const original = playlist.original?.filter((_, i) => i !== originalAt);
       setState({ playlist: { ...playlist, items, ...(original ? { original } : null) } });
@@ -1161,7 +1267,9 @@ export const comparePlayer = {
     const { playlist } = state;
     setState({
       forward: [],
-      playlist: playlist ? { ...playlist, items: playlist.items.slice(0, playlist.index + 1), original: undefined } : null,
+      playlist: playlist
+        ? { ...playlist, items: playlist.items.slice(0, playlist.index + 1), original: undefined }
+        : null,
     });
     dirty = true;
     flushSession();
@@ -1181,7 +1289,8 @@ export const comparePlayer = {
 
   /** 끔 → 전체 → 한 곡 → 끔 */
   cycleRepeat() {
-    const repeat: RepeatMode = state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
+    const repeat: RepeatMode =
+      state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off';
     writeStored(REPEAT_KEY, repeat);
     setState({ repeat });
   },
@@ -1204,11 +1313,13 @@ export const comparePlayer = {
   },
 
   /** 취향 추천 목록을 받는다(로그인하면 서버가 고른 것, 아니면 이 기기의 답으로 고른 것) */
-  setTastePool(items: readonly AutoplayCandidate[]) {
+  setTastePool(items: readonly AutoplayCandidate[], genres: readonly PieceGenre[] = []) {
     tastePool = items;
+    tasteGenrePool = genres;
     if (!state.current || !state.autoplay) return;
     // 취향 추천이 오기 전에 만든 목록이면 아직 그 목록 곡을 틀기 전이니 취향을 넣어 한 번 다시 만든다
-    if (items.length && !autoplayBuiltWithTaste && state.origin !== 'autoplay') rebuildAutoplay();
+    if ((items.length || genres.length) && !autoplayBuiltWithTaste && state.origin !== 'autoplay')
+      rebuildAutoplay();
     else ensureAutoplay();
   },
 
@@ -1237,7 +1348,8 @@ export const comparePlayer = {
     const { current, progress } = state;
     navToken += 1;
     media?.pause();
-    if (current && progress.duration > 0) savePosition(current.performanceId, progress.current, progress.duration);
+    if (current && progress.duration > 0)
+      savePosition(current.performanceId, progress.current, progress.duration);
     setState({
       current: null,
       playing: false,
@@ -1389,7 +1501,8 @@ export const comparePlayer = {
 
   /** 이 연주가 지금 앱 플레이어에서 나오고 있으면 그 위치(초), 아니면 null */
   livePosition(performanceId: number): number | null {
-    if (state.current?.performanceId !== performanceId || media?.performanceId !== performanceId) return null;
+    if (state.current?.performanceId !== performanceId || media?.performanceId !== performanceId)
+      return null;
     return media.currentTime?.() ?? state.progress.current;
   },
 
