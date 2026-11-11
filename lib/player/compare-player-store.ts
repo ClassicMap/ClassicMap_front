@@ -458,6 +458,21 @@ function savePosition(performanceId: number, seconds: number, duration?: number)
   state = { ...state, positions: { ...state.positions, [performanceId]: value } };
 }
 
+/** 이 연주들의 기억해 둔 위치를 버린다 */
+function forgetPositions(performanceIds: readonly number[]) {
+  const positions = { ...state.positions };
+  let changed = false;
+  for (const id of performanceIds) {
+    if (positions[id] === undefined) continue;
+    delete positions[id];
+    changed = true;
+  }
+  if (!changed) return;
+  positionOrder = positionOrder.filter((id) => positions[id] !== undefined);
+  scheduleSave();
+  state = { ...state, positions };
+}
+
 // ─── 웹 셸 영상의 자리 ─────────────────────────────────────────
 
 const slots = new Set<PlayerSlot>();
@@ -510,6 +525,8 @@ function selectTrack(
   }
   const sameSong = current?.sectorId === track.sectorId;
   const leaving = sameSong ? null : leavingEntry();
+  // 새 곡이면 이 곡의 다른 연주자에 남은 옛 위치도 버린다. 연주자를 바꿔 이어 듣는 건 이번에 듣는 동안만이다
+  if (!sameSong && options.queue) forgetPositions(options.queue.map((item) => item.performanceId));
   beginListening(track);
   const start =
     options.startAt !== undefined

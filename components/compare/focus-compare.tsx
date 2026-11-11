@@ -289,15 +289,16 @@ function FocusStage(props: FocusStageProps) {
   const handOff = React.useCallback(() => {
     const latest = engineRef.current;
     const positions = latest.positions();
-    comparePlayer.rememberPosition(a.id, positions.a, clipDurationMs(a) / 1000);
-    comparePlayer.rememberPosition(b.id, positions.b, clipDurationMs(b) / 1000);
     const current = latest.side === 'a' ? a : b;
-    // 떠나 있는 동안 앱 플레이어가 다른 곡으로 넘어갔어도 듣던 쪽은 듣던 자리에서 넘긴다
+    const other = latest.side === 'a' ? b : a;
+    // 떠나 있는 동안 앱 플레이어가 다른 곡으로 넘어갔어도 듣던 쪽은 듣던 자리에서 넘긴다.
+    // 다른 곡에서 넘어오면 스토어가 이 곡의 옛 위치를 버리므로, 소리 안 나던 쪽 위치는 넘긴 뒤에 적는다
     comparePlayer.select(trackFromPerformance(current, imageOf(current)), {
       play: latest.playing,
       startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
     });
+    comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
   }, [a, b, imageOf, queue]);
 
   const exit = React.useCallback(() => {
