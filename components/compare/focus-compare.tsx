@@ -345,8 +345,11 @@ function FocusStage(props: FocusStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.playing, engine.side]);
 
-  /** 이 무대가 재생을 맡고 있다. 앱 플레이어에 넘기면 false, 화면에 돌아와 다시 맡으면 true */
-  const ownsPlayback = React.useRef(true);
+  /**
+   * 이 무대가 재생을 맡고 있다. 앱 플레이어에 넘기면 false, 화면에 돌아와 다시 맡으면 true.
+   * 다른 화면 아래에 깔린 채 그려지면(로그인 화면으로 가며 셸이 바뀔 때) 맡지 않고 앱 플레이어가 잇는다
+   */
+  const ownsPlayback = React.useRef(screenFocused);
 
   // 두 연주의 위치를 스토어에 남기고, 듣던 쪽 연주를 앱 플레이어에 넘긴다. 한 번 떠날 때 한 번만 넘긴다
   // (넘긴 뒤 앱 플레이어가 다른 곡으로 넘어갔으면 그걸 되돌리지 않는다)
@@ -733,7 +736,8 @@ function useWebFocusEngine(
   }, []);
 
   React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    // 보이지 않는 채 그려졌으면 넘겨받지 않는다. 화면이 보이게 되면 resume 이 넘겨받는다
+    if (Platform.OS !== 'web' || !props.screenFocused) return dropTakeover;
     if (start.playing) holdShell();
     else comparePlayer.pause();
     return dropTakeover;
