@@ -247,7 +247,7 @@ export function Faces({
           accessibilityLabel={highlightIds?.has(performer.artistId) ? t('{name}, 레퍼토리에 있어요', { name: performer.artistName }) : undefined}
           className={cn(
             'rounded-full border-2',
-            highlightIds?.has(performer.artistId) ? 'z-10 border-primary' : ringClassName
+            highlightIds?.has(performer.artistId) ? 'z-raised border-primary' : ringClassName
           )}
           style={{ marginLeft: index === 0 ? 0 : -8 }}>
           <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={22} />

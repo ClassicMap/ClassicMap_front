@@ -1,3 +1,4 @@
+import { LAYER } from '@/lib/design/layers';
 import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
@@ -23,7 +24,7 @@ const FULLSCREEN_ROOT_CSS = `
 [data-cm-fsroot] video { object-fit: contain !important; }
 [data-cm-fsroot]:fullscreen > div { animation: cm-fs-in 320ms ease-out both; }
 [data-cm-fsroot][data-idle] { cursor: none; }
-[data-cm-fsroot][data-pseudo] { left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2147483000; }
+[data-cm-fsroot][data-pseudo] { left: 0; top: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: ${LAYER.fullscreen}; }
 [data-cm-fsroot][data-pseudo] > div { animation: cm-fs-in 320ms ease-out both; }
 @keyframes cm-fs-in { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { [data-cm-fsroot]:fullscreen > div, [data-cm-fsroot][data-pseudo] > div { animation: none; } }

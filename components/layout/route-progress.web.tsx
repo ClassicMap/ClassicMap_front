@@ -1,3 +1,4 @@
+import { LAYER } from '@/lib/design/layers';
 import { useLocale } from '@/lib/i18n';
 import { useRouteSignature } from '@/lib/navigation/route-signature';
 import { type Query, useQueryClient } from '@tanstack/react-query';
@@ -128,7 +129,7 @@ export function RouteProgress({ placement }: { placement: 'panel' | 'viewport' }
         transformOrigin: '0 50%',
         transform: 'scaleX(0)',
         opacity: 0,
-        zIndex: 30,
+        zIndex: LAYER.floating,
         pointerEvents: 'none',
         // 화면 전환 스냅숏에 섞이지 않고 위에 그대로 남는다
         viewTransitionName: 'cm-route-progress',

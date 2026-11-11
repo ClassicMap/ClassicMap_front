@@ -1,3 +1,4 @@
+import { LAYER } from '@/lib/design/layers';
 import { useLocale } from '@/lib/i18n';
 import { NativeYoutubeClip } from '@/features/player/components/performance-video-player';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
@@ -61,7 +62,7 @@ export function ComparePlayerHost() {
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[{ position: 'absolute', left: 0, right: 0, overflow: 'hidden', zIndex: 40 }, bandStyle]}>
+      style={[{ position: 'absolute', left: 0, right: 0, overflow: 'hidden', zIndex: LAYER.player }, bandStyle]}>
       <Animated.View
         // 미니 자리에서는 누르면 미니 플레이어가 받게 한다
         pointerEvents={kind === 'slot' ? 'auto' : 'none'}

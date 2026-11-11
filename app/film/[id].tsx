@@ -42,7 +42,7 @@ export default function FilmTitleScreen() {
       onPress={goBack}
       accessibilityLabel={t('뒤로')}
       style={{ top: insets.top + 4 }}
-      className="absolute left-2 z-10 size-11 items-center justify-center rounded-full bg-background/70">
+      className="absolute left-2 z-raised size-11 items-center justify-center rounded-full bg-background/70">
       <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
     </Pressable>
   );

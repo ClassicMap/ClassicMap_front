@@ -134,7 +134,7 @@ export function AlbumDetailModal({ album, onClose }: AlbumDetailModalProps) {
               accessibilityRole="button"
               accessibilityLabel={t('닫기')}
               hitSlop={8}
-              className="absolute right-3 top-3 z-10 size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
+              className="absolute right-3 top-3 z-raised size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
               <Icon as={XIcon} size={18} className="text-foreground-muted" />
             </Pressable>
 
