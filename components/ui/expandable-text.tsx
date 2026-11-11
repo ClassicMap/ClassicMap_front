@@ -17,7 +17,13 @@ type ExpandableTextProps = {
  * 접으면 `lines` 줄까지만 보이고, 실제로 잘릴 때만 '더 보기'를 낸다.
  * 글자 수로 가늠하면 좁은 칸에서 잘리는데 버튼이 없는 일이 생겨, 전체 높이를 숨은 사본으로 재서 견준다.
  */
-export function ExpandableText({ text, lines, variant = 'body', className, toggleClassName }: ExpandableTextProps) {
+function ExpandableText({
+  text,
+  lines,
+  variant = 'body',
+  className,
+  toggleClassName,
+}: ExpandableTextProps) {
   useLocale();
   const [expanded, setExpanded] = React.useState(false);
   const [fullHeight, setFullHeight] = React.useState(0);
@@ -26,7 +32,8 @@ export function ExpandableText({ text, lines, variant = 'body', className, toggl
 
   React.useEffect(() => {
     // 펼친 동안은 접힌 높이를 다시 못 재므로 직전 판단을 둔다
-    if (!expanded && fullHeight > 0 && clampedHeight > 0) setTruncated(fullHeight > clampedHeight + 1);
+    if (!expanded && fullHeight > 0 && clampedHeight > 0)
+      setTruncated(fullHeight > clampedHeight + 1);
   }, [expanded, fullHeight, clampedHeight]);
 
   const onFullLayout = (event: LayoutChangeEvent) => setFullHeight(event.nativeEvent.layout.height);
@@ -44,7 +51,10 @@ export function ExpandableText({ text, lines, variant = 'body', className, toggl
           className={className}>
           {text}
         </Text>
-        <View pointerEvents="none" className="absolute inset-x-0 top-0 opacity-0" accessibilityElementsHidden>
+        <View
+          pointerEvents="none"
+          className="absolute inset-x-0 top-0 opacity-0"
+          accessibilityElementsHidden>
           <Text variant={variant} onLayout={onFullLayout} className={className}>
             {text}
           </Text>
@@ -64,3 +74,5 @@ export function ExpandableText({ text, lines, variant = 'body', className, toggl
     </View>
   );
 }
+
+export { ExpandableText };

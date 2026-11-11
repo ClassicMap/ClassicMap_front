@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react-native';
 import { Pressable } from 'react-native';
 
 /** 목록 아래 '더 보기'·'모두 보기'·'접기'. 목록마다 같은 모양을 쓴다 */
-export function MoreLink({
+function MoreLink({
   label,
   onPress,
   disabled,
@@ -36,3 +36,5 @@ export function MoreLink({
     </Pressable>
   );
 }
+
+export { MoreLink };
