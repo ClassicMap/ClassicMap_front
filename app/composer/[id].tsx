@@ -26,11 +26,18 @@ import { ComposerAPI } from '@/lib/api/client';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
 import { useComposer } from '@/lib/query/hooks/useComposers';
-import { PIECE_QUERY_KEYS } from '@/lib/query/hooks/usePieces';
+import { PIECE_QUERY_KEYS, useComposerCatalog } from '@/lib/query/hooks/usePieces';
+import { ComposerHighlights } from '@/components/composer/composer-highlights';
 import { ComposerWorks } from '@/components/composer/composer-works';
 import { MoreLink } from '@/components/ui/more-link';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ComparisonPiece, Piece, PiecePart, PiecePartKind } from '@/lib/types/models';
+import type {
+  ComparisonPiece,
+  ComposerHighlight,
+  Piece,
+  PiecePart,
+  PiecePartKind,
+} from '@/lib/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -101,6 +108,11 @@ export default function ComposerDetailScreen() {
 
   const composerQuery = useComposer(Number.isFinite(composerId) ? composerId : undefined);
   const composer = composerQuery.data;
+  // 「처음 듣는다면」은 작품 영역과 같은 catalog 응답에 실려 온다(같은 캐시를 쓴다)
+  const highlights = useComposerCatalog(composer ? composerId : undefined).data?.highlights ?? [];
+  const [worksReveal, setWorksReveal] = React.useState<{ q: string; key: number } | null>(null);
+  const showInWorks = (highlight: ComposerHighlight) =>
+    setWorksReveal((current) => ({ q: highlight.title, key: (current?.key ?? 0) + 1 }));
   const comparableQuery = useComparisonPieces(composerId, Boolean(composer));
   const refreshPieces = () => queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
 
@@ -328,6 +340,14 @@ export default function ComposerDetailScreen() {
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
           <View className="min-w-0 flex-1 gap-11">
+            {/* 처음 듣는다면: 사람이 고른 작품 5곡, '더 보기'로 10곡까지. 고른 곡이 없으면 칸이 없다 */}
+            <ComposerHighlights
+              highlights={highlights}
+              wide={wide}
+              onCompare={openCompare}
+              onShowInWorks={showInWorks}
+            />
+
             {/* 비교할 수 있는 작품 (1차 시안: 번호 행). 많으면 5곡만 보이고 펼친다 */}
             <View ref={comparableRef}>
               <SectionTitle title={t('비교할 수 있는 작품')} meta={comparable.length > 0 ? t('{count}곡', { count: comparable.length }) : undefined} />
@@ -411,6 +431,7 @@ export default function ComposerDetailScreen() {
               onEdit={handleEditPiece}
               onDelete={handleDeletePiece}
               scrollRef={scrollRef}
+              reveal={worksReveal}
               headerAction={
                 canEdit ? (
                   <Button

@@ -92,11 +92,35 @@ export interface ComposerCatalogGenre {
   forms: ComposerCatalogForm[];
 }
 
-/** 작곡가 작품의 갈래·형식별 개수. 작품이 많은 갈래부터, '기타'는 맨 뒤다 */
+/** 작곡가 작품의 갈래·형식별 개수와 「처음 듣는다면」. 작품이 많은 갈래부터, '기타'는 맨 뒤다 */
 export interface ComposerCatalog {
   total: number;
   notableTotal: number;
   genres: ComposerCatalogGenre[];
+  /** 「처음 듣는다면」: 사람이 고른 작품을 순서대로 최대 10곡. 검색어로 센 응답이나 고른 곡이 없으면 빈 목록 */
+  highlights: ComposerHighlight[];
+}
+
+/** 「처음 듣는다면」 대표 곡(세트 안 최상위 곡) */
+export interface ComposerHighlightPart {
+  sequenceNumber: number;
+  /** 화면 언어로 고른 곡 이름 */
+  name: string;
+}
+
+/** 「처음 듣는다면」 한 곡. 작곡가 작품 목록 한 줄(최상위 작품)을 가리킨다 */
+export interface ComposerHighlight {
+  pieceId: number;
+  /** 화면 언어로 고른 제목 */
+  title: string;
+  genre: PieceGenre | null;
+  partKind: PiecePartKind | null;
+  /** 세트면 대표 곡. 없으면 null */
+  part: ComposerHighlightPart | null;
+  /** 비교 화면으로 열 작품(작품 자체나 대표 곡으로 이어진 작품). 비교할 수 없으면 null */
+  comparePieceId: number | null;
+  /** 화면 언어로 고른 한 줄 이유. 근거가 없어 비워 둔 곡은 null */
+  reason: string | null;
 }
 
 export type PiecePartKind = 'movement' | 'work';

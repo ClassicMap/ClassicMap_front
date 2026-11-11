@@ -16,6 +16,9 @@ export const COMPOSER: Readonly<Record<string, string>> = {
     'No work has three or more performers yet. They will show up here as videos come in.',
   '이 작품들을 연주한 사람': 'Who played these works',
   '작품 추가': 'Add work',
+  // 처음 듣는다면
+  '처음 듣는다면': 'Where to start',
+  '{title} 작품 목록에서 보기': 'Show {title} in the works list',
   // 작품 목록
   작품번호순: 'By catalogue',
   '작곡 연도순': 'By year',

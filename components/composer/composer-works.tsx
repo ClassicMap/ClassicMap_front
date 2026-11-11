@@ -100,9 +100,14 @@ export interface ComposerWorksProps {
   onDelete: (piece: Piece) => void;
   /** 작품 영역을 품은 화면 스크롤. 검색 칸을 화면 위로 맞추는 데 쓴다 */
   scrollRef?: React.RefObject<ScrollView | null>;
+  /**
+   * 바깥에서 작품 하나를 찾아 보이게 한다(「처음 듣는다면」 카드). key 가 바뀔 때마다 전체 갈래에서
+   * q 로 찾고 검색 칸을 화면 위로 올린다
+   */
+  reveal?: { q: string; key: number } | null;
 }
 
-type AlignMode = 'focus' | 'reset';
+type AlignMode = 'focus' | 'reset' | 'show';
 
 /**
  * 작곡가 작품 영역: 작곡가 안 검색, 갈래 칩, 전체 보기(갈래마다 5곡), 갈래 보기(형식 묶음·정렬·대표곡만).
@@ -174,8 +179,9 @@ export function ComposerWorks(props: ComposerWorksProps) {
           viewport.measureInWindow((_vx, viewportTop, _vw, viewportHeight) => {
             const screenY =
               headerTop + headerHeight + SECTION_GAP - STICKY_PAD - viewportTop - topInset;
-            const move = mode === 'focus' ? screenY > viewportHeight * 0.3 : screenY < 0;
-            if (move) scroll.scrollTo({ y: Math.max(0, homeY), animated: mode === 'focus' });
+            const move =
+              mode === 'show' || (mode === 'focus' ? screenY > viewportHeight * 0.3 : screenY < 0);
+            if (move) scroll.scrollTo({ y: Math.max(0, homeY), animated: mode !== 'reset' });
           });
         });
       });
@@ -222,6 +228,22 @@ export function ComposerWorks(props: ComposerWorksProps) {
     setText('');
     setQ('');
   }, []);
+
+  // 「처음 듣는다면」 카드에서 작품을 찾으면 전체 갈래에서 그 제목으로 찾고 검색 칸을 화면 위로 올린다
+  // (같은 key 로 다시 그려질 때 지운 검색어를 되살리지 않도록 key 가 바뀔 때만 돈다)
+  const revealKey = props.reveal?.key;
+  const revealQuery = props.reveal?.q;
+  const alignRef = React.useRef(alignSearchBlock);
+  alignRef.current = alignSearchBlock;
+  React.useEffect(() => {
+    if (revealKey === undefined || !revealQuery) return;
+    setGenre('all');
+    setText(revealQuery);
+    setQ(revealQuery);
+    // 검색 결과 칸이 자리를 잡은 뒤 옮긴다
+    const timer = setTimeout(() => alignRef.current('show'), 50);
+    return () => clearTimeout(timer);
+  }, [revealKey, revealQuery]);
 
   return (
     <View style={{ gap: SECTION_GAP }}>
