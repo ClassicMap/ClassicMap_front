@@ -141,6 +141,18 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
     return () => comparePlayer.setFocus(null);
   }, [focus, screenFocused]);
 
+  // 이 구간을 듣다가 들어왔으면 연주자마다 듣던 자리에서 잇고, 다른 곡을 듣다가(또는 아무것도 안 듣다가)
+  // 들어왔으면 두 연주 모두 처음부터 튼다. 영상이 위치를 읽기 전에 정해 둔다
+  const aId = a?.id;
+  const bId = b?.id;
+  const focusSectorId = a?.sectorId;
+  React.useLayoutEffect(() => {
+    if (aId === undefined || bId === undefined) return;
+    if (comparePlayer.getState().current?.sectorId === focusSectorId) return;
+    comparePlayer.rememberPosition(aId, 0);
+    comparePlayer.rememberPosition(bId, 0);
+  }, [aId, bId, focusSectorId]);
+
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
       <EmptyState
