@@ -1,7 +1,7 @@
 import { AlbumGrid, AlbumShelf } from '@/components/album/album-card';
 import { AlbumDetailModal } from '@/components/album/album-detail-modal';
 import { FilterMenu } from '@/components/concert/concert-filter-bar';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';

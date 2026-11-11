@@ -41,7 +41,7 @@ import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 
 /** 이번 실행에서 취향 묻기를 이미 열었는지. 뒤로 나가도 같은 실행 안에서는 다시 열지 않는다 */
 let onboardingOpened = false;

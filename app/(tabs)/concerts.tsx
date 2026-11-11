@@ -40,7 +40,7 @@ import { AlertCircleIcon, PlusIcon, SearchXIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 
 /** 걸러낸 결과가 이보다 적으면 다음 페이지를 더 불러온다 */
 const MIN_VISIBLE = 12;

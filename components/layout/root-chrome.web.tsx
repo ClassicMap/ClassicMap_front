@@ -1,10 +1,10 @@
 import { useLocale } from '@/lib/i18n';
-import { isBarePath } from '@/components/navigation/bare-paths';
-import { RouteProgress } from '@/components/navigation/route-progress';
+import { isBarePath } from '@/components/layout/bare-paths';
+import { RouteProgress } from '@/components/layout/route-progress';
 import { AutoplayTasteFeed } from '@/components/player/autoplay-taste-feed';
 import { ComparePlayerHost } from '@/components/player/compare-player-host';
 import { MiniPlayerBar } from '@/components/player/mini-player-bar';
-import { AppShell } from '@/components/shell/app-shell';
+import { AppShell } from '@/components/layout/app-shell';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { usePathname } from 'expo-router';
 import * as React from 'react';

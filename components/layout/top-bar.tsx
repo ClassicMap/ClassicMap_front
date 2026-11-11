@@ -8,7 +8,7 @@ import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
 import { Pressable, View } from 'react-native';
 
-import { useCommandPalette } from './command-palette-context';
+import { useCommandPalette } from '@/features/search/components/command-palette-context';
 import { Kbd, modKeyLabel } from '@/components/ui/kbd';
 import { setSidebarCollapsed } from './sidebar-state';
 

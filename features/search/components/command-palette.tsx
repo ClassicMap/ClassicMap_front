@@ -2,7 +2,7 @@ import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
-import { useUnifiedSearch } from '@/hooks/use-unified-search';
+import { useUnifiedSearch } from '@/features/search/hooks/use-unified-search';
 import { useDebounce } from '@/lib/hooks/useDebounce';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/useComposers';

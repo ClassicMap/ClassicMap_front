@@ -17,7 +17,7 @@ import { msg, t, useLocale } from '@/lib/i18n';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { createPortal } from 'react-dom';
 
-import { useCommandPalette } from './command-palette-context';
+import { useCommandPalette } from '@/features/search/components/command-palette-context';
 import { readSidebarCollapsed, setSidebarCollapsed } from './sidebar-state';
 import { Kbd, modKeyLabel } from '@/components/ui/kbd';
 

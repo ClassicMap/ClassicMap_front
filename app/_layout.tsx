@@ -15,7 +15,7 @@ import * as React from 'react';
 import { Platform } from 'react-native';
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
-import { RootChrome } from '@/components/navigation/root-chrome';
+import { RootChrome } from '@/components/layout/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
 import { useTasteSync } from '@/lib/hooks/useTaste';

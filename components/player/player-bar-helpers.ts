@@ -25,7 +25,7 @@ export function useSettled(value: boolean, delayMs = 180): boolean {
   return settled;
 }
 
-/** 탭바 높이. components/navigation/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */
+/** 탭바 높이. components/layout/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */
 export function tabBarHeight(insetBottom: number): number {
   const bottomPadding = Platform.OS === 'android' ? insetBottom + 8 : 20;
   return 58 + bottomPadding;

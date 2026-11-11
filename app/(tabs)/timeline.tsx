@@ -1,5 +1,5 @@
 import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabScrollInsets } from '@/components/layout/tab-chrome';
 import {
   ComposerGantt,
   GANTT_DOT_SPACE,

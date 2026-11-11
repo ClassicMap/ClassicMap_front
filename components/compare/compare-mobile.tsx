@@ -71,7 +71,7 @@ import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import { genreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabHeaderInset, useTabScrollInsets } from '@/components/layout/tab-chrome';
 
 interface CompareMobileCatalogProps {
   onOpenGenre: (genre: PieceGenre) => void;

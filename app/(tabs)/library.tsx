@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, BookmarkIcon, LogInIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
-import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabHeaderInset, useTabScrollInsets } from '@/components/layout/tab-chrome';
 
 export default function LibraryScreen() {
   useLocale();

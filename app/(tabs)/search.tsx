@@ -6,7 +6,7 @@ import { CompareIcon, ComposerKindIcon, EraIcon, PerformerKindIcon } from '@/com
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useUnifiedSearch } from '@/hooks/use-unified-search';
+import { useUnifiedSearch } from '@/features/search/hooks/use-unified-search';
 import { type ArtistCategoryCode, getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { getEraForeground } from '@/lib/design/era-palette';
 import { PERIODS } from '@/lib/data/periods';
@@ -23,7 +23,7 @@ import { useColorScheme } from 'nativewind';
 import { GenreTiles, useGenreShelves } from '@/components/compare/genre-browse';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
-import { useTabHeaderInset } from '@/components/navigation/tab-chrome';
+import { useTabHeaderInset } from '@/components/layout/tab-chrome';
 
 type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert' | 'screen';
 
