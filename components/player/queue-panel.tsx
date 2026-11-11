@@ -486,6 +486,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
                     key={autoplayKeys[index]}
                     {...itemRow(item)}
                     onPress={() => comparePlayer.playFromQueue('autoplay', index)}
+                    onRemove={() => comparePlayer.removeFromQueue('autoplay', index)}
                   />
                 ))
               ) : autoplayStatus === 'empty' ? (

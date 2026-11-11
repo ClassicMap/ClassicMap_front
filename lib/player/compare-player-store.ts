@@ -2,7 +2,7 @@ import { sectorNames } from '@/lib/data/legacy-names';
 import { type NameSidecar } from '@/lib/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sameMoment } from '@/lib/player/focus-align';
-import { type AutoplayCandidate, pickAutoplay } from '@/lib/player/autoplay';
+import { type AutoplayBasis, type AutoplayCandidate, pickAutoplay } from '@/lib/player/autoplay';
 import { resolvePlaylistItem, resolveSectorQueue } from '@/lib/player/playlist';
 import type { ClipAlignment } from '@/lib/types/models';
 import * as React from 'react';
@@ -211,8 +211,10 @@ const QUEUE_OPEN_KEY = 'classicmap.player.queue-open';
 const SESSION_KEY = 'classicmap.player.session.v1';
 /** 들은 곡은 최근 것만 이만큼 남긴다 */
 const MAX_HISTORY = 30;
-/** 자동 재생으로 미리 골라 둘 곡 수 */
-const AUTOPLAY_COUNT = 3;
+/** 자동 재생 목록을 한 번에 이만큼 만들어 두고 */
+const AUTOPLAY_LENGTH = 20;
+/** 남은 곡이 이보다 적으면 뒤에 이어 붙인다 */
+const AUTOPLAY_LOW = 6;
 /** 끝에서 이만큼 안쪽이면 다 들은 것으로 보고 다음에는 처음부터 */
 const END_MARGIN_SEC = 0.75;
 /** 연주별 위치는 최근 것만 이만큼 남긴다 */
@@ -257,6 +259,7 @@ interface StoredSession {
   origin?: QueueOrigin;
   history?: QueueEntry[];
   forward?: QueueEntry[];
+  autoplayItems?: PlaylistItem[];
 }
 
 function isPlaylistItem(value: unknown): value is PlaylistItem {
@@ -318,6 +321,7 @@ function parseSession(raw: string | null): StoredSession | null {
       origin?: unknown;
       history?: unknown;
       forward?: unknown;
+      autoplayItems?: unknown;
     };
     const positions = Array.isArray(record.positions)
       ? record.positions.filter(
@@ -337,6 +341,7 @@ function parseSession(raw: string | null): StoredSession | null {
       origin: isOrigin(record.origin) ? record.origin : undefined,
       history: parseEntries(record.history).slice(-MAX_HISTORY),
       forward: current ? parseEntries(record.forward) : [],
+      autoplayItems: current && Array.isArray(record.autoplayItems) ? record.autoplayItems.filter(isPlaylistItem) : [],
     };
   } catch {
     return null;
@@ -364,6 +369,7 @@ function serializeSession(): string {
     origin: state.origin,
     history: [...state.history],
     forward: [...state.forward],
+    autoplayItems: [...state.autoplayItems],
   } satisfies StoredSession);
 }
 
@@ -403,6 +409,9 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
     origin: session.origin ?? (session.playlist ? 'source' : 'insert'),
     history: session.history ?? [],
     forward: session.forward ?? [],
+    // 새로고침해도 만들어 둔 자동 재생 목록을 그대로 잇는다
+    autoplayItems: session.autoplayItems ?? [],
+    autoplayStatus: session.autoplayItems?.length ? 'ready' : 'idle',
     restored: current !== null,
     progress: { current: resumeAt, duration: current?.durationSec ?? 0 },
   };
@@ -569,7 +578,7 @@ if (Platform.OS !== 'web') {
       else setState({ ...patch, positions: merged });
       fillLegacyNames();
       refillQueue();
-      refreshAutoplay();
+      ensureAutoplay();
     })
     .catch(() => undefined);
   AppState.addEventListener('change', (next) => {
@@ -579,7 +588,7 @@ if (Platform.OS !== 'web') {
   fillLegacyNames();
   refillQueue();
   // 자동 재생 값들은 이 파일 아래쪽에서 만들어지므로 다 읽힌 뒤에 고른다
-  setTimeout(refreshAutoplay, 0);
+  setTimeout(ensureAutoplay, 0);
   window.addEventListener('pagehide', flushSession);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushSession();
@@ -667,6 +676,8 @@ interface QueuePatch {
   origin: QueueOrigin;
   history: readonly QueueEntry[];
   forward: readonly QueueEntry[];
+  /** 주면 자동 재생 목록을 바꾼다(새 목록이면 비워 새로 만들고, 자동 재생 곡을 틀면 그 뒤만 남긴다). 안 주면 그대로 */
+  autoplayItems?: readonly PlaylistItem[];
 }
 
 /**
@@ -752,10 +763,18 @@ function userQueuePatch(track: ComparePlayerTrack, options: SelectOptions): Queu
       options.playlist.items !== state.playlist?.items
         ? shuffleAround(options.playlist)
         : options.playlist;
-    return { playlist: next, origin: next ? 'source' : 'insert', history: nextHistory, forward: [] };
+    // 같은 목록 안에서 자리만 옮기면 자동 재생 목록은 그대로, 새 목록이면 그 목록에 맞춰 새로 만든다
+    const sameList = Boolean(options.playlist && options.playlist.items === state.playlist?.items);
+    return {
+      playlist: next,
+      origin: next ? 'source' : 'insert',
+      history: nextHistory,
+      forward: [],
+      ...(sameList ? null : { autoplayItems: [] }),
+    };
   }
   if (options.insert) return { playlist, origin: 'insert', history: nextHistory, forward };
-  return { playlist: null, origin: 'insert', history: nextHistory, forward: [] };
+  return { playlist: null, origin: 'insert', history: nextHistory, forward: [], autoplayItems: [] };
 }
 
 function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: QueuePatch) {
@@ -785,8 +804,9 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
     // 곡이 바뀌었는데 차례 목록을 안 받았으면 떠난 곡의 목록을 남기지 않는다
     queue: options.queue ?? (sameSong ? state.queue : []),
     ...patch,
-    ...(sameSong ? null : { autoplayItems: [], autoplayStatus: state.autoplay ? 'loading' : 'idle' }),
   });
+  // 자동 재생 목록을 새로 만들게 됐으면 고르던 결과는 버린다
+  if (patch.autoplayItems && patch.autoplayItems.length === 0) autoplayToken += 1;
   if (sameMedia && media) {
     media.seek(start);
     if (options.play) media.play();
@@ -794,7 +814,7 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
   flushSession();
   if (!sameSong) {
     refillQueue();
-    refreshAutoplay();
+    ensureAutoplay();
   }
 }
 
@@ -865,11 +885,18 @@ async function advance(): Promise<boolean> {
     return playFromSource(playlist, 0, { history: nextHistory, forward: [] });
   }
   if (!state.autoplay) return false;
-  const picks = state.autoplayItems.length ? state.autoplayItems : await computeAutoplay();
+  // 자동 재생 목록의 맨 앞부터 차례로 튼다. 아직 없으면 지금 만든다
+  const picks = state.autoplayItems.length ? state.autoplayItems : await buildAutoplay(AUTOPLAY_LENGTH, []);
   return playItems(
-    picks.map((item) => ({
+    picks.map((item, index) => ({
       item,
-      patch: (): QueuePatch => ({ playlist: state.playlist, origin: 'autoplay', history: nextHistory, forward: [] }),
+      patch: (): QueuePatch => ({
+        playlist: state.playlist,
+        origin: 'autoplay',
+        history: nextHistory,
+        forward: [],
+        autoplayItems: picks.slice(index + 1),
+      }),
     }))
   );
 }
@@ -880,35 +907,68 @@ async function advance(): Promise<boolean> {
 let tastePool: readonly AutoplayCandidate[] = [];
 let autoplayToken = 0;
 
-/** 지금 곡 다음에 이어질 비슷한 곡을 고른다. 들은 곡·대기열에 이미 있는 곡은 빼고 고른다 */
-async function computeAutoplay(): Promise<readonly PlaylistItem[]> {
-  const current = state.current;
-  if (!current) return [];
-  const exclude = new Set<number>([
-    current.pieceId,
+/** 자동 재생 목록을 만들 때 이미 정해진 곡(들은 곡·지금 곡·대기열·자동 재생 목록)은 빼고 고른다 */
+function knownPieces(extra: readonly PlaylistItem[]): Set<number> {
+  return new Set<number>([
+    ...(state.current ? [state.current.pieceId] : []),
     ...state.history.map((entry) => entry.track.pieceId),
     ...state.forward.map((entry) => entry.track.pieceId),
     ...remainingOf(state.playlist).map((item) => item.pieceId),
+    ...extra.map((item) => item.pieceId),
   ]);
-  return pickAutoplay({ basis: current, exclude, taste: tastePool, count: AUTOPLAY_COUNT });
 }
 
-function refreshAutoplay() {
+/** 이어 붙일 기준 곡: 자동 재생 목록의 맨 끝 곡, 없으면 지금 곡 */
+function autoplayBasis(existing: readonly PlaylistItem[]): AutoplayBasis | null {
+  const current = state.current;
+  if (!current) return null;
+  const last = existing[existing.length - 1];
+  if (!last) return current;
+  return { pieceId: last.pieceId, composerId: last.meta?.composerId ?? current.composerId, artistId: null, artistName: '' };
+}
+
+/** 자동 재생 곡을 count 개 더 고른다(existing 뒤에 이어질 것) */
+async function buildAutoplay(count: number, existing: readonly PlaylistItem[]): Promise<readonly PlaylistItem[]> {
+  const basis = autoplayBasis(existing);
+  if (!basis || count <= 0) return [];
+  return pickAutoplay({ basis, exclude: knownPieces(existing), taste: tastePool, count });
+}
+
+/** 지금 목록을 취향 추천과 함께 만들었는지. 취향 추천 없이 만들었으면 추천이 왔을 때 한 번 다시 만든다 */
+let autoplayBuiltWithTaste = true;
+
+/**
+ * 자동 재생 목록을 채운다. 곡마다 다시 고르지 않고, 한 번 길게 만들어 둔 목록을 차례로 쓰다가
+ * 남은 곡이 적어지면 뒤에 이어 붙인다. 새 목록을 틀면(목록이 비워지면) 그때 새로 만든다
+ */
+function ensureAutoplay() {
+  if (!state.autoplay || !state.current) return;
+  const existing = state.autoplayItems;
+  if (existing.length >= AUTOPLAY_LOW) return;
   const token = ++autoplayToken;
-  if (!state.autoplay || !state.current) {
-    if (state.autoplayItems.length || state.autoplayStatus !== 'idle') setState({ autoplayItems: [], autoplayStatus: 'idle' });
-    return;
+  if (!existing.length) {
+    autoplayBuiltWithTaste = tastePool.length > 0;
+    setState({ autoplayStatus: 'loading' });
   }
-  const basis = state.current.performanceId;
-  // 이미 골라 둔 곡이 있으면 새로 고르는 동안에도 그대로 보인다(깜빡이지 않게)
-  if (!state.autoplayItems.length) setState({ autoplayStatus: 'loading' });
   const settle = (items: readonly PlaylistItem[]) => {
-    if (token !== autoplayToken || state.current?.performanceId !== basis) return;
-    setState({ autoplayItems: items, autoplayStatus: items.length ? 'ready' : 'empty' });
+    if (token !== autoplayToken) return;
+    // 고르는 사이 목록이 줄었을 수 있어 지금 목록 뒤에 붙이고, 겹치는 곡은 뺀다
+    const have = new Set(state.autoplayItems.map((item) => item.pieceId));
+    const merged = [...state.autoplayItems, ...items.filter((item) => !have.has(item.pieceId))];
+    setState({ autoplayItems: merged, autoplayStatus: merged.length ? 'ready' : 'empty' });
+    dirty = true;
+    scheduleSave();
   };
-  void computeAutoplay()
+  void buildAutoplay(AUTOPLAY_LENGTH - existing.length, existing)
     .then(settle)
     .catch(() => settle([]));
+}
+
+/** 자동 재생 목록을 버리고 새로 만든다 */
+function rebuildAutoplay() {
+  autoplayToken += 1;
+  setState({ autoplayItems: [] });
+  ensureAutoplay();
 }
 
 export const comparePlayer = {
@@ -1057,19 +1117,28 @@ export const comparePlayer = {
       void playFromSource(playlist, playlist.index + 1 + index, { history: nextHistory, forward });
       return;
     }
-    const picks = state.autoplayItems.slice(index);
+    // 자동 재생 줄: 그 곡부터 틀고, 목록은 그 뒤부터 이어진다
+    const all = state.autoplayItems;
     void playItems(
-      picks.map((item) => ({
+      all.slice(index).map((item, offset) => ({
         item,
-        patch: (): QueuePatch => ({ playlist: state.playlist, origin: 'autoplay', history: nextHistory, forward }),
+        patch: (): QueuePatch => ({
+          playlist: state.playlist,
+          origin: 'autoplay',
+          history: nextHistory,
+          forward,
+          autoplayItems: all.slice(index + offset + 1),
+        }),
       }))
     );
   },
 
   /** 대기열에서 한 줄을 뺀다 */
-  removeFromQueue(section: 'forward' | 'source', index: number) {
+  removeFromQueue(section: 'forward' | 'source' | 'autoplay', index: number) {
     const { forward, playlist } = state;
-    if (section === 'forward') {
+    if (section === 'autoplay') {
+      setState({ autoplayItems: state.autoplayItems.filter((_, i) => i !== index) });
+    } else if (section === 'forward') {
       setState({ forward: forward.filter((_, i) => i !== index) });
     } else if (playlist) {
       const at = playlist.index + 1 + index;
@@ -1084,7 +1153,7 @@ export const comparePlayer = {
     }
     dirty = true;
     flushSession();
-    refreshAutoplay();
+    ensureAutoplay();
   },
 
   /** 비우기: 지금 곡만 남기고 다음에 나올 곡을 비운다. 자동 재생은 그대로 이어진다 */
@@ -1096,7 +1165,7 @@ export const comparePlayer = {
     });
     dirty = true;
     flushSession();
-    refreshAutoplay();
+    ensureAutoplay();
   },
 
   setShuffle(on: boolean) {
@@ -1120,13 +1189,13 @@ export const comparePlayer = {
   setAutoplay(on: boolean) {
     writeStored(AUTOPLAY_KEY, on ? 'on' : 'off');
     setState({ autoplay: on });
-    // 끌 때는 골라 둔 곡을 지우지 않는다(패널에서 흐리게 남겨 두고, 다시 켜면 바로 쓴다)
-    if (on && !state.autoplayItems.length) refreshAutoplay();
+    // 끌 때는 만들어 둔 목록을 지우지 않는다(다시 켜면 바로 이어 쓴다)
+    if (on) ensureAutoplay();
   },
 
-  /** 자동 재생 곡을 다시 고른다(못 찾았을 때 「다시 시도」) */
+  /** 자동 재생 목록을 다시 만든다(못 찾았을 때 「다시 시도」) */
   retryAutoplay() {
-    refreshAutoplay();
+    rebuildAutoplay();
   },
 
   setQueueOpen(open: boolean) {
@@ -1137,7 +1206,10 @@ export const comparePlayer = {
   /** 취향 추천 목록을 받는다(로그인하면 서버가 고른 것, 아니면 이 기기의 답으로 고른 것) */
   setTastePool(items: readonly AutoplayCandidate[]) {
     tastePool = items;
-    if (state.current && state.autoplay) refreshAutoplay();
+    if (!state.current || !state.autoplay) return;
+    // 취향 추천이 오기 전에 만든 목록이면 아직 그 목록 곡을 틀기 전이니 취향을 넣어 한 번 다시 만든다
+    if (items.length && !autoplayBuiltWithTaste && state.origin !== 'autoplay') rebuildAutoplay();
+    else ensureAutoplay();
   },
 
   /** 같은 연주를 다시 누르면 재생·일시정지 */

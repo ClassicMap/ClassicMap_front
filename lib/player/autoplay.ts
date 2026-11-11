@@ -100,12 +100,21 @@ async function firstPage<T>(load: () => Promise<{ pages: readonly T[][] }>): Pro
   }
 }
 
+/** 자동 재생 목록을 이어 붙일 때 기준이 되는 곡 */
+export type AutoplayBasis = Pick<
+  ComparePlayerTrack,
+  'pieceId' | 'composerId' | 'artistId' | 'artistName'
+>;
+
 /**
- * 지금 곡 다음에 이어질 곡을 고른다. 점수: 지금 연주자가 그 곡에도 있으면 3, 취향 추천 2, 같은 작곡가 2, 같은 장르 1.
- * 같은 까닭이 세 번 이어지지 않게 섞는다. 연주·클립은 여기서 부르지 않고(목록 첫 쪽만 본다) 튼 차례에 고른다
+ * 자동 재생 목록을 만든다(한 번에 길게). 「비슷한 곡 하나 → 취향 추천 둘」 순서로 번갈아 고르고,
+ * 같은 작곡가가 세 번 연달아 나오지 않게 한다.
+ * - 비슷한 곡: 기준 곡의 연주자가 그 곡에도 있으면 3, 같은 작곡가 2, 같은 장르 1
+ * - 취향 추천: 홈 추천과 같은 것(서버가 이 사람의 취향·들은 기록으로 고른 순서 그대로)
+ * 연주·클립은 여기서 부르지 않고(목록 첫 쪽만 본다) 그 곡 차례가 올 때 고른다
  */
 export async function pickAutoplay(input: {
-  basis: ComparePlayerTrack;
+  basis: AutoplayBasis;
   exclude: ReadonlySet<number>;
   taste: readonly AutoplayCandidate[];
   count: number;
@@ -132,12 +141,13 @@ export async function pickAutoplay(input: {
     ? await firstPage(() => queryClient.fetchInfiniteQuery(genrePiecesQueryOptions(genre)))
     : [];
 
-  const pool = new Map<number, Scored>();
+  // 비슷한 곡: 까닭이 여럿이면 점수를 더하고 가장 강한 까닭을 보인다
+  const similar = new Map<number, Scored>();
   const add = (candidate: AutoplayCandidate, kind: ReasonKind, reason: string) => {
-    if (exclude.has(candidate.pieceId)) return;
-    const existing = pool.get(candidate.pieceId);
+    if (exclude.has(candidate.pieceId) || candidate.pieceId === basis.pieceId) return;
+    const existing = similar.get(candidate.pieceId);
     if (!existing) {
-      pool.set(candidate.pieceId, { candidate, score: WEIGHT[kind], kind, reason });
+      similar.set(candidate.pieceId, { candidate, score: WEIGHT[kind], kind, reason });
       return;
     }
     existing.score += WEIGHT[kind];
@@ -149,7 +159,6 @@ export async function pickAutoplay(input: {
       existing.reason = reason;
     }
   };
-
   for (const performance of artistPerformances) {
     if (performance.clipStatus !== 'ready') continue;
     add(
@@ -158,9 +167,7 @@ export async function pickAutoplay(input: {
       t('같은 연주자 · {name}', { name: shortName(basis.artistName) })
     );
   }
-  for (const candidate of taste) add(candidate, 'taste', candidate.meta.reason || t('취향 추천'));
   for (const piece of composerPieces) {
-    if (piece.pieceId === basis.pieceId) continue;
     add(
       candidateFromPiece(piece, null),
       'composer',
@@ -174,26 +181,39 @@ export async function pickAutoplay(input: {
       'genre',
       t('비슷한 편성 · {genre}', { genre: genreLabel })
     );
-
   // 점수가 같으면 조금씩 흔들어 매번 같은 곡만 나오지 않게 한다
-  const ranked = [...pool.values()].map((entry) => ({
-    entry,
-    rank: entry.score + Math.random() * 0.9,
-  }));
+  const similarList = [...similar.values()]
+    .map((entry) => ({ entry, rank: entry.score + Math.random() * 0.9 }))
+    .sort((a, b) => b.rank - a.rank)
+    .map(({ entry }) => entry);
+  const tasteList: Scored[] = taste
+    .filter((candidate) => !exclude.has(candidate.pieceId) && candidate.pieceId !== basis.pieceId)
+    .map((candidate) => ({
+      candidate,
+      score: WEIGHT.taste,
+      kind: 'taste',
+      reason: candidate.meta.reason || t('취향 추천'),
+    }));
+
+  const used = new Set<number>();
   const picks: Scored[] = [];
-  while (picks.length < count && ranked.length) {
-    const lastTwo = picks.slice(-2).map((pick) => pick.kind);
+  /** 같은 작곡가가 세 번 연달아 나오지 않는 첫 곡. 없으면 아무 첫 곡 */
+  const takeFrom = (list: readonly Scored[]): Scored | null => {
+    const lastTwo = picks.slice(-2).map((pick) => pick.candidate.composerId);
     const repeated = lastTwo.length === 2 && lastTwo[0] === lastTwo[1] ? lastTwo[0] : null;
-    let bestIndex = 0;
-    let bestRank = -Infinity;
-    ranked.forEach(({ entry, rank }, index) => {
-      const adjusted = repeated && entry.kind === repeated ? rank - 2 : rank;
-      if (adjusted > bestRank) {
-        bestRank = adjusted;
-        bestIndex = index;
-      }
-    });
-    picks.push(ranked.splice(bestIndex, 1)[0].entry);
+    const fresh = list.filter((entry) => !used.has(entry.candidate.pieceId));
+    return fresh.find((entry) => entry.candidate.composerId !== repeated) ?? fresh[0] ?? null;
+  };
+  const pattern: ('similar' | 'taste')[] = ['similar', 'taste', 'taste'];
+  while (picks.length < count) {
+    const want = pattern[picks.length % pattern.length];
+    const pick =
+      want === 'taste'
+        ? (takeFrom(tasteList) ?? takeFrom(similarList))
+        : (takeFrom(similarList) ?? takeFrom(tasteList));
+    if (!pick) break;
+    used.add(pick.candidate.pieceId);
+    picks.push(pick);
   }
   return picks.map(({ candidate, reason }) => ({
     pieceId: candidate.pieceId,
