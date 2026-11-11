@@ -242,7 +242,7 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '최근 재생': 'Recently played',
   '아직 들은 곡이 없어요.': 'Nothing played yet.',
   '{name}에서': 'From {name}',
-  '목록이 끝나면 취향에 맞춘 비슷한 곡을 이어서 틀어요': 'Keeps playing similar pieces for your taste when the list ends',
+  '취향에 맞춘 비슷한 곡이 이어져요': 'Similar pieces for your taste come next',
   '꺼져 있어요. 목록이 끝나면 멈춰요.': 'Off. Playback stops at the end of the list.',
   '사이드바 접기': 'Collapse sidebar',
   '사이드바 펼치기': 'Expand sidebar',

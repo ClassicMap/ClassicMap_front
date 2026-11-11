@@ -465,7 +465,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
 
             <Section
               title={t('자동 재생')}
-              detail={t('목록이 끝나면 취향에 맞춘 비슷한 곡을 이어서 틀어요')}
+              detail={t('취향에 맞춘 비슷한 곡이 이어져요')}
               action={<AutoplaySwitch on={autoplay} />}>
               {!autoplay ? (
                 <Note>{t('꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
