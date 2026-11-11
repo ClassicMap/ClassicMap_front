@@ -20,7 +20,7 @@ import {
   supportingCredits,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
-import { comparePlaylistFor } from '@/lib/player/compare-playlist';
+import { compareQueueFor } from '@/lib/player/compare-playlist';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { crossfade, type Fade, fadeSeconds, type SwitchCause } from '@/lib/player/crossfade';
 import { type AlignedClip, fineClock, followRate, sameMoment } from '@/lib/player/focus-align';
@@ -367,7 +367,7 @@ function FocusStage(props: FocusStageProps) {
       play: latest.playing || (Platform.OS === 'web' && webRef.current.takingOver()),
       startAt: latest.side === 'a' ? positions.a : positions.b,
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
-      playlist: comparePlaylistFor(current.pieceId, sectors, current.sectorId),
+      ...compareQueueFor(current.pieceId, sectors, current.sectorId, current),
     });
     comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
     // 넘긴 뒤에는 이 화면 영상이 앱 플레이어를 멈추지 않는다
@@ -1125,7 +1125,7 @@ function useNativeFocusEngine(
     if (state?.performanceId !== a.id && state?.performanceId !== b.id) {
       comparePlayer.select(trackFromPerformance(a, imageOf(a)), {
         play: startPlaying,
-        playlist: comparePlaylistFor(a.pieceId, sectors, a.sectorId),
+        ...compareQueueFor(a.pieceId, sectors, a.sectorId, a),
       });
     }
     // 처음 한 번만

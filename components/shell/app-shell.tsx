@@ -6,6 +6,8 @@ import { View } from 'react-native';
 import { PageContainer } from '@/components/navigation/page-container';
 import { RouteProgress } from '@/components/navigation/route-progress';
 import { GlobalPlayerBar } from '@/components/player/global-player-bar';
+import { QueuePanel } from '@/components/player/queue-panel';
+import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 
 import { CommandPalette } from './command-palette';
 import { CommandPaletteProvider } from './command-palette-context';
@@ -30,8 +32,21 @@ export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; chi
           {/* 비교 화면 밖에서 듣고 있으면 본문 아래에 플레이바가 남는다 */}
           <GlobalPlayerBar />
         </View>
+        <QueueDock />
       </View>
       <CommandPalette />
     </CommandPaletteProvider>
+  );
+}
+
+/** 재생 대기열 패널. 열면 본문 오른쪽에 붙고 본문 폭이 그만큼 줄어든다 */
+function QueueDock() {
+  const open = useComparePlayer((state) => state.queueOpen);
+  const hasCurrent = useComparePlayer((state) => state.current !== null);
+  if (!open || !hasCurrent) return null;
+  return (
+    <View className="w-[320px] shrink-0 overflow-hidden rounded-[9px] bg-surface-1">
+      <QueuePanel onClose={() => comparePlayer.setQueueOpen(false)} />
+    </View>
   );
 }

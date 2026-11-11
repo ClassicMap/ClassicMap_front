@@ -126,15 +126,19 @@ export function useAllSectorPerformances(sectorIds: readonly number[]) {
   });
 }
 
-export function useArtistComparisonPerformances(artistId: number) {
-  return useInfiniteQuery({
+/** 한 연주자의 비교 연주. 아티스트 화면과 자동 재생(같은 연주자로 이어 듣기)이 같은 키를 쓴다 */
+export function artistComparisonQueryOptions(artistId: number) {
+  return infiniteQueryOptions({
     queryKey: COMPARISON_QUERY_KEYS.artist(artistId),
     queryFn: ({ pageParam }) =>
       ComparisonAPI.getByArtist(artistId, { cursor: pageParam, limit: PAGE_SIZE }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: null as string | null,
-    enabled: artistId > 0,
   });
+}
+
+export function useArtistComparisonPerformances(artistId: number) {
+  return useInfiniteQuery({ ...artistComparisonQueryOptions(artistId), enabled: artistId > 0 });
 }
 
 export function comparisonPieceQueryOptions(pieceId: number, composerId: number | undefined) {

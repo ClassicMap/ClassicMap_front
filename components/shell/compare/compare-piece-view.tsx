@@ -20,7 +20,8 @@ import { PieceArt } from '@/components/piece/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/ui/icons';
 import { PerformerStepper, useFollowSongNav, useSongNav } from '@/components/player/song-nav';
-import { comparePlaylistFor } from '@/lib/player/compare-playlist';
+import { compareQueueFor } from '@/lib/player/compare-playlist';
+import { QueueButton } from '@/components/player/queue-panel';
 import { ServiceLogo } from '@/components/ui/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -196,7 +197,7 @@ export function ComparePieceView({
       comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
         play: true,
         queue,
-        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+        ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
       }),
     [imageOf, queue, pieceId, sectors]
   );
@@ -237,7 +238,7 @@ export function ComparePieceView({
         play: true,
         queue,
         startAt: moment.offsetMs / 1000,
-        playlist: comparePlaylistFor(pieceId, sectors, performance.sectorId),
+        ...compareQueueFor(pieceId, sectors, performance.sectorId, performance),
       });
     },
     [imageOf, queue, pieceId, sectors]
@@ -1130,7 +1131,7 @@ function PlayerBar({
             </View>
             <View className="shrink-0 flex-row items-center gap-2">
               {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
-              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} />
+              <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} spot={false} />
               {focusButton}
             </View>
           </>
@@ -1195,6 +1196,7 @@ function PlayerBar({
       {/* 오른쪽: 소리·화면·원본 */}
       <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
         <VolumeControl width={compact ? 56 : 76} />
+        <QueueButton />
         <Pressable
           onPress={onFullscreen}
           accessibilityLabel={t('전체 화면 (F)')}

@@ -6,7 +6,7 @@ import { Volume1Icon, Volume2Icon, VolumeXIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
-/** 음소거 버튼 + 볼륨 슬라이더 (웹). 값은 이 브라우저에 남는다 */
+/** 음소거 버튼 + 볼륨 슬라이더 (웹). 값은 이 브라우저에 남는다. width 가 0이면 버튼만 둔다(좁은 재생 바) */
 export function VolumeControl({ width = 76 }: { width?: number }) {
   useLocale();
   const volume = useComparePlayer((state) => state.volume);
@@ -24,17 +24,19 @@ export function VolumeControl({ width = 76 }: { width?: number }) {
           className="text-foreground-muted"
         />
       </Pressable>
-      <View className="flex-row" style={{ width }}>
-        <ScrubBar
-          value={level}
-          onScrub={(value) => comparePlayer.setVolume(value)}
-          onCommit={(value) => comparePlayer.setVolume(value)}
-          label={t('볼륨')}
-          valueText={(value) => `${Math.round(value * 100)}%`}
-          step={0.1}
-          fill="hsl(var(--foreground-muted))"
-        />
-      </View>
+      {width > 0 ? (
+        <View className="flex-row" style={{ width }}>
+          <ScrubBar
+            value={level}
+            onScrub={(value) => comparePlayer.setVolume(value)}
+            onCommit={(value) => comparePlayer.setVolume(value)}
+            label={t('볼륨')}
+            valueText={(value) => `${Math.round(value * 100)}%`}
+            step={0.1}
+            fill="hsl(var(--foreground-muted))"
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

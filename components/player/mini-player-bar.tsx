@@ -1,5 +1,6 @@
 import { MiniVideoTarget } from '@/components/player/mini-video-target';
 import { compareHrefFor, tabBarHeight, useSettled } from '@/components/player/player-bar-helpers';
+import { QueuePanel } from '@/components/player/queue-panel';
 import { useSongNav } from '@/components/player/song-nav';
 import { EntityThumb } from '@/components/ui/entity-thumb';
 import { Icon } from '@/components/ui/icon';
@@ -8,9 +9,9 @@ import { relocalize, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { useRouter, useSegments } from 'expo-router';
-import { PauseIcon, PlayIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
+import { ListMusicIcon, PauseIcon, PlayIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Animated, PanResponder, Platform, Pressable, View } from 'react-native';
+import { Animated, Modal, PanResponder, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** 미니 플레이어를 이만큼(px) 밀면 이전·다음 곡으로 넘어간다 */
@@ -57,6 +58,8 @@ export function MiniPlayerBar() {
   }, [dragX]);
 
   // 영상이 비교 화면 자리에 떠 있지 않으면 띄운다 (다른 화면이거나, 비교 화면이 다른 작품을 보고 있을 때)
+  // 대기열은 아래에서 올라오는 시트로 연다(데스크톱은 오른쪽 패널)
+  const [queueVisible, setQueueVisible] = React.useState(false);
   const wanted = Boolean(current) && !focus && surface !== 'slot';
   const visible = useSettled(wanted);
   if (!current || !visible) return null;
@@ -121,15 +124,21 @@ export function MiniPlayerBar() {
             disabled={!nav.hasNext}
             accessibilityLabel={nav.nextLabel}
             className={cn(
-              'size-10 items-center justify-center rounded-full',
+              'size-9 items-center justify-center rounded-full',
               !nav.hasNext && 'opacity-30'
             )}>
             <Icon as={SkipForwardIcon} size={18} className="fill-foreground text-foreground" />
           </Pressable>
           <Pressable
+            onPress={() => setQueueVisible(true)}
+            accessibilityLabel={t('재생 대기열')}
+            className="size-9 items-center justify-center rounded-full">
+            <Icon as={ListMusicIcon} size={18} className="text-foreground" />
+          </Pressable>
+          <Pressable
             onPress={() => comparePlayer.close()}
             accessibilityLabel={t('플레이어 닫기')}
-            className="size-10 items-center justify-center rounded-full">
+            className="size-9 items-center justify-center rounded-full">
             <Icon as={XIcon} size={18} className="text-foreground-muted" />
           </Pressable>
         </View>
@@ -137,6 +146,25 @@ export function MiniPlayerBar() {
           <View className="h-full bg-primary" style={{ width: `${ratio * 100}%` }} />
         </View>
       </View>
+      <Modal
+        visible={queueVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setQueueVisible(false)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <Pressable
+            className="flex-1"
+            onPress={() => setQueueVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('대기열 닫기')}
+          />
+          <View
+            className="overflow-hidden rounded-t-2xl bg-surface-1"
+            style={{ height: '82%', paddingBottom: insets.bottom }}>
+            <QueuePanel onClose={() => setQueueVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

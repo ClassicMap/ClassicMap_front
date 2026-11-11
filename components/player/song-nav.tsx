@@ -4,27 +4,66 @@ import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
+import { ArrowLeftRightIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
 /**
- * 재생 바의 이전·다음 곡. 어느 화면의 재생 바든 같은 뜻이다(재생 목록을 따라 곡을 넘긴다).
- * 비교 화면에서 튼 곡은 그 작품의 구간들이 목록이라 이름만 「구간」으로 부른다
+ * 재생 바의 이전·다음 곡. 어느 화면의 재생 바든 같은 뜻이다(대기열을 따라 곡을 넘긴다).
+ * 이전·다음이 같은 작품의 다른 구간이면 이름만 「구간」으로 부른다
  */
 export function useSongNav() {
   useLocale();
-  const hasNext = useComparePlayer((state) =>
-    Boolean(
-      state.current && state.playlist && state.playlist.index < state.playlist.items.length - 1
-    )
-  );
-  const sections = useComparePlayer((state) => state.playlist?.kind === 'compare');
+  const hasNext = useComparePlayer(() => comparePlayer.hasNext());
+  const nextSection = useComparePlayer((state) => {
+    const upcoming = comparePlayer.upcomingPieceId();
+    if (upcoming === null) return state.playlist?.kind === 'compare';
+    return upcoming === state.current?.pieceId;
+  });
+  const prevSection = useComparePlayer((state) => {
+    const last = state.history[state.history.length - 1];
+    if (!last) return state.playlist?.kind === 'compare';
+    return last.track.pieceId === state.current?.pieceId;
+  });
   return {
     hasNext,
-    prevLabel: sections ? t('이전 구간') : t('이전 곡'),
-    nextLabel: sections ? t('다음 구간') : t('다음 곡'),
+    prevLabel: prevSection ? t('이전 구간') : t('이전 곡'),
+    nextLabel: nextSection ? t('다음 구간') : t('다음 곡'),
   };
+}
+
+/**
+ * 「같은 지점」: 켜면 연주자를 바꿀 때 지금 듣던 대목부터, 끄면 연주자마다 듣던 자리부터 잇는다.
+ * 비교 화면 위의 「이어서 · 같은 지점」과 같은 값이다
+ */
+export function SameSpotToggle({ compact = false }: { compact?: boolean }) {
+  useLocale();
+  const on = useComparePlayer((state) => state.switchMode === 'align');
+  return (
+    <Pressable
+      onPress={() => comparePlayer.setSwitchMode(on ? 'resume' : 'align')}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on }}
+      accessibilityLabel={t('같은 지점에서 연주자 바꾸기')}
+      hitSlop={4}
+      className={cn(
+        'h-full flex-row items-center gap-1.5 rounded-r-full border-l border-border pl-2.5 pr-3 web:hover:bg-surface-2',
+        compact && 'pl-2 pr-2.5'
+      )}>
+      <Icon
+        as={ArrowLeftRightIcon}
+        size={14}
+        className={on ? 'text-primary' : 'text-foreground-muted'}
+      />
+      {compact ? null : (
+        <Text
+          numberOfLines={1}
+          className={cn('text-label', on ? 'font-semibold text-primary' : 'text-foreground-muted')}>
+          {t('같은 지점')}
+        </Text>
+      )}
+    </Pressable>
+  );
 }
 
 /** 연주자 묶음에 한 번에 보일 얼굴 수. 더 많으면 지금 연주자 둘레만 보이고 「2/8」을 붙인다 */
@@ -45,11 +84,14 @@ function faceWindow(size: number, position: number, max: number): [number, numbe
 export function PerformerStepper({
   compact = false,
   maxFaces = compact ? MAX_FACES_COMPACT : MAX_FACES,
+  spot = true,
   className,
 }: {
   compact?: boolean;
   /** 한 번에 보일 얼굴 수. 0이면 ‹ ›만 둔다(연주자 카드가 바로 위에 있는 비교 화면의 좁은 바) */
   maxFaces?: number;
+  /** 끝에 「같은 지점」 토글을 붙인다 */
+  spot?: boolean;
   className?: string;
 }) {
   const { locale } = useLocale();
@@ -126,9 +168,13 @@ export function PerformerStepper({
         accessibilityRole="button"
         accessibilityLabel={t('다음 연주자')}
         hitSlop={4}
-        className="h-full w-7 items-center justify-center rounded-r-full web:hover:bg-surface-2">
+        className={cn(
+          'h-full w-7 items-center justify-center web:hover:bg-surface-2',
+          !spot && 'rounded-r-full'
+        )}>
         <Icon as={ChevronRightIcon} size={15} className="text-foreground" />
       </Pressable>
+      {spot ? <SameSpotToggle compact={compact} /> : null}
       {/* 사진에 마우스를 올리면 그 연주자 이름을 묶음 위에 띄운다 */}
       {hoveredName ? (
         <View

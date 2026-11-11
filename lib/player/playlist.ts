@@ -10,7 +10,8 @@ import {
   pieceSectorsQueryOptions,
   sectorPerformancesQueryOptions,
 } from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
+import type { ComparisonPerformance, ComparisonPiece, ComparisonSector } from '@/lib/types/models';
+import { pieceMeta } from '@/lib/player/autoplay';
 
 /**
  * 재생 목록의 곡을 실제 연주로 정하는 규칙. 영화 카드의 「바로 듣기」, 홈·작곡가 카드의 재생,
@@ -73,30 +74,62 @@ export async function resolvePlaylistItem(
   };
 }
 
+/** 재생 목록으로 받을 작품. 카드가 가진 작품 정보를 대기열 줄에 그대로 쓴다 */
+export type ListPiece = Pick<ComparisonPiece, 'pieceId'> & Partial<ComparisonPiece>;
+
+function listItem(piece: ListPiece): PlaylistItem {
+  const meta =
+    piece.pieceTitle && piece.composerName
+      ? pieceMeta({
+          pieceId: piece.pieceId,
+          pieceTitle: piece.pieceTitle,
+          composerName: piece.composerName,
+          composerAvatarUrl: piece.composerAvatarUrl ?? null,
+          coverVideoId: piece.coverVideoId ?? null,
+          opusNumber: null,
+          composerId: piece.composerId ?? 0,
+          sectorCount: 0,
+          performerCount: 0,
+          performers: [],
+        })
+      : undefined;
+  return { pieceId: piece.pieceId, sectorId: null, meta };
+}
+
+/** 작품 카드 목록이나 이미 만든 목록 줄을 대기열 줄로 */
+export function listItems(list: readonly ListPiece[] | readonly PlaylistItem[]): PlaylistItem[] {
+  // 작품 카드는 제목을 갖고 있고, 이미 만든 목록 줄은 meta 에 담아 둔다
+  return list.map((entry) => ('pieceTitle' in entry ? listItem(entry as ListPiece) : (entry as PlaylistItem)));
+}
+
 /** 작품 목록(홈 선반·작곡가 화면·비교 둘러보기)을 재생 목록으로. 이 작품이 목록에 없으면 이 곡 하나만 */
 export function pieceListPlaylist(
   pieceId: number,
-  list?: readonly { pieceId: number }[]
+  list?: readonly ListPiece[],
+  name?: string
 ): Playlist {
-  const items =
-    list && list.length > 0
-      ? list.map((piece) => ({ pieceId: piece.pieceId, sectorId: null }))
-      : [];
+  const items = list && list.length > 0 ? list.map(listItem) : [];
   const index = items.findIndex((item) => item.pieceId === pieceId);
-  if (index < 0) return { kind: 'list', items: [{ pieceId, sectorId: null }], index: 0 };
-  return { kind: 'list', items, index };
+  if (index < 0) return { kind: 'list', items: [{ pieceId, sectorId: null }], index: 0, name };
+  return { kind: 'list', items, index, name };
 }
 
-/** 한 작품의 비교 구간들을 재생 목록으로(비교 화면). 끝나면 다음 구간으로 넘어가지 않는다 */
+/** 한 작품의 비교 구간들을 재생 목록으로(비교 화면) */
 export function sectorPlaylist(
   pieceId: number,
-  sectors: readonly Pick<ComparisonSector, 'id'>[],
-  sectorId: number
+  sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName'>[],
+  sectorId: number,
+  piece?: { title: string; composer: string; image: string | null }
 ): Playlist {
-  const items = sectors.map((sector) => ({ pieceId, sectorId: sector.id }));
+  const items = sectors.map((sector) => ({
+    pieceId,
+    sectorId: sector.id,
+    meta: piece ? { title: `${sector.sectorName} · ${piece.title}`, composer: piece.composer, image: piece.image } : undefined,
+  }));
   const index = items.findIndex((item) => item.sectorId === sectorId);
-  if (index < 0) return { kind: 'compare', items: [{ pieceId, sectorId }], index: 0 };
-  return { kind: 'compare', items, index };
+  const name = piece ? piece.title : undefined;
+  if (index < 0) return { kind: 'compare', items: [{ pieceId, sectorId }], index: 0, name };
+  return { kind: 'compare', items, index, name };
 }
 
 /** 한 구간의 재생 가능한 연주들(연주자 넘기기 차례). 새로고침 뒤 되살린 곡의 차례를 다시 채울 때 쓴다 */
