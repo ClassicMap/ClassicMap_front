@@ -136,7 +136,7 @@ function isComposerPiece(piece: Piece | ComposerPiece): piece is ComposerPiece {
 }
 
 /** 세트 안 곡 번호를 화면 이름으로. 악장이면 「2악장」, 아니면 「3번」 */
-function partLabel(sequence: number, kind: PiecePartKind | null | undefined): string {
+export function partLabel(sequence: number, kind: PiecePartKind | null | undefined): string {
   return kind === 'movement' ? t('{n}악장', { n: sequence }) : t('{n}번', { n: sequence });
 }
 

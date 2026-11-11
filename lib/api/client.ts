@@ -22,6 +22,7 @@ import { isPieceGenre } from '../design/genre-palette';
 import type {
   Composer,
   ComposerCatalog,
+  ComposerHighlight,
   ComposerPiece,
   ComposerPieceFilter,
   Piece,
@@ -113,6 +114,23 @@ interface APIPiecePart {
   notable?: boolean;
   appleMusicUrl?: string | null;
   spotifyUrl?: string | null;
+}
+
+interface APIComposerHighlight {
+  pieceId: number;
+  title: string;
+  titleEn?: string | null;
+  genre?: string | null;
+  partKind?: PiecePartKind | null;
+  part?: { sequenceNumber: number; name: string; nameEn?: string | null } | null;
+  comparePieceId?: number | null;
+  reason?: string | null;
+  reasonEn?: string | null;
+}
+
+interface APIComposerCatalog extends Omit<ComposerCatalog, 'highlights'> {
+  /** 「처음 듣는다면」 칸이 생기기 전 서버는 이 칸이 없다 */
+  highlights?: APIComposerHighlight[];
 }
 
 interface APIPieceSearchResult extends APIPiece {
@@ -324,13 +342,26 @@ const mapComposerPiece = (api: APIComposerPiece): ComposerPiece => ({
   matchedPart: api.matchedPart ?? null,
 });
 
-const mapCatalog = (api: ComposerCatalog): ComposerCatalog => ({
+const mapHighlight = (api: APIComposerHighlight): ComposerHighlight => ({
+  pieceId: api.pieceId,
+  title: pick(api.title, api.titleEn),
+  genre: isPieceGenre(api.genre) ? api.genre : null,
+  partKind: api.partKind ?? null,
+  part: api.part
+    ? { sequenceNumber: api.part.sequenceNumber, name: pick(api.part.name, api.part.nameEn) }
+    : null,
+  comparePieceId: api.comparePieceId ?? null,
+  reason: pick(api.reason, api.reasonEn) ?? null,
+});
+
+const mapCatalog = (api: APIComposerCatalog): ComposerCatalog => ({
   total: api.total,
   notableTotal: api.notableTotal,
   genres: api.genres.map((genre) => ({
     ...genre,
     genre: isPieceGenre(genre.genre) ? genre.genre : null,
   })),
+  highlights: (api.highlights ?? []).map(mapHighlight),
 });
 
 const mapPiecePart = (api: APIPiecePart): PiecePart => ({
@@ -1035,7 +1066,7 @@ export const PieceAPI = {
   /** q 가 있으면 그 검색에 걸린 작품만 갈래·형식별로 센다(검색 중 갈래 칩의 결과 수) */
   async getCatalog(composerId: number, q?: string): Promise<ComposerCatalog> {
     const query = q ? `?q=${encodeURIComponent(q)}` : '';
-    const data = await requestJson<ComposerCatalog>(`/composers/${composerId}/catalog${query}`);
+    const data = await requestJson<APIComposerCatalog>(`/composers/${composerId}/catalog${query}`);
     return mapCatalog(data);
   },
 
