@@ -56,6 +56,8 @@ export interface QueueItemMeta {
   image: string | null;
   /** 자동 재생 줄에 보이는 고른 까닭 */
   reason?: string;
+  /** 줄 그림으로 쓸 작곡가 사진을 찾는 데 쓴다 */
+  composerId?: number;
 }
 
 /** 재생 목록의 한 곡(작품의 한 구간). 어느 연주로 틀지는 그 곡 차례가 올 때 정한다 */
@@ -1287,9 +1289,9 @@ export const comparePlayer = {
       return;
     }
     setState({ playing: false });
-    // 비교 화면에서 그 영상을 보는 중이면(나란히 듣는 중) 멈춘다. 아니면 대기열의 다음 곡으로 넘어간다.
-    // 앱은 끝을 두 번 알릴 때가 있어 같은 연주에서 한 번만 넘긴다
-    if (state.surface === 'slot' || advancedFrom === performanceId) return;
+    // 비교 화면 자리에서 그 영상을 보는 중이면(나란히 듣는 중) 멈춘다. 전체 화면은 감상이라 다음 곡으로 넘어가고,
+    // 영상은 전체 화면 그대로 다음 곡이 된다. 앱은 끝을 두 번 알릴 때가 있어 같은 연주에서 한 번만 넘긴다
+    if ((state.surface === 'slot' && !state.fullscreen) || advancedFrom === performanceId) return;
     advancedFrom = performanceId;
     void advance().finally(() => {
       if (advancedFrom === performanceId) advancedFrom = null;

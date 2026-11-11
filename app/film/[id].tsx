@@ -62,6 +62,7 @@ export default function FilmTitleScreen() {
             title: cue.partLabel ? `${cue.workTitle} · ${cue.partLabel}` : cue.workTitle,
             composer: cue.composerName,
             image: null,
+            composerId: cue.composerId ?? undefined,
           },
         },
       });

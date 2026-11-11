@@ -11,13 +11,14 @@ import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
 import { type Href, Link, usePathname } from 'expo-router';
-import { DiscIcon, HomeIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, SearchIcon } from 'lucide-react-native';
+import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { msg, t, useLocale } from '@/lib/i18n';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { createPortal } from 'react-dom';
 
 import { useCommandPalette } from './command-palette-context';
-import { setSidebarCollapsed } from './sidebar-state';
+import { readSidebarCollapsed, setSidebarCollapsed } from './sidebar-state';
 import { Kbd, modKeyLabel } from './kbd';
 
 type NavIconProps = { size: number; className: string };
@@ -55,102 +56,199 @@ const NAV_ITEMS: NavItem[] = [
 /** 사이드바 레퍼토리는 종류마다 최근 몇 개만. 나머지는 레퍼토리 탭에서 */
 const LIBRARY_PER_SECTION = 4;
 
+/** 접힌 사이드바에서 아이콘에 마우스를 올리면 오른쪽에 뜨는 이름 (shadcn 사이드바와 같은 동작) */
+interface HoverLabel {
+  text: string;
+  top: number;
+  left: number;
+}
+
+const HoverLabelContext = React.createContext<(label: HoverLabel | null) => void>(() => undefined);
+
+/** 접힌 상태에서만 이름을 띄우는 손잡이. 웹 DOM 요소의 자리를 읽어 화면 기준으로 띄운다 */
+function useHoverLabel(text: string, enabled: boolean) {
+  const show = React.useContext(HoverLabelContext);
+  return enabled
+    ? {
+        onHoverIn: (event: { currentTarget: unknown }) => {
+          const element = event.currentTarget as HTMLElement | null;
+          const rect = element?.getBoundingClientRect?.();
+          if (rect) show({ text, top: rect.top + rect.height / 2, left: rect.right + 10 });
+        },
+        onHoverOut: () => show(null),
+      }
+    : {};
+}
+
 /**
- * 데스크톱 사이드바. 창이 좁으면 아이콘만 남기고(rail), 넓으면 사용자가 접고 펼 수 있다(접은 상태는 이 브라우저에 남는다).
- * 폭은 부드럽게 줄고 늘며, 펼칠 때 글자가 뒤따라 나타난다
+ * 데스크톱 사이드바. shadcn(Base UI) 사이드바와 같은 방식으로 접고 편다.
+ * - 상단바 왼쪽 단추, 사이드바 오른쪽 가장자리 띠, ⌘B(Ctrl+B)로 접고 편다. 접은 상태는 이 브라우저에 남는다
+ * - 접으면 아이콘만 남고(레퍼토리는 사진만), 마우스를 올리면 오른쪽에 이름이 뜬다
+ * - 창이 좁으면 늘 접힌 모양(rail)이고 펼치기는 없다
  */
 export function SideNav({ collapsed, canToggle = false }: { collapsed: boolean; canToggle?: boolean }) {
   useLocale();
   const pathname = usePathname();
   const { setOpen } = useCommandPalette();
   const queryClient = useQueryClient();
-  const toggle = canToggle ? (
-    <Pressable
-      onPress={() => setSidebarCollapsed(!collapsed)}
-      accessibilityRole="button"
-      accessibilityLabel={collapsed ? t('사이드바 펼치기') : t('사이드바 접기')}
-      className="cm-tint size-8 items-center justify-center rounded-md web:hover:bg-surface-2">
-      <Icon
-        as={collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon}
-        size={18}
-        className="text-foreground-muted"
-      />
-    </Pressable>
-  ) : null;
+  const [hoverLabel, setHoverLabel] = React.useState<HoverLabel | null>(null);
+  // 펼치면 떠 있던 이름을 지운다
+  React.useEffect(() => {
+    if (!collapsed) setHoverLabel(null);
+  }, [collapsed]);
 
   return (
-    <View
-      className={cn(
-        'cm-side shrink-0 overflow-hidden rounded-[9px] bg-surface-1 py-4',
-        collapsed ? 'w-[60px] items-center px-2' : 'w-[232px] px-2.5'
-      )}>
+    <HoverLabelContext.Provider value={setHoverLabel}>
       <View
         className={cn(
-          'flex-row items-center gap-2.5 pb-5',
-          collapsed ? 'flex-col justify-center gap-3' : 'px-2.5'
+          'cm-side relative shrink-0 overflow-hidden rounded-[9px] bg-surface-1 py-4',
+          collapsed ? 'w-[60px] items-center px-2' : 'w-[232px] px-2.5'
         )}>
-        <BrandLogo size={28} />
-        {!collapsed && (
-          <Text className="cm-reveal flex-1 text-[15px] font-bold tracking-tight">ClassicMap</Text>
-        )}
-        {toggle}
-      </View>
-
-      {NAV_ITEMS.map((item) => {
-        const active = item.match.some((prefix) => pathname.startsWith(prefix));
-        return (
-          <Link key={item.label} href={item.href} asChild>
-            <Pressable
-              {...createPrefetchHandlers(queryClient, active ? null : item.prefetch)}
-              accessibilityRole="link"
-              accessibilityLabel={item.label}
-              accessibilityState={{ selected: active }}
-              className={cn(
-                'h-10 flex-row items-center gap-3.5 rounded-md transition-colors duration-instant',
-                collapsed ? 'w-10 justify-center' : 'px-2.5',
-                active ? 'bg-surface-3' : 'hover:bg-surface-2'
-              )}>
-              {item.renderIcon({
-                size: 20,
-                className: active ? 'text-foreground' : 'text-foreground-muted',
-              })}
-              {!collapsed && (
-                <Text
-                  numberOfLines={1}
-                  className={cn(
-                    'cm-reveal flex-1 text-[13.5px] font-semibold',
-                    active ? 'text-foreground' : 'text-foreground-muted'
-                  )}>
-                  {t(item.label)}
-                </Text>
-              )}
-              {!collapsed && item.href === '/search' ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('빠른 검색 열기')}
-                  onPress={(event) => {
-                    event.preventDefault();
-                    setOpen(true);
-                  }}>
-                  <Kbd>{`${modKeyLabel()}K`}</Kbd>
-                </Pressable>
-              ) : null}
-            </Pressable>
-          </Link>
-        );
-      })}
-
-
-      {!collapsed && (
-        <View className="cm-reveal min-h-0 flex-1">
-          <Library />
+        <View className={cn('flex-row items-center gap-2.5 pb-5', collapsed ? 'justify-center' : 'px-2.5')}>
+          <BrandLogo size={28} />
+          {!collapsed && <Text className="cm-reveal text-[15px] font-bold tracking-tight">ClassicMap</Text>}
         </View>
-      )}
-    </View>
+
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.label}
+            item={item}
+            active={item.match.some((prefix) => pathname.startsWith(prefix))}
+            collapsed={collapsed}
+            prefetch={createPrefetchHandlers(queryClient, item.prefetch ?? null)}
+            onOpenPalette={() => setOpen(true)}
+          />
+        ))}
+
+        <View className="min-h-0 flex-1">
+          <Library collapsed={collapsed} />
+        </View>
+
+        {canToggle ? <SidebarRail collapsed={collapsed} /> : null}
+      </View>
+      {hoverLabel && collapsed ? <FloatingLabel label={hoverLabel} /> : null}
+    </HoverLabelContext.Provider>
   );
 }
 
-function Library() {
+function NavLink({
+  item,
+  active,
+  collapsed,
+  prefetch,
+  onOpenPalette,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  prefetch: object;
+  onOpenPalette: () => void;
+}) {
+  const hover = useHoverLabel(t(item.label), collapsed);
+  return (
+    <Link href={item.href} asChild>
+      <Pressable
+        {...(active ? {} : prefetch)}
+        {...hover}
+        accessibilityRole="link"
+        accessibilityLabel={t(item.label)}
+        accessibilityState={{ selected: active }}
+        className={cn(
+          'h-10 flex-row items-center gap-3.5 rounded-md transition-colors duration-instant',
+          collapsed ? 'w-10 justify-center' : 'px-2.5',
+          active ? 'bg-surface-3' : 'hover:bg-surface-2'
+        )}>
+        {item.renderIcon({
+          size: 20,
+          className: active ? 'text-foreground' : 'text-foreground-muted',
+        })}
+        {!collapsed && (
+          <Text
+            numberOfLines={1}
+            className={cn(
+              'cm-reveal flex-1 text-[13.5px] font-semibold',
+              active ? 'text-foreground' : 'text-foreground-muted'
+            )}>
+            {t(item.label)}
+          </Text>
+        )}
+        {!collapsed && item.href === '/search' ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('빠른 검색 열기')}
+            onPress={(event) => {
+              event.preventDefault();
+              onOpenPalette();
+            }}>
+            <Kbd>{`${modKeyLabel()}K`}</Kbd>
+          </Pressable>
+        ) : null}
+      </Pressable>
+    </Link>
+  );
+}
+
+/** 사이드바 오른쪽 가장자리의 얇은 띠. 올리면 선이 보이고 누르면 접고 편다 (shadcn SidebarRail) */
+function SidebarRail({ collapsed }: { collapsed: boolean }) {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <Pressable
+      onPress={() => setSidebarCollapsed(!collapsed)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      accessibilityRole="button"
+      accessibilityLabel={collapsed ? t('사이드바 펼치기') : t('사이드바 접기')}
+      tabIndex={-1}
+      className="absolute bottom-0 right-0 top-0 w-2 items-end"
+      style={{ cursor: collapsed ? 'e-resize' : 'w-resize' } as object}>
+      <View className={cn('cm-fade h-full w-0.5 bg-border-strong', hovered ? 'opacity-100' : 'opacity-0')} />
+    </Pressable>
+  );
+}
+
+/** 접힌 사이드바의 이름 말풍선. 사이드바가 잘라 내지 않게 화면 위에 띄운다 */
+function FloatingLabel({ label }: { label: HoverLabel }) {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
+  return createPortal(
+    <div
+      className="cm-backdrop-in"
+      style={{
+        position: 'fixed',
+        top: label.top,
+        left: label.left,
+        transform: 'translateY(-50%)',
+        zIndex: 60,
+        pointerEvents: 'none',
+        padding: '4px 8px',
+        borderRadius: 6,
+        background: 'hsl(var(--foreground))',
+        color: 'hsl(var(--background))',
+        font: '600 12px/16px Pretendard, system-ui, sans-serif',
+        whiteSpace: 'nowrap',
+      }}>
+      {label.text}
+    </div>,
+    document.body
+  );
+}
+
+/** ⌘B(Ctrl+B)로 사이드바를 접고 편다. 글을 쓰는 중에는 받지 않는다 */
+export function useSidebarShortcut(enabled: boolean) {
+  React.useEffect(() => {
+    if (!enabled || Platform.OS !== 'web') return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'b' || !(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      event.preventDefault();
+      setSidebarCollapsed(!readSidebarCollapsed());
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [enabled]);
+}
+
+function Library({ collapsed }: { collapsed: boolean }) {
   const { locale } = useLocale();
   const { isSignedIn } = useAuth();
   const favorites = useMyRepertoire(isSignedIn === true);
@@ -161,8 +259,23 @@ function Library() {
     [favorites.data, locale]
   );
 
+  // 접으면 담아 둔 작곡가·연주자를 사진만 세로로 늘어놓는다(스포티파이 접힌 보관함처럼)
+  if (collapsed) {
+    const entries = sections.flatMap((section) => section.entries);
+    if (entries.length === 0) return null;
+    return (
+      <View className="mt-4 flex-1 items-center border-t border-border pt-4">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="items-center gap-2">
+          {entries.map((entry) => (
+            <CollapsedLibraryLink key={entry.key} entry={entry} />
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
-    <View className="mt-4 flex-1 border-t border-border pt-4">
+    <View className="cm-reveal mt-4 flex-1 border-t border-border pt-4">
       <Text variant="micro" className="px-2.5 pb-2.5 uppercase tracking-widest">
         {t('레퍼토리')}
       </Text>
@@ -227,8 +340,23 @@ function Library() {
   );
 }
 
-function LibraryThumb({ entry }: { entry: LibraryEntry }) {
+function CollapsedLibraryLink({ entry }: { entry: LibraryEntry }) {
+  const hover = useHoverLabel(entry.title, true);
+  return (
+    <Link href={entry.href as Href} asChild>
+      <Pressable
+        {...hover}
+        accessibilityRole="link"
+        accessibilityLabel={entry.title}
+        className="rounded-md p-1 hover:bg-surface-2">
+        <LibraryThumb entry={entry} size={36} />
+      </Pressable>
+    </Link>
+  );
+}
+
+function LibraryThumb({ entry, size = 38 }: { entry: LibraryEntry; size?: number }) {
   useLocale();
   const image = useComposerAvatar(entry.composerId, entry.image);
-  return <EntityThumb name={entry.title} image={image} shape={entry.shape} size={38} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
+  return <EntityThumb name={entry.title} image={image} shape={entry.shape} size={size} aspect={entry.kind === 'concert' ? 4 / 3 : 1} />;
 }

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 import { CommandPalette } from './command-palette';
 import { CommandPaletteProvider } from './command-palette-context';
-import { SideNav } from './side-nav';
+import { SideNav, useSidebarShortcut } from './side-nav';
 import { useSidebarCollapsed } from './sidebar-state';
 import { TopBar } from './top-bar';
 
@@ -24,14 +24,17 @@ import { TopBar } from './top-bar';
 export function AppShell({ nav, children }: { nav: Exclude<NavMode, 'tabs'>; children: React.ReactNode }) {
   useLocale();
   const sidebarCollapsed = useSidebarCollapsed();
+  // 사이드바를 접고 펼 수 있는 건 넓은 창(full)뿐이다. 좁으면 늘 아이콘만 남는다
+  const canToggle = nav === 'full';
+  useSidebarShortcut(canToggle);
   return (
     <CommandPaletteProvider>
       <View className="h-full flex-1 gap-2 bg-background p-2" style={{ height: '100vh' } as object}>
         <View className="min-h-0 flex-1 flex-row gap-2">
-          <SideNav collapsed={nav === 'rail' || sidebarCollapsed} canToggle={nav === 'full'} />
+          <SideNav collapsed={nav === 'rail' || (canToggle && sidebarCollapsed)} canToggle={canToggle} />
           <View className="min-w-0 flex-1 overflow-hidden rounded-[9px] bg-surface-1">
             <RouteProgress placement="panel" />
-            <TopBar />
+            <TopBar sidebar={canToggle ? { collapsed: sidebarCollapsed } : undefined} />
             {/* 화면을 옮기면 이 자리만 바뀌고 상단바·플레이바는 그대로 있다 */}
             <PageContainer>{children}</PageContainer>
           </View>

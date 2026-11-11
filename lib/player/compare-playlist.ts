@@ -13,7 +13,7 @@ export function compareQueueFor(
   pieceId: number,
   sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName'>[],
   sectorId: number,
-  performance?: Pick<ComparisonPerformance, 'pieceTitle' | 'composerName' | 'videoId'>
+  performance?: Pick<ComparisonPerformance, 'pieceTitle' | 'composerName' | 'composerId' | 'videoId'>
 ): { playlist?: Playlist; insert?: boolean } {
   const { current, playlist } = comparePlayer.getState();
   if (current?.sectorId === sectorId && playlist) return {};

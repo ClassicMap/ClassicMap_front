@@ -14,6 +14,10 @@ function read(): boolean {
 
 let collapsed = read();
 
+export function readSidebarCollapsed(): boolean {
+  return collapsed;
+}
+
 export function setSidebarCollapsed(next: boolean) {
   collapsed = next;
   try {

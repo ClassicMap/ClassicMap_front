@@ -12,19 +12,20 @@ import {
   useComparePlayer,
 } from '@/lib/player/compare-player-store';
 import { findCachedComparisonPiece } from '@/lib/query/hooks/useComparisonPerformances';
+import { useComposerAvatar } from '@/lib/query/hooks/useComposers';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronRightIcon,
   InfinityIcon,
   ListMusicIcon,
+  PlayIcon,
   Repeat1Icon,
   RepeatIcon,
   ShuffleIcon,
   XIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
 /** 재생 바의 대기열 버튼. 데스크톱은 오른쪽 패널을 열고 닫는다(모바일은 onPress 로 시트를 연다) */
 export function QueueButton({ onPress }: { onPress?: () => void }) {
@@ -91,151 +92,89 @@ function repeatLabel(repeat: 'off' | 'all' | 'one'): string {
   return t('반복: 끔');
 }
 
-/** 패널 위의 셔플·반복·자동 재생 */
-function ModeButton({
-  icon,
-  label,
-  state,
-  on,
-  onPress,
-  role = 'switch',
-}: {
-  icon: typeof ShuffleIcon;
-  label: string;
-  state: string;
-  on: boolean;
-  onPress: () => void;
-  role?: 'switch' | 'button';
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole={role}
-      aria-checked={role === 'switch' ? on : undefined}
-      accessibilityLabel={`${label}: ${state}`}
-      className={cn(
-        'cm-tint min-w-0 flex-1 items-center gap-0.5 rounded-lg border py-1.5',
-        on ? 'border-primary bg-primary-muted' : 'border-border bg-surface-2 web:hover:bg-surface-3'
-      )}>
-      <Icon as={icon} size={15} className={on ? 'text-primary' : 'text-foreground-muted'} />
-      <Text
-        numberOfLines={1}
-        className={cn('text-caption font-semibold', on ? 'text-primary' : 'text-foreground-muted')}>
-        {label}
-      </Text>
-      <Text
-        numberOfLines={1}
-        className={cn('text-[11px]', on ? 'text-primary' : 'text-foreground-subtle')}>
-        {state}
-      </Text>
-    </Pressable>
+/** 마우스가 있는 화면인가. 없으면(손가락) 빼기 단추를 늘 보인다 */
+function useCanHover(): boolean {
+  return React.useMemo(
+    () =>
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      Boolean(window.matchMedia?.('(hover: hover)').matches),
+    []
   );
 }
 
-function SectionTitle({ title, detail }: { title: string; detail?: string }) {
-  return (
-    <View className="flex-row items-baseline justify-between gap-2 px-4 pb-1 pt-3">
-      <Text className="shrink-0 text-[11.5px] font-semibold uppercase tracking-wider text-foreground-subtle">
-        {title}
-      </Text>
-      {detail ? (
-        <Text
-          numberOfLines={1}
-          className="min-w-0 shrink text-right text-caption text-foreground-muted">
-          {detail}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-function Note({ children }: { children: string }) {
-  return <Text className="px-4 pb-2 pt-0.5 text-caption text-foreground-subtle">{children}</Text>;
-}
+/** 줄이 사라지는 애니메이션 길이(ms). 이만큼 기다렸다가 실제로 뺀다 */
+const LEAVE_MS = 180;
 
 interface RowProps {
   title: string;
   subtitle: string;
   image: string | null;
   imageName: string;
-  reason?: string;
+  /** 그림이 없으면 이 작곡가 사진을 쓴다 */
+  composerId?: number;
   now?: boolean;
-  past?: boolean;
   playing?: boolean;
-  /** 흐리게(자동 재생이 꺼졌을 때 골라 둔 곡) */
-  dimmed?: boolean;
-  /** 나가는 중(빼기·비우기·접기). 옆으로 비켜 사라진다 */
-  leaving?: boolean;
   label: string;
   onPress?: () => void;
   onRemove?: () => void;
 }
 
-/** 줄이 사라지는 애니메이션 길이(ms). 이만큼 기다렸다가 실제로 뺀다 */
-const LEAVE_MS = 180;
-
+/**
+ * 대기열 한 줄 (스포티파이 대기열과 같은 모양). 마우스를 올리면 바탕이 깔리고 그림 위에 재생 표시,
+ * 오른쪽에 빼기 단추가 뜬다. 지금 곡은 제목이 강조색이다
+ */
 function Row({
   title,
   subtitle,
   image,
   imageName,
-  reason,
+  composerId,
   now,
-  past,
   playing,
-  dimmed,
-  leaving,
   label,
   onPress,
   onRemove,
 }: RowProps) {
+  const canHover = useCanHover();
+  const [hovered, setHovered] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
-  const out = leaving || removing;
+  // 곡 그림: 연주자 사진(들은 곡·지금 곡) 또는 작곡가 사진, 없으면 대표 영상 그림
+  const composerPhoto = useComposerAvatar(composerId, null);
+  const picture = composerPhoto ?? image;
   return (
-    <View
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress || removing}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       className={cn(
-        'cm-row-in cm-fade flex-row items-center',
-        now && 'bg-primary-muted',
-        !now && !dimmed && 'web:hover:bg-surface-2',
-        dimmed && 'opacity-40',
-        out && 'cm-row-out'
+        'cm-fade mx-2 flex-row items-center gap-3 rounded-md px-2 py-1.5',
+        hovered && 'bg-surface-2',
+        removing && 'cm-row-out'
       )}>
-      <Pressable
-        onPress={onPress}
-        disabled={!onPress || dimmed || out}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        className={cn(
-          'min-w-0 flex-1 flex-row items-center gap-3 py-1.5 pl-4',
-          onRemove ? 'pr-1' : 'pr-4',
-          past && 'opacity-55'
-        )}>
-        <EntityThumb name={imageName} image={image} shape="square" size={40} />
-        <View className="min-w-0 flex-1">
-          <View className="flex-row items-center gap-1.5">
-            {now ? <Equalizer playing={Boolean(playing)} size={10} /> : null}
-            <Text
-              numberOfLines={1}
-              className={cn(
-                'min-w-0 shrink text-body-sm font-semibold',
-                now ? 'text-primary' : 'text-foreground'
-              )}>
-              {title}
-            </Text>
+      <View>
+        <EntityThumb name={imageName} image={picture} shape="square" size={44} />
+        {hovered && onPress && !now ? (
+          <View className="absolute inset-0 items-center justify-center rounded bg-black/45">
+            <Icon as={PlayIcon} size={16} className="fill-white text-white" />
           </View>
-          <Text variant="caption" numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </View>
-        {reason ? (
-          <Text
-            numberOfLines={1}
-            className="max-w-[118px] shrink-0 rounded bg-primary-muted px-1.5 text-[11px] font-semibold text-primary">
-            {reason}
-          </Text>
         ) : null}
-      </Pressable>
-      {onRemove ? (
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text
+          numberOfLines={1}
+          className={cn('text-body-sm font-semibold', now ? 'text-primary' : 'text-foreground')}>
+          {title}
+        </Text>
+        <Text variant="caption" numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+      {now ? <Equalizer playing={Boolean(playing)} size={12} /> : null}
+      {onRemove && (hovered || !canHover) ? (
         <Pressable
           onPress={() => {
             if (removing) return;
@@ -245,19 +184,19 @@ function Row({
           accessibilityRole="button"
           accessibilityLabel={t('{title} 대기열에서 빼기', { title })}
           hitSlop={6}
-          className="mr-3 size-7 items-center justify-center rounded-full opacity-50 web:hover:bg-surface-3 web:hover:opacity-100">
-          <Icon as={XIcon} size={13} className="text-foreground-muted" />
+          className="size-7 items-center justify-center rounded-full web:hover:bg-surface-3">
+          <Icon as={XIcon} size={14} className="text-foreground-muted" />
         </Pressable>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
-/** 자동 재생 곡을 고르는 동안 보이는 빈 줄 */
+/** 자동 재생을 고르는 동안 보이는 빈 줄 */
 function RowSkeleton() {
   return (
-    <View className="flex-row items-center gap-3 px-4 py-1.5">
-      <Skeleton className="size-10 rounded-md" />
+    <View className="mx-2 flex-row items-center gap-3 px-2 py-1.5">
+      <Skeleton className="size-11 rounded" />
       <View className="flex-1 gap-1.5">
         <Skeleton className="h-3 w-3/4" />
         <Skeleton className="h-2.5 w-1/3" />
@@ -266,18 +205,14 @@ function RowSkeleton() {
   );
 }
 
-function trackRow(
-  track: ComparePlayerTrack,
-  extra: Partial<RowProps> & { label?: string }
-): RowProps {
+function trackRow(track: ComparePlayerTrack): Omit<RowProps, 'label'> & { label: string } {
   const local = relocalize(track);
   return {
     title: local.pieceTitle,
     subtitle: `${local.artistName} · ${local.sectorName}`,
     image: local.artistImageUrl,
     imageName: local.artistName,
-    label: extra.label ?? `${local.pieceTitle} ${local.artistName}`,
-    ...extra,
+    label: `${local.pieceTitle} ${local.artistName}`,
   };
 }
 
@@ -285,16 +220,18 @@ function trackRow(
 function useItemRow() {
   const queryClient = useQueryClient();
   return React.useCallback(
-    (
-      item: PlaylistItem
-    ): Pick<RowProps, 'title' | 'subtitle' | 'image' | 'imageName' | 'reason'> => {
+    (item: PlaylistItem): Omit<RowProps, 'label'> & { label: string } => {
       if (item.meta) {
+        const subtitle = item.meta.reason
+          ? `${item.meta.composer} · ${item.meta.reason}`
+          : item.meta.composer;
         return {
           title: item.meta.title,
-          subtitle: item.meta.composer,
+          subtitle,
           image: item.meta.image,
-          imageName: item.meta.title,
-          reason: item.meta.reason,
+          imageName: item.meta.composer || item.meta.title,
+          composerId: item.meta.composerId,
+          label: `${item.meta.title} ${subtitle}`,
         };
       }
       const cached = findCachedComparisonPiece(queryClient, item.pieceId)?.piece;
@@ -303,14 +240,16 @@ function useItemRow() {
         title,
         subtitle: cached?.composerName ?? '',
         image: cached?.composerAvatarUrl ?? null,
-        imageName: title,
+        imageName: cached?.composerName ?? title,
+        composerId: cached?.composerId,
+        label: title,
       };
     },
     [queryClient]
   );
 }
 
-/** 같은 곡이 목록에 두 번 있어도 줄 열쇠가 겹치지 않게(줄이 옮겨 가도 다시 나타나지 않게) 작품·구간·몇 번째로 만든다 */
+/** 같은 곡이 목록에 두 번 있어도 줄 열쇠가 겹치지 않게 작품·구간·몇 번째로 만든다 */
 function stableKeys(
   items: readonly { pieceId: number; sectorId: number | null }[],
   prefix: string
@@ -324,23 +263,71 @@ function stableKeys(
   });
 }
 
-/** 닫힌 뒤에도 잠깐(나가는 애니메이션 동안) 그려 둔다 */
-function useLingering(value: boolean, ms: number): boolean {
-  const [lingering, setLingering] = React.useState(value);
-  React.useEffect(() => {
-    if (value) {
-      setLingering(true);
-      return;
-    }
-    const timer = setTimeout(() => setLingering(false), ms);
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return value || lingering;
+/** 구역 머리: 굵은 제목, 아래에 출처 한 줄, 오른쪽에 동작 하나 (애플 뮤직 「이어서 재생 · ~에서 · 비우기」) */
+function Section({
+  title,
+  detail,
+  action,
+  children,
+}: {
+  title: string;
+  detail?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <View className="pt-4">
+      <View className="flex-row items-start justify-between gap-3 px-4 pb-1.5">
+        <View className="min-w-0 flex-1">
+          <Text className="text-body font-bold text-foreground">{title}</Text>
+          {detail ? (
+            <Text variant="caption" numberOfLines={1}>
+              {detail}
+            </Text>
+          ) : null}
+        </View>
+        {action}
+      </View>
+      {children}
+    </View>
+  );
 }
 
+function Note({ children }: { children: React.ReactNode }) {
+  return <Text className="px-4 py-1 text-caption text-foreground-subtle">{children}</Text>;
+}
+
+/** 자동 재생 켜고 끄기 스위치 */
+function AutoplaySwitch({ on }: { on: boolean }) {
+  return (
+    <Pressable
+      onPress={() => comparePlayer.setAutoplay(!on)}
+      accessibilityRole="switch"
+      aria-checked={on}
+      accessibilityLabel={t('자동 재생')}
+      hitSlop={6}
+      className="flex-row items-center gap-2 pt-0.5">
+      <Icon as={InfinityIcon} size={15} className={on ? 'text-primary' : 'text-foreground-muted'} />
+      <View
+        className={cn(
+          'cm-tint h-5 w-9 justify-center rounded-full px-0.5',
+          on ? 'bg-primary' : 'bg-surface-3'
+        )}>
+        <View
+          className="cm-turn size-4 rounded-full bg-white"
+          style={{ transform: [{ translateX: on ? 16 : 0 }] }}
+        />
+      </View>
+    </Pressable>
+  );
+}
+
+type QueueTab = 'queue' | 'history';
+
 /**
- * 재생 대기열. 위에서부터 들은 곡 → 지금 재생 → 다음에 재생 → 이어서 재생 → 자동 재생.
- * 줄을 누르면 그 곡부터 틀고, 그 사이 곡은 건너뛴다. 줄은 생길 때 살짝 올라오고 뺄 때 옆으로 비켜 사라진다
+ * 재생 대기열 (스포티파이·애플 뮤직의 오른쪽 대기열과 같은 짜임).
+ * 「대기열」 탭: 지금 재생 → 다음에 재생(⏮로 미룬 곡) → 이어서 재생(재생을 누른 목록) → 자동 재생.
+ * 「최근 재생」 탭: 들은 곡(최근 것부터). 줄을 누르면 그 곡부터 튼다. 셔플·반복은 재생 바에 있다
  */
 export function QueuePanel({ onClose }: { onClose?: () => void }) {
   useLocale();
@@ -354,197 +341,168 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const autoplayStatus = useComparePlayer((state) => state.autoplayStatus);
   const shuffle = useComparePlayer((state) => state.shuffle);
   const repeat = useComparePlayer((state) => state.repeat);
-  const [showHistory, setShowHistory] = React.useState(false);
-  const historyMounted = useLingering(showHistory, LEAVE_MS);
-  const [clearing, setClearing] = React.useState(false);
+  const [tab, setTab] = React.useState<QueueTab>('queue');
   const itemRow = useItemRow();
   const remaining = playlist ? playlist.items.slice(playlist.index + 1) : [];
   const remainingKeys = stableKeys(remaining, 's');
   const autoplayKeys = stableKeys(autoplayItems, 'a');
-  const sourceName = playlist?.name ?? t('재생 목록');
   const repeatAll = repeat === 'all' && Boolean(playlist?.items.length);
-  // 자동 재생이 꺼졌거나 전체 반복이면 골라 둔 곡을 흐리게 남겨 둔다(갑자기 사라지지 않게)
-  const autoplayPaused = !autoplay || repeatAll;
+  const sourceName = playlist?.name ?? t('재생 목록');
 
-  const clear = () => {
-    if (clearing) return;
-    setClearing(true);
-    setTimeout(() => {
-      comparePlayer.clearQueue();
-      setClearing(false);
-    }, LEAVE_MS);
-  };
+  const tabs: { key: QueueTab; label: string }[] = [
+    { key: 'queue', label: t('대기열') },
+    { key: 'history', label: t('최근 재생') },
+  ];
 
   return (
     <View className="flex-1 bg-surface-1">
-      <View className="gap-2.5 border-b border-border px-4 pb-3 pt-3.5">
-        <View className="flex-row items-center justify-between gap-2">
-          <Text className="text-body font-bold text-foreground">{t('재생 대기열')}</Text>
-          <View className="flex-row items-center gap-1">
-            <Pressable
-              onPress={clear}
-              accessibilityRole="button"
-              accessibilityLabel={t('대기열 비우기')}
-              className="cm-tint rounded-full px-2 py-1 web:hover:bg-surface-2">
-              <Text className="text-label font-semibold text-primary">{t('비우기')}</Text>
-            </Pressable>
-            {onClose ? (
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel={t('대기열 닫기')}
-                className="cm-tint size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
-                <Icon as={XIcon} size={16} className="text-foreground-muted" />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-        <View className="flex-row gap-1.5">
-          <ModeButton
-            icon={ShuffleIcon}
-            label={t('셔플')}
-            state={shuffle ? t('켬') : t('끔')}
-            on={shuffle}
-            onPress={() => comparePlayer.setShuffle(!shuffle)}
-          />
-          <ModeButton
-            icon={repeat === 'one' ? Repeat1Icon : RepeatIcon}
-            label={t('반복')}
-            state={repeat === 'all' ? t('전체') : repeat === 'one' ? t('한 곡') : t('끔')}
-            on={repeat !== 'off'}
-            role="button"
-            onPress={() => comparePlayer.cycleRepeat()}
-          />
-          <ModeButton
-            icon={InfinityIcon}
-            label={t('자동 재생')}
-            state={autoplay ? t('켬') : t('끔')}
-            on={autoplay}
-            onPress={() => comparePlayer.setAutoplay(!autoplay)}
-          />
-        </View>
-      </View>
-      <ScrollView className="flex-1" contentContainerClassName="pb-4">
-        {history.length ? (
+      <View className="flex-row items-center gap-5 px-4 pb-1 pt-4">
+        {tabs.map((item) => (
           <Pressable
-            onPress={() => setShowHistory((value) => !value)}
-            accessibilityRole="button"
-            aria-expanded={showHistory}
-            className="cm-tint flex-row items-center gap-1.5 px-4 pb-1 pt-2.5">
-            <View
-              className="cm-turn"
-              style={{ transform: [{ rotate: showHistory ? '90deg' : '0deg' }] }}>
-              <Icon as={ChevronRightIcon} size={14} className="text-foreground-muted" />
-            </View>
-            <Text className="text-label font-semibold text-foreground-muted">
-              {t('들은 곡 {count}', { count: history.length })}
+            key={item.key}
+            onPress={() => setTab(item.key)}
+            accessibilityRole="tab"
+            aria-selected={tab === item.key}
+            className="py-1">
+            <Text
+              className={cn(
+                'cm-tint text-[15px] font-bold',
+                tab === item.key
+                  ? 'text-foreground'
+                  : 'text-foreground-subtle web:hover:text-foreground-muted'
+              )}>
+              {item.label}
             </Text>
           </Pressable>
+        ))}
+        {onClose ? (
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('대기열 닫기')}
+            className="ml-auto size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+            <Icon as={XIcon} size={16} className="text-foreground-muted" />
+          </Pressable>
         ) : null}
-        {historyMounted
-          ? history.map((entry: QueueEntry, index) => (
-              <Row
-                key={`h-${index}-${entry.track.performanceId}`}
-                {...trackRow(entry.track, { past: true, leaving: !showHistory })}
-                onPress={() => comparePlayer.playFromQueue('history', index)}
-              />
-            ))
-          : null}
+      </View>
 
-        <SectionTitle title={t('지금 재생')} />
-        {current ? (
-          <Row
-            key={`now-${current.performanceId}`}
-            {...trackRow(current, { now: true, playing })}
-          />
+      <ScrollView key={tab} className="cm-reveal flex-1" contentContainerClassName="pb-6">
+        {tab === 'history' ? (
+          history.length ? (
+            <View className="pt-2">
+              {[...history].reverse().map((entry: QueueEntry, reversedIndex) => {
+                const index = history.length - 1 - reversedIndex;
+                return (
+                  <Row
+                    key={`h-${index}-${entry.track.performanceId}`}
+                    {...trackRow(entry.track)}
+                    onPress={() => comparePlayer.playFromQueue('history', index)}
+                  />
+                );
+              })}
+            </View>
+          ) : (
+            <View className="pt-3">
+              <Note>{t('아직 들은 곡이 없어요.')}</Note>
+            </View>
+          )
         ) : (
-          <Note>{t('재생 중인 곡이 없어요.')}</Note>
-        )}
-
-        {forward.length ? (
           <>
-            <SectionTitle title={t('다음에 재생')} />
-            {forward.map((entry, index) => (
-              <Row
-                key={`f-${entry.track.performanceId}-${index}`}
-                {...trackRow(entry.track, { leaving: clearing })}
-                onPress={() => comparePlayer.playFromQueue('forward', index)}
-                onRemove={() => comparePlayer.removeFromQueue('forward', index)}
-              />
-            ))}
+            <Section title={t('지금 재생')}>
+              {current ? (
+                <Row {...trackRow(current)} now playing={playing} />
+              ) : (
+                <Note>{t('재생 중인 곡이 없어요.')}</Note>
+              )}
+            </Section>
+
+            {forward.length ? (
+              <Section title={t('다음에 재생')}>
+                {forward.map((entry, index) => (
+                  <Row
+                    key={`f-${entry.track.performanceId}-${index}`}
+                    {...trackRow(entry.track)}
+                    onPress={() => comparePlayer.playFromQueue('forward', index)}
+                    onRemove={() => comparePlayer.removeFromQueue('forward', index)}
+                  />
+                ))}
+              </Section>
+            ) : null}
+
+            <Section
+              title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
+              detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
+              action={
+                remaining.length || forward.length ? (
+                  <Pressable
+                    onPress={() => comparePlayer.clearQueue()}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('대기열 비우기')}
+                    className="rounded-full px-1 py-0.5">
+                    <Text className="text-label font-semibold text-foreground-muted web:hover:text-foreground">
+                      {t('비우기')}
+                    </Text>
+                  </Pressable>
+                ) : undefined
+              }>
+              {remaining.length ? (
+                remaining.map((item, index) => (
+                  <Row
+                    key={remainingKeys[index]}
+                    {...itemRow(item)}
+                    onPress={() => comparePlayer.playFromQueue('source', index)}
+                    onRemove={() => comparePlayer.removeFromQueue('source', index)}
+                  />
+                ))
+              ) : (
+                <Note>
+                  {repeatAll
+                    ? t('반복(전체): 끝나면 목록 처음으로 돌아가요.')
+                    : t('목록 끝이에요.')}
+                </Note>
+              )}
+            </Section>
+
+            <Section
+              title={t('자동 재생')}
+              detail={t('목록이 끝나면 취향에 맞춘 비슷한 곡을 이어서 틀어요')}
+              action={<AutoplaySwitch on={autoplay} />}>
+              {!autoplay ? (
+                <Note>{t('꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
+              ) : repeatAll ? (
+                <Note>{t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}</Note>
+              ) : autoplayItems.length ? (
+                autoplayItems.map((item, index) => (
+                  <Row
+                    key={autoplayKeys[index]}
+                    {...itemRow(item)}
+                    onPress={() => comparePlayer.playFromQueue('autoplay', index)}
+                  />
+                ))
+              ) : autoplayStatus === 'empty' ? (
+                <View className="flex-row flex-wrap items-center gap-x-2 px-4 py-1">
+                  <Text className="text-caption text-foreground-subtle">
+                    {t('비슷한 곡을 찾지 못했어요.')}
+                  </Text>
+                  <Pressable
+                    onPress={() => comparePlayer.retryAutoplay()}
+                    accessibilityRole="button">
+                    <Text className="text-caption font-semibold text-primary">
+                      {t('다시 시도')}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : current ? (
+                <View accessibilityLabel={t('비슷한 곡을 고르는 중이에요.')}>
+                  <RowSkeleton />
+                  <RowSkeleton />
+                  <RowSkeleton />
+                </View>
+              ) : (
+                <Note>{t('곡을 틀면 비슷한 곡이 이어져요.')}</Note>
+              )}
+            </Section>
           </>
-        ) : null}
-
-        <SectionTitle
-          title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
-          detail={playlist ? sourceName : undefined}
-        />
-        {remaining.length ? (
-          remaining.map((item, index) => {
-            const row = itemRow(item);
-            return (
-              <Row
-                key={remainingKeys[index]}
-                {...row}
-                reason={undefined}
-                leaving={clearing}
-                label={`${row.title} ${row.subtitle}`}
-                onPress={() => comparePlayer.playFromQueue('source', index)}
-                onRemove={() => comparePlayer.removeFromQueue('source', index)}
-              />
-            );
-          })
-        ) : (
-          <View className="cm-row-in">
-            <Note>
-              {repeatAll ? t('반복(전체): 끝나면 목록 처음으로 돌아가요.') : t('목록 끝이에요.')}
-            </Note>
-          </View>
-        )}
-
-        <SectionTitle title={t('자동 재생 · 취향에 맞춘 곡')} />
-        {autoplayPaused ? (
-          <View className="cm-row-in">
-            <Note>
-              {!autoplay
-                ? t('자동 재생이 꺼져 있어요. 목록이 끝나면 멈춰요.')
-                : t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}
-            </Note>
-          </View>
-        ) : null}
-        {autoplayItems.length ? (
-          autoplayItems.map((item, index) => {
-            const row = itemRow(item);
-            return (
-              <Row
-                key={autoplayKeys[index]}
-                {...row}
-                dimmed={autoplayPaused}
-                label={`${row.title} ${row.subtitle} ${row.reason ?? ''}`.trim()}
-                onPress={() => comparePlayer.playFromQueue('autoplay', index)}
-              />
-            );
-          })
-        ) : autoplayPaused ? null : autoplayStatus === 'empty' ? (
-          <View className="cm-row-in flex-row flex-wrap items-center gap-x-2 px-4 pb-2 pt-0.5">
-            <Text className="text-caption text-foreground-subtle">
-              {t('비슷한 곡을 찾지 못했어요.')}
-            </Text>
-            <Pressable
-              onPress={() => comparePlayer.retryAutoplay()}
-              accessibilityRole="button"
-              className="rounded-full px-1.5 py-0.5 web:hover:bg-surface-2">
-              <Text className="text-caption font-semibold text-primary">{t('다시 시도')}</Text>
-            </Pressable>
-          </View>
-        ) : current ? (
-          <View accessibilityLabel={t('비슷한 곡을 고르는 중이에요.')}>
-            <RowSkeleton />
-            <RowSkeleton />
-            <RowSkeleton />
-          </View>
-        ) : (
-          <Note>{t('곡을 틀면 비슷한 곡이 이어져요.')}</Note>
         )}
       </ScrollView>
     </View>

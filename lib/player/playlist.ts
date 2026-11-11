@@ -119,12 +119,14 @@ export function sectorPlaylist(
   pieceId: number,
   sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName'>[],
   sectorId: number,
-  piece?: { title: string; composer: string; image: string | null }
+  piece?: { title: string; composer: string; image: string | null; composerId?: number }
 ): Playlist {
   const items = sectors.map((sector) => ({
     pieceId,
     sectorId: sector.id,
-    meta: piece ? { title: `${sector.sectorName} · ${piece.title}`, composer: piece.composer, image: piece.image } : undefined,
+    meta: piece
+      ? { title: `${sector.sectorName} · ${piece.title}`, composer: piece.composer, image: piece.image, composerId: piece.composerId }
+      : undefined,
   }));
   const index = items.findIndex((item) => item.sectorId === sectorId);
   const name = piece ? piece.title : undefined;
