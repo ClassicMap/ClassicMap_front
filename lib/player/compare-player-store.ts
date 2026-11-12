@@ -1252,9 +1252,14 @@ export const comparePlayer = {
   /** 대기열 패널이 한 화면에 들어가는 자동 재생 줄 수를 알려 준다. 모자라면 바로 이어 붙인다 */
   setAutoplayTarget(count: number) {
     const next = Math.max(AUTOPLAY_MIN, Math.min(AUTOPLAY_MAX, Math.floor(count)));
-    if (next === autoplayTarget) return;
+    const changed = next !== autoplayTarget;
     autoplayTarget = next;
-    ensureAutoplay();
+    // 패널을 열기 전에 만들어 둔 목록이 더 길면 화면에 들어가는 만큼만 남긴다(뒤쪽을 덜어 낸다)
+    if (state.autoplayItems.length > next) {
+      setState({ autoplayItems: state.autoplayItems.slice(0, next) });
+      dirty = true;
+      scheduleSave();
+    } else if (changed) ensureAutoplay();
   },
 
   /**
