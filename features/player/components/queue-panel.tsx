@@ -364,7 +364,7 @@ type QueueTab = 'queue' | 'history';
 
 /**
  * 재생 대기열 (스포티파이·애플 뮤직의 오른쪽 대기열과 같은 짜임).
- * 「대기열」 탭: 지금 재생 → 다음에 재생(⏮로 미룬 곡) → 이어서 재생(재생을 누른 목록) → 자동 재생.
+ * 「대기열」 탭: 지금 재생 → 다음에 재생(직접 넣은 곡·미룬 곡 → 재생을 누른 목록 → 자동 재생을 한 목록으로 잇는다).
  * 「최근 재생」 탭: 들은 곡(최근 것부터). 줄을 누르면 그 곡부터 튼다. 셔플·반복은 재생 바에 있다
  */
 export function QueuePanel({ onClose }: { onClose?: () => void }) {
@@ -435,13 +435,6 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
         </View>
       ))
     : null;
-  // 접히는 줄은 보이는 첫 칸 맨 위에 둔다
-  const leavingAt: 'forward' | 'source' | 'autoplay' = forward.length
-    ? 'forward'
-    : remaining.length
-      ? 'source'
-      : 'autoplay';
-
   // 새로 들어온 줄(대기열에 넣은 곡, 다시 채워진 자동 재생)은 아래에서 차례로 올라오며 나타난다.
   // 패널을 처음 열 때는 패널 전체가 나타나므로 줄마다 따로 움직이지 않는다
   const knownKeys = React.useRef<Set<string> | null>(null);
@@ -481,8 +474,6 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
     { key: 'history', label: t('최근 재생') },
   ];
 
-  // 「이어서 재생」은 남은 목록 곡이 있을 때만 보이고, 비우기 단추는 보이는 첫 칸(다음에 재생 또는 이어서 재생)에 둔다
-  const showSource = remaining.length > 0 || repeatAll;
   const clearAction = (
     <Pressable
       onPress={() => comparePlayer.clearQueue()}
@@ -563,53 +554,45 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               )}
             </Section>
 
-            {forward.length ? (
-              <Section title={t('다음에 재생')} action={showSource ? undefined : clearAction}>
-                {leavingAt === 'forward' ? leavingRows : null}
-                {forward.map((entry, index) => (
-                  <View key={forwardKeys[index]} {...entering(forwardKeys[index], 'insert')}>
-                    <Row
-                      {...trackRow(entry.track)}
-                      onPress={() => comparePlayer.playFromQueue('forward', index)}
-                      onRemove={() => comparePlayer.removeFromQueue('forward', index)}
-                    />
-                  </View>
-                ))}
-              </Section>
-            ) : null}
-
-            {/* 다음에 나올 목록 곡이 있을 때만 보인다(스포티파이 「다음: ~」). 끝난 목록은 남기지 않는다 */}
-            {showSource ? (
-              <Section
-                title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
-                detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
-                action={remaining.length || forward.length ? clearAction : undefined}>
-                {leavingAt === 'source' ? leavingRows : null}
-                {remaining.length ? (
-                  remaining.map((item, index) => (
-                    <View key={remainingKeys[index]} {...entering(remainingKeys[index], 'fill')}>
-                      <Row
-                        {...itemRow(item)}
-                        onPress={() => comparePlayer.playFromQueue('source', index)}
-                        onRemove={() => comparePlayer.removeFromQueue('source', index)}
-                      />
-                    </View>
-                  ))
-                ) : (
-                  <Note>{t('반복(전체): 끝나면 목록 처음으로 돌아가요.')}</Note>
-                )}
-              </Section>
-            ) : null}
-
+            {/* 다음에 나올 곡은 한 목록으로 잇는다(애플 뮤직 「이어서 재생」): 직접 넣은 곡 → 듣던 목록 → 자동 재생 */}
             <Section
-              title={t('자동 재생')}
-              detail={t('취향에 맞춘 비슷한 곡이 이어져요')}
-              action={<AutoplaySwitch on={autoplay} />}>
-              {leavingAt === 'autoplay' ? leavingRows : null}
-              {!autoplay ? (
-                <Note>{t('꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
-              ) : repeatAll ? (
-                <Note>{t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}</Note>
+              title={shuffle && remaining.length ? t('다음에 재생 · 셔플') : t('다음에 재생')}
+              detail={
+                remaining.length && playlist
+                  ? t('{name}에서', { name: sourceName })
+                  : autoplay
+                    ? t('취향에 맞춘 비슷한 곡이 이어져요')
+                    : undefined
+              }
+              action={
+                <View className="flex-row items-center gap-3">
+                  {forward.length || remaining.length ? clearAction : null}
+                  <AutoplaySwitch on={autoplay} />
+                </View>
+              }>
+              {leavingRows}
+              {forward.map((entry, index) => (
+                <View key={forwardKeys[index]} {...entering(forwardKeys[index], 'insert')}>
+                  <Row
+                    {...trackRow(entry.track)}
+                    onPress={() => comparePlayer.playFromQueue('forward', index)}
+                    onRemove={() => comparePlayer.removeFromQueue('forward', index)}
+                  />
+                </View>
+              ))}
+              {remaining.map((item, index) => (
+                <View key={remainingKeys[index]} {...entering(remainingKeys[index], 'fill')}>
+                  <Row
+                    {...itemRow(item)}
+                    onPress={() => comparePlayer.playFromQueue('source', index)}
+                    onRemove={() => comparePlayer.removeFromQueue('source', index)}
+                  />
+                </View>
+              ))}
+              {repeatAll ? (
+                <Note>{t('반복(전체): 끝나면 목록 처음으로 돌아가요.')}</Note>
+              ) : !autoplay ? (
+                <Note>{t('자동 재생이 꺼져 있어요. 여기까지 듣고 멈춰요.')}</Note>
               ) : autoplayItems.length ? (
                 <>
                   {autoplayItems.map((item, index) => (
