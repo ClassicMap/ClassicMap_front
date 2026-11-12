@@ -11,6 +11,7 @@ import {
   artistComparisonQueryOptions,
   comparisonPiecesQueryOptions,
   genrePiecesQueryOptions,
+  genreSummariesQueryOptions,
 } from '@/lib/query/hooks/use-comparison-performances';
 import type { ComparisonPerformance, ComparisonPiece, TasteSound } from '@/types/models';
 
@@ -40,9 +41,15 @@ export interface AutoplayCandidate {
   meta: QueueItemMeta;
 }
 
-/** 후보를 고른 까닭. 위에 있을수록 강하다 */
-type ReasonKind = 'artist' | 'taste' | 'composer' | 'genre';
-const WEIGHT: Record<ReasonKind, number> = { artist: 3, taste: 2, composer: 2, genre: 1 };
+/** 후보를 고른 까닭. 위에 있을수록 강하다. 'other' 는 비슷한 곡·취향 추천이 다 떨어졌을 때만 쓰는 다른 편성의 곡 */
+type ReasonKind = 'artist' | 'taste' | 'composer' | 'genre' | 'other';
+const WEIGHT: Record<ReasonKind, number> = {
+  artist: 3,
+  taste: 2,
+  composer: 2,
+  genre: 1,
+  other: 0,
+};
 
 /** 자동 재생이 고른 쪽: 기준 곡과 비슷한 곡이거나 취향 추천 */
 type PickSide = AutoplayPick['side'];
@@ -129,6 +136,7 @@ export type AutoplayBasis = Pick<
  * 같은 작곡가가 세 번 연달아 나오지 않게 한다.
  * - 비슷한 곡: 기준 곡의 연주자가 그 곡에도 있으면 3, 같은 작곡가 2, 같은 장르 1
  * - 취향 추천: 홈 추천과 같은 것(서버가 이 사람의 취향·들은 기록으로 고른 순서 그대로)
+ * - 둘 다 떨어지면 다른 편성의 곡으로 잇는다(편성 하나씩, 모자란 만큼만 받는다)
  * 연주·클립은 여기서 부르지 않고(목록 첫 쪽만 본다) 그 곡 차례가 올 때 고른다
  */
 export async function pickAutoplay(input: {
@@ -236,6 +244,30 @@ export async function pickAutoplay(input: {
 
   const used = new Set<number>();
   const picks: Scored[] = [];
+  // 다른 편성의 곡: 기준 곡의 편성과 취향 편성은 위에서 이미 후보에 넣었으니 나머지 편성을 섞은 차례로 하나씩 받는다
+  const otherList: Scored[] = [];
+  let otherGenres: PieceGenre[] | null = null;
+  const loadOtherGenre = async (): Promise<boolean> => {
+    if (!otherGenres) {
+      const loaded = new Set<PieceGenre>([...(genre ? [genre] : []), ...genres]);
+      const summaries = await queryClient.fetchQuery(genreSummariesQueryOptions()).catch(() => []);
+      otherGenres = shuffle(
+        summaries.map((summary) => summary.genre).filter((key) => !loaded.has(key))
+      );
+    }
+    const next = otherGenres.shift();
+    if (!next) return false;
+    const reason = t('다른 편성 · {genre}', { genre: t(genreStyle(next)?.label ?? '') });
+    const pieces = await firstPage(() =>
+      queryClient.fetchInfiniteQuery(genrePiecesQueryOptions(next))
+    );
+    for (const piece of shuffle(pieces)) {
+      const candidate = candidateFromPiece(piece, null);
+      if (exclude.has(candidate.pieceId) || candidate.pieceId === basis.pieceId) continue;
+      otherList.push({ candidate, score: WEIGHT.other, kind: 'other', reason });
+    }
+    return true;
+  };
   // 이미 있는 목록의 끝을 이어받는다: 한 곡씩 이어 붙여도 「비슷한 곡 하나 → 취향 추천 둘」과 작곡가 연속 금지가 이어진다
   const composers: (number | undefined)[] = tail
     .slice(-2)
@@ -254,7 +286,11 @@ export async function pickAutoplay(input: {
     const want: PickSide = !sides.length || (a === 'taste' && b === 'taste') ? 'similar' : 'taste';
     const fromTaste = takeFrom(tasteList);
     const fromSimilar = takeFrom(similarList);
-    const pick = want === 'taste' ? (fromTaste ?? fromSimilar) : (fromSimilar ?? fromTaste);
+    let pick =
+      (want === 'taste' ? (fromTaste ?? fromSimilar) : (fromSimilar ?? fromTaste)) ??
+      takeFrom(otherList);
+    // 비슷한 곡도 취향 추천도 없으면 다른 편성을 하나씩 받아 잇는다
+    while (!pick && (await loadOtherGenre())) pick = takeFrom(otherList);
     if (!pick) break;
     used.add(pick.candidate.pieceId);
     picks.push(pick);
