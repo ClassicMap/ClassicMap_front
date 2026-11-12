@@ -18,6 +18,7 @@ import { playPiece } from '@/lib/player/play-piece';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
+import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
 
 /** 웹 전용 움직임 클래스(global.css 카드·커버 움직임). 같은 규칙이 네이티브로도 컴파일돼서 웹에서만 단다 */
 const WEB_CARD = Platform.OS === 'web' ? 'cm-card' : undefined;
@@ -100,6 +101,16 @@ export function PieceCard({
             <Icon as={XIcon} size={12} className="text-white" />
             <Text className="text-micro font-semibold text-white">{t('관심 없음')}</Text>
           </Pressable>
+        ) : null}
+        {/* 데스크톱 호버에서 재생 버튼과 함께 뜨는 ⋯: 다음에 재생·대기열에 추가 */}
+        {Platform.OS === 'web' ? (
+          <QueueAddMenu
+            piece={piece}
+            title={piece.pieceTitle}
+            tone="onArt"
+            className="cm-play-fab absolute bottom-2 left-2"
+            openClassName="cm-play-fab-on"
+          />
         ) : null}
         {/* 데스크톱 호버에서 아래에서 올라오는 재생 버튼. 그 자리에서 바로 튼다.
             지금 듣는 작품이면 일시정지 버튼으로 늘 떠 있다 */}

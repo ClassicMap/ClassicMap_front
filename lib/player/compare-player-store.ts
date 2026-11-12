@@ -67,6 +67,20 @@ export interface PlaylistItem {
   /** 정해진 구간. 없으면 그 작품에서 처음 여는 구간 */
   sectorId: number | null;
   meta?: QueueItemMeta;
+  /** 사용자가 「대기열에 추가」로 직접 넣은 곡. 자동 재생 목록 끝에 놓이고, 목록을 새로 만들어도 남는다 */
+  pinned?: boolean;
+  /** 이 연주로 튼다(비교 화면의 연주 카드에서 넣었을 때). 없거나 못 틀면 평소 규칙으로 고른다 */
+  performanceId?: number;
+}
+
+/** 자동 재생 목록에서 사용자가 직접 넣은 곡만 */
+function pinnedOf(items: readonly PlaylistItem[]): PlaylistItem[] {
+  return items.filter((item) => item.pinned);
+}
+
+/** 자동 재생 목록에서 자동으로 고른 곡 수(직접 넣은 곡은 세지 않는다) */
+function pickedCount(items: readonly PlaylistItem[]): number {
+  return items.reduce((count, item) => count + (item.pinned ? 0 : 1), 0);
 }
 
 /**
@@ -211,8 +225,13 @@ const SESSION_KEY = 'classicmap.player.session.v1';
 const MAX_HISTORY = 30;
 /** 자동 재생 목록을 한 번에 이만큼 만들어 두고 */
 const AUTOPLAY_LENGTH = 20;
-/** 남은 곡이 이보다 적으면 뒤에 이어 붙인다 */
-const AUTOPLAY_LOW = 6;
+const AUTOPLAY_MIN = 5;
+const AUTOPLAY_MAX = 30;
+/**
+ * 자동 재생 목록을 이만큼으로 채워 둔다. 대기열 패널이 한 화면에 들어가는 줄 수를 알려 주면 그 수에 맞춘다
+ * (곡이 하나 넘어가면 끝에 하나를 이어 붙여 늘 같은 길이). 패널을 연 적이 없으면 기본 길이다
+ */
+let autoplayTarget = AUTOPLAY_LENGTH;
 /** 끝에서 이만큼 안쪽이면 다 들은 것으로 보고 다음에는 처음부터 */
 const END_MARGIN_SEC = 0.75;
 /** 연주별 위치는 최근 것만 이만큼 남긴다 */
@@ -817,11 +836,17 @@ function userQueuePatch(track: ComparePlayerTrack, options: SelectOptions): Queu
       origin: next ? 'source' : 'insert',
       history: nextHistory,
       forward: [],
-      ...(sameList ? null : { autoplayItems: [] }),
+      ...(sameList ? null : { autoplayItems: pinnedOf(state.autoplayItems) }),
     };
   }
   if (options.insert) return { playlist, origin: 'insert', history: nextHistory, forward };
-  return { playlist: null, origin: 'insert', history: nextHistory, forward: [], autoplayItems: [] };
+  return {
+    playlist: null,
+    origin: 'insert',
+    history: nextHistory,
+    forward: [],
+    autoplayItems: pinnedOf(state.autoplayItems),
+  };
 }
 
 function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: QueuePatch) {
@@ -862,7 +887,7 @@ function selectTrack(track: ComparePlayerTrack, options: SelectOptions, patch: Q
         }),
   });
   // 자동 재생 목록을 새로 만들게 됐으면 고르던 결과는 버린다
-  if (patch.autoplayItems && patch.autoplayItems.length === 0) autoplayToken += 1;
+  if (patch.autoplayItems && pickedCount(patch.autoplayItems) === 0) autoplayToken += 1;
   if (sameMedia && media) {
     media.seek(start);
     if (options.play) media.play();
@@ -966,7 +991,7 @@ async function advance(): Promise<boolean> {
   let picks = state.autoplayItems;
   if (!picks.length) {
     autoplayToken += 1;
-    picks = await buildAutoplay(AUTOPLAY_LENGTH, []);
+    picks = await buildAutoplay(autoplayTarget, []);
     if (!picks.length) setState({ autoplayStatus: 'empty' });
   }
   return playItems(
@@ -1042,12 +1067,15 @@ let autoplayBuiltWithTaste = true;
 function ensureAutoplay() {
   if (!state.autoplay || !state.current) return;
   const existing = state.autoplayItems;
-  if (existing.length >= AUTOPLAY_LOW) return;
+  // 직접 넣은 곡은 길이에 세지 않는다(그만큼 목록이 길어진다)
+  const picked = pickedCount(existing);
+  if (picked >= autoplayTarget) return;
   const token = ++autoplayToken;
-  if (!existing.length) {
+  if (!picked) {
     autoplayBuiltWithTaste = tastePool.length > 0 || tasteGenrePool.length > 0;
-    setState({ autoplayStatus: 'loading' });
   }
+  // 이어 붙이는 동안에도 '고르는 중'으로 둔다. 대기열 패널이 남은 줄 아래에 빈 줄 모양을 깔아 둔다
+  setState({ autoplayStatus: 'loading' });
   const settle = (items: readonly PlaylistItem[]) => {
     if (token !== autoplayToken) return;
     // 고르는 사이 곡이 넘어갔을 수 있어 지금 목록 뒤에 붙이고, 지금 곡·들은 곡·대기열·목록에 이미 있는 곡은 뺀다
@@ -1057,7 +1085,7 @@ function ensureAutoplay() {
     dirty = true;
     scheduleSave();
   };
-  void buildAutoplay(AUTOPLAY_LENGTH - existing.length, existing)
+  void buildAutoplay(autoplayTarget - picked, existing)
     .then(settle)
     .catch(() => settle([]));
 }
@@ -1065,8 +1093,21 @@ function ensureAutoplay() {
 /** 자동 재생 목록을 버리고 새로 만든다 */
 function rebuildAutoplay() {
   autoplayToken += 1;
-  setState({ autoplayItems: [] });
+  setState({ autoplayItems: pinnedOf(state.autoplayItems) });
   ensureAutoplay();
+}
+
+/**
+ * 「대기열에 추가」: 지금 보이는 목록의 맨 끝(자동 재생 곡들 뒤)에 붙인다. 그 뒤로는 자동 재생이 이어 붙는다.
+ * 자동 재생이 꺼져 있거나 전체 반복이면 자동 재생 목록이 쓰이지 않으니 false 를 돌려주고, 부른 쪽이 「다음에 재생」 끝에 넣는다
+ */
+function appendLast(item: PlaylistItem): boolean {
+  const repeatAll = state.repeat === 'all' && Boolean(state.playlist?.items.length);
+  if (!state.autoplay || repeatAll) return false;
+  setState({ autoplayItems: [...state.autoplayItems, { ...item, pinned: true }] });
+  dirty = true;
+  flushSession();
+  return true;
 }
 
 export const comparePlayer = {
@@ -1241,6 +1282,74 @@ export const comparePlayer = {
         }),
       }))
     );
+  },
+
+  /** 대기열 패널이 한 화면에 들어가는 자동 재생 줄 수를 알려 준다. 모자라면 바로 이어 붙인다 */
+  setAutoplayTarget(count: number) {
+    const next = Math.max(AUTOPLAY_MIN, Math.min(AUTOPLAY_MAX, Math.floor(count)));
+    const changed = next !== autoplayTarget;
+    autoplayTarget = next;
+    // 패널을 열기 전에 만들어 둔 목록이 더 길면 화면에 들어가는 만큼만 남긴다(뒤쪽을 덜어 낸다)
+    if (pickedCount(state.autoplayItems) > next) {
+      // 자동으로 고른 곡만 앞에서부터 next 개 남기고, 직접 넣은 곡은 그대로 둔다
+      let kept = 0;
+      setState({
+        autoplayItems: state.autoplayItems.filter((item) => item.pinned || (kept += 1) <= next),
+      });
+      dirty = true;
+      scheduleSave();
+    } else if (changed) ensureAutoplay();
+  },
+
+  /**
+   * 곡을 대기열에 끼운다. 'next' 는 지금 곡 바로 다음, 'last' 는 지금 보이는 목록의 맨 끝(자동 재생 곡들 뒤)이다.
+   * 듣던 연주자가 그 곡에도 있으면 그 연주로 넣는다. 듣는 곡이 없으면 바로 튼다. 틀 연주가 없으면 false
+   */
+  async enqueue(item: PlaylistItem, where: 'next' | 'last'): Promise<boolean> {
+    let resolved: Awaited<ReturnType<typeof resolvePlaylistItem>> = null;
+    try {
+      resolved = await resolvePlaylistItem(item, state.current?.artistId);
+    } catch {
+      resolved = null;
+    }
+    if (!resolved) return false;
+    if (state.current && where === 'last' && appendLast(item)) return true;
+    comparePlayer.enqueueTrack(resolved.track, where, { queue: resolved.queue, meta: item.meta });
+    return true;
+  },
+
+  /**
+   * 이 연주를 대기열에 끼운다(비교 화면의 연주 카드). 자리는 `enqueue` 와 같다.
+   * 듣는 곡이 없으면 바로 튼다
+   */
+  enqueueTrack(
+    track: ComparePlayerTrack,
+    where: 'next' | 'last',
+    extra?: { queue?: readonly ComparePlayerTrack[]; meta?: QueueItemMeta }
+  ) {
+    if (!state.current) {
+      navToken += 1;
+      const options: SelectOptions = { play: true, queue: extra?.queue, startAt: 0 };
+      selectTrack(track, options, userQueuePatch(track, options));
+      return;
+    }
+    if (
+      where === 'last' &&
+      !extra?.meta &&
+      appendLast({
+        pieceId: track.pieceId,
+        sectorId: track.sectorId,
+        performanceId: track.performanceId,
+        meta: { title: track.pieceTitle, composer: track.artistName, image: track.artistImageUrl },
+      })
+    ) {
+      return;
+    }
+    const entry: QueueEntry = { track, origin: 'insert', sourceIndex: null, meta: extra?.meta };
+    const { forward } = state;
+    setState({ forward: where === 'next' ? [entry, ...forward] : [...forward, entry] });
+    dirty = true;
+    flushSession();
   },
 
   /** 대기열에서 한 줄을 뺀다 */
