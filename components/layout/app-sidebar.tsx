@@ -1,6 +1,13 @@
 import { BrandLogo } from '@/components/shared/brand-logo';
 import { EntityThumb } from '@/components/shared/entity-thumb';
-import { CompareIcon, PerformerKindIcon, TicketIcon } from '@/components/shared/icons';
+import {
+  type ClassicIconProps,
+  CompareIcon,
+  ComposerKindIcon,
+  PerformerKindIcon,
+  RepertoireIcon,
+  TicketIcon,
+} from '@/components/shared/icons';
 import { Icon } from '@/components/ui/icon';
 import { Kbd, modKeyLabel } from '@/components/ui/kbd';
 import { Text } from '@/components/ui/text';
@@ -9,6 +16,7 @@ import {
   buildLibraryEntries,
   groupLibraryEntries,
   type LibraryEntry,
+  type LibraryKind,
 } from '@/features/library/lib/library';
 import { useCommandPalette } from '@/features/search/components/command-palette-context';
 import { msg, t, useLocale } from '@/lib/i18n';
@@ -23,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { type Href, Link, usePathname } from 'expo-router';
-import { DiscIcon, HomeIcon, SearchIcon } from 'lucide-react-native';
+import { DiscIcon, HomeIcon, Music2Icon, SearchIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -185,12 +193,17 @@ function Library() {
   const fade = useSidebarFade();
   return (
     <View className="mt-4 flex-1 border-t border-border pt-4">
-      <Text
-        variant="micro"
-        numberOfLines={1}
-        className={cn('px-2.5 pb-2.5 uppercase tracking-widest', fade)}>
-        {t('레퍼토리')}
-      </Text>
+      <View>
+        <Text
+          variant="micro"
+          numberOfLines={1}
+          className={cn('px-2.5 pb-2.5 uppercase tracking-widest', fade)}>
+          {t('레퍼토리')}
+        </Text>
+        <CollapsedMark className="pb-2.5">
+          <RepertoireIcon size={16} className="text-foreground-subtle" />
+        </CollapsedMark>
+      </View>
       {!isSignedIn ? (
         <SidebarAction href="/(auth)/sign-in" className="px-2.5 py-2">
           <Text variant="caption" className="text-foreground-muted" style={{ minWidth: 190 }}>
@@ -215,31 +228,45 @@ function Library() {
           {sections.map((section) => (
             <View key={section.kind} className="mb-2.5">
               {/* 사람·작품·공연이 섞이지 않게 종류별로 묶는다. 악기는 연주자 행 부제로 보인다 */}
-              <View className={cn('flex-row items-baseline gap-1.5 px-2.5 pb-1 pt-1', fade)}>
-                <Text
-                  numberOfLines={1}
-                  className="text-[11.5px] font-semibold text-foreground-subtle">
-                  {t(section.label)}
-                </Text>
-                <Text className="text-[11px] text-foreground-subtle/70">{section.total}</Text>
+              <View>
+                <View className={cn('flex-row items-baseline gap-1.5 px-2.5 pb-1 pt-1', fade)}>
+                  <Text
+                    numberOfLines={1}
+                    className="text-[11.5px] font-semibold text-foreground-subtle">
+                    {t(section.label)}
+                  </Text>
+                  <Text className="text-[11px] text-foreground-subtle/70">{section.total}</Text>
+                </View>
+                {/* 접으면 묶음 이름 자리에 그 종류의 그림 글자를 둔다(무엇의 사진들인지 알 수 있게) */}
+                <CollapsedMark>
+                  <KindMark kind={section.kind} />
+                </CollapsedMark>
               </View>
               {section.entries.map((entry) => (
                 <LibraryLink key={entry.key} entry={entry} />
               ))}
               {section.total > section.entries.length ? (
-                <SidebarAction
-                  href={`/library?kind=${section.kind}` as Href}
-                  className="px-2.5 py-1.5">
-                  <Text
-                    numberOfLines={1}
-                    className="text-[12px] text-foreground-muted"
-                    style={{ minWidth: 150 }}>
-                    {t('{kind} {count}개 더 보기', {
-                      kind: t(section.label),
-                      count: section.total - section.entries.length,
-                    })}
-                  </Text>
-                </SidebarAction>
+                <View>
+                  <SidebarAction
+                    href={`/library?kind=${section.kind}` as Href}
+                    className="px-2.5 py-1.5">
+                    <Text
+                      numberOfLines={1}
+                      className="text-[12px] text-foreground-muted"
+                      style={{ minWidth: 150 }}>
+                      {t('{kind} {count}개 더 보기', {
+                        kind: t(section.label),
+                        count: section.total - section.entries.length,
+                      })}
+                    </Text>
+                  </SidebarAction>
+                  {/* 접으면 더 있는 개수만 남긴다 */}
+                  <CollapsedMark>
+                    <Text className="text-[11px] font-semibold tabular-nums text-foreground-subtle">
+                      {`+${section.total - section.entries.length}`}
+                    </Text>
+                  </CollapsedMark>
+                </View>
               ) : null}
             </View>
           ))}
@@ -247,6 +274,47 @@ function Library() {
       )}
     </View>
   );
+}
+
+/**
+ * 접힌 사이드바에서만 보이는 표시. 글자가 사라진 자리를 사진과 같은 세로줄(가운데 선)에 맞춰 채운다.
+ * 펼치면 글자와 자리를 바꾸며 서서히 사라진다. 누를 수는 없다
+ */
+function CollapsedMark({ children, className }: { children: React.ReactNode; className?: string }) {
+  const { collapsed } = useSidebar();
+  return (
+    <View
+      aria-hidden
+      className={cn(
+        'cm-fade absolute inset-y-0 left-[3px] w-[38px] items-center justify-center',
+        collapsed ? 'opacity-100' : 'opacity-0',
+        className
+      )}
+      style={{ pointerEvents: 'none' }}>
+      {children}
+    </View>
+  );
+}
+
+const KIND_MARK_PROPS: ClassicIconProps & { className: string } = {
+  size: 15,
+  className: 'text-foreground-subtle',
+};
+
+/** 레퍼토리 묶음 종류의 그림 글자. 주 메뉴와 같은 그림을 쓴다 */
+function KindMark({ kind }: { kind: LibraryKind }) {
+  switch (kind) {
+    case 'composer':
+      return <ComposerKindIcon {...KIND_MARK_PROPS} />;
+    case 'artist':
+      return <PerformerKindIcon {...KIND_MARK_PROPS} />;
+    case 'concert':
+      return <TicketIcon {...KIND_MARK_PROPS} />;
+    case 'album':
+      return <Icon as={DiscIcon} size={15} className="text-foreground-subtle" />;
+    case 'piece':
+      return <Icon as={Music2Icon} size={15} className="text-foreground-subtle" />;
+  }
 }
 
 /** 레퍼토리 한 줄. 사진은 접어도 제자리, 글자는 접으면 사라지고 마우스를 올리면 이름이 뜬다 */
