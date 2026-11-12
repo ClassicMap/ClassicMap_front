@@ -7,6 +7,8 @@ import { PlayerSlot } from '@/features/player/components/player-slot';
 import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { VolumeControl } from '@/features/player/components/volume-control';
 import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
+import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
+import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -51,6 +53,7 @@ import {
 import { useIsFocused } from '@react-navigation/native';
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Side = 'a' | 'b';
 /** 전환할 때 어디서 이어 들을지. 집중 비교는 같은 대목을 번갈아 듣는 게 핵심이라 '같은 지점'이 기본이다 */
@@ -311,6 +314,7 @@ function FocusStage(props: FocusStageProps) {
   const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue, featuredPair } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = React.useState<FocusMode>('align');
   const [auto, setAuto] = React.useState<AutoInterval>(0);
   const [loop, setLoop] = React.useState<LoopRange | null>(null);
@@ -700,7 +704,10 @@ function FocusStage(props: FocusStageProps) {
           </PlayerBarPortal>
         ) : null
       ) : (
-        <FocusBar {...focusBar} />
+        // iOS 는 탭바가 화면 위에 떠 있어서, 그만큼 띄우지 않으면 조작부가 탭바 뒤에 깔린다
+        <View style={TAB_CHROME_TRANSLUCENT ? { paddingBottom: tabBarHeight(insets.bottom) } : undefined}>
+          <FocusBar {...focusBar} />
+        </View>
       )}
     </View>
   );
