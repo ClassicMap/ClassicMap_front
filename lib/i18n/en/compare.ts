@@ -48,8 +48,11 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '크게 보기 (T)': 'Theater view (T)',
   '이 구간은 아직 재생할 영상이 없어요': 'No video to play for this section yet',
   '연주를 누르면 재생돼요': 'Select a performance to play it',
-  'Space 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면':
-    'Space play · ←→ performer · ⇧←→ 5 s · T theater · F full screen',
+  '키보드 단축키': 'Keyboard shortcuts',
+  '재생·일시정지': 'Play / pause',
+  '연주자 바꾸기': 'Switch performer',
+  '5초 앞뒤로': 'Skip 5 seconds',
+  음소거: 'Mute',
   '←→ 연주자 · ⇧←→ 5초 · 스페이스 재생': '←→ Performer · ⇧←→ 5 s · Space to play',
   'YouTube 원본': 'Original on YouTube',
   'YouTube 원본 새 창으로 보기': 'Open the original on YouTube in a new window',
