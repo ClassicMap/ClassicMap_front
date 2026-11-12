@@ -6,6 +6,7 @@ import { OptimizedImage } from '@/components/shared/optimized-image';
 import { PlayerSlot } from '@/features/player/components/player-slot';
 import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { VolumeControl } from '@/features/player/components/volume-control';
+import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -460,6 +461,19 @@ function FocusStage(props: FocusStageProps) {
     }
   };
 
+  const focusBar = {
+    engine,
+    performers: { a: performerOf(a, imageOf), b: performerOf(b, imageOf) },
+    active,
+    loop,
+    editingLoop,
+    onLoopChange: (range: LoopRange | null) => {
+      setLoop(range);
+      setEditingLoop(false);
+    },
+    onExit: exit,
+  };
+
   return (
     <View className="flex-1">
       <ScrollView className="flex-1" contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
@@ -676,18 +690,16 @@ function FocusStage(props: FocusStageProps) {
         <LengthTable a={a} b={b} imageOf={imageOf} rows={rows} activeSectorId={activeSectorId} />
       </ScrollView>
 
-      <FocusBar
-        engine={engine}
-        performers={{ a: performerOf(a, imageOf), b: performerOf(b, imageOf) }}
-        active={active}
-        loop={loop}
-        editingLoop={editingLoop}
-        onLoopChange={(range) => {
-          setLoop(range);
-          setEditingLoop(false);
-        }}
-        onExit={exit}
-      />
+      {/* 넓은 웹은 셸 재생 바 자리에 그린다(바가 늘 같은 자리에 있다). 이 화면이 뒤에 깔려 있으면 그리지 않는다 */}
+      {Platform.OS === 'web' && !narrow ? (
+        screenFocused ? (
+          <PlayerBarPortal>
+            <FocusBar {...focusBar} inShell />
+          </PlayerBarPortal>
+        ) : null
+      ) : (
+        <FocusBar {...focusBar} />
+      )}
     </View>
   );
 }
@@ -1466,6 +1478,7 @@ function FocusBar({
   editingLoop,
   onLoopChange,
   onExit,
+  inShell = false,
 }: {
   engine: FocusEngine;
   performers: Record<Side, Performer>;
@@ -1474,6 +1487,8 @@ function FocusBar({
   editingLoop: boolean;
   onLoopChange: (range: LoopRange | null) => void;
   onExit: () => void;
+  /** 셸 재생 바 자리에 그린다(넓은 웹). 평소 재생 바와 같은 세 칸 배치를 쓴다 */
+  inShell?: boolean;
 }) {
   useLocale();
   const { progress } = engine;
@@ -1542,6 +1557,47 @@ function FocusBar({
       </Text>
     </View>
   );
+
+  // 셸 재생 바 자리: 왼쪽은 지금 듣는 쪽, 가운데는 재생과 진행바(구간 반복도 여기서 끈다), 오른쪽은 A⇄B·소리·나가기.
+  // 곡 넘기기·셔플·대기열은 두 연주만 번갈아 듣는 동안에는 뜻이 없어 두지 않는다
+  if (inShell) {
+    const on = performers[engine.side];
+    return (
+      <View className="h-full flex-row items-center gap-4 px-4">
+        <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
+          <PerformerMark performer={on} tone={engine.side} size={44} />
+          <View key={engine.side} className="cm-row-in min-w-0 flex-1">
+            <View className="flex-row items-center gap-2">
+              <View className="rounded-xs bg-primary-muted px-1.5 py-0.5">
+                <Text className="text-micro font-bold text-primary">{t('1:1 비교')}</Text>
+              </View>
+              <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+                {on.name}
+              </Text>
+            </View>
+            <Text variant="caption" numberOfLines={1}>
+              {`${active.pieceTitle} · ${active.sectorName}`}
+            </Text>
+          </View>
+        </View>
+        <View className="w-[400px] shrink items-center gap-1.5">
+          <Pressable
+            onPress={engine.togglePlay}
+            accessibilityRole="button"
+            accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
+            className="cm-press-solid size-9 items-center justify-center rounded-full bg-foreground">
+            <Icon as={engine.playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
+          </Pressable>
+          <View className="w-full flex-row">{track}</View>
+        </View>
+        <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
+          {swapButton}
+          <VolumeControl width={76} />
+          {exitButton}
+        </View>
+      </View>
+    );
+  }
 
   // 좁은 화면은 두 줄: 위는 진행바, 아래는 재생·전환·나가기
   if (narrow) {
