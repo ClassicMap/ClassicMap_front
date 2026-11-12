@@ -36,6 +36,14 @@ export function usePlayerBarVisible(): boolean {
   return useSettled(wanted);
 }
 
+/**
+ * 데스크톱 하단 재생 바를 보일 때인가. 듣는 곡이 있으면 어느 화면에서나 같은 바가 뜬다(비교 화면도 이 바를 쓴다).
+ * 1:1 비교 중에는 그 화면의 조작부가 재생을 맡아 숨긴다
+ */
+export function useDesktopPlayerBarVisible(): boolean {
+  return useComparePlayer((state) => state.current !== null && state.focus === null);
+}
+
 /** 탭바 높이. components/layout/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */
 export function tabBarHeight(insetBottom: number): number {
   const bottomPadding = Platform.OS === 'android' ? insetBottom + 8 : 20;
