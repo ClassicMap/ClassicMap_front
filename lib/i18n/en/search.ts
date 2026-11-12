@@ -24,6 +24,7 @@ export const SEARCH: Readonly<Record<string, string>> = {
   액션: 'Actions',
   '다크 모드 전환': 'Toggle dark mode',
   '검색 닫기': 'Close search',
+  '검색하는 중이에요.': 'Searching…',
   '작곡가, 작품, 아티스트, 공연 검색': 'Search composers, works, artists, concerts',
   '“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.':
     'No results for “{q}”. Try another name or spelling.',

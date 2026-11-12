@@ -1,5 +1,6 @@
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { getArtistCategoryLabel } from '@/lib/design/artist-category';
 import { useUnifiedSearch } from '@/features/search/hooks/use-unified-search';
@@ -74,6 +75,7 @@ export function CommandPalette() {
   const close = React.useCallback(() => {
     setOpen(false);
   }, [setOpen]);
+  const skeletonRef = React.useRef(false);
 
   React.useEffect(() => {
     if (open) {
@@ -223,7 +225,8 @@ export function CommandPalette() {
       } else if (event.key === 'Enter' && !event.isComposing) {
         event.preventDefault();
         event.stopPropagation();
-        flat[activeIndex]?.run();
+        // 결과 자리 모양만 보이는 동안에는 가려진 줄이 열리지 않게 한다
+        if (!skeletonRef.current) flat[activeIndex]?.run();
       }
     }
     // 입력 칸(RN TextInput)은 키 이벤트 전파를 끊으므로 캡처 단계에서 먼저 받는다
@@ -235,6 +238,12 @@ export function CommandPalette() {
 
   const trimmed = debounced.trim();
   const hasResults = groups.length > 1;
+  // 글자를 치자마자 결과 자리 모양을 먼저 보인다(입력이 멈추길 기다리는 300ms 와 첫 응답을 기다리는 동안).
+  // 이미 보이는 검색 결과가 있으면 그대로 두고 새 결과로 갈아 끼운다
+  const typed = query.trim();
+  const waiting = typed !== '' && (typed !== trimmed || result.isFetching);
+  const showSkeleton = waiting && !(trimmed !== '' && hasResults);
+  skeletonRef.current = showSkeleton;
   let running = -1;
 
   return (
@@ -265,7 +274,7 @@ export function CommandPalette() {
           <Kbd>esc</Kbd>
         </View>
         <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
-          {trimmed && !hasResults && !result.isFetching ? (
+          {trimmed && !hasResults && !result.isFetching && !showSkeleton ? (
             <View className="items-center px-6 py-10">
               <Text variant="bodySm" className="text-foreground-muted">
                 {t('“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.', { q: trimmed })}
@@ -279,7 +288,8 @@ export function CommandPalette() {
               </Text>
             </View>
           ) : null}
-          {groups.map((group) => (
+          {showSkeleton ? <PaletteSkeleton /> : null}
+          {(showSkeleton ? [] : groups).map((group) => (
             <View key={group.label} className="py-1.5">
               <Text variant="micro" className="px-4 pb-1 pt-2 uppercase">
                 {t(group.label)}
@@ -327,6 +337,30 @@ export function CommandPalette() {
           </Text>
         </View>
       </View>
+    </View>
+  );
+}
+
+/** 검색 결과가 오기 전의 자리 모양: 결과와 같은 묶음 머리·줄 높이라 결과가 와도 화면이 덜 움직인다 */
+const SKELETON_GROUPS: readonly (readonly string[])[] = [['w-28'], ['w-44', 'w-56', 'w-36', 'w-48'], ['w-32', 'w-40']];
+
+function PaletteSkeleton() {
+  useLocale();
+  return (
+    <View accessibilityLabel={t('검색하는 중이에요.')}>
+      {SKELETON_GROUPS.map((rows, group) => (
+        <View key={group} className="py-1.5">
+          <View className="px-4 pb-1 pt-2">
+            <Skeleton className="h-3 w-16" />
+          </View>
+          {rows.map((width, row) => (
+            <View key={row} className="mx-1.5 h-10 flex-row items-center gap-3 px-2.5">
+              <Skeleton className="size-6 rounded-sm" />
+              <Skeleton className={cn('h-3.5', width)} />
+            </View>
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
