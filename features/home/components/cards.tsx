@@ -19,7 +19,7 @@ import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
-import { queueActionSheet } from '@/features/player/lib/queue-actions';
+import { queueLongPressProps } from '@/features/player/lib/queue-actions';
 
 /** 웹 전용 움직임 클래스(global.css 카드·커버 움직임). 같은 규칙이 네이티브로도 컴파일돼서 웹에서만 단다 */
 const WEB_CARD = Platform.OS === 'web' ? 'cm-card' : undefined;
@@ -77,17 +77,14 @@ export function PieceCard({
       {...prefetch}
       onPress={onPress}
       // 앱: 길게 누르면 대기열 동작 시트(추천 카드면 「관심 없음」도 함께)
-      onLongPress={
-        Platform.OS === 'web'
-          ? undefined
-          : () =>
-              queueActionSheet.open({
-                piece,
-                title: piece.pieceTitle,
-                subtitle: piece.composerName,
-                onDismiss: confirmDismiss,
-              })
-      }
+      {...(Platform.OS === 'web'
+        ? null
+        : queueLongPressProps(() => ({
+            piece,
+            title: piece.pieceTitle,
+            subtitle: piece.composerName,
+            onDismiss: confirmDismiss,
+          })))}
       accessibilityRole="link"
       accessibilityLabel={t('{title} 비교하기', {
         title: `${piece.composerName} ${piece.pieceTitle}${genre ? `, ${t(genre.label)}` : ''}`,
@@ -123,7 +120,17 @@ export function PieceCard({
             className="cm-play-fab absolute bottom-2 left-2"
             openClassName="cm-play-fab-on"
           />
-        ) : null}
+        ) : (
+          // 앱: 표지 오른쪽 위에 늘 보이는 ⋯ (길게 누르기와 같은 시트). 아래쪽은 연주자 얼굴이 쓴다
+          <QueueAddMenu
+            piece={piece}
+            title={piece.pieceTitle}
+            subtitle={piece.composerName}
+            onDismiss={confirmDismiss}
+            tone="onArt"
+            className="absolute right-1.5 top-1.5 size-7"
+          />
+        )}
         {/* 데스크톱 호버에서 아래에서 올라오는 재생 버튼. 그 자리에서 바로 튼다.
             지금 듣는 작품이면 일시정지 버튼으로 늘 떠 있다 */}
         {Platform.OS === 'web' ? (

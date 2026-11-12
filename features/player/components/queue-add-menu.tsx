@@ -26,6 +26,7 @@ export function QueueAddMenu({
   track,
   title,
   subtitle,
+  onDismiss,
   tone = 'plain',
   hoverOnly = false,
   className,
@@ -39,6 +40,8 @@ export function QueueAddMenu({
   title: string;
   /** 시트 제목 아래 줄(작곡가·연주자) */
   subtitle?: string;
+  /** 터치 화면의 시트에 「관심 없음」을 함께 둔다(추천 카드) */
+  onDismiss?: () => void;
   /** 그림 위에 얹을 때는 'onArt'(어두운 동그라미) */
   tone?: 'plain' | 'onArt';
   /** 넓은 웹에서 줄에 마우스를 올렸을 때만 보인다(감싼 줄에 `group` 이 있어야 한다). 터치 화면에서는 늘 보인다 */
@@ -69,7 +72,7 @@ export function QueueAddMenu({
   if (Platform.OS !== 'web' || nav === 'tabs') {
     return (
       <Pressable
-        onPress={() => queueActionSheet.open({ piece, track, title, subtitle })}
+        onPress={() => queueActionSheet.open({ piece, track, title, subtitle, onDismiss })}
         accessibilityRole="button"
         accessibilityLabel={t('{title} 대기열에 넣기', { title })}
         hitSlop={8}

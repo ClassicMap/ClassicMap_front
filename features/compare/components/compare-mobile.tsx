@@ -17,7 +17,7 @@ import { compareQueueFor } from '@/lib/player/compare-playlist';
 import { useIsFocused } from '@react-navigation/native';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
-import { queueActionSheet } from '@/features/player/lib/queue-actions';
+import { type QueueActionRequest, queueLongPressProps } from '@/features/player/lib/queue-actions';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -298,9 +298,11 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
             <Pressable
               key={piece.pieceId}
               onPress={() => onOpen(piece)}
-              onLongPress={() =>
-                queueActionSheet.open({ piece, title: piece.pieceTitle, subtitle: piece.composerName })
-              }
+              {...queueLongPressProps(() => ({
+                piece,
+                title: piece.pieceTitle,
+                subtitle: piece.composerName,
+              }))}
               accessibilityRole="link"
               accessibilityLabel={
                 repertoire.pieces.has(piece.pieceId)
@@ -701,14 +703,13 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
                 active={performance.id === activeId}
                 inRepertoire={repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)}
                 onPress={() => choose(performance)}
-                onQueue={
+                queue={
                   isPlayablePerformance(performance) && performance.id !== activeId
-                    ? () =>
-                        queueActionSheet.open({
-                          track: trackFromPerformance(performance, imageOf(performance)),
-                          title: primaryCredit(performance)?.artistName ?? performance.pieceTitle,
-                          subtitle: `${performance.pieceTitle} · ${performance.sectorName}`,
-                        })
+                    ? () => ({
+                        track: trackFromPerformance(performance, imageOf(performance)),
+                        title: primaryCredit(performance)?.artistName ?? performance.pieceTitle,
+                        subtitle: `${performance.pieceTitle} · ${performance.sectorName}`,
+                      })
                     : undefined
                 }
                 onMoment={(moment) => playAt(performance, moment)}
@@ -749,7 +750,7 @@ function PerformerRow({
   active,
   inRepertoire,
   onPress,
-  onQueue,
+  queue,
   onMoment,
   curveFloor,
 }: {
@@ -760,7 +761,7 @@ function PerformerRow({
   inRepertoire: boolean;
   onPress: () => void;
   /** 길게 누르면 이 연주를 대기열에 넣는 시트를 연다 */
-  onQueue?: () => void;
+  queue?: () => QueueActionRequest;
   onMoment: (moment: ListeningMoment) => void;
   curveFloor: number;
 }) {
@@ -776,7 +777,7 @@ function PerformerRow({
     <View>
       <Pressable
         onPress={ready ? onPress : undefined}
-        onLongPress={onQueue}
+        {...(queue ? queueLongPressProps(queue) : null)}
         disabled={!ready}
         accessibilityRole="button"
         accessibilityState={{ selected: active, disabled: !ready }}

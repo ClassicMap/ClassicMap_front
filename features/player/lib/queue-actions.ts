@@ -5,6 +5,7 @@ import {
 } from '@/lib/player/compare-player-store';
 import { type ListPiece, listItems } from '@/lib/player/playlist';
 import * as React from 'react';
+import { Platform } from 'react-native';
 
 /** 대기열에 넣을 것. 곡(`piece`)이면 연주는 듣던 연주자 또는 대표 연주로 고르고, `track` 이면 그 연주를 그대로 넣는다 */
 export interface QueueTarget {
@@ -67,4 +68,28 @@ export function useQueueActionRequest(): QueueActionRequest | null {
     () => request,
     () => null
   );
+}
+
+let held: QueueActionRequest | null = null;
+
+/**
+ * 길게 눌러 시트를 여는 줄·카드에 펼쳐 넣는 props.
+ * 안드로이드는 손가락을 댄 채 시트(새 창)가 뜨면 손을 뗄 때 바깥 막이 눌려 곧바로 닫힌다. 그래서 손을 뗀 뒤에 연다
+ */
+export function queueLongPressProps(request: () => QueueActionRequest): {
+  onLongPress: () => void;
+  onPressOut?: () => void;
+} {
+  if (Platform.OS !== 'android') return { onLongPress: () => queueActionSheet.open(request()) };
+  return {
+    onLongPress: () => {
+      held = request();
+    },
+    onPressOut: () => {
+      if (!held) return;
+      const next = held;
+      held = null;
+      queueActionSheet.open(next);
+    },
+  };
 }

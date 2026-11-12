@@ -1104,10 +1104,19 @@ function rebuildAutoplay() {
 function appendLast(item: PlaylistItem): boolean {
   const repeatAll = state.repeat === 'all' && Boolean(state.playlist?.items.length);
   if (!state.autoplay || repeatAll) return false;
-  setState({ autoplayItems: [...state.autoplayItems, { ...item, pinned: true }] });
+  setState({ autoplayItems: [...withoutPiece(item.pieceId), { ...item, pinned: true }] });
   dirty = true;
   flushSession();
   return true;
+}
+
+/**
+ * 직접 넣는 곡이 자동 재생 목록에 이미 있으면(자동으로 고른 줄이든 앞서 직접 넣은 줄이든) 그 줄은 뺀다.
+ * 같은 곡이 두 번 나오지 않고, 다시 넣으면 새로 넣은 자리로 옮겨진다.
+ * 빈 자리는 곧바로 채우지 않는다(채우면 방금 맨 끝에 넣은 곡 뒤에 새 줄이 붙는다). 다음에 목록을 이을 때 함께 채워진다
+ */
+function withoutPiece(pieceId: number): PlaylistItem[] {
+  return state.autoplayItems.filter((item) => item.pieceId !== pieceId);
 }
 
 export const comparePlayer = {
@@ -1347,7 +1356,12 @@ export const comparePlayer = {
     }
     const entry: QueueEntry = { track, origin: 'insert', sourceIndex: null, meta: extra?.meta };
     const { forward } = state;
-    setState({ forward: where === 'next' ? [entry, ...forward] : [...forward, entry] });
+    const autoplayItems = withoutPiece(track.pieceId);
+    const dropped = autoplayItems.length !== state.autoplayItems.length;
+    setState({
+      forward: where === 'next' ? [entry, ...forward] : [...forward, entry],
+      ...(dropped ? { autoplayItems } : null),
+    });
     dirty = true;
     flushSession();
   },
