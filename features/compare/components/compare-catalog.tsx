@@ -448,8 +448,7 @@ function PieceRow({
         <QueueAddMenu
           piece={piece}
           title={piece.pieceTitle}
-          className="opacity-0 web:focus-visible:opacity-100 web:group-hover:opacity-100"
-          openClassName="opacity-100"
+          hoverOnly
         />
       ) : null}
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />

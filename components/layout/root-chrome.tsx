@@ -3,6 +3,7 @@ import { isBarePath } from '@/components/layout/bare-paths';
 import { AutoplayTasteFeed } from '@/features/player/components/autoplay-taste-feed';
 import { ComparePlayerHost } from '@/features/player/components/compare-player-host';
 import { MiniPlayerBar } from '@/features/player/components/mini-player-bar';
+import { QueueActionSheet } from '@/features/player/components/queue-action-sheet';
 import { usePathname } from 'expo-router';
 import * as React from 'react';
 
@@ -21,6 +22,7 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
       {isBarePath(pathname) ? null : <MiniPlayerBar />}
       <ComparePlayerHost />
       <AutoplayTasteFeed />
+      <QueueActionSheet />
     </>
   );
 }
