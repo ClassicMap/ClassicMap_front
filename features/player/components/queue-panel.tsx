@@ -6,7 +6,6 @@ import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
 import { shell, useShell } from '@/lib/layout/shell-state';
 import {
-  AUTOPLAY_LENGTH,
   comparePlayer,
   type ComparePlayerTrack,
   type PlaylistItem,
@@ -118,6 +117,10 @@ function useCanHover(): boolean {
 const LEAVE_MS = 180;
 /** 다음 곡으로 넘어갈 때 맨 윗줄이 접히는 길이(ms). global.css 의 cm-row-leave 와 같게 둔다 */
 const ROW_LEAVE_MS = 320;
+/** 대기열 한 줄 높이(px): 그림 44 + 위아래 6 */
+const ROW_HEIGHT = 56;
+/** 목록에서 자동 재생 줄들 위에 늘 있는 높이(px): 「지금 재생」 머리·줄과 「자동 재생」 머리 */
+const LIST_FIXED_HEIGHT = 164;
 /** 한 번에 접히는 줄은 이만큼까지만 그린다(멀리 건너뛰어도 화면에 보이는 만큼이면 된다) */
 const MAX_LEAVING = 12;
 /** 새 줄이 차례로 나타나는 간격(ms)과 그 간격을 주는 줄 수 */
@@ -377,6 +380,15 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const shuffle = useComparePlayer((state) => state.shuffle);
   const repeat = useComparePlayer((state) => state.repeat);
   const [tab, setTab] = React.useState<QueueTab>('queue');
+  // 자동 재생 줄 수는 패널 한 화면에 딱 들어가는 만큼으로 맞춘다(마지막 줄이 잘리지 않게).
+  // 곡이 넘어가면 끝에 하나가 채워져 늘 같은 길이다. 직접 넣은 곡·목록은 그 위에 더해져 길어진다
+  const [fitRows, setFitRows] = React.useState(0);
+  const onListLayout = React.useCallback((height: number) => {
+    const rows = Math.floor((height - LIST_FIXED_HEIGHT) / ROW_HEIGHT);
+    if (rows <= 0) return;
+    setFitRows(rows);
+    comparePlayer.setAutoplayTarget(rows);
+  }, []);
   const itemRow = useItemRow();
   const remaining = playlist ? playlist.items.slice(playlist.index + 1) : [];
   const remainingKeys = stableKeys(remaining, 's');
@@ -461,7 +473,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   // 자동 재생을 이어 붙이는 동안 남은 줄 아래에 채워질 만큼 빈 줄 모양을 깔아 둔다
   const fillingRows =
     autoplayStatus === 'loading' && autoplayItems.length > 0
-      ? Math.max(0, AUTOPLAY_LENGTH - autoplayItems.length)
+      ? Math.max(0, fitRows - autoplayItems.length)
       : 0;
 
   const tabs: { key: QueueTab; label: string }[] = [
@@ -515,7 +527,11 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
         ) : null}
       </View>
 
-      <ScrollView key={tab} className="cm-reveal flex-1" contentContainerClassName="pb-6">
+      <ScrollView
+        key={tab}
+        className="cm-reveal flex-1"
+        contentContainerClassName="pb-6"
+        onLayout={(event) => onListLayout(event.nativeEvent.layout.height)}>
         {tab === 'history' ? (
           history.length ? (
             <View className="pt-2">

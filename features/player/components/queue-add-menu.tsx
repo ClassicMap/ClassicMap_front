@@ -2,7 +2,11 @@ import { Icon } from '@/components/ui/icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
-import { comparePlayer, type PlaylistItem } from '@/lib/player/compare-player-store';
+import {
+  comparePlayer,
+  type ComparePlayerTrack,
+  type PlaylistItem,
+} from '@/lib/player/compare-player-store';
 import { type ListPiece, listItems } from '@/lib/player/playlist';
 import { cn } from '@/lib/utils';
 import {
@@ -15,17 +19,21 @@ import * as React from 'react';
 import { Pressable } from 'react-native';
 
 /**
- * 곡 카드·목록 줄의 ⋯ 메뉴. 지금 듣는 것을 끊지 않고 이 곡을 대기열에 끼운다.
+ * 곡 카드·목록 줄·비교 화면 연주 카드의 ⋯ 메뉴. 지금 듣는 것을 끊지 않고 이 곡을 대기열에 끼운다.
  * 「다음에 재생」은 지금 곡 바로 다음, 「대기열에 추가」는 직접 넣은 곡들 맨 뒤다. 둘 다 원래 목록보다 먼저 나온다
  */
 export function QueueAddMenu({
   piece,
+  track,
   title,
   tone = 'plain',
   className,
   openClassName,
 }: {
-  piece: ListPiece | PlaylistItem;
+  /** 곡을 넣는다(연주는 듣던 연주자 또는 대표 연주로 고른다) */
+  piece?: ListPiece | PlaylistItem;
+  /** 이 연주를 그대로 넣는다(비교 화면의 연주 카드) */
+  track?: ComparePlayerTrack;
   /** 접근성 이름에 쓰는 곡 제목 */
   title: string;
   /** 그림 위에 얹을 때는 'onArt'(어두운 동그라미) */
@@ -38,6 +46,11 @@ export function QueueAddMenu({
   const [open, setOpen] = React.useState(false);
   const add = (where: 'next' | 'last') => () => {
     setOpen(false);
+    if (track) {
+      comparePlayer.enqueueTrack(track, where);
+      return;
+    }
+    if (!piece) return;
     const [item] = listItems([piece] as readonly ListPiece[] | readonly PlaylistItem[]);
     if (item) void comparePlayer.enqueue(item, where);
   };

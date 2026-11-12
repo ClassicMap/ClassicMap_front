@@ -61,7 +61,8 @@ import {
 } from 'lucide-react-native';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { t, useLocale } from '@/lib/i18n';
 
@@ -855,6 +856,14 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
         <Text variant="mono" className="text-foreground-subtle">
           {clipClock(duration)}
         </Text>
+        {/* 이 연주를 대기열에 넣는다(지금 듣는 연주와 1:1 고르는 중에는 뺀다) */}
+        {Platform.OS === 'web' && seekable && !active ? (
+          <QueueAddMenu
+            track={trackFromPerformance(performance, image)}
+            title={credit?.artistName ?? performance.pieceTitle}
+            className="-ml-1"
+          />
+        ) : null}
       </View>
 
       {/* 연주 노트: 확정된 노트가 없는 연주는 이름과 곡선만 둔다 */}
