@@ -19,7 +19,7 @@ import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
-import { queueActionSheet } from '@/features/player/lib/queue-actions';
+import { queueLongPressProps } from '@/features/player/lib/queue-actions';
 
 /** 웹 전용 움직임 클래스(global.css 카드·커버 움직임). 같은 규칙이 네이티브로도 컴파일돼서 웹에서만 단다 */
 const WEB_CARD = Platform.OS === 'web' ? 'cm-card' : undefined;
@@ -77,17 +77,14 @@ export function PieceCard({
       {...prefetch}
       onPress={onPress}
       // 앱: 길게 누르면 대기열 동작 시트(추천 카드면 「관심 없음」도 함께)
-      onLongPress={
-        Platform.OS === 'web'
-          ? undefined
-          : () =>
-              queueActionSheet.open({
-                piece,
-                title: piece.pieceTitle,
-                subtitle: piece.composerName,
-                onDismiss: confirmDismiss,
-              })
-      }
+      {...(Platform.OS === 'web'
+        ? null
+        : queueLongPressProps(() => ({
+            piece,
+            title: piece.pieceTitle,
+            subtitle: piece.composerName,
+            onDismiss: confirmDismiss,
+          })))}
       accessibilityRole="link"
       accessibilityLabel={t('{title} 비교하기', {
         title: `${piece.composerName} ${piece.pieceTitle}${genre ? `, ${t(genre.label)}` : ''}`,
