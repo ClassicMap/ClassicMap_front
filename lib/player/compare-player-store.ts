@@ -1045,12 +1045,14 @@ function autoplayBasis(existing: readonly PlaylistItem[]): AutoplayBasis | null 
   if (!current) return null;
   const last = existing[existing.length - 1];
   if (!last) return current;
+  // 직접 넣은 곡과 옛 세션의 곡은 장르를 모른다. 맨 끝이 그런 곡이면 그 앞에서 자동 재생이 고른 마지막 곡을 기준으로 쓴다
+  const basis = last.picked ? last : ([...existing].reverse().find((item) => item.picked) ?? last);
   return {
-    pieceId: last.pieceId,
-    composerId: last.picked?.composerId ?? last.meta?.composerId ?? current.composerId,
+    pieceId: basis.pieceId,
+    composerId: basis.picked?.composerId ?? basis.meta?.composerId ?? current.composerId,
     artistId: null,
     artistName: '',
-    genre: last.picked?.genre,
+    genre: basis.picked?.genre,
   };
 }
 
