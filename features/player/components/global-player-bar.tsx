@@ -249,22 +249,34 @@ export function GlobalPlayerBar() {
         <PerformerStepper compact={!layout.spotLabel} maxFaces={layout.faces} />
         <VolumeControl width={layout.volume} />
         <QueueButton />
-        <MoreMenu track={current} onGoToCompare={goToCompare} />
+        <FullscreenButton onGoToCompare={goToCompare} />
+        <MoreMenu track={current} />
       </View>
     </View>
   );
 }
 
-/** 자주 쓰지 않는 동작 모음: 전체 화면, YouTube 원본, 플레이어 닫기 */
-function MoreMenu({
-  track,
-  onGoToCompare,
-}: {
-  track: ComparePlayerTrack;
-  onGoToCompare: () => void;
-}) {
-  const [open, setOpen] = React.useState(false);
+/** 전체 화면. 비교 화면 밖에서 누르면 그 화면으로 가면서 띄운다 */
+function FullscreenButton({ onGoToCompare }: { onGoToCompare: () => void }) {
   const onPage = useComparePlayer((state) => state.surface === 'slot');
+  return (
+    <Pressable
+      onPress={() => {
+        // 누른 그 자리에서 청해야 브라우저가 받아 준다. 조작부는 비교 화면이 그리므로 그 화면으로 간다
+        comparePlayer.requestFullscreen();
+        if (!onPage) onGoToCompare();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={onPage ? t('전체 화면 (F)') : t('전체 화면')}
+      className="size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2">
+      <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
+    </Pressable>
+  );
+}
+
+/** 자주 쓰지 않는 동작 모음: YouTube 원본, 플레이어 닫기 */
+function MoreMenu({ track }: { track: ComparePlayerTrack }) {
+  const [open, setOpen] = React.useState(false);
   const watchUrl = track.videoId
     ? `https://www.youtube.com/watch?v=${track.videoId}&t=${Math.floor(track.startMs / 1000)}s`
     : null;
@@ -288,16 +300,6 @@ function MoreMenu({
         <Icon as={MoreHorizontalIcon} size={16} className="text-foreground-muted" />
       </PopoverTrigger>
       <PopoverContent side="top" align="end" sideOffset={10} className="w-60 gap-0 p-1.5">
-        <MenuRow
-          icon={MaximizeIcon}
-          label={t('전체 화면')}
-          hint={onPage ? 'F' : undefined}
-          onPress={run(() => {
-            // 누른 그 자리에서 청해야 브라우저가 받아 준다. 조작부는 비교 화면이 그리므로 그 화면으로 간다
-            comparePlayer.requestFullscreen();
-            if (!onPage) onGoToCompare();
-          })}
-        />
         {watchUrl ? (
           <MenuRow
             icon={ExternalLinkIcon}
@@ -315,12 +317,10 @@ function MoreMenu({
 function MenuRow({
   icon,
   label,
-  hint,
   onPress,
 }: {
   icon: LucideIcon;
   label: string;
-  hint?: string;
   onPress: () => void;
 }) {
   return (
@@ -332,11 +332,6 @@ function MenuRow({
       <Text numberOfLines={1} className="flex-1 text-body-sm text-foreground">
         {label}
       </Text>
-      {hint ? (
-        <Text variant="mono" className="text-caption text-foreground-muted">
-          {hint}
-        </Text>
-      ) : null}
     </Pressable>
   );
 }
