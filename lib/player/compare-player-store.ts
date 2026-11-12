@@ -61,6 +61,16 @@ export interface QueueItemMeta {
   composerId?: number;
 }
 
+/**
+ * 자동 재생이 고른 곡에 남겨 두는 것. 목록을 이어 붙일 때 맨 끝 곡이 기준이 되므로 그 곡의 작곡가·장르와,
+ * 번갈아 고르는 차례(비슷한 곡·취향 추천 가운데 어느 쪽이었는지)를 알아야 한다
+ */
+export interface AutoplayPick {
+  composerId: number;
+  genre: PieceGenre | null;
+  side: 'similar' | 'taste';
+}
+
 /** 재생 목록의 한 곡(작품의 한 구간). 어느 연주로 틀지는 그 곡 차례가 올 때 정한다 */
 export interface PlaylistItem {
   pieceId: number;
@@ -71,6 +81,8 @@ export interface PlaylistItem {
   pinned?: boolean;
   /** 이 연주로 튼다(비교 화면의 연주 카드에서 넣었을 때). 없거나 못 틀면 평소 규칙으로 고른다 */
   performanceId?: number;
+  /** 자동 재생이 고른 곡이면 남는다(옛 세션의 곡·직접 넣은 곡에는 없다) */
+  picked?: AutoplayPick;
 }
 
 /** 자동 재생 목록에서 사용자가 직접 넣은 곡만 */
@@ -1033,11 +1045,14 @@ function autoplayBasis(existing: readonly PlaylistItem[]): AutoplayBasis | null 
   if (!current) return null;
   const last = existing[existing.length - 1];
   if (!last) return current;
+  // 직접 넣은 곡과 옛 세션의 곡은 장르를 모른다. 맨 끝이 그런 곡이면 그 앞에서 자동 재생이 고른 마지막 곡을 기준으로 쓴다
+  const basis = last.picked ? last : ([...existing].reverse().find((item) => item.picked) ?? last);
   return {
-    pieceId: last.pieceId,
-    composerId: last.meta?.composerId ?? current.composerId,
+    pieceId: basis.pieceId,
+    composerId: basis.picked?.composerId ?? basis.meta?.composerId ?? current.composerId,
     artistId: null,
     artistName: '',
+    genre: basis.picked?.genre,
   };
 }
 
@@ -1051,6 +1066,7 @@ async function buildAutoplay(
   return pickAutoplay({
     basis,
     exclude: knownPieces(existing),
+    tail: existing,
     taste: tastePool,
     genres: tasteGenrePool,
     count,

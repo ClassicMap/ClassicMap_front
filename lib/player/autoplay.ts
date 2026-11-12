@@ -1,6 +1,7 @@
 import { type PieceGenre, genreStyle, isPieceGenre } from '@/lib/design/genre-palette';
 import { t } from '@/lib/i18n';
 import type {
+  AutoplayPick,
   ComparePlayerTrack,
   PlaylistItem,
   QueueItemMeta,
@@ -42,6 +43,9 @@ export interface AutoplayCandidate {
 /** 후보를 고른 까닭. 위에 있을수록 강하다 */
 type ReasonKind = 'artist' | 'taste' | 'composer' | 'genre';
 const WEIGHT: Record<ReasonKind, number> = { artist: 3, taste: 2, composer: 2, genre: 1 };
+
+/** 자동 재생이 고른 쪽: 기준 곡과 비슷한 곡이거나 취향 추천 */
+type PickSide = AutoplayPick['side'];
 
 interface Scored {
   candidate: AutoplayCandidate;
@@ -114,11 +118,11 @@ async function firstPage<T>(load: () => Promise<{ pages: readonly T[][] }>): Pro
   }
 }
 
-/** 자동 재생 목록을 이어 붙일 때 기준이 되는 곡 */
+/** 자동 재생 목록을 이어 붙일 때 기준이 되는 곡. 장르를 알면 같이 준다(모르면 목록에서 찾는다) */
 export type AutoplayBasis = Pick<
   ComparePlayerTrack,
   'pieceId' | 'composerId' | 'artistId' | 'artistName'
->;
+> & { genre?: PieceGenre | null };
 
 /**
  * 자동 재생 목록을 만든다(한 번에 길게). 「비슷한 곡 하나 → 취향 추천 둘」 순서로 번갈아 고르고,
@@ -130,12 +134,14 @@ export type AutoplayBasis = Pick<
 export async function pickAutoplay(input: {
   basis: AutoplayBasis;
   exclude: ReadonlySet<number>;
+  /** 이미 만들어 둔 목록(이 뒤에 이어 붙는다). 번갈아 고르는 차례와 같은 작곡가 연속 금지를 여기서 잇는다 */
+  tail?: readonly PlaylistItem[];
   taste: readonly AutoplayCandidate[];
   /** 취향 묻기에서 고른 소리의 장르. 서버 추천 다음 취향 후보가 된다 */
   genres?: readonly PieceGenre[];
   count: number;
 }): Promise<PlaylistItem[]> {
-  const { basis, exclude, taste, count, genres = [] } = input;
+  const { basis, exclude, tail = [], taste, count, genres = [] } = input;
   const [composerPieces, artistPerformances] = await Promise.all([
     firstPage(() => queryClient.fetchInfiniteQuery(comparisonPiecesQueryOptions(basis.composerId))),
     basis.artistId
@@ -149,6 +155,7 @@ export async function pickAutoplay(input: {
       : Promise.resolve([] as readonly ComparisonPerformance[]),
   ]);
   const basisGenre =
+    basis.genre ??
     composerPieces.find((piece) => piece.pieceId === basis.pieceId)?.genre ??
     taste.find((candidate) => candidate.pieceId === basis.pieceId)?.genre ??
     null;
@@ -229,28 +236,40 @@ export async function pickAutoplay(input: {
 
   const used = new Set<number>();
   const picks: Scored[] = [];
+  // 이미 있는 목록의 끝을 이어받는다: 한 곡씩 이어 붙여도 「비슷한 곡 하나 → 취향 추천 둘」과 작곡가 연속 금지가 이어진다
+  const composers: (number | undefined)[] = tail
+    .slice(-2)
+    .map((item) => item.picked?.composerId ?? item.meta?.composerId);
+  const sides: (PickSide | undefined)[] = tail.slice(-2).map((item) => item.picked?.side);
   /** 같은 작곡가가 세 번 연달아 나오지 않는 첫 곡. 없으면 아무 첫 곡 */
   const takeFrom = (list: readonly Scored[]): Scored | null => {
-    const lastTwo = picks.slice(-2).map((pick) => pick.candidate.composerId);
-    const repeated = lastTwo.length === 2 && lastTwo[0] === lastTwo[1] ? lastTwo[0] : null;
+    const [a, b] = composers.slice(-2);
+    const repeated = a !== undefined && a === b ? a : null;
     const fresh = list.filter((entry) => !used.has(entry.candidate.pieceId));
     return fresh.find((entry) => entry.candidate.composerId !== repeated) ?? fresh[0] ?? null;
   };
-  const pattern: ('similar' | 'taste')[] = ['similar', 'taste', 'taste'];
   while (picks.length < count) {
-    const want = pattern[picks.length % pattern.length];
-    const pick =
-      want === 'taste'
-        ? (takeFrom(tasteList) ?? takeFrom(similarList))
-        : (takeFrom(similarList) ?? takeFrom(tasteList));
+    // 처음이거나 취향 추천이 둘 이어졌으면 비슷한 곡 차례
+    const [a, b] = sides.slice(-2);
+    const want: PickSide = !sides.length || (a === 'taste' && b === 'taste') ? 'similar' : 'taste';
+    const fromTaste = takeFrom(tasteList);
+    const fromSimilar = takeFrom(similarList);
+    const pick = want === 'taste' ? (fromTaste ?? fromSimilar) : (fromSimilar ?? fromTaste);
     if (!pick) break;
     used.add(pick.candidate.pieceId);
     picks.push(pick);
+    composers.push(pick.candidate.composerId);
+    sides.push(pick.kind === 'taste' ? 'taste' : 'similar');
   }
-  return picks.map(({ candidate, reason }) => ({
+  return picks.map(({ candidate, reason, kind }) => ({
     pieceId: candidate.pieceId,
     sectorId: candidate.sectorId,
     meta: { ...candidate.meta, reason },
+    picked: {
+      composerId: candidate.composerId,
+      genre: candidate.genre,
+      side: kind === 'taste' ? 'taste' : 'similar',
+    },
   }));
 }
 
