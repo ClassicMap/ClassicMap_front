@@ -341,8 +341,8 @@ export function CommandPalette() {
   );
 }
 
-/** 검색 결과가 오기 전의 자리 모양: 결과와 같은 묶음 머리·줄 높이라 결과가 와도 화면이 덜 움직인다 */
-const SKELETON_GROUPS: readonly (readonly string[])[] = [['w-28'], ['w-44', 'w-56', 'w-36', 'w-48'], ['w-32', 'w-40']];
+/** 검색 결과가 오기 전의 자리 모양: 묶음 머리 하나와 줄 셋. 결과와 같은 줄 높이다 */
+const SKELETON_GROUPS: readonly (readonly string[])[] = [['w-44', 'w-56', 'w-36']];
 
 function PaletteSkeleton() {
   useLocale();
