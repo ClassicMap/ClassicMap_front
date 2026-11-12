@@ -117,6 +117,18 @@ function useCanHover(): boolean {
 const LEAVE_MS = 180;
 /** 다음 곡으로 넘어갈 때 맨 윗줄이 접히는 길이(ms). global.css 의 cm-row-leave 와 같게 둔다 */
 const ROW_LEAVE_MS = 320;
+/** 한 번에 접히는 줄은 이만큼까지만 그린다(멀리 건너뛰어도 화면에 보이는 만큼이면 된다) */
+const MAX_LEAVING = 12;
+/** 새 줄이 차례로 나타나는 간격(ms)과 그 간격을 주는 줄 수 */
+const STAGGER_MS = 35;
+const MAX_STAGGER = 10;
+/** 새 줄 표시를 이만큼 붙여 둔다(ms). 그사이 다시 그려져도 움직임이 끊기지 않는다 */
+const ROW_ENTER_KEEP_MS = 1200;
+
+interface UpcomingRow {
+  pieceId: number;
+  row: Omit<RowProps, 'label'> & { label: string };
+}
 
 interface RowProps {
   title: string;
@@ -371,50 +383,76 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const repeatAll = repeat === 'all' && Boolean(playlist?.items.length);
   const sourceName = playlist?.name ?? t('재생 목록');
 
-  // 다음 곡으로 넘어가면 대기열 맨 윗줄이 지금 곡이 된다. 그 줄을 잠깐 남겨 접히게 해서 아래 줄들이 따라 올라오게 한다
-  const head: { pieceId: number; row: ReturnType<typeof trackRow> } | null = forward[0]
-    ? { pieceId: forward[0].track.pieceId, row: trackRow(forward[0].track) }
-    : remaining[0]
-      ? { pieceId: remaining[0].pieceId, row: itemRow(remaining[0]) }
-      : autoplay && !repeatAll && autoplayItems[0]
-        ? { pieceId: autoplayItems[0].pieceId, row: itemRow(autoplayItems[0]) }
-        : null;
-  const headRef = React.useRef(head);
+  const forwardKeys = stableKeys(
+    forward.map((entry) => ({ pieceId: entry.track.performanceId, sectorId: null })),
+    'f'
+  );
+  const autoplayShown = autoplay && !repeatAll ? autoplayItems : [];
+
+  // 다음 곡으로 넘어가거나 아래 줄을 눌러 건너뛰면, 지금 곡이 된 줄과 그 위에 있던 줄들을 잠깐 남겨 접히게 한다.
+  // 그래서 아래 줄들이 따라 올라온다
+  const upcoming: UpcomingRow[] = [
+    ...forward.map((entry) => ({ pieceId: entry.track.pieceId, row: trackRow(entry.track) })),
+    ...remaining.map((item) => ({ pieceId: item.pieceId, row: itemRow(item) })),
+    ...autoplayShown.map((item) => ({ pieceId: item.pieceId, row: itemRow(item) })),
+  ];
+  const upcomingRef = React.useRef(upcoming);
   const currentIdRef = React.useRef(current?.performanceId ?? null);
-  const [leaving, setLeaving] = React.useState<{
-    id: number;
-    row: ReturnType<typeof trackRow>;
-  } | null>(null);
+  const [leaving, setLeaving] = React.useState<{ id: number; rows: UpcomingRow[] } | null>(null);
   React.useEffect(() => {
-    const previousHead = headRef.current;
+    const previous = upcomingRef.current;
     const currentId = current?.performanceId ?? null;
-    const advanced =
-      current !== null &&
-      currentIdRef.current !== null &&
-      currentIdRef.current !== currentId &&
-      previousHead !== null &&
-      previousHead.pieceId === current.pieceId;
+    const changed = current !== null && currentIdRef.current !== null && currentIdRef.current !== currentId;
     currentIdRef.current = currentId;
-    headRef.current = head;
-    if (!advanced || !previousHead) return;
-    setLeaving({ id: current.performanceId, row: previousHead.row });
+    upcomingRef.current = upcoming;
+    if (!changed || !current) return;
+    const at = previous.findIndex((row) => row.pieceId === current.pieceId);
+    if (at < 0) return;
+    setLeaving({ id: current.performanceId, rows: previous.slice(Math.max(0, at + 1 - MAX_LEAVING), at + 1) });
   });
   React.useEffect(() => {
     if (!leaving) return;
     const timer = setTimeout(() => setLeaving(null), ROW_LEAVE_MS);
     return () => clearTimeout(timer);
   }, [leaving]);
-  const leavingRow = leaving ? (
-    <View key={`leave-${leaving.id}`} className="cm-row-leave" aria-hidden>
-      <Row {...leaving.row} />
-    </View>
-  ) : null;
+  const leavingRows = leaving
+    ? leaving.rows.map((item, index) => (
+        <View key={`leave-${leaving.id}-${index}`} className="cm-row-leave" aria-hidden>
+          <Row {...item.row} />
+        </View>
+      ))
+    : null;
   // 접히는 줄은 보이는 첫 칸 맨 위에 둔다
   const leavingAt: 'forward' | 'source' | 'autoplay' = forward.length
     ? 'forward'
     : remaining.length
       ? 'source'
       : 'autoplay';
+
+  // 새로 들어온 줄(대기열에 넣은 곡, 다시 채워진 자동 재생)은 아래에서 차례로 올라오며 나타난다.
+  // 패널을 처음 열 때는 패널 전체가 나타나므로 줄마다 따로 움직이지 않는다
+  const knownKeys = React.useRef<Set<string> | null>(null);
+  const freshKeys = React.useRef(new Map<string, { delay: number; at: number }>());
+  const allKeys = [...forwardKeys, ...remainingKeys, ...stableKeys(autoplayShown, 'a')];
+  const now = Date.now();
+  let freshCount = 0;
+  if (knownKeys.current) {
+    for (const key of allKeys) {
+      if (knownKeys.current.has(key)) continue;
+      freshKeys.current.set(key, { delay: Math.min(freshCount, MAX_STAGGER) * STAGGER_MS, at: now });
+      freshCount += 1;
+    }
+  }
+  knownKeys.current = new Set(allKeys);
+  for (const [key, fresh] of freshKeys.current) {
+    if (now - fresh.at > ROW_ENTER_KEEP_MS) freshKeys.current.delete(key);
+  }
+  const entering = (key: string) => {
+    const fresh = freshKeys.current.get(key);
+    return fresh
+      ? { className: 'cm-row-in', style: { animationDelay: `${fresh.delay}ms` } as object }
+      : {};
+  };
 
   const tabs: { key: QueueTab; label: string }[] = [
     { key: 'queue', label: t('대기열') },
@@ -501,14 +539,15 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
 
             {forward.length ? (
               <Section title={t('다음에 재생')} action={showSource ? undefined : clearAction}>
-                {leavingAt === 'forward' ? leavingRow : null}
+                {leavingAt === 'forward' ? leavingRows : null}
                 {forward.map((entry, index) => (
-                  <Row
-                    key={`f-${entry.track.performanceId}-${index}`}
-                    {...trackRow(entry.track)}
-                    onPress={() => comparePlayer.playFromQueue('forward', index)}
-                    onRemove={() => comparePlayer.removeFromQueue('forward', index)}
-                  />
+                  <View key={forwardKeys[index]} {...entering(forwardKeys[index])}>
+                    <Row
+                      {...trackRow(entry.track)}
+                      onPress={() => comparePlayer.playFromQueue('forward', index)}
+                      onRemove={() => comparePlayer.removeFromQueue('forward', index)}
+                    />
+                  </View>
                 ))}
               </Section>
             ) : null}
@@ -519,15 +558,16 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
                 title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
                 detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
                 action={remaining.length || forward.length ? clearAction : undefined}>
-                {leavingAt === 'source' ? leavingRow : null}
+                {leavingAt === 'source' ? leavingRows : null}
                 {remaining.length ? (
                   remaining.map((item, index) => (
-                    <Row
-                      key={remainingKeys[index]}
-                      {...itemRow(item)}
-                      onPress={() => comparePlayer.playFromQueue('source', index)}
-                      onRemove={() => comparePlayer.removeFromQueue('source', index)}
-                    />
+                    <View key={remainingKeys[index]} {...entering(remainingKeys[index])}>
+                      <Row
+                        {...itemRow(item)}
+                        onPress={() => comparePlayer.playFromQueue('source', index)}
+                        onRemove={() => comparePlayer.removeFromQueue('source', index)}
+                      />
+                    </View>
                   ))
                 ) : (
                   <Note>{t('반복(전체): 끝나면 목록 처음으로 돌아가요.')}</Note>
@@ -539,19 +579,20 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               title={t('자동 재생')}
               detail={t('취향에 맞춘 비슷한 곡이 이어져요')}
               action={<AutoplaySwitch on={autoplay} />}>
-              {leavingAt === 'autoplay' ? leavingRow : null}
+              {leavingAt === 'autoplay' ? leavingRows : null}
               {!autoplay ? (
                 <Note>{t('꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
               ) : repeatAll ? (
                 <Note>{t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}</Note>
               ) : autoplayItems.length ? (
                 autoplayItems.map((item, index) => (
-                  <Row
-                    key={autoplayKeys[index]}
-                    {...itemRow(item)}
-                    onPress={() => comparePlayer.playFromQueue('autoplay', index)}
-                    onRemove={() => comparePlayer.removeFromQueue('autoplay', index)}
-                  />
+                  <View key={autoplayKeys[index]} {...entering(autoplayKeys[index])}>
+                    <Row
+                      {...itemRow(item)}
+                      onPress={() => comparePlayer.playFromQueue('autoplay', index)}
+                      onRemove={() => comparePlayer.removeFromQueue('autoplay', index)}
+                    />
+                  </View>
                 ))
               ) : autoplayStatus === 'empty' ? (
                 <View className="flex-row flex-wrap items-center gap-x-2 px-4 py-1">
