@@ -1,5 +1,5 @@
 import { GlobalPlayerBar } from '@/features/player/components/global-player-bar';
-import { usePlayerBarVisible } from '@/features/player/components/player-bar-helpers';
+import { useDesktopPlayerBarVisible } from '@/features/player/components/player-bar-helpers';
 import { QueuePanel } from '@/features/player/components/queue-panel';
 import { CommandPalette } from '@/features/search/components/command-palette';
 import { CommandPaletteProvider } from '@/features/search/components/command-palette-context';
@@ -35,7 +35,7 @@ export function AppShell({
   // 사이드바를 접고 펼 수 있는 건 넓은 창(full)뿐이다. 좁으면 늘 아이콘만 남는다
   const canToggle = nav === 'full';
   useSidebarShortcut(canToggle);
-  const playerBarVisible = usePlayerBarVisible();
+  const playerBarVisible = useDesktopPlayerBarVisible();
   return (
     <CommandPaletteProvider>
       <Shell>
@@ -52,7 +52,7 @@ export function AppShell({
           </ShellMain>
           <QueueDock />
         </ShellBody>
-        {/* 비교 화면 밖에서 듣고 있으면 맨 아래에 플레이바가 남는다 */}
+        {/* 듣는 곡이 있으면 어느 화면에서나 맨 아래에 같은 플레이바가 있다 */}
         <ShellFooter visible={playerBarVisible}>
           <GlobalPlayerBar />
         </ShellFooter>

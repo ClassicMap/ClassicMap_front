@@ -9,9 +9,7 @@ import { PieceScreenStrip } from '@/features/film/components/piece-screen-strip'
 import { SwitchModeToggle } from '@/features/compare/components/switch-mode-toggle';
 import { FavoriteButton } from '@/features/library/components/favorite-button';
 import { PlayerSlot } from '@/features/player/components/player-slot';
-import { VolumeControl } from '@/features/player/components/volume-control';
 import { RepertoireThumb } from '@/features/library/components/repertoire-badge';
-import { ScrubBar } from '@/features/player/components/scrub-bar';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/shared/entity-thumb';
@@ -20,10 +18,8 @@ import { GenreLink } from '@/features/piece/components/genre-link';
 import { PieceArt } from '@/features/piece/components/piece-art';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon } from '@/components/shared/icons';
-import { PerformerStepper, useFollowSongNav, useSongNav } from '@/features/player/components/song-nav';
+import { useFollowSongNav } from '@/features/player/components/song-nav';
 import { compareQueueFor } from '@/lib/player/compare-playlist';
-import { QueueButton } from '@/features/player/components/queue-panel';
-import { ServiceLogo } from '@/components/shared/service-logo';
 import { Skeleton, SkeletonMedia } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useRecordRecentPiece } from '@/hooks/use-recent-pieces';
@@ -42,7 +38,6 @@ import {
   sortComparisonSectors,
   supportingCredits,
   youtubeThumbnailUrl,
-  youtubeWatchUrl,
 } from '@/lib/data/comparison';
 import { comparePlayer, type ComparePlayerTrack, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
@@ -63,8 +58,6 @@ import {
   PlusIcon,
   RectangleHorizontalIcon,
   SettingsIcon,
-  SkipBackIcon,
-  SkipForwardIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -464,6 +457,23 @@ export function ComparePieceView({
             ))}
           </ScrollView>
           <SwitchModeToggle />
+          {/* 1:1 비교: 지금 듣는 연주를 기준으로 두고, 견줄 연주 하나를 아래 카드에서 고른다 */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={picking ? t('1:1 비교 고르기 취소') : t('1:1 비교')}
+            accessibilityState={{ selected: picking, disabled: !canFocus }}
+            onPress={() => setPicking((value) => !value)}
+            disabled={!canFocus}
+            className={cn(
+              'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border px-3',
+              picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
+              !canFocus && 'opacity-40'
+            )}>
+            <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
+            <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
+              {picking ? t('고르는 중') : t('1:1 비교')}
+            </Text>
+          </Pressable>
           <Pressable
             onPress={() => comparePlayer.setTheater(!theater)}
             accessibilityRole="button"
@@ -655,19 +665,6 @@ export function ComparePieceView({
         )
       ) : null}
 
-      {/* 다른 작품을 듣는 중이면 셸의 플레이바가 그 연주를 보여 준다 */}
-      {current && !active ? null : (
-      <PlayerBar
-        active={active}
-        activeImage={active ? imageOf(active) : null}
-        playing={playing}
-        onTogglePlay={togglePlay}
-        onFullscreen={toggleFullscreen}
-        canFocus={canFocus}
-        picking={picking}
-        onToggleFocus={() => setPicking((value) => !value)}
-      />
-      )}
     </View>
   );
 }
@@ -1046,185 +1043,6 @@ function TheaterRow({
         </View>
       </View>
     </Pressable>
-  );
-}
-
-interface PlayerBarProps {
-  active: ComparisonPerformance | undefined;
-  activeImage: string | null;
-  playing: boolean;
-  onTogglePlay: () => void;
-  onFullscreen: () => void;
-  canFocus: boolean;
-  picking: boolean;
-  onToggleFocus: () => void;
-}
-
-/** 재생 바가 이보다 좁으면 버튼 글자를 접는다 (px) */
-const BAR_COMPACT_WIDTH = 1080;
-/** 이보다 좁으면 연주자 묶음과 소리 막대도 접는다 (px) */
-const BAR_TIGHT_WIDTH = 820;
-
-/**
- * 재생 바 (6.5): 이 화면에서 무엇을 듣고 있는지. 왼쪽 사진은 지금 연주하는 사람이다.
- * 다른 화면의 재생 바와 같은 뜻이다. ⏮ ⏭는 재생 목록을 따라 곡(여기서 틀었으면 이 작품의 구간)을 넘기고,
- * 연주자는 이름 옆 ‹ ›로 바꾼다
- */
-function PlayerBar({
-  active,
-  activeImage,
-  playing,
-  onTogglePlay,
-  onFullscreen,
-  canFocus,
-  picking,
-  onToggleFocus,
-}: PlayerBarProps) {
-  useLocale();
-  const credit = active ? primaryCredit(active) : undefined;
-  const photo = useArtistImage(credit?.artistId, activeImage);
-  // 재생 위치는 초마다 바뀌어 바 안에서만 구독한다 (화면 전체가 다시 그려지지 않게)
-  const progress = useComparePlayer((state) => state.progress);
-  const [scrub, setScrub] = React.useState<number | null>(null);
-  const duration = progress.duration || (active ? clipDurationMs(active) / 1000 : 0);
-  const shownSeconds = scrub !== null ? scrub * duration : progress.current;
-
-  // 좌우를 같은 폭으로 두어 가운데 재생 조작이 정확히 가운데 온다. 좁으면 버튼 글자를 접는다
-  const [barWidth, setBarWidth] = React.useState(0);
-  const compact = barWidth > 0 && barWidth < BAR_COMPACT_WIDTH;
-  // 대기열 패널까지 열어 아주 좁으면 이름 칸을 남기려고 연주자 묶음(위 카드에 있음)과 소리 막대를 접는다
-  const tight = barWidth > 0 && barWidth < BAR_TIGHT_WIDTH;
-
-  const focusButton = (
-    <Pressable
-      accessibilityLabel={picking ? t('1:1 비교 고르기 취소') : t('1:1 비교')}
-      accessibilityState={{ selected: picking, disabled: !canFocus }}
-      onPress={onToggleFocus}
-      disabled={!canFocus}
-      className={cn(
-        'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border',
-        compact ? 'w-8 justify-center' : 'px-3',
-        picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
-        !canFocus && 'opacity-40'
-      )}>
-      <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
-      {compact ? null : (
-        <Text numberOfLines={1} className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
-          {picking ? t('고르는 중') : t('1:1 비교')}
-        </Text>
-      )}
-    </Pressable>
-  );
-  const nav = useSongNav();
-
-  return (
-    <View
-      onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
-      className="h-[76px] flex-row items-center gap-4 border-t border-border px-4">
-      {/* 왼쪽: 누구를 듣는지 + 비교 동작 */}
-      <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
-        {active ? (
-          <>
-            <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={48} />
-            <View className="min-w-0 flex-1">
-              <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
-                {credit?.artistName ?? t('연주자 정보 없음')}
-              </Text>
-              <Text variant="caption" numberOfLines={1}>
-                {`${active.sectorName} · ${active.pieceTitle}`}
-              </Text>
-            </View>
-            <View className="shrink-0 flex-row items-center gap-2">
-              {/* 연주자 사진은 바로 위 카드에 다 있으니, 좁으면 이름 칸을 남기려고 ‹ ›만 둔다 */}
-              {tight ? null : <PerformerStepper compact={compact} maxFaces={compact ? 0 : 3} spot={false} />}
-              {focusButton}
-            </View>
-          </>
-        ) : (
-          <View className="min-w-0 gap-0.5">
-            <Text variant="caption" numberOfLines={1} className="text-foreground-muted">
-              {t('연주를 누르면 재생돼요')}
-            </Text>
-            <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
-              {t('Space 재생 · ←→ 연주자 · ⇧←→ 5초 · T 크게 보기 · F 전체 화면')}
-            </Text>
-          </View>
-        )}
-      </View>
-      {/* 가운데: 재생 조작 */}
-      <View className={cn('items-center gap-1.5', compact ? 'w-[300px]' : 'w-[380px]')}>
-        <View className="flex-row items-center gap-4">
-          {/* 3초 넘게 들었으면 처음으로, 그 안이면 재생 목록의 이전 곡(구간)으로 */}
-          <Pressable
-            accessibilityLabel={nav.prevLabel}
-            disabled={!active}
-            onPress={() => comparePlayer.previous()}
-            className={cn('size-8 items-center justify-center rounded-full', !active && 'opacity-40')}>
-            <Icon as={SkipBackIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
-          </Pressable>
-          <Pressable
-            accessibilityLabel={playing ? t('일시정지') : t('재생')}
-            onPress={onTogglePlay}
-            className="size-9 items-center justify-center rounded-full bg-foreground">
-            <Icon as={playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
-          </Pressable>
-          <Pressable
-            accessibilityLabel={nav.nextLabel}
-            disabled={!active || !nav.hasNext}
-            onPress={() => comparePlayer.next()}
-            className={cn('size-8 items-center justify-center rounded-full', (!active || !nav.hasNext) && 'opacity-40')}>
-            <Icon as={SkipForwardIcon} size={16} className="fill-foreground-muted text-foreground-muted" />
-          </Pressable>
-        </View>
-        <View className="w-full flex-row items-center gap-2.5">
-          <Text variant="mono" className="w-10 text-right text-foreground-muted">
-            {clipClock(shownSeconds * 1000)}
-          </Text>
-          <ScrubBar
-            value={duration > 0 ? progress.current / duration : 0}
-            onScrub={setScrub}
-            onCommit={(value) => {
-              setScrub(null);
-              comparePlayer.seek(value * duration);
-            }}
-            label={t('재생 위치')}
-            valueText={(value) => `${clipClock(value * duration * 1000)} / ${clipClock(duration * 1000)}`}
-            step={duration > 0 ? 5 / duration : 0.05}
-            disabled={!active || duration <= 0}
-            tooltip
-          />
-          <Text variant="mono" className="w-10 text-foreground-muted">
-            {active ? clipClock(duration * 1000) : '0:00'}
-          </Text>
-        </View>
-      </View>
-      {/* 오른쪽: 소리·화면·원본 */}
-      <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">
-        <VolumeControl width={tight ? 0 : compact ? 56 : 76} />
-        <QueueButton />
-        <Pressable
-          onPress={onFullscreen}
-          accessibilityLabel={t('전체 화면 (F)')}
-          className="size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2">
-          <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
-        </Pressable>
-        {active && youtubeWatchUrl(active) ? (
-          <a
-            href={youtubeWatchUrl(active)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={t('YouTube 원본 새 창으로 보기')}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <ServiceLogo service="youtube" size={16} />
-            {compact ? null : (
-              <Text variant="caption" numberOfLines={1} className="text-foreground-subtle">
-                {t('YouTube 원본')}
-              </Text>
-            )}
-          </a>
-        ) : null}
-      </View>
-    </View>
   );
 }
 
