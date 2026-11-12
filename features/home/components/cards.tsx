@@ -123,7 +123,17 @@ export function PieceCard({
             className="cm-play-fab absolute bottom-2 left-2"
             openClassName="cm-play-fab-on"
           />
-        ) : null}
+        ) : (
+          // 앱: 표지 오른쪽 위에 늘 보이는 ⋯ (길게 누르기와 같은 시트). 아래쪽은 연주자 얼굴이 쓴다
+          <QueueAddMenu
+            piece={piece}
+            title={piece.pieceTitle}
+            subtitle={piece.composerName}
+            onDismiss={confirmDismiss}
+            tone="onArt"
+            className="absolute right-1.5 top-1.5 size-7"
+          />
+        )}
         {/* 데스크톱 호버에서 아래에서 올라오는 재생 버튼. 그 자리에서 바로 튼다.
             지금 듣는 작품이면 일시정지 버튼으로 늘 떠 있다 */}
         {Platform.OS === 'web' ? (
