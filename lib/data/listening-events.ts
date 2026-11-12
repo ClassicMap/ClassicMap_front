@@ -1,6 +1,6 @@
 import { TasteAPI } from '@/lib/api/taste';
 import { comparePlayer } from '@/lib/player/compare-player-store';
-import type { ListeningEvent } from '@/lib/types/models';
+import type { ListeningEvent } from '@/types/models';
 import { AppState, Platform } from 'react-native';
 
 /**

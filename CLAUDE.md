@@ -15,6 +15,19 @@
 - API 목록에는 pagination을 적용하며 전체 작품과 녹음을 한 번에 요청하지 않습니다.
 - 명시적 TypeScript 타입을 사용하고 `any`를 추가하지 않습니다.
 
+## 구조와 컴포넌트
+
+근거와 자세한 규칙은 `docs/frontend-structure.md` 에 있습니다.
+
+- `app/` 은 라우트만 둡니다. 조각은 아래에서 가져옵니다.
+- `components/ui` 는 도메인을 모르는 프리미티브, `components/shared` 는 두 기능 이상이 쓰는 앱 공용 조각, `components/layout` 은 셸입니다. `components/` 루트에는 파일을 두지 않습니다.
+- 기능은 `features/<기능>/{components,hooks,lib}` 에 둡니다. 한 기능에서만 쓰는 훅·함수는 그 기능 안에, 공용만 최상위 `hooks/`·`lib/`·`types/` 에 둡니다.
+- 의존 방향은 `app → components/layout → features → components/shared → components/ui → hooks·lib·types` 입니다. 아래쪽이 위쪽을 가져오지 않습니다.
+- 파일 이름은 kebab-case, export 는 named 만 씁니다(`export default` 는 `app/` 라우트만). 묶음 `index.ts` 는 만들지 않습니다.
+- 컴포넌트는 `function` 선언으로 쓰고 `forwardRef` 를 쓰지 않습니다. `cva` 는 variant 가 있는 `components/ui` 프리미티브에만 쓰고 `<이름>Variants` 로 함께 내보냅니다.
+- 플랫폼별 구현은 `app/` 밖에 두고 짝 파일(`x.tsx` + `x.web.tsx`)을 함께 옮깁니다.
+- Tailwind 는 v3 입니다. v4 문법(`data-open:`, `origin-(--x)`, `outline-hidden`)을 쓰지 않습니다.
+
 ## UI 문구
 
 - 사용자 대상 문구는 자연스러운 해요체를 사용합니다.
@@ -25,6 +38,7 @@
 
 ```bash
 npx tsc --noEmit
+npm run i18n:check
 npx expo export --platform web
 ```
 

@@ -1,6 +1,6 @@
 import { comparePlayer, type Playlist } from '@/lib/player/compare-player-store';
 import { sectorPlaylist } from '@/lib/player/playlist';
-import type { ComparisonPerformance, ComparisonSector } from '@/lib/types/models';
+import type { ComparisonPerformance, ComparisonSector } from '@/types/models';
 
 /**
  * 비교 화면에서 연주를 고를 때 대기열을 어떻게 할지.

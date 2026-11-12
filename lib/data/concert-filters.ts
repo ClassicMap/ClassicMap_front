@@ -1,5 +1,5 @@
 import { msg, t } from '@/lib/i18n';
-import type { Concert } from '@/lib/types/models';
+import type { Concert } from '@/types/models';
 
 /**
  * 공연 탭 필터. 주소 파라미터가 곧 상태이고, 백엔드 `/concerts/search` 파라미터로 옮긴다.

@@ -94,7 +94,7 @@ import {
   MOCK_PIECES, 
   MOCK_ARTISTS, 
   MOCK_PERFORMANCES 
-} from '@/lib/data/mockDatabase';
+} from '@/lib/data/mock-database';
 
 // 모든 작곡가
 const composers = MOCK_COMPOSERS;
@@ -111,7 +111,7 @@ import {
   getPiecesByComposerId,
   getMajorPiecesByComposerId,
   getPerformancesByPieceId,
-} from '@/lib/data/mockDatabase';
+} from '@/lib/data/mock-database';
 
 // 작곡가 조회
 const composer = getComposerById(1);
@@ -133,7 +133,7 @@ import {
   getComposerDTO,
   getPieceDTO,
   getComparisonData,
-} from '@/lib/data/mockDTO';
+} from '@/features/compare/lib/mock-dto';
 
 // 작곡가 + 주요 곡 포함
 const composerWithPieces = getComposerDTO(4); // 쇼팽
@@ -161,7 +161,7 @@ const comparisonData = getComparisonData(4, 10); // 쇼팽 발라드 1번
 ### 타임라인 페이지
 
 ```typescript
-import { getTimelineComposers, getAllPeriods } from '@/lib/data/mockDTO';
+import { getTimelineComposers, getAllPeriods } from '@/features/compare/lib/mock-dto';
 
 const composers = getTimelineComposers();
 const periods = getAllPeriods();
@@ -170,7 +170,7 @@ const periods = getAllPeriods();
 ### 홈 페이지 - 인기 비교
 
 ```typescript
-import { getPopularComparisons } from '@/lib/data/mockDTO';
+import { getPopularComparisons } from '@/features/compare/lib/mock-dto';
 
 const popularComparisons = getPopularComparisons();
 // [
@@ -245,7 +245,7 @@ export async function fetchComposerById(id: number): Promise<ComposerDTO> {
 ### 2. Mock → API 전환
 ```typescript
 // Before (Mock)
-import { getComposerDTO } from '@/lib/data/mockDTO';
+import { getComposerDTO } from '@/features/compare/lib/mock-dto';
 const composer = getComposerDTO(1);
 
 // After (API)

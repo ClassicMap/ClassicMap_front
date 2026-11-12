@@ -1,9 +1,9 @@
-import { FieldMessage, SubPage } from '@/components/account/sub-page';
+import { FieldMessage, SubPage } from '@/features/account/components/sub-page';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import { translateClerkError } from '@/lib/clerk/error-translator';
+import { translateClerkError } from '@/features/auth/lib/error-translator';
 import { t, useLocale } from '@/lib/i18n';
 import { useUser } from '@clerk/clerk-expo';
 import * as React from 'react';

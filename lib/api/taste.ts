@@ -15,7 +15,7 @@ import type {
   TasteAnswers,
   TasteProfile,
   TasteSound,
-} from '@/lib/types/models';
+} from '@/types/models';
 
 export const LISTENING_LEVELS: readonly ListeningLevel[] = ['new', 'some', 'often', 'player'];
 export const TASTE_SOUNDS: readonly TasteSound[] = [

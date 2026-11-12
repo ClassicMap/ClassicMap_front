@@ -1,12 +1,12 @@
-import { RepertoireList } from '@/components/library/repertoire-list';
-import { ProfileAvatar, RatingGrid, type RatingSortKey, StatTile } from '@/components/profile/profile-parts';
+import { RepertoireList } from '@/features/library/components/repertoire-list';
+import { ProfileAvatar, RatingGrid, type RatingSortKey, StatTile } from '@/features/profile/components/profile-parts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { getFavoriteCount } from '@/lib/data/library';
-import { usePublicProfile } from '@/lib/query/hooks/useMyPage';
+import { getFavoriteCount } from '@/features/library/lib/library';
+import { usePublicProfile } from '@/lib/query/hooks/use-my-page';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';

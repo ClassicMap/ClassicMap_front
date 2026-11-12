@@ -1,4 +1,4 @@
-import type { ClipAlignment } from '@/lib/types/models';
+import type { ClipAlignment } from '@/types/models';
 
 /** 끝에 딱 붙으면 바로 끝나 버려서 조금 안쪽에서 멈춘다 */
 const END_GUARD_SEC = 0.1;

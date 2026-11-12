@@ -1,18 +1,18 @@
-import { RepertoireList } from '@/components/library/repertoire-list';
+import { RepertoireList } from '@/features/library/components/repertoire-list';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { getFavoriteCount, isLibraryKind } from '@/lib/data/library';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { getFavoriteCount, isLibraryKind } from '@/features/library/lib/library';
+import { useAuth } from '@/hooks/use-auth';
 import { t, useLocale } from '@/lib/i18n';
-import { useMyRepertoire } from '@/lib/query/hooks/useRecordings';
+import { useMyRepertoire } from '@/lib/query/hooks/use-recordings';
 import { cn } from '@/lib/utils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, BookmarkIcon, LogInIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
-import { useTabHeaderInset, useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabHeaderInset, useTabScrollInsets } from '@/hooks/use-tab-chrome';
 
 export default function LibraryScreen() {
   useLocale();

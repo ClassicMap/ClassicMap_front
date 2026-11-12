@@ -1,6 +1,6 @@
-import LegacyCompareScreen from '@/components/compare/legacy-compare-screen';
+import { LegacyCompareScreen } from '@/features/compare/components/legacy-compare-screen';
 import { EmptyState } from '@/components/ui/empty-state';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 import { t, useLocale } from '@/lib/i18n';
 import { LockIcon } from 'lucide-react-native';
 import * as React from 'react';

@@ -46,7 +46,7 @@ import type {
   BoxofficeRanking,
   ArtistBanner,
   ImageCredit,
-} from '../types/models';
+} from '@/types/models';
 
 // API 응답 타입 정의
 interface APIComposer {

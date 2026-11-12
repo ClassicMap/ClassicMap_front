@@ -5,7 +5,7 @@ import { sameMoment } from '@/lib/player/focus-align';
 import { type AutoplayBasis, type AutoplayCandidate, pickAutoplay } from '@/lib/player/autoplay';
 import { resolvePlaylistItem, resolveSectorQueue } from '@/lib/player/playlist';
 import type { PieceGenre } from '@/lib/design/genre-palette';
-import type { ClipAlignment } from '@/lib/types/models';
+import type { ClipAlignment } from '@/types/models';
 import * as React from 'react';
 import { AppState, Platform } from 'react-native';
 

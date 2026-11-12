@@ -1,9 +1,9 @@
-import { ScrollShelf } from '@/components/home/shelf';
-import { shortTitleMeta, titleMeta } from '@/components/screen/labels';
-import { POSTER_ASPECT, ScreenPoster } from '@/components/screen/screen-poster';
-import { ScreenWorksList } from '@/components/screen/screen-works-list';
-import { TmdbAttribution } from '@/components/screen/tmdb-attribution';
-import { SELECTED_SHADOW } from '@/components/compare/switch-mode-toggle';
+import { ScrollShelf } from '@/components/shared/shelf';
+import { shortTitleMeta, titleMeta } from '@/features/film/lib/labels';
+import { POSTER_ASPECT, ScreenPoster } from '@/features/film/components/screen-poster';
+import { ScreenWorksList } from '@/features/film/components/screen-works-list';
+import { TmdbAttribution } from '@/features/film/components/tmdb-attribution';
+import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -11,15 +11,15 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
 import {
   useFeaturedScreenCues,
   usePrefetchScreenTitle,
   useScreenTitles,
   useScreenTitleSearch,
-} from '@/lib/query/hooks/useScreen';
-import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-screen';
+import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, SearchIcon, XIcon } from 'lucide-react-native';

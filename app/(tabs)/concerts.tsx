@@ -1,19 +1,19 @@
-import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
-import { ConcertCard } from '@/components/concert/concert-card';
-import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/components/concert/concert-filter-bar';
-import type { ArtistChoice } from '@/components/concert/concert-filter-panels';
-import { FavoriteArtistConcerts } from '@/components/concert/favorite-artist-concerts';
-import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/components/concert/concert-parts';
+import { ConcertFormModal } from '@/features/admin/components/concert-form-modal';
+import { ConcertCard } from '@/features/concert/components/concert-card';
+import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/features/concert/components/concert-filter-bar';
+import type { ArtistChoice } from '@/features/concert/components/concert-filter-panels';
+import { FavoriteArtistConcerts } from '@/features/concert/components/favorite-artist-concerts';
+import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/features/concert/components/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { TicketIcon } from '@/components/ui/icons';
+import { TicketIcon } from '@/components/shared/icons';
 import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { BoxofficeAPI, type BoxofficeConcert } from '@/lib/api/client';
-import { normalizeAreas } from '@/lib/data/areas';
+import { normalizeAreas } from '@/features/concert/lib/areas';
 import {
   type ConcertFilter,
   type ConcertFilterParams,
@@ -25,14 +25,14 @@ import {
   toConcertFilterParams,
   toDayString,
 } from '@/lib/data/concert-filters';
-import { getRankForeground } from '@/lib/design/rank-palette';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useDebounce } from '@/lib/hooks/useDebounce';
+import { getRankForeground } from '@/features/concert/lib/rank-palette';
+import { useAuth } from '@/hooks/use-auth';
+import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
-import { useArtist } from '@/lib/query/hooks/useArtists';
-import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/useConcerts';
-import { useMyFavorites } from '@/lib/query/hooks/useMyPage';
-import type { Concert } from '@/lib/types/models';
+import { useArtist } from '@/lib/query/hooks/use-artists';
+import { useAreas, useFilteredConcerts } from '@/lib/query/hooks/use-concerts';
+import { useMyFavorites } from '@/lib/query/hooks/use-my-page';
+import type { Concert } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
@@ -40,7 +40,7 @@ import { AlertCircleIcon, PlusIcon, SearchXIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { type LayoutChangeEvent, Pressable, ScrollView, View } from 'react-native';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 
 /** 걸러낸 결과가 이보다 적으면 다음 페이지를 더 불러온다 */
 const MIN_VISIBLE = 12;

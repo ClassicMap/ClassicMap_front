@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
-import { AuthShell } from '@/components/auth/auth-shell';
-import { ResetPasswordForm } from '@/components/reset-password-form';
+import { AuthShell } from '@/features/auth/components/auth-shell';
+import { ResetPasswordForm } from '@/features/auth/components/reset-password-form';
 import * as React from 'react';
 
 export default function ResetPasswordScreen() {

@@ -1,6 +1,6 @@
 import { useLocale } from '@/lib/i18n';
-import { AuthShell } from '@/components/auth/auth-shell';
-import { ForgotPasswordForm } from '@/components/forgot-password-form';
+import { AuthShell } from '@/features/auth/components/auth-shell';
+import { ForgotPasswordForm } from '@/features/auth/components/forgot-password-form';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 

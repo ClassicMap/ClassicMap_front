@@ -1,5 +1,5 @@
 import { msg } from '@/lib/i18n';
-import { Period } from '../types/models';
+import { Period } from '@/types/models';
 import { ERA_BASE_COLORS } from '../design/era-palette';
 
 // 시대별 색상 매핑 (단일 정의는 lib/design/era-palette.ts)

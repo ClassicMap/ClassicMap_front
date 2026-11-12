@@ -1,19 +1,19 @@
-import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
-import { PieceFormModal } from '@/components/admin/PieceFormModal';
-import { FavoriteButton } from '@/components/favorite-button';
-import { ScrollShelf } from '@/components/home/shelf';
+import { ComposerFormModal } from '@/features/admin/components/composer-form-modal';
+import { PieceFormModal } from '@/features/admin/components/piece-form-modal';
+import { FavoriteButton } from '@/features/library/components/favorite-button';
+import { ScrollShelf } from '@/components/shared/shelf';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
-import { HeroBanner, HeroPlayButton } from '@/components/hero/hero-banner';
-import { PhotoCredit } from '@/components/hero/photo-credit';
+import { EntityThumb } from '@/components/shared/entity-thumb';
+import { HeroBanner, HeroPlayButton } from '@/components/shared/hero-banner';
+import { PhotoCredit } from '@/components/shared/photo-credit';
 import { playList, playPiece } from '@/lib/player/play-piece';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import { PieceArt } from '@/components/piece/piece-art';
-import { TrackIndex } from '@/components/piece/track-index';
-import { GenreLink } from '@/components/piece/genre-link';
+import { PieceArt } from '@/features/piece/components/piece-art';
+import { TrackIndex } from '@/features/piece/components/track-index';
+import { GenreLink } from '@/features/piece/components/genre-link';
 import { performerNamesLine } from '@/lib/data/comparison';
 import { genreStyle } from '@/lib/design/genre-palette';
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -23,12 +23,12 @@ import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminComposerAPI, AdminPieceAPI } from '@/lib/api/admin';
 import { ComposerAPI } from '@/lib/api/client';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
-import { useComposer } from '@/lib/query/hooks/useComposers';
-import { PIECE_QUERY_KEYS, useComposerCatalog } from '@/lib/query/hooks/usePieces';
-import { ComposerHighlights } from '@/components/composer/composer-highlights';
-import { ComposerWorks } from '@/components/composer/composer-works';
+import { useAuth } from '@/hooks/use-auth';
+import { useComparisonPieces } from '@/lib/query/hooks/use-comparison-performances';
+import { useComposer } from '@/lib/query/hooks/use-composers';
+import { PIECE_QUERY_KEYS, useComposerCatalog } from '@/lib/query/hooks/use-pieces';
+import { ComposerHighlights } from '@/features/composer/components/composer-highlights';
+import { ComposerWorks } from '@/features/composer/components/composer-works';
 import { MoreLink } from '@/components/ui/more-link';
 import { useQueryClient } from '@tanstack/react-query';
 import type {
@@ -37,7 +37,7 @@ import type {
   Piece,
   PiecePart,
   PiecePartKind,
-} from '@/lib/types/models';
+} from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -55,7 +55,7 @@ import {
 } from 'lucide-react-native';
 import * as React from 'react';
 import { formatNumber, t, useLocale } from '@/lib/i18n';
-import { scrollInnerView } from '@/lib/utils/scroll-inner-view';
+import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 interface PerformerSummary {

@@ -1,9 +1,9 @@
 import { useLocale } from '@/lib/i18n';
-import { FocusCompare, parseFocusParam } from '@/components/compare/focus-compare';
-import { CompareMobileScreen } from '@/components/compare/compare-mobile-screen';
-import { CompareGenrePieces } from '@/components/compare/genre-browse';
-import { CompareCatalog, CompareComposerPieces } from '@/components/shell/compare/compare-catalog';
-import { ComparePieceView } from '@/components/shell/compare/compare-piece-view';
+import { FocusCompare, parseFocusParam } from '@/features/compare/components/focus-compare';
+import { CompareMobileScreen } from '@/features/compare/components/compare-mobile-screen';
+import { CompareGenrePieces } from '@/features/compare/components/genre-browse';
+import { CompareCatalog, CompareComposerPieces } from '@/features/compare/components/compare-catalog';
+import { ComparePieceView } from '@/features/compare/components/compare-piece-view';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { isPieceGenre } from '@/lib/design/genre-palette';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';

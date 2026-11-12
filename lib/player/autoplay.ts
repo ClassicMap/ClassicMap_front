@@ -10,8 +10,8 @@ import {
   artistComparisonQueryOptions,
   comparisonPiecesQueryOptions,
   genrePiecesQueryOptions,
-} from '@/lib/query/hooks/useComparisonPerformances';
-import type { ComparisonPerformance, ComparisonPiece, TasteSound } from '@/lib/types/models';
+} from '@/lib/query/hooks/use-comparison-performances';
+import type { ComparisonPerformance, ComparisonPiece, TasteSound } from '@/types/models';
 
 /** 취향 묻기의 「끌리는 소리」를 장르로. 이 장르 곡들이 자동 재생의 취향 후보가 된다 */
 const SOUND_GENRES: Record<TasteSound, readonly PieceGenre[]> = {

@@ -1,4 +1,4 @@
-import { SubPage } from '@/components/account/sub-page';
+import { SubPage } from '@/features/account/components/sub-page';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';

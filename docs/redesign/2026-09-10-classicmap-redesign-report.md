@@ -59,7 +59,7 @@
 | C7 | 목록 기본 정렬은 API 기본값을 그대로 사용 | **`추천순`을 기본 정렬로 신설** (tier S>A>없음>B>C → 채움률 → 작품 수) | `/composers?offset=0&limit=20`이 `birthYear` 오름차순이라 첫 화면이 곰베르·카베손·세르통·다저로 채워집니다. 이미지도 없고 대중에게 낯선 이름만 보입니다 |
 | C8 | 작품 메타데이터는 채워져 있음 (0.3절 B6 해소) | **B6 해소를 철회합니다.** 작품 카드는 제목·작곡가만 보장하고 나머지는 있을 때만 표시 | 신규 작품을 포함한 전체 기준 메타데이터 채움률이 약 10%입니다 |
 | C9 | 아티스트 필터 칩은 실제 `category` 값 12종 기반 (C5) | **표시용 정규화 맵을 필수로 둡니다** | `category`가 29종으로 늘었고 같은 악기가 `pianist` 58 / `피아노` 43 / `피아니스트` 5로 세 갈래로 쪼개졌습니다 |
-| C10 | 아바타는 대체로 존재한다고 가정 | **폴백 타일을 1급 컴포넌트로 승격** (`components/ui/fallback-art.tsx`) | 작곡가 이미지 보유 31%, 아티스트 48%. 목록의 절반 이상이 폴백입니다 |
+| C10 | 아바타는 대체로 존재한다고 가정 | **폴백 타일을 1급 컴포넌트로 승격** (`components/shared/fallback-art.tsx`) | 작곡가 이미지 보유 31%, 아티스트 48%. 목록의 절반 이상이 폴백입니다 |
 | C11 | 비교 데스크톱 3열 그리드 (C1) | **유지 확정** | 섹터당 연주 수가 2차 조사에서도 3개 또는 5개이고, 4개인 섹터는 여전히 없습니다 |
 
 > **2026-09-17 백엔드 반영**: 비교를 막던 B15·B16·B17·B21·B23·B25·B26이 백엔드에 구현됐습니다(배포 전). 확정된 응답 형태와 결정은 기능 제안서 20.1절에 있습니다. 새 비교 화면은 `/pieces/{id}/comparison-sectors`와 `/sectors/{id}/comparison-performances`를 기준으로 하고, 클립 자산이 없는 레거시 3곡(라흐 협주곡 2·3번, 발라드 1번)은 새 파이프라인으로 다시 수집될 때까지 나오지 않습니다.
@@ -251,7 +251,7 @@ rating  : 문자열 86건("0.0") · null 99건   ← 타입은 number로 선언�
 - **`category`가 영문 slug입니다.** 보고서 7.2의 한글 필터 칩(`피아노 / 바이올린 …`)은 그대로 쓸 수 없습니다. 표시용 한글 라벨 ↔ 값 매핑 테이블이 필요합니다.
 - **`orchestra` 47건**은 사람이 아닙니다. 아바타 원형·생년·국적 표시를 그대로 적용하면 어색합니다.
 - `피아니스트`(5) / `피아노`(4) 9건은 **`pianist`로 정규화되어야 할 데이터 오염**입니다.
-- `rating`이 문자열 또는 null인데 `lib/types/models.ts`는 `rating: number`로 선언합니다. `Number(...)` 변환이 이미 화면 곳곳에 있으나, 타입 차원에서 `string | number | null`로 좁히는 편이 안전합니다.
+- `rating`이 문자열 또는 null인데 `types/models.ts`는 `rating: number`로 선언합니다. `Number(...)` 변환이 이미 화면 곳곳에 있으나, 타입 차원에서 `string | number | null`로 좁히는 편이 안전합니다.
 
 #### 1.6.4 작품 — **B6 해소**
 
@@ -336,7 +336,7 @@ rating  : 문자열 86건("0.0") · null 99건   ← 타입은 number로 선언�
 |---|---|---|
 | **D1** | **공연 지역 필터가 동작하지 않음** | `concerts.tsx:264`의 `AREA_CODE_MAP` 키는 축약형(`서울`, `부산`)인데 `/concerts/areas`는 풀네임(`서울특별시`, `부산광역시`)을 반환 → `AREA_CODE_MAP[city]`가 항상 `undefined` → 박스오피스 TOP3가 언제나 전국 기준 |
 | **D2** | **아티스트 상세의 "이 아티스트의 연주 비교"가 항상 빈 상태** | `/artists/{id}/comparison-performances`가 빈 배열 반환. 임윤찬(187)은 `/artists/187/performances`로는 연주 4개가 나오는데 comparison 경로로는 0개 |
-| **D3** | **`PeriodAPI.getAll()`이 항상 실패** | `/periods` **404**. 화면은 로컬 `getAllPeriods()`(`lib/data/mockDTO.ts`)를 쓰고 있어 표면화되지 않은 죽은 코드 |
+| **D3** | **`PeriodAPI.getAll()`이 항상 실패** | `/periods` **404**. 화면은 로컬 `getAllPeriods()`(`features/compare/lib/mock-dto.ts`)를 쓰고 있어 표면화되지 않은 죽은 코드 |
 
 부가 데이터 품질 이슈:
 - `/concerts/areas` 응답에 `"대구광역시, 대구광역시"`, `"대전광역시, 대전광역시"` 중복 문자열과 `"전남광주통합특별시"` 비표준 값이 섞여 있습니다.
@@ -676,7 +676,7 @@ ClassicMap은 "클래식 음악 입문자를 위한 로드맵"이며, 다른 클
 현재 `concerts.tsx`에 하드코딩된 금·은·동을 토큰화합니다.
 
 ```ts
-// lib/design/rank-palette.ts
+// features/concert/lib/rank-palette.ts
 export const RANK_PALETTE = {
   1: { base: '#D4AF37', onDark: '#E8C766', onLight: '#8A6E12' },
   2: { base: '#B8B8BD', onDark: '#D2D2D6', onLight: '#6B6B70' },
@@ -797,7 +797,7 @@ export type Density = 'comfortable' | 'compact';
 | 계층 | 출처 | 범위 |
 |---|---|---|
 | 범용 | `lucide-react-native` (유지) | 홈·검색·닫기·화살표·달력 등 뜻이 이미 굳어진 기호 |
-| 고유 | `components/ui/icons/` (신규) | ClassicMap에만 있는 개념 — lucide에 대응물이 없습니다 |
+| 고유 | `components/shared/icons/` (신규) | ClassicMap에만 있는 개념 — lucide에 대응물이 없습니다 |
 
 lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 개념에만** 만들고, 같은 뜻을 두 벌로 유지하지 않습니다.
 
@@ -812,7 +812,7 @@ lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 �
 
 #### 4.7.3 고유 아이콘 목록
 
-`components/ui/icons/index.ts`에서 내보냅니다. 기하는 시안(`classicmap-mockup.html`)과 동일한 값입니다.
+`components/shared/icons/index.ts`에서 내보냅니다. 기하는 시안(`classicmap-mockup.html`)과 동일한 값입니다.
 
 | 컴포넌트 | 뜻 | 형태와 이유 |
 |---|---|---|
@@ -860,7 +860,7 @@ lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 �
 - 타임라인 길이는 **마지막 구간의 끝**입니다. `Piece.durationMinutes`를 쓰지 않는 이유는 실연 영상이 그보다 길기 때문입니다(라흐 3번 표기 40분, 임윤찬 실연 42:32).
 - 연주자마다 시각이 다르므로 **한 연주를 기준으로 그리고 A/B를 바꾸면 다시 계산**합니다.
 - 좁은 구간은 실제로 아주 좁습니다(최소 26px). 폭을 부풀려 왜곡하지 않고, 투명 의사요소로 **클릭 영역만 44px로 확보**합니다.
-- 계산은 `lib/design/section-timeline.ts`의 `placeSections()` / `movementBoundaries()`입니다.
+- 계산은 `features/compare/lib/section-timeline.ts`의 `placeSections()` / `movementBoundaries()`입니다.
 - **구간 블록은 1번선과 5번선 *사이*에 넣습니다**(`top: 1px; height: 39px`). 오선 밖으로 튀어나와도, 오선 높이에 딱 맞춰도 어긋나 보입니다. 딱 맞추면 바깥 두 줄이 **블록 테두리를 겸하게 되어** 구간 밖에서는 회색 선, 안에서는 금색 면의 경계로 성격이 바뀝니다. 사이에 넣으면 두 줄이 어디서나 그냥 선으로 남습니다.
 - **구간 블록에 `border-radius`를 주지 않습니다.** 모서리가 하필 1번선·5번선 위에 앉아 선 끝을 4px 얼룩으로 번지게 합니다.
 
@@ -889,7 +889,7 @@ lucide를 걷어내지 않습니다. 고유 아이콘은 **대응물이 없는 �
 - **SMuFL 규약: 오선 한 칸 = `0.25em`.** 줄 간격 10px이면 `font-size`는 정확히 40px입니다 (`staffFontSize()`).
 - 글리프 원점은 baseline입니다. 높은음자리표는 **G선**(아래서 둘째 줄), 조표와 박자표는 해당 음 위치에 baseline을 둡니다.
 - **높은음자리표는 오선 위아래로 크게 벗어납니다.** 캔버스를 오선 높이로만 잡으면 잘립니다(시안에서 41.7% 잘렸습니다). 세로로 넉넉히 잡고 절대배치로 띄웁니다.
-- 코드: `lib/design/smufl.ts`(글리프·조표 계산), `components/ui/notation-glyph.tsx`(렌더).
+- 코드: `features/compare/lib/smufl.ts`(글리프·조표 계산), `features/compare/components/notation-glyph.tsx`(렌더).
 - 폰트 로드는 네이티브 `expo-font`, 웹 `@font-face`입니다. **`Bravura.woff2`(323KB)와 OFL 라이선스 파일을 저장소에 함께 넣어야 합니다.**
 
 **데이터 현황**: `Piece`에 **조성·빠르기말·박자·악장 경계가 없습니다.** 조성은 제목 문자열(`피아노 협주곡 3번 D단조`)에만 들어 있고, 나머지는 어디에도 없습니다. **제목을 파싱하거나 곡 상식으로 채우지 않습니다** → **B24**. 없으면 머리를 음자리표만 그리고 빠르기말은 생략합니다.
@@ -1397,7 +1397,7 @@ export function useBreakpoint() {
 **보존해야 할 로직**
 - URL 파라미터 진입(`?composerId=&pieceId=`) 처리
 - `clipStatus !== 'ready'` 필터링 (계약 구현 후 활성화. 현재는 필드가 오지 않음 — 1.6.5)
-- 웹=클립 URL / 네이티브=YouTube IFrame 이중 재생 경로 (`components/performance-video-player.tsx`). **재생 모드 변경은 별도 승인 필요**하므로 이번 리디자인에서 건드리지 않습니다
+- 웹=클립 URL / 네이티브=YouTube IFrame 이중 재생 경로 (`features/player/components/performance-video-player.tsx`). **재생 모드 변경은 별도 승인 필요**하므로 이번 리디자인에서 건드리지 않습니다
 - 관리자 편집/삭제 액션
 
 **파일 분리 제안** (1438줄 해체)
@@ -1558,7 +1558,7 @@ KOPIS 공연 소개 이미지는 **세로로 매우 깁니다**(실측 `221 × 6
 
 - 현재 폼이 화면 전폭입니다. `max-w-[400px] mx-auto` + 상하 중앙 정렬로 변경
 - 데스크톱: 좌측 브랜드 패널(그라디언트 + 로고 + 한 줄 카피) + 우측 폼 2열 스플릿
-- 소셜 로그인 버튼(`components/social-connections.tsx`)의 아이콘·간격 통일
+- 소셜 로그인 버튼(`features/auth/components/social-connections.tsx`)의 아이콘·간격 통일
 
 ### 7.10 관리자 폼 모달 (`components/admin/*`)
 
@@ -1627,11 +1627,11 @@ KOPIS 공연 소개 이미지는 **세로로 매우 깁니다**(실측 `221 × 6
 | 현재 | 작업 |
 |---|---|
 | `components/artist-comparison-section.tsx` | `components/compare/artist-comparison-section.tsx`로 이동, 새 토큰 적용 |
-| `components/sector-chip.tsx` | `components/ui/chip.tsx`로 흡수 후 삭제 |
-| `components/StarRating.tsx` | 토큰화(amber → warning 또는 primary), 크기 variant 추가 |
-| `components/optimized-image.tsx` | 스켈레톤 통합, `#f0f0f0` 하드코딩 → `muted` 토큰 |
-| `components/performance-video-player.tsx` | **재생 로직 변경 금지**. 포스터 상태 + 클릭 시 로드 래퍼만 추가 |
-| `components/ticket-vendors-modal.tsx` | `sheet.tsx` 기반으로 교체 |
+| `features/compare/components/sector-chip.tsx` | `components/ui/chip.tsx`로 흡수 후 삭제 |
+| `features/concert/components/star-rating.tsx` | 토큰화(amber → warning 또는 primary), 크기 variant 추가 |
+| `components/shared/optimized-image.tsx` | 스켈레톤 통합, `#f0f0f0` 하드코딩 → `muted` 토큰 |
+| `features/player/components/performance-video-player.tsx` | **재생 로직 변경 금지**. 포스터 상태 + 클릭 시 로드 래퍼만 추가 |
+| `features/concert/components/ticket-vendors-modal.tsx` | `sheet.tsx` 기반으로 교체 |
 | `components/my-page/profile-components.tsx` (714줄) | 컴포넌트별 파일로 분할 |
 | `components/admin/*` | 공통 `FormModal` + `FormField` 도입 |
 
@@ -1674,7 +1674,7 @@ lib/design/
 
 **검증**: 기존 화면이 새 색으로 렌더되고 tsc/export 통과. 이 시점에서 앱이 이미 "다른 제품"처럼 보입니다.
 
-> **진행 (2026-09-17)**: 1.1~1.3의 색상 부분 완료. `npx tsc --noEmit`, `npx expo export --platform web` 통과. 고유 아이콘 세트(`components/ui/icons/`)와 악보 유틸(`lib/design/smufl.ts`, `section-timeline.ts`), 악보 폰트 에셋(`assets/fonts/`)도 선행 완료 상태입니다.
+> **진행 (2026-09-17)**: 1.1~1.3의 색상 부분 완료. `npx tsc --noEmit`, `npx expo export --platform web` 통과. 고유 아이콘 세트(`components/shared/icons/`)와 악보 유틸(`features/compare/lib/smufl.ts`, `section-timeline.ts`), 악보 폰트 에셋(`assets/fonts/`)도 선행 완료 상태입니다.
 >
 > **다음 순서 (5.0.2 결정에 따름)**: ① 프리미티브 `chip` / `badge` / `skeleton` / `empty-state` → ② 웹 셸(`components/shell/` + `_layout.web.tsx`) → ③ 커맨드 팔레트 → ④ `compare.web.tsx`. **웹 전용 코드는 `*.web.tsx`와 `components/shell/`에만 둡니다.**
 
@@ -1695,7 +1695,7 @@ lib/design/
 
 | # | 작업 |
 |---|---|
-| 3.1 | `components/shell/app-shell.tsx`, `side-nav.tsx`, `top-bar.tsx` 신설 |
+| 3.1 | `components/layout/app-shell.tsx`, `side-nav.tsx`, `top-bar.tsx` 신설 |
 | 3.2 | `app/(tabs)/_layout.web.tsx` 신설 — 브레이크포인트 기반 셸/탭 분기 |
 | 3.3 | `+html.tsx`에 초기 레이아웃 클래스 인라인 스크립트 + 폰트 preload 추가 |
 | 3.4 | `command-palette.tsx` 신설 (⌘K, 기존 search API 3종 병렬 호출) |
@@ -1724,7 +1724,7 @@ lib/design/
 >
 > | 화면 | 구현 | 비고 |
 > |---|---|---|
-> | 비교 | 데스크톱 `compare.web.tsx`, 모바일·네이티브 `components/compare/compare-mobile.tsx` | 새 비교 API. 구간을 오선 위에 앉힘(Bravura 높은음자리표). 관리 기능은 `/compare-admin`(관리자 전용)으로 옮김 |
+> | 비교 | 데스크톱 `compare.web.tsx`, 모바일·네이티브 `features/compare/components/compare-mobile.tsx` | 새 비교 API. 구간을 오선 위에 앉힘(Bravura 높은음자리표). 관리 기능은 `/compare-admin`(관리자 전용)으로 옮김 |
 > | 홈 | 오늘의 비교 히어로 + 셸프 | 최근 본 작품(기기 저장), 시대로 듣기 → `/timeline?era=` |
 > | 연주자 | 원형 그리드 + 분류 칩 + 검색 | |
 > | 공연·상세 3종·타임라인 | 2차 시안 | 작곡가 상세 작품은 30곡씩 페이지 |
@@ -1740,7 +1740,7 @@ lib/design/
 >
 > **진행 (2026-09-29 오후)**
 >
-> - 5.1 헤더 반투명 완료(iOS만). 헤더 배경은 블러 위에 배경색(라이트 72%, 다크 80%)을 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 비칩니다. 탭 화면은 `useTabScrollInsets`(`components/navigation/tab-chrome.ts`)로 헤더 높이만큼 `contentInset`을 둡니다.
+> - 5.1 헤더 반투명 완료(iOS만). 헤더 배경은 블러 위에 배경색(라이트 72%, 다크 80%)을 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 비칩니다. 탭 화면은 `useTabScrollInsets`(`hooks/use-tab-chrome.ts`)로 헤더 높이만큼 `contentInset`을 둡니다.
 > - `withAlpha()`가 `hsl(H S L / A)`를 내서 네이티브에서 색이 무시되던 것을 `hsla(...)`로 고쳤습니다.
 > - 5.3 iOS 시뮬레이터(iPhone 17, iOS 27) 확인: 탭 5개·상세 3종·연주자·타임라인·비교 상세·로그인 화면을 라이트/다크로 캡처해 봤고 레이아웃 깨짐은 없었습니다. 안드로이드는 에뮬레이터가 없어 미확인입니다.
 > - **iOS 27 차단 이슈**: Xcode 27 SDK로 빌드하면 앱이 실행 즉시 종료됩니다(`UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`). SDK 54 네이티브 템플릿이 UIScene 라이프사이클을 쓰지 않기 때문입니다. 로컬 확인은 `ios/`(gitignore)에 SceneDelegate를 임시로 붙여서 했습니다. 저장소에 반영하려면 config plugin 또는 Expo SDK 업그레이드가 필요합니다. 같은 빌드에서 일부 Pod의 최소 배포 버전(12.4·13.4)이 Xcode 27 하한(15.0)보다 낮아 빌드가 실패하는 것도 함께 풀어야 합니다.
@@ -1849,9 +1849,9 @@ lib/design/
 | `components/ui/button.tsx` | 2.4 | size `xs`, density, `subtle` variant |
 | `components/ui/card.tsx` | 2.4 | 더블링, `interactive` |
 | `components/ui/input.tsx` | 2.4 | density, 아이콘 prop |
-| `components/sector-chip.tsx` | 2.2 | `ui/chip.tsx`로 흡수 후 삭제 |
-| `components/optimized-image.tsx` | 2.3 | 스켈레톤 통합, `#f0f0f0` 제거 |
-| `components/StarRating.tsx` | 2.x | 토큰화 |
+| `features/compare/components/sector-chip.tsx` | 2.2 | `ui/chip.tsx`로 흡수 후 삭제 |
+| `components/shared/optimized-image.tsx` | 2.3 | 스켈레톤 통합, `#f0f0f0` 제거 |
+| `features/concert/components/star-rating.tsx` | 2.x | 토큰화 |
 | `app/+html.tsx` | 3.3 | 레이아웃 선세팅 스크립트, 폰트 preload |
 | `app/(tabs)/_layout.tsx` | 5.2 | 하드코딩 색상 토큰화, 블러 크롬 |
 | `app/(tabs)/_layout.web.tsx` | 3.2 | **신규** 웹 셸 분기 |
@@ -1867,19 +1867,19 @@ lib/design/
 | `app/(auth)/*` | 4.7 | 폭 제한, 스플릿 |
 | `components/admin/*` | 4.8 | 공통 FormModal, 슬라이드오버 |
 | `components/OnboardingModal.tsx` | 4.9 | 인라인 카드로 축소 |
-| `components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
+| `features/player/components/performance-video-player.tsx` | — | **재생 로직 변경 금지**, 포스터 래퍼만 |
 | `components/artist-comparison-section.tsx` | 4.5 | 빈 배열이면 섹션 숨김 (버그 D2) |
 | `lib/design/artist-category.ts` | 2.x | **신규** category 라벨·alias 매핑 (C5) |
-| `components/ui/icons/` | 2.x | **작업 완료** 고유 아이콘 8종 + `createClassicIcon`. 4.7절 |
+| `components/shared/icons/` | 2.x | **작업 완료** 고유 아이콘 8종 + `createClassicIcon`. 4.7절 |
 | `lib/design/tokens.ts` | 1.2 | **작업 완료** JS 쪽 색상 단일 소스. `global.css`와 값을 함께 유지 |
-| `lib/design/smufl.ts` | — | **작업 완료** SMuFL 글리프 · 조표 계산. 4.7.6절 |
-| `lib/design/section-timeline.ts` | — | **작업 완료** 구간 위치 계산. 4.7.5절 |
-| `components/ui/notation-glyph.tsx` | — | **작업 완료** 악보 글리프 렌더 |
+| `features/compare/lib/smufl.ts` | — | **작업 완료** SMuFL 글리프 · 조표 계산. 4.7.6절 |
+| `features/compare/lib/section-timeline.ts` | — | **작업 완료** 구간 위치 계산. 4.7.5절 |
+| `features/compare/components/notation-glyph.tsx` | — | **작업 완료** 악보 글리프 렌더 |
 | `assets/fonts/` | — | **작업 완료** Bravura otf/woff2 + OFL 라이선스. 5.7절 |
 | `app/(tabs)/_layout.web.tsx` | 3.2 | **신규 · 웹 전용** 사이드바 셸. 5.2절 |
 | `app/(tabs)/compare.web.tsx` | 4.1 | **신규 · 웹 전용** 3열 슬롯 · 오선지. 5.2절 |
 | `components/shell/` | 3.x | **신규 · 웹 전용** AppShell · SideNav · TopBar · PlayerBar · CommandPalette |
-| `components/ui/fallback-art.tsx` | 2.x | **신규** 폴백 타일 (C10). 목록의 절반 이상이 이 상태 |
+| `components/shared/fallback-art.tsx` | 2.x | **신규** 폴백 타일 (C10). 목록의 절반 이상이 이 상태 |
 
 ## 부록 C. 2026-09-12 데이터 조사 재현 방법
 

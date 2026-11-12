@@ -19,7 +19,7 @@ import type {
   ScreenTitleSummary,
   ScreenWork,
   ScreenWorkPage,
-} from '@/lib/types/models';
+} from '@/types/models';
 
 export const SCREEN_TITLE_KINDS: readonly ScreenTitleKind[] = ['MOVIE', 'SERIES', 'ANIME'];
 const USAGES: readonly ScreenCueUsage[] = ['SCORE', 'SOURCE', 'PERFORMED', 'TITLES'];

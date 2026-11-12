@@ -5,7 +5,7 @@ export * from './pieces';
 export * from './artists';
 export * from './periods';
 
-export * from '../types/models';
+export * from '@/types/models';
 
 // 모든 데이터를 한번에 가져올 수 있는 객체
 import { COMPOSERS } from './composers';

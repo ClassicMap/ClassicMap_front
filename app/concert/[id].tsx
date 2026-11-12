@@ -1,4 +1,4 @@
-import { ConcertFormModal } from '@/components/admin/ConcertFormModal';
+import { ConcertFormModal } from '@/features/admin/components/concert-form-modal';
 import {
   OriginalLanguageNote,
   CastChip,
@@ -8,25 +8,25 @@ import {
   concertStatusLabel,
   formatDay,
   parsePrices,
-} from '@/components/concert/concert-parts';
-import { StarRating } from '@/components/StarRating';
-import { FavoriteButton } from '@/components/favorite-button';
-import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/components/ticket-vendors-modal';
+} from '@/features/concert/components/concert-parts';
+import { StarRating } from '@/features/concert/components/star-rating';
+import { FavoriteButton } from '@/features/library/components/favorite-button';
+import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/features/concert/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { ConcertAPI } from '@/lib/api/client';
-import { areaName } from '@/lib/data/areas';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { areaName } from '@/features/concert/lib/areas';
+import { useAuth } from '@/hooks/use-auth';
 import { formatNumber, t, useLocale } from '@/lib/i18n';
-import { useConcert } from '@/lib/query/hooks/useConcerts';
-import type { TicketVendor } from '@/lib/types/models';
+import { useConcert } from '@/lib/query/hooks/use-concerts';
+import type { TicketVendor } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';

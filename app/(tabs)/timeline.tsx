@@ -1,5 +1,5 @@
-import { ComposerFormModal } from '@/components/admin/ComposerFormModal';
-import { useTabScrollInsets } from '@/components/navigation/tab-chrome';
+import { ComposerFormModal } from '@/features/admin/components/composer-form-modal';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import {
   ComposerGantt,
   GANTT_DOT_SPACE,
@@ -8,12 +8,12 @@ import {
   GANTT_PORTRAIT_SPACE,
   GANTT_ROW_HEIGHT,
   type OverflowGroup,
-} from '@/components/timeline/composer-gantt';
-import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/components/timeline/density-strip';
+} from '@/features/timeline/components/composer-gantt';
+import { DENSITY_STRIP_HEIGHT, DensityStrip } from '@/features/timeline/components/density-strip';
 import { Button } from '@/components/ui/button';
 import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { EntityThumb } from '@/components/ui/entity-thumb';
+import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -26,11 +26,11 @@ import {
   placeLabeledSpans,
   yearTicks,
   type LabeledSpanInput,
-} from '@/lib/design/timeline-layout';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/useComparisonPerformances';
-import { useAllComposers } from '@/lib/query/hooks/useComposers';
-import type { Composer, Period } from '@/lib/types/models';
+} from '@/features/timeline/lib/timeline-layout';
+import { useAuth } from '@/hooks/use-auth';
+import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/use-comparison-performances';
+import { useAllComposers } from '@/lib/query/hooks/use-composers';
+import type { Composer, Period } from '@/types/models';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
