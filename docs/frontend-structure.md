@@ -117,6 +117,7 @@ hooks/                    공용 훅 (use-breakpoint, use-auth, use-debounce …
 lib/                      공용 코드
   api/ query/ data/       서버 통신, 쿼리 훅(lib/query/hooks), 화면 모델 변환
   player/                 재생 엔진(스토어·재생 목록·자동 재생)
+  layout/                 셸의 크기와 상태(shell-layout, shell-state)
   design/ i18n/ navigation/ utils/
   utils.ts theme.ts
 types/                    공용 타입(models.ts)과 전역 선언(*.d.ts)
@@ -150,10 +151,11 @@ types/                    공용 타입(models.ts)과 전역 선언(*.d.ts)
 ### 4.2 ui 프리미티브
 
 - 파트 이름은 shadcn Base UI 판과 같게 합니다(`Popover`, `PopoverTrigger`, `PopoverContent`, `PopoverHeader`, `PopoverTitle`, `PopoverDescription` …).
-- 모든 파트에 `data-slot` 을 붙입니다(웹). 파일 끝에서 `export { … }` 한 번으로 내보냅니다.
+- 파일 끝에서 `export { … }` 한 번으로 내보냅니다. 웹 구현(Base UI)의 파트에는 `data-slot` 을 붙입니다.
 - 요소를 바꿔 끼울 때는 `asChild` 가 아니라 `render` 를 씁니다: `<PopoverTrigger render={<Button variant="ghost" />}>…</PopoverTrigger>`.
 - 위치 값(`side`, `align`, `sideOffset`, `alignOffset`)은 Content 가 받습니다.
 - 열림 상태는 `open` / `defaultOpen` / `onOpenChange` 로 다룹니다. 트리거 ref 의 `open()`·`close()` 는 쓰지 않습니다.
+- 오버레이(팝오버·셀렉트·툴팁·다이얼로그·시트)에는 `z-overlay` 가 이미 들어 있습니다. 쓰는 쪽에서 z-index 를 더하지 않습니다.
 
 ### 4.3 웹·앱 구현이 갈리는 프리미티브
 
@@ -161,15 +163,20 @@ types/                    공용 타입(models.ts)과 전역 선언(*.d.ts)
 
 ```
 components/ui/popover/
-  index.tsx        앱 구현 (@rn-primitives)
+  index.tsx        앱 구현
   index.web.tsx    웹 구현 (@base-ui/react)
   types.ts         두 구현이 함께 쓰는 props 타입
 ```
 
 - 두 파일은 같은 이름을 내보내고, 각 파트의 props 는 `types.ts` 의 타입을 씁니다. 한쪽에서만 뜻이 있는 prop 은 타입에 두고 주석으로 `웹 전용` / `앱 전용` 을 적습니다.
-- 가져오는 쪽은 `@/components/ui/popover` 하나만 씁니다.
-- 웹 트리거에 RN 요소를 넘길 때는 `components/ui/lib/render-pressable.web.ts` 가 `onClick` → `onPress`, `data-*` → `dataSet` 을 이어 줍니다(2절).
-- `npm run typecheck` 는 앱 구현을, `npm run typecheck:web` 은 웹 구현을 봅니다(`tsconfig.web.json` 의 `moduleSuffixes`, bluesky 방식).
+- 가져오는 쪽은 `@/components/ui/popover` 하나만 씁니다. 타입 체크(`tsc`)는 앱 구현을 기준으로 호출부를 보므로, 두 구현이 `types.ts` 를 함께 쓰는 것이 어긋남을 막는 장치입니다. 한쪽 구현에만 있는 export 를 만들지 않습니다(필요하면 `context.tsx`·`overlay.ts` 처럼 따로 파일로 뺍니다).
+- 웹 트리거에 RN 요소를 넘길 때는 `components/ui/lib/render-pressable.ts` 가 `onClick` → `onPress`, `data-*` → `dataSet` 을 이어 줍니다(2절). 넘기는 요소는 `<button>` 으로 그려지는 것(`Button`, `accessibilityRole="button"` 인 `Pressable`)이어야 하고, 아니면 `nativeButton={false}` 를 줍니다.
+- 앱 구현은 무엇으로 하나
+  - popover·select: `@rn-primitives`.
+  - dialog·sheet: RN `Modal`. 지금까지 화면들이 쓰던 것이라 뒤로 가기·시스템 모달 동작이 그대로입니다.
+  - slider: 직접 그린 끌기(`PanResponder`). `@rn-primitives/slider` 는 끌기를 구현하지 않습니다.
+  - tooltip: 트리거만 그립니다. 툴팁은 마우스·키보드 포커스에 뜨는 것이라 터치 화면에는 띄우지 않습니다(Base UI 도 같습니다). 그래서 트리거에는 늘 접근성 이름을 따로 줍니다.
+- 웹 구현 기준 타입 체크(bluesky 의 `moduleSuffixes` 방식)는 넣지 않았습니다. `react-native-svg` 의 웹 타입이 달라 기존 코드에서 222건이 걸립니다.
 
 ## 5. 겹침 순서
 
@@ -189,19 +196,22 @@ components/ui/popover/
 ## 6. 셸
 
 ```
-ShellProvider          상태 한곳: 내비 모양(tabs·rail·full), 사이드바 접힘, 대기열 열림
-└ Shell                영역 한곳: 행 [본문 줄 | 재생바], 본문 줄의 열 [사이드바 | 본문 | 대기열]
-   ├ Sidebar           접힘·펼침, 현재 위치, 키보드 이동
-   ├ ShellMain         상단바 + 본문(여기만 스크롤)
-   ├ QueueDock         오른쪽 대기열 자리
-   └ PlayerDock        하단 재생바 자리
+AppShell (components/layout/app-shell.tsx)      영역에 무엇을 넣을지 정합니다
+└ Shell                 화면 높이에 고정. 세로로 [ShellBody | ShellFooter]
+   ├ ShellBody          가로로 [사이드바 | ShellMain | ShellAside]
+   │  ├ AppSidebar      Sidebar 파트(sidebar.tsx)로 조립한 메뉴·레퍼토리
+   │  ├ ShellMain       상단바 + 본문(여기만 스크롤)
+   │  └ ShellAside      오른쪽 대기열 자리. 열면 본문을 밀어냅니다
+   └ ShellFooter        하단 재생바 자리. 화면 폭 전체
 ```
 
-- 크기는 상수 한곳(`lib/layout/shell-layout.ts`)에 둡니다: 사이드바 232 / 접힘 60, 대기열 320, 재생바 76, 간격 8.
-- 레이아웃 상태는 재생 상태와 나눕니다. 사이드바 접힘은 브라우저에 남깁니다(`classicmap.sidebar-collapsed`).
-- 대기열 열림은 셸이 가집니다. 재생바의 대기열 단추와 모바일 시트가 같은 상태를 봅니다.
+- 영역은 `components/layout/shell.tsx`, 크기는 `lib/layout/shell-layout.ts`(사이드바 232 / 접힘 60, 대기열 320, 재생바 76, 간격 8), 상태는 `lib/layout/shell-state.ts` 한곳씩에서 정합니다.
+- 레이아웃 상태는 재생 상태(`lib/player`)와 나눕니다. `shell-state` 가 사이드바 접힘(`classicmap.sidebar-collapsed`), 넓은 창의 대기열 열림(`classicmap.player.queue-open`), 좁은 화면의 대기열 시트 열림(남기지 않음)을 가집니다. 재생바의 대기열 단추와 미니 플레이어가 이 값을 봅니다.
+- 재생바가 보일 조건은 `features/player/components/player-bar-helpers.ts` 의 `usePlayerBarVisible` 한곳입니다. 셸은 보일 때만 재생바 자리를 둡니다.
+- 사이드바는 shadcn Sidebar 의 파트(`Sidebar`, `SidebarLink`, `SidebarAction`, `SidebarRail`, `SidebarTooltip`, `SidebarTrigger`)를 따릅니다. ⌘/Ctrl+B 로 접고 펴고, ↑↓·Home·End 로 메뉴 사이를 옮기며, 지금 위치는 `aria-current="page"` 입니다.
 - 좁은 화면(1024px 미만)은 하단 탭 + 미니 플레이어를 유지합니다. 조사한 사례 다수는 서랍이지만, 이 작업은 화면 모양을 바꾸지 않는 리팩터링이라 그대로 둡니다(서랍 전환은 따로 정할 일입니다).
-- 영상 요소(`ComparePlayerHost`)는 셸 밖 루트에 같은 key 로 남깁니다. 창 폭이 바뀌거나 단독 화면을 오가도 재생이 끊기지 않게 하는 장치라 위치를 바꾸지 않습니다.
+- 영상 요소(`ComparePlayerHost`)는 셸 밖 루트(`root-chrome`)에 같은 key 로 남깁니다. 창 폭이 바뀌거나 단독 화면을 오가도 재생이 끊기지 않게 하는 장치라 위치를 바꾸지 않습니다.
+- 화면 단축키가 글 쓰는 중인지 가릴 때는 `lib/utils/is-typing-target.ts` 를 씁니다. 태그 이름으로 직접 가리면 슬라이더(`<input type="range">`)에 포커스가 있을 때 단축키가 죽습니다.
 
 ## 7. 2026-11-12 현황 진단
 
@@ -238,3 +248,20 @@ ShellProvider          상태 한곳: 내비 모양(tabs·rail·full), 사이드
 1. 이 문서 + 디렉토리 이동(동작 변경 없음)
 2. 셸(6절)
 3. ui 프리미티브(4절): Base UI 도입, popover·select 다시 쓰기, dialog·sheet·tooltip·slider 추가
+
+## 9. 프리미티브 현황 (2026-11-12)
+
+| 프리미티브 | 웹 | 앱 | 쓰는 곳 |
+|---|---|---|---|
+| `popover` | Base UI | @rn-primitives | 공연 필터, 사용자 메뉴 |
+| `tooltip` | Base UI | 트리거만 | 접힌 사이드바 이름표 |
+| `slider` | Base UI | 직접 그린 끌기 | 재생 위치·볼륨(`features/player/components/scrub-bar`) |
+| `dialog` | Base UI | RN Modal | 아직 없음 |
+| `sheet` | Base UI | RN Modal | 모바일 대기열 |
+| `select` | Base UI | @rn-primitives | 아직 없음 |
+| `button` `input` `label` `text` `badge` `chip` `card` `avatar` `separator` `skeleton` `icon` `kbd` `empty-state` `expandable-text` `more-link` `scrim` | 한 파일 (`Platform.select`) | 같은 파일 | 전반 |
+
+아직 프리미티브로 옮기지 않은 것은 다음과 같습니다. 모양과 닫는 방식이 화면마다 달라 하나씩 옮기며 확인해야 합니다.
+
+- RN `Modal` 을 직접 쓰는 화면 6곳: `features/concert/components/{ticket-vendors-modal,concert-filter-bar,image-lightbox}`, `features/admin/components/form-modal`, `features/film/components/screen-cue-card`, `features/album/components/album-detail-modal`
+- 빠른 검색(`features/search/components/command-palette`): `position: fixed` 와 window 키 입력으로 직접 구현

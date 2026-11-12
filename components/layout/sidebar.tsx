@@ -1,6 +1,7 @@
+import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { LAYER } from '@/lib/design/layers';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { t, useLocale } from '@/lib/i18n';
 import { shell, useShell } from '@/lib/layout/shell-state';
 import { cn } from '@/lib/utils';
@@ -8,13 +9,13 @@ import { type Href, Link, router } from 'expo-router';
 import { PanelLeftIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
-import { createPortal } from 'react-dom';
 
 import { SHELL } from '@/lib/layout/shell-layout';
 
 /**
  * 사이드바 부품. shadcn(Base UI 판) Sidebar 의 파트와 동작을 따른다.
- * - Sidebar: 접힘·펼침 폭, 화살표 키 이동, 접힌 동안 이름표
+ * - Sidebar: 접힘·펼침 폭, 화살표 키 이동
+ * - SidebarTooltip: 접힌 동안 마우스를 올리거나 포커스하면 오른쪽에 뜨는 이름표
  * - SidebarLink: 메뉴 한 줄(아이콘 + 이름). 지금 위치면 `isActive`
  * - SidebarAction: 접으면 사라지는 안내·링크
  * - SidebarRail: 오른쪽 가장자리 띠. 누르면 접고 편다
@@ -22,40 +23,26 @@ import { SHELL } from '@/lib/layout/shell-layout';
  * 메뉴 내용은 app-sidebar.tsx 가 조립한다.
  */
 
-interface HoverLabel {
-  text: string;
-  top: number;
-  left: number;
-}
-
-interface SidebarContextValue {
-  collapsed: boolean;
-  showLabel: (label: HoverLabel | null) => void;
-}
-
-const SidebarContext = React.createContext<SidebarContextValue>({
-  collapsed: false,
-  showLabel: () => undefined,
-});
+const SidebarContext = React.createContext<{ collapsed: boolean }>({ collapsed: false });
 
 function useSidebar(): { collapsed: boolean } {
-  return { collapsed: React.useContext(SidebarContext).collapsed };
+  return React.useContext(SidebarContext);
 }
 
 /**
- * 접힌 상태에서만 이름을 띄우는 손잡이. 마우스를 올리거나 키보드로 포커스하면 오른쪽에 이름이 뜬다.
- * 웹 DOM 요소의 자리를 읽어 화면 기준으로 띄운다
+ * 접힌 동안의 이름표 (shadcn SidebarMenuButton 의 tooltip). 펼쳐 있으면 뜨지 않는다.
+ * 자식은 TooltipTrigger 를(또는 그것을 감싼 `<Link asChild>` 를) 하나 둔다
  */
-function useSidebarLabel(text: string) {
-  const { collapsed, showLabel } = React.useContext(SidebarContext);
-  if (!collapsed) return {};
-  const show = (event: { currentTarget: unknown }) => {
-    const element = event.currentTarget as HTMLElement | null;
-    const rect = element?.getBoundingClientRect?.();
-    if (rect) showLabel({ text, top: rect.top + rect.height / 2, left: rect.right + 10 });
-  };
-  const hide = () => showLabel(null);
-  return { onHoverIn: show, onHoverOut: hide, onFocus: show, onBlur: hide };
+function SidebarTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const { collapsed } = useSidebar();
+  return (
+    <Tooltip disabled={!collapsed}>
+      {children}
+      <TooltipContent side="right" align="center" sideOffset={10}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 const ARROW_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
@@ -63,8 +50,7 @@ const ARROW_KEYS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
 /** 사이드바 안에서 ↑↓·Home·End 로 메뉴 사이를 옮긴다 (Tab 은 그대로 다음 요소로) */
 function onSidebarKeyDown(event: React.KeyboardEvent<HTMLElement>) {
   if (!ARROW_KEYS.includes(event.key) || event.altKey || event.metaKey || event.ctrlKey) return;
-  const target = event.target as HTMLElement;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+  if (isTypingTarget(event.target)) return;
   const items = Array.from(
     event.currentTarget.querySelectorAll<HTMLElement>('a[href], [role="link"], [role="button"]')
   ).filter(
@@ -94,29 +80,25 @@ function Sidebar({
   label: string;
   children: React.ReactNode;
 }) {
-  const [hoverLabel, setHoverLabel] = React.useState<HoverLabel | null>(null);
-  // 펼치면 떠 있던 이름을 지운다
-  React.useEffect(() => {
-    if (!collapsed) setHoverLabel(null);
-  }, [collapsed]);
-  const value = React.useMemo(() => ({ collapsed, showLabel: setHoverLabel }), [collapsed]);
+  const value = React.useMemo(() => ({ collapsed }), [collapsed]);
   const keyboard = Platform.OS === 'web' ? { onKeyDown: onSidebarKeyDown } : null;
 
   return (
     <SidebarContext.Provider value={value}>
-      {/* 접고 펼 때 로고·아이콘·사진은 제자리(가운데 30px 선)에 그대로 있고 폭만 줄고 늘며, 글자는 서서히 사라진다 */}
-      <View
-        role="navigation"
-        aria-label={label}
-        {...(keyboard as object)}
-        className="cm-side relative shrink-0 overflow-hidden bg-surface-1 px-2 py-4"
-        style={{
-          width: collapsed ? SHELL.sidebarCollapsedWidth : SHELL.sidebarWidth,
-          borderRadius: SHELL.radius,
-        }}>
-        {children}
-      </View>
-      {hoverLabel && collapsed ? <SidebarFloatingLabel label={hoverLabel} /> : null}
+      <TooltipProvider delay={0}>
+        {/* 접고 펼 때 로고·아이콘·사진은 제자리(가운데 30px 선)에 그대로 있고 폭만 줄고 늘며, 글자는 서서히 사라진다 */}
+        <View
+          role="navigation"
+          aria-label={label}
+          {...(keyboard as object)}
+          className="cm-side relative shrink-0 overflow-hidden bg-surface-1 px-2 py-4"
+          style={{
+            width: collapsed ? SHELL.sidebarCollapsedWidth : SHELL.sidebarWidth,
+            borderRadius: SHELL.radius,
+          }}>
+          {children}
+        </View>
+      </TooltipProvider>
     </SidebarContext.Provider>
   );
 }
@@ -150,39 +132,43 @@ function SidebarLink({
   children?: React.ReactNode;
 }) {
   const { collapsed } = useSidebar();
-  const hover = useSidebarLabel(label);
   return (
-    <Link href={href} asChild>
-      <Pressable
-        {...handlers}
-        {...hover}
-        accessibilityRole="link"
-        accessibilityLabel={label}
-        aria-current={isActive ? 'page' : undefined}
-        className={cn(
-          'h-10 flex-row items-center gap-3.5 rounded-md px-3 transition-colors duration-instant',
-          isActive ? 'bg-surface-3' : 'hover:bg-surface-2'
-        )}>
-        {/* 접힌 좁은 칸에서도 아이콘이 눌려 사라지지 않게 줄어들지 않는 칸에 넣는다 */}
-        <View className="shrink-0">
-          {renderIcon({
-            size: 20,
-            className: isActive ? 'text-foreground' : 'text-foreground-muted',
-          })}
-        </View>
-        <Text
-          numberOfLines={1}
-          className={cn(
-            'cm-fade flex-1 text-[13.5px] font-semibold',
-            isActive ? 'text-foreground' : 'text-foreground-muted',
-            collapsed && 'opacity-0'
-          )}
-          style={{ minWidth: 110 }}>
-          {label}
-        </Text>
-        {children}
-      </Pressable>
-    </Link>
+    <SidebarTooltip label={label}>
+      <Link href={href} asChild>
+        <TooltipTrigger
+          render={
+            <Pressable
+              {...handlers}
+              accessibilityRole="link"
+              accessibilityLabel={label}
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                'h-10 flex-row items-center gap-3.5 rounded-md px-3 transition-colors duration-instant',
+                isActive ? 'bg-surface-3' : 'hover:bg-surface-2'
+              )}
+            />
+          }>
+          {/* 접힌 좁은 칸에서도 아이콘이 눌려 사라지지 않게 줄어들지 않는 칸에 넣는다 */}
+          <View className="shrink-0">
+            {renderIcon({
+              size: 20,
+              className: isActive ? 'text-foreground' : 'text-foreground-muted',
+            })}
+          </View>
+          <Text
+            numberOfLines={1}
+            className={cn(
+              'cm-fade flex-1 text-[13.5px] font-semibold',
+              isActive ? 'text-foreground' : 'text-foreground-muted',
+              collapsed && 'opacity-0'
+            )}
+            style={{ minWidth: 110 }}>
+            {label}
+          </Text>
+          {children}
+        </TooltipTrigger>
+      </Link>
+    </SidebarTooltip>
   );
 }
 
@@ -255,33 +241,6 @@ function SidebarTrigger({ className }: { className?: string }) {
   );
 }
 
-/** 접힌 사이드바의 이름 말풍선. 사이드바가 잘라 내지 않게 화면 위에 띄운다 */
-function SidebarFloatingLabel({ label }: { label: HoverLabel }) {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-  return createPortal(
-    <div
-      role="tooltip"
-      className="cm-backdrop-in"
-      style={{
-        position: 'fixed',
-        top: label.top,
-        left: label.left,
-        transform: 'translateY(-50%)',
-        zIndex: LAYER.overlay,
-        pointerEvents: 'none',
-        padding: '4px 8px',
-        borderRadius: 6,
-        background: 'hsl(var(--foreground))',
-        color: 'hsl(var(--background))',
-        font: '600 12px/16px Pretendard, system-ui, sans-serif',
-        whiteSpace: 'nowrap',
-      }}>
-      {label.text}
-    </div>,
-    document.body
-  );
-}
-
 /** ⌘B(Ctrl+B)로 사이드바를 접고 편다. 글을 쓰는 중에는 받지 않는다 */
 function useSidebarShortcut(enabled: boolean) {
   React.useEffect(() => {
@@ -294,12 +253,7 @@ function useSidebarShortcut(enabled: boolean) {
         event.shiftKey
       )
         return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
-      )
-        return;
+      if (isTypingTarget(event.target)) return;
       event.preventDefault();
       shell.toggleSidebar();
     };
@@ -313,10 +267,10 @@ export {
   SidebarAction,
   SidebarLink,
   SidebarRail,
+  SidebarTooltip,
   SidebarTrigger,
   useSidebar,
   useSidebarFade,
-  useSidebarLabel,
   useSidebarShortcut,
 };
 export type { SidebarIconProps };

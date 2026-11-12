@@ -4,6 +4,7 @@ import { CompareIcon, PerformerKindIcon, TicketIcon } from '@/components/shared/
 import { Icon } from '@/components/ui/icon';
 import { Kbd, modKeyLabel } from '@/components/ui/kbd';
 import { Text } from '@/components/ui/text';
+import { TooltipTrigger } from '@/components/ui/tooltip';
 import {
   buildLibraryEntries,
   groupLibraryEntries,
@@ -32,9 +33,9 @@ import {
   type SidebarIconProps,
   SidebarLink,
   SidebarRail,
+  SidebarTooltip,
   useSidebar,
   useSidebarFade,
-  useSidebarLabel,
 } from './sidebar';
 
 interface NavItem {
@@ -252,28 +253,32 @@ function Library() {
 function LibraryLink({ entry }: { entry: LibraryEntry }) {
   const queryClient = useQueryClient();
   const fade = useSidebarFade();
-  const hover = useSidebarLabel(entry.title);
   return (
-    <Link href={entry.href as Href} asChild>
-      <Pressable
-        {...createPrefetchHandlers(queryClient, prefetchTargetFromHref(entry.href))}
-        {...hover}
-        accessibilityRole="link"
-        accessibilityLabel={entry.title}
-        className="flex-row items-center gap-3 rounded-md px-[3px] py-[7px] hover:bg-surface-2">
-        <View className="shrink-0">
-          <LibraryThumb entry={entry} />
-        </View>
-        <View className={cn('min-w-0 flex-1', fade)} style={{ minWidth: 140 }}>
-          <Text numberOfLines={1} className="text-[13px] font-semibold">
-            {entry.title}
-          </Text>
-          <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
-            {entry.subtitle}
-          </Text>
-        </View>
-      </Pressable>
-    </Link>
+    <SidebarTooltip label={entry.title}>
+      <Link href={entry.href as Href} asChild>
+        <TooltipTrigger
+          render={
+            <Pressable
+              {...createPrefetchHandlers(queryClient, prefetchTargetFromHref(entry.href))}
+              accessibilityRole="link"
+              accessibilityLabel={entry.title}
+              className="flex-row items-center gap-3 rounded-md px-[3px] py-[7px] hover:bg-surface-2"
+            />
+          }>
+          <View className="shrink-0">
+            <LibraryThumb entry={entry} />
+          </View>
+          <View className={cn('min-w-0 flex-1', fade)} style={{ minWidth: 140 }}>
+            <Text numberOfLines={1} className="text-[13px] font-semibold">
+              {entry.title}
+            </Text>
+            <Text numberOfLines={1} className="text-[11.5px] text-foreground-muted">
+              {entry.subtitle}
+            </Text>
+          </View>
+        </TooltipTrigger>
+      </Link>
+    </SidebarTooltip>
   );
 }
 

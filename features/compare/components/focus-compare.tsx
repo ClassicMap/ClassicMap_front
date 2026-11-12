@@ -1,3 +1,4 @@
+import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { FeaturedPairNote, PerformanceNote } from '@/features/compare/components/listening-note';
 import { type Performer, PerformerMark, performerOf } from '@/features/compare/components/performer-mark';
 import { LoudnessMeasures, LoudnessOverlay } from '@/features/compare/components/loudness-curve';
@@ -423,7 +424,7 @@ function FocusStage(props: FocusStageProps) {
     if (Platform.OS !== 'web' || !screenFocused) return;
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (isTypingTarget(target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const engine = engineRef.current;
       if (event.key === ' ') {

@@ -5,7 +5,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 
 /** 키캡 표시 (`⌘K`, `↵`). 웹 셸 전용. */
-export function Kbd({ children, className }: { children: string; className?: string }) {
+function Kbd({ children, className }: { children: string; className?: string }) {
   useLocale();
   return (
     <View
@@ -19,7 +19,9 @@ export function Kbd({ children, className }: { children: string; className?: str
 }
 
 /** 맥이면 ⌘, 그 외 Ctrl */
-export function modKeyLabel(): string {
+function modKeyLabel(): string {
   if (typeof navigator === 'undefined') return '⌘';
   return /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 }
+
+export { Kbd, modKeyLabel };

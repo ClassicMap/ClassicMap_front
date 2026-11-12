@@ -1,3 +1,4 @@
+import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { FullscreenOverlay } from '@/features/compare/components/fullscreen-overlay';
 import { FeaturedPairLink, MomentChip, PerformanceNote, resolveFeaturedPair } from '@/features/compare/components/listening-note';
 import { PerformerMark, performerOf } from '@/features/compare/components/performer-mark';
@@ -282,7 +283,7 @@ export function ComparePieceView({
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
       // 슬라이더는 제 화살표를 스스로 처리하고 전파를 끊으므로 여기서는 입력 칸만 비킨다
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (isTypingTarget(target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (event.key === 'Escape' && picking) {

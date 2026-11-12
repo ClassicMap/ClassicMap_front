@@ -5,7 +5,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Text } from '@/components/ui/text';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { type Href, useRouter } from 'expo-router';
-import type { TriggerRef } from '@rn-primitives/popover';
 import { LogInIcon, LogOutIcon, UserIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View, ActivityIndicator } from 'react-native';
@@ -18,7 +17,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   const { user } = useUser();
   const { signOut, isSignedIn } = useAuth();
   const router = useRouter();
-  const popoverTriggerRef = React.useRef<TriggerRef>(null);
+  const [open, setOpen] = React.useState(false);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   function onLogin() {
@@ -28,7 +27,7 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   async function onSignOut() {
     try {
       setIsSigningOut(true);
-      popoverTriggerRef.current?.close();
+      setOpen(false);
       await signOut();
       // 로그아웃 성공 - 조용히 처리 (페이지 전환이 피드백 역할)
     } catch (error: unknown) {
@@ -40,24 +39,35 @@ export function UserMenu({ iconColor }: { iconColor?: string } = {}) {
   }
 
   function onOpenMyPage() {
-    popoverTriggerRef.current?.close();
+    setOpen(false);
     router.push('/my-page' as Href);
   }
 
   if (!isSignedIn) {
     return (
-      <Button variant="ghost" size="icon" className="size-8 rounded-full" onPress={onLogin}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-8 rounded-full"
+        accessibilityLabel={t('로그인')}
+        onPress={onLogin}>
         <Icon as={LogInIcon} color={iconColor} className="size-5" />
       </Button>
     );
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild ref={popoverTriggerRef}>
-        <Button variant="ghost" size="icon" className="size-8 rounded-full">
-          <UserAvatar iconColor={iconColor} />
-        </Button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-full"
+            accessibilityLabel={t('내 계정 메뉴')}
+          />
+        }>
+        <UserAvatar iconColor={iconColor} />
       </PopoverTrigger>
       <PopoverContent align="end" side="bottom" className="w-80 p-0">
         <View className="gap-3 border-b border-border p-3">
