@@ -2,7 +2,7 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/features/auth/components/user-menu';
 import { useRouter } from 'expo-router';
-import { ChevronLeftIcon, ChevronRightIcon, MoonStarIcon, PanelLeftIcon, SearchIcon, SunIcon } from 'lucide-react-native';
+import { ChevronLeftIcon, ChevronRightIcon, MoonStarIcon, SearchIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
@@ -10,7 +10,8 @@ import { Pressable, View } from 'react-native';
 
 import { useCommandPalette } from '@/features/search/components/command-palette-context';
 import { Kbd, modKeyLabel } from '@/components/ui/kbd';
-import { setSidebarCollapsed } from './sidebar-state';
+import { SHELL } from '@/lib/layout/shell-layout';
+import { SidebarTrigger } from './sidebar';
 
 function RoundButton({
   label,
@@ -34,7 +35,7 @@ function RoundButton({
 }
 
 /** 상단바. 사이드바를 접고 펼 수 있는 창이면 맨 왼쪽에 접기 단추를 둔다(shadcn SidebarTrigger 자리) */
-export function TopBar({ sidebar }: { sidebar?: { collapsed: boolean } }) {
+export function TopBar({ sidebarTrigger = false }: { sidebarTrigger?: boolean }) {
   useLocale();
   const router = useRouter();
   const { setOpen } = useCommandPalette();
@@ -42,16 +43,10 @@ export function TopBar({ sidebar }: { sidebar?: { collapsed: boolean } }) {
   const { locale, setLocale } = useLocale();
 
   return (
-    <View className="h-14 shrink-0 flex-row items-center gap-2.5 px-5">
-      {sidebar ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={sidebar.collapsed ? t('사이드바 펼치기') : t('사이드바 접기')}
-          onPress={() => setSidebarCollapsed(!sidebar.collapsed)}
-          className="-ml-2 size-8 items-center justify-center rounded-md hover:bg-surface-3">
-          <Icon as={PanelLeftIcon} size={18} className="text-foreground-muted" />
-        </Pressable>
-      ) : null}
+    <View
+      className="shrink-0 flex-row items-center gap-2.5 px-5"
+      style={{ height: SHELL.topBarHeight }}>
+      {sidebarTrigger ? <SidebarTrigger className="-ml-2" /> : null}
       <RoundButton label={t('뒤로')} onPress={() => (router.canGoBack() ? router.back() : router.push('/home'))}>
         <Icon as={ChevronLeftIcon} size={18} className="text-foreground-muted" />
       </RoundButton>

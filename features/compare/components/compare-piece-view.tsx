@@ -733,7 +733,7 @@ function PickMark({ pick }: { pick: PickState }) {
   useLocale();
   if (pick !== 'candidate') return null;
   return (
-    <View pointerEvents="none" className="absolute left-3 top-3 z-10">
+    <View pointerEvents="none" className="absolute left-3 top-3 z-raised">
       <View className="size-7 items-center justify-center rounded-full border-2 border-white bg-black/40">
         <Icon as={PlusIcon} size={14} className="text-white" />
       </View>

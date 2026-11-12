@@ -238,7 +238,7 @@ export function CommandPalette() {
   let running = -1;
 
   return (
-    <View className="absolute inset-0 z-50" style={{ position: 'fixed' as 'absolute' }}>
+    <View className="absolute inset-0 z-overlay" style={{ position: 'fixed' as 'absolute' }}>
       <Pressable
         accessibilityLabel={t('검색 닫기')}
         className={cn('absolute inset-0 bg-black/50', closing ? 'cm-scrim-out' : 'cm-scrim-in')}

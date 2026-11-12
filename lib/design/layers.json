@@ -1,0 +1,8 @@
+{
+  "raised": 10,
+  "rail": 20,
+  "floating": 30,
+  "player": 40,
+  "overlay": 50,
+  "fullscreen": 2147483000
+}

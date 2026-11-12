@@ -136,8 +136,6 @@ export interface ComparePlayerState {
   autoplayStatus: 'idle' | 'loading' | 'ready' | 'empty';
   shuffle: boolean;
   repeat: RepeatMode;
-  /** 데스크톱 대기열 패널이 열려 있다 */
-  queueOpen: boolean;
   /**
    * 재생 바의 이전·다음 곡(또는 끝나서 넘어감)으로 곡이 바뀔 때마다 늘어난다.
    * 그 작품의 비교 화면이 열려 있으면 화면도 그 구간으로 따라간다
@@ -208,7 +206,6 @@ const CROSSFADE_KEY = 'classicmap.player.crossfade';
 const AUTOPLAY_KEY = 'classicmap.player.autoplay';
 const SHUFFLE_KEY = 'classicmap.player.shuffle';
 const REPEAT_KEY = 'classicmap.player.repeat';
-const QUEUE_OPEN_KEY = 'classicmap.player.queue-open';
 const SESSION_KEY = 'classicmap.player.session.v1';
 /** 들은 곡은 최근 것만 이만큼 남긴다 */
 const MAX_HISTORY = 30;
@@ -459,7 +456,6 @@ let state: ComparePlayerState = {
     const stored = readStored(REPEAT_KEY);
     return stored === 'all' || stored === 'one' ? stored : 'off';
   })(),
-  queueOpen: readStored(QUEUE_OPEN_KEY) === '1',
   navigation: { seq: 0, pieceId: 0, sectorId: 0 },
   restored: false,
   surface: 'none',
@@ -1315,11 +1311,6 @@ export const comparePlayer = {
   /** 자동 재생 목록을 다시 만든다(못 찾았을 때 「다시 시도」) */
   retryAutoplay() {
     rebuildAutoplay();
-  },
-
-  setQueueOpen(open: boolean) {
-    writeStored(QUEUE_OPEN_KEY, open ? '1' : '0');
-    setState({ queueOpen: open });
   },
 
   /** 취향 추천 목록을 받는다(로그인하면 서버가 고른 것, 아니면 이 기기의 답으로 고른 것) */

@@ -1,4 +1,4 @@
-import type { ComparePlayerTrack } from '@/lib/player/compare-player-store';
+import { type ComparePlayerTrack, useComparePlayer } from '@/lib/player/compare-player-store';
 import type { Href } from 'expo-router';
 import * as React from 'react';
 import { Platform } from 'react-native';
@@ -23,6 +23,17 @@ export function useSettled(value: boolean, delayMs = 180): boolean {
     return () => clearTimeout(timer);
   }, [value, delayMs]);
   return settled;
+}
+
+/**
+ * 재생 바(데스크톱 하단 바·모바일 미니 플레이어)를 보일 때인가.
+ * 듣는 곡이 있고, 영상이 비교 화면 자리에 떠 있지 않고(그 화면의 재생 바가 맡는다), 1:1 비교 중이 아닐 때다
+ */
+export function usePlayerBarVisible(): boolean {
+  const wanted = useComparePlayer(
+    (state) => state.current !== null && state.surface !== 'slot' && state.focus === null
+  );
+  return useSettled(wanted);
 }
 
 /** 탭바 높이. components/layout/tabs-layout.tsx 의 탭바 스타일과 같게 둔다 */

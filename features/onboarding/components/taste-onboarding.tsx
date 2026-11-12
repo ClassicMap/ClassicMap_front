@@ -462,7 +462,7 @@ function PeopleStep({
         hint={t('고르면 레퍼토리에 담아 두고, 그 사람이 나오는 비교를 앞에 보여 드려요.')}
       />
       <View className="relative">
-        <View className="absolute inset-y-0 left-3.5 z-10 justify-center" pointerEvents="none">
+        <View className="absolute inset-y-0 left-3.5 z-raised justify-center" pointerEvents="none">
           <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
         </View>
         <Input

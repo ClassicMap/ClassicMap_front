@@ -7,6 +7,8 @@ module.exports = {
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
+      // 겹침 순서 (docs/frontend-structure.md 5절). 값은 lib/design/layers.json 한곳에 있다
+      zIndex: require('./lib/design/layers.json'),
       colors: {
         border: 'hsl(var(--border))',
         'border-strong': 'hsl(var(--border-strong))',

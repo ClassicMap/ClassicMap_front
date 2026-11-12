@@ -1,5 +1,5 @@
 import { MiniVideoTarget } from '@/features/player/components/mini-video-target';
-import { compareHrefFor, useSettled } from '@/features/player/components/player-bar-helpers';
+import { compareHrefFor, usePlayerBarVisible } from '@/features/player/components/player-bar-helpers';
 import { QueueButton, RepeatButton, ShuffleButton } from '@/features/player/components/queue-panel';
 import { PerformerStepper, useSongNav } from '@/features/player/components/song-nav';
 import { VolumeControl } from '@/features/player/components/volume-control';
@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
 import { relocalize, t, useLocale } from '@/lib/i18n';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
+import { SHELL } from '@/lib/layout/shell-layout';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'expo-router';
 import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
@@ -105,8 +106,6 @@ export function GlobalPlayerBar() {
   const current = React.useMemo(() => (stored ? relocalize(stored) : stored), [stored, locale]);
   const playing = useComparePlayer((state) => state.playing);
   const restored = useComparePlayer((state) => state.restored);
-  const surface = useComparePlayer((state) => state.surface);
-  const focus = useComparePlayer((state) => state.focus);
   const nav = useSongNav();
   const progress = useComparePlayer((state) => state.progress);
   const [scrub, setScrub] = React.useState<number | null>(null);
@@ -114,7 +113,7 @@ export function GlobalPlayerBar() {
   const [barWidth, setBarWidth] = React.useState(0);
   const layout = layoutFor(barWidth);
   const video = layout.video;
-  const visible = useSettled(Boolean(current) && surface !== 'slot' && !focus);
+  const visible = usePlayerBarVisible();
 
   if (!current || !visible) return null;
   const duration = progress.duration || current.durationSec;
@@ -124,7 +123,8 @@ export function GlobalPlayerBar() {
   return (
     <View
       onLayout={(event) => setBarWidth(event.nativeEvent.layout.width)}
-      className="cm-rise h-[76px] flex-row items-center gap-4 rounded-[9px] bg-surface-1 px-4">
+      className="cm-rise h-full flex-row items-center gap-4 bg-surface-1 px-4"
+      style={{ borderRadius: SHELL.radius }}>
       <View className="min-w-0 flex-1 basis-0 flex-row items-center gap-3">
         {video ? (
           <Pressable
@@ -170,6 +170,7 @@ export function GlobalPlayerBar() {
           {layout.modes ? <ShuffleButton /> : null}
           {/* 3초 넘게 들었으면 처음으로, 그 안이면 들은 순서의 이전 곡으로 */}
           <Pressable
+            accessibilityRole="button"
             accessibilityLabel={nav.prevLabel}
             onPress={() => comparePlayer.previous()}
             className="size-8 items-center justify-center rounded-full">
@@ -180,6 +181,7 @@ export function GlobalPlayerBar() {
             />
           </Pressable>
           <Pressable
+            accessibilityRole="button"
             accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             onPress={() => comparePlayer.togglePlay()}
             className="size-9 items-center justify-center rounded-full bg-foreground web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95">
@@ -190,6 +192,7 @@ export function GlobalPlayerBar() {
             />
           </Pressable>
           <Pressable
+            accessibilityRole="button"
             accessibilityLabel={nav.nextLabel}
             disabled={!nav.hasNext}
             onPress={() => comparePlayer.next()}
@@ -235,6 +238,7 @@ export function GlobalPlayerBar() {
         <QueueButton />
         <Pressable
           onPress={() => comparePlayer.close()}
+          accessibilityRole="button"
           accessibilityLabel={t('플레이어 닫기')}
           className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
           <Icon as={XIcon} size={16} className="text-foreground-muted" />
