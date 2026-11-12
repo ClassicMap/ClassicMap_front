@@ -210,7 +210,7 @@ const SESSION_KEY = 'classicmap.player.session.v1';
 /** 들은 곡은 최근 것만 이만큼 남긴다 */
 const MAX_HISTORY = 30;
 /** 자동 재생 목록을 한 번에 이만큼 만들어 두고 */
-const AUTOPLAY_LENGTH = 20;
+export const AUTOPLAY_LENGTH = 20;
 /** 남은 곡이 이보다 적으면 뒤에 이어 붙인다 */
 const AUTOPLAY_LOW = 6;
 /** 끝에서 이만큼 안쪽이면 다 들은 것으로 보고 다음에는 처음부터 */
@@ -1046,8 +1046,9 @@ function ensureAutoplay() {
   const token = ++autoplayToken;
   if (!existing.length) {
     autoplayBuiltWithTaste = tastePool.length > 0 || tasteGenrePool.length > 0;
-    setState({ autoplayStatus: 'loading' });
   }
+  // 이어 붙이는 동안에도 '고르는 중'으로 둔다. 대기열 패널이 남은 줄 아래에 빈 줄 모양을 깔아 둔다
+  setState({ autoplayStatus: 'loading' });
   const settle = (items: readonly PlaylistItem[]) => {
     if (token !== autoplayToken) return;
     // 고르는 사이 곡이 넘어갔을 수 있어 지금 목록 뒤에 붙이고, 지금 곡·들은 곡·대기열·목록에 이미 있는 곡은 뺀다

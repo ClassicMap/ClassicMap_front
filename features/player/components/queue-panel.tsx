@@ -6,6 +6,7 @@ import { Text } from '@/components/ui/text';
 import { relocalize, t, useLocale } from '@/lib/i18n';
 import { shell, useShell } from '@/lib/layout/shell-state';
 import {
+  AUTOPLAY_LENGTH,
   comparePlayer,
   type ComparePlayerTrack,
   type PlaylistItem,
@@ -447,12 +448,21 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   for (const [key, fresh] of freshKeys.current) {
     if (now - fresh.at > ROW_ENTER_KEEP_MS) freshKeys.current.delete(key);
   }
-  const entering = (key: string) => {
+  // 직접 넣은 곡은 아래에서 올라오고, 채워지는 줄은 빈 줄 모양이 있던 자리에서 내용만 나타난다
+  const entering = (key: string, how: 'insert' | 'fill') => {
     const fresh = freshKeys.current.get(key);
     return fresh
-      ? { className: 'cm-row-in', style: { animationDelay: `${fresh.delay}ms` } as object }
+      ? {
+          className: how === 'insert' ? 'cm-row-in' : 'cm-row-fill',
+          style: { animationDelay: `${fresh.delay}ms` } as object,
+        }
       : {};
   };
+  // 자동 재생을 이어 붙이는 동안 남은 줄 아래에 채워질 만큼 빈 줄 모양을 깔아 둔다
+  const fillingRows =
+    autoplayStatus === 'loading' && autoplayItems.length > 0
+      ? Math.max(0, AUTOPLAY_LENGTH - autoplayItems.length)
+      : 0;
 
   const tabs: { key: QueueTab; label: string }[] = [
     { key: 'queue', label: t('대기열') },
@@ -541,7 +551,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               <Section title={t('다음에 재생')} action={showSource ? undefined : clearAction}>
                 {leavingAt === 'forward' ? leavingRows : null}
                 {forward.map((entry, index) => (
-                  <View key={forwardKeys[index]} {...entering(forwardKeys[index])}>
+                  <View key={forwardKeys[index]} {...entering(forwardKeys[index], 'insert')}>
                     <Row
                       {...trackRow(entry.track)}
                       onPress={() => comparePlayer.playFromQueue('forward', index)}
@@ -561,7 +571,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
                 {leavingAt === 'source' ? leavingRows : null}
                 {remaining.length ? (
                   remaining.map((item, index) => (
-                    <View key={remainingKeys[index]} {...entering(remainingKeys[index])}>
+                    <View key={remainingKeys[index]} {...entering(remainingKeys[index], 'fill')}>
                       <Row
                         {...itemRow(item)}
                         onPress={() => comparePlayer.playFromQueue('source', index)}
@@ -585,15 +595,20 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               ) : repeatAll ? (
                 <Note>{t('반복(전체)이 켜져 있어 자동 재생은 쉬어요.')}</Note>
               ) : autoplayItems.length ? (
-                autoplayItems.map((item, index) => (
-                  <View key={autoplayKeys[index]} {...entering(autoplayKeys[index])}>
-                    <Row
-                      {...itemRow(item)}
-                      onPress={() => comparePlayer.playFromQueue('autoplay', index)}
-                      onRemove={() => comparePlayer.removeFromQueue('autoplay', index)}
-                    />
-                  </View>
-                ))
+                <>
+                  {autoplayItems.map((item, index) => (
+                    <View key={autoplayKeys[index]} {...entering(autoplayKeys[index], 'fill')}>
+                      <Row
+                        {...itemRow(item)}
+                        onPress={() => comparePlayer.playFromQueue('autoplay', index)}
+                        onRemove={() => comparePlayer.removeFromQueue('autoplay', index)}
+                      />
+                    </View>
+                  ))}
+                  {Array.from({ length: fillingRows }, (_, index) => (
+                    <RowSkeleton key={`filling-${index}`} />
+                  ))}
+                </>
               ) : autoplayStatus === 'empty' ? (
                 <View className="flex-row flex-wrap items-center gap-x-2 px-4 py-1">
                   <Text className="text-caption text-foreground-subtle">
