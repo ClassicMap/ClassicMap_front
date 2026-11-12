@@ -44,6 +44,8 @@ import {
   PauseIcon,
   PlayIcon,
   RepeatIcon,
+  RotateCcwIcon,
+  RotateCwIcon,
   XIcon,
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
@@ -1581,13 +1583,30 @@ function FocusBar({
           </View>
         </View>
         <View className="w-[400px] shrink items-center gap-1.5">
-          <Pressable
-            onPress={engine.togglePlay}
-            accessibilityRole="button"
-            accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
-            className="cm-press-solid size-9 items-center justify-center rounded-full bg-foreground">
-            <Icon as={engine.playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
-          </Pressable>
+          {/* 평소 바의 ⏮ ⏭ 자리: 같은 대목을 다시 듣기 쉽게 5초씩 옮긴다 */}
+          <View className="flex-row items-center gap-4">
+            <Pressable
+              onPress={() => engine.seekBy(-SEEK_STEP_SEC)}
+              accessibilityRole="button"
+              accessibilityLabel={t('5초 뒤로 (⇧←)')}
+              className="cm-press size-8 items-center justify-center rounded-full">
+              <Icon as={RotateCcwIcon} size={16} className="text-foreground-muted" />
+            </Pressable>
+            <Pressable
+              onPress={engine.togglePlay}
+              accessibilityRole="button"
+              accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
+              className="cm-press-solid size-9 items-center justify-center rounded-full bg-foreground">
+              <Icon as={engine.playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
+            </Pressable>
+            <Pressable
+              onPress={() => engine.seekBy(SEEK_STEP_SEC)}
+              accessibilityRole="button"
+              accessibilityLabel={t('5초 앞으로 (⇧→)')}
+              className="cm-press size-8 items-center justify-center rounded-full">
+              <Icon as={RotateCwIcon} size={16} className="text-foreground-muted" />
+            </Pressable>
+          </View>
           <View className="w-full flex-row">{track}</View>
         </View>
         <View className="min-w-0 flex-1 basis-0 flex-row items-center justify-end gap-2.5">

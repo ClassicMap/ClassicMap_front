@@ -52,6 +52,8 @@ export const COMPARE: Readonly<Record<string, string>> = {
   '재생·일시정지': 'Play / pause',
   '연주자 바꾸기': 'Switch performer',
   '5초 앞뒤로': 'Skip 5 seconds',
+  '5초 뒤로 (⇧←)': 'Back 5 seconds (⇧←)',
+  '5초 앞으로 (⇧→)': 'Forward 5 seconds (⇧→)',
   음소거: 'Mute',
   '←→ 연주자 · ⇧←→ 5초 · 스페이스 재생': '←→ Performer · ⇧←→ 5 s · Space to play',
   'YouTube 원본': 'Original on YouTube',
