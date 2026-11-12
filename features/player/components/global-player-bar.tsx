@@ -155,10 +155,12 @@ export function GlobalPlayerBar() {
             />
           </Pressable>
         ) : null}
+        {/* 곡·연주자가 바뀌면 글자가 아래에서 살짝 올라오며 바뀐다 */}
         <Pressable
+          key={current.performanceId}
           onPress={goToCompare}
           accessibilityRole="link"
-          className="min-w-0 flex-1">
+          className="cm-row-in min-w-0 flex-1">
           <View className="flex-row items-center gap-1.5">
             <Equalizer playing={playing} size={11} />
             <Text
@@ -186,7 +188,7 @@ export function GlobalPlayerBar() {
             accessibilityRole="button"
             accessibilityLabel={nav.prevLabel}
             onPress={() => comparePlayer.previous()}
-            className="size-8 items-center justify-center rounded-full">
+            className="cm-press size-8 items-center justify-center rounded-full">
             <Icon
               as={SkipBackIcon}
               size={16}
@@ -197,7 +199,7 @@ export function GlobalPlayerBar() {
             accessibilityRole="button"
             accessibilityLabel={playing ? t('일시정지') : restored ? t('이어 듣기') : t('재생')}
             onPress={() => comparePlayer.togglePlay()}
-            className="size-9 items-center justify-center rounded-full bg-foreground web:transition-transform web:duration-fast web:hover:scale-105 web:active:scale-95">
+            className="cm-press-solid size-9 items-center justify-center rounded-full bg-foreground">
             <Icon
               as={playing ? PauseIcon : PlayIcon}
               size={16}
@@ -210,7 +212,7 @@ export function GlobalPlayerBar() {
             disabled={!nav.hasNext}
             onPress={() => comparePlayer.next()}
             className={cn(
-              'size-8 items-center justify-center rounded-full',
+              'cm-press size-8 items-center justify-center rounded-full',
               !nav.hasNext && 'opacity-40'
             )}>
             <Icon
@@ -268,7 +270,7 @@ function FullscreenButton({ onGoToCompare }: { onGoToCompare: () => void }) {
       }}
       accessibilityRole="button"
       accessibilityLabel={onPage ? t('전체 화면 (F)') : t('전체 화면')}
-      className="size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2">
+      className="cm-press size-8 shrink-0 items-center justify-center rounded-full">
       <Icon as={MaximizeIcon} size={16} className="text-foreground-muted" />
     </Pressable>
   );
@@ -292,7 +294,7 @@ function MoreMenu({ track }: { track: ComparePlayerTrack }) {
             accessibilityRole="button"
             accessibilityLabel={t('menu::더 보기')}
             className={cn(
-              'size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',
+              'cm-press size-8 shrink-0 items-center justify-center rounded-full',
               open && 'bg-surface-2'
             )}
           />

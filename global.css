@@ -348,6 +348,55 @@
       opacity 180ms var(--ease-settle),
       transform 180ms var(--ease-settle);
   }
+  /* 다음 곡으로 넘어갈 때: 대기열 맨 윗줄이 접히며 사라지고 아래 줄들이 따라 올라온다 */
+  .cm-row-leave {
+    overflow: hidden;
+    pointer-events: none;
+    animation: cm-row-leave 320ms var(--ease-settle) both;
+  }
+  @keyframes cm-row-leave {
+    from {
+      max-height: 60px;
+      opacity: 1;
+    }
+    45% {
+      opacity: 0;
+    }
+    to {
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+  /* 재생 바 단추: 누르면 움츠러들고 떼면 살짝 넘쳤다 돌아온다 */
+  .cm-press {
+    transition:
+      transform 360ms var(--ease-pop),
+      background-color 200ms var(--ease-settle);
+  }
+  .cm-press:active {
+    transform: scale(0.82);
+    background-color: hsl(var(--surface-3));
+    transition-duration: 90ms;
+  }
+  .cm-press-solid {
+    transition: transform 360ms var(--ease-pop);
+  }
+  .cm-press-solid:active {
+    transform: scale(0.88);
+    transition-duration: 90ms;
+  }
+  @media (hover: hover) {
+    .cm-press:hover {
+      background-color: hsl(var(--surface-2));
+    }
+    .cm-press-solid:hover {
+      transform: scale(1.06);
+    }
+    .cm-press-solid:active {
+      transform: scale(0.88);
+    }
+  }
   .cm-fade {
     transition: opacity 240ms var(--ease-settle);
   }
@@ -396,6 +445,13 @@
     .cm-sheet-up,
     .cm-backdrop-in {
       animation: none;
+    }
+    .cm-row-leave {
+      display: none;
+    }
+    .cm-press,
+    .cm-press-solid {
+      transition: none;
     }
   }
 }

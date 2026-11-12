@@ -32,6 +32,14 @@ import { Platform, Pressable, ScrollView, View } from 'react-native';
 export function QueueButton() {
   useLocale();
   const active = useShell((state) => state.queueOpen);
+  // 곡을 대기열에 넣으면 단추가 한 번 통통 튄다(들어갔다는 표시)
+  const queued = useComparePlayer((state) => state.forward.length);
+  const seen = React.useRef(queued);
+  const [bump, setBump] = React.useState(0);
+  React.useEffect(() => {
+    if (queued > seen.current) setBump((value) => value + 1);
+    seen.current = queued;
+  }, [queued]);
   return (
     <Pressable
       onPress={() => shell.toggleQueue()}
@@ -39,14 +47,16 @@ export function QueueButton() {
       aria-expanded={active}
       accessibilityLabel={t('재생 대기열')}
       className={cn(
-        'cm-tint size-8 shrink-0 items-center justify-center rounded-full web:hover:bg-surface-2',
+        'cm-press size-8 shrink-0 items-center justify-center rounded-full',
         active && 'bg-primary-muted'
       )}>
-      <Icon
-        as={ListMusicIcon}
-        size={16}
-        className={active ? 'text-primary' : 'text-foreground-muted'}
-      />
+      <View key={bump} className={bump ? 'cm-pop' : undefined}>
+        <Icon
+          as={ListMusicIcon}
+          size={16}
+          className={active ? 'text-primary' : 'text-foreground-muted'}
+        />
+      </View>
     </Pressable>
   );
 }
@@ -61,7 +71,7 @@ export function ShuffleButton() {
       accessibilityRole="switch"
       aria-checked={on}
       accessibilityLabel={t('셔플')}
-      className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+      className="cm-press size-8 items-center justify-center rounded-full">
       <Icon as={ShuffleIcon} size={15} className={on ? 'text-primary' : 'text-foreground-muted'} />
     </Pressable>
   );
@@ -76,7 +86,7 @@ export function RepeatButton() {
       onPress={() => comparePlayer.cycleRepeat()}
       accessibilityRole="button"
       accessibilityLabel={repeatLabel(repeat)}
-      className="size-8 items-center justify-center rounded-full web:hover:bg-surface-2">
+      className="cm-press size-8 items-center justify-center rounded-full">
       <Icon
         as={repeat === 'one' ? Repeat1Icon : RepeatIcon}
         size={15}
@@ -105,6 +115,8 @@ function useCanHover(): boolean {
 
 /** 줄이 사라지는 애니메이션 길이(ms). 이만큼 기다렸다가 실제로 뺀다 */
 const LEAVE_MS = 180;
+/** 다음 곡으로 넘어갈 때 맨 윗줄이 접히는 길이(ms). global.css 의 cm-row-leave 와 같게 둔다 */
+const ROW_LEAVE_MS = 320;
 
 interface RowProps {
   title: string;
@@ -359,6 +371,51 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const repeatAll = repeat === 'all' && Boolean(playlist?.items.length);
   const sourceName = playlist?.name ?? t('재생 목록');
 
+  // 다음 곡으로 넘어가면 대기열 맨 윗줄이 지금 곡이 된다. 그 줄을 잠깐 남겨 접히게 해서 아래 줄들이 따라 올라오게 한다
+  const head: { pieceId: number; row: ReturnType<typeof trackRow> } | null = forward[0]
+    ? { pieceId: forward[0].track.pieceId, row: trackRow(forward[0].track) }
+    : remaining[0]
+      ? { pieceId: remaining[0].pieceId, row: itemRow(remaining[0]) }
+      : autoplay && !repeatAll && autoplayItems[0]
+        ? { pieceId: autoplayItems[0].pieceId, row: itemRow(autoplayItems[0]) }
+        : null;
+  const headRef = React.useRef(head);
+  const currentIdRef = React.useRef(current?.performanceId ?? null);
+  const [leaving, setLeaving] = React.useState<{
+    id: number;
+    row: ReturnType<typeof trackRow>;
+  } | null>(null);
+  React.useEffect(() => {
+    const previousHead = headRef.current;
+    const currentId = current?.performanceId ?? null;
+    const advanced =
+      current !== null &&
+      currentIdRef.current !== null &&
+      currentIdRef.current !== currentId &&
+      previousHead !== null &&
+      previousHead.pieceId === current.pieceId;
+    currentIdRef.current = currentId;
+    headRef.current = head;
+    if (!advanced || !previousHead) return;
+    setLeaving({ id: current.performanceId, row: previousHead.row });
+  });
+  React.useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => setLeaving(null), ROW_LEAVE_MS);
+    return () => clearTimeout(timer);
+  }, [leaving]);
+  const leavingRow = leaving ? (
+    <View key={`leave-${leaving.id}`} className="cm-row-leave" aria-hidden>
+      <Row {...leaving.row} />
+    </View>
+  ) : null;
+  // 접히는 줄은 보이는 첫 칸 맨 위에 둔다
+  const leavingAt: 'forward' | 'source' | 'autoplay' = forward.length
+    ? 'forward'
+    : remaining.length
+      ? 'source'
+      : 'autoplay';
+
   const tabs: { key: QueueTab; label: string }[] = [
     { key: 'queue', label: t('대기열') },
     { key: 'history', label: t('최근 재생') },
@@ -434,7 +491,9 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
           <>
             <Section title={t('지금 재생')}>
               {current ? (
-                <Row {...trackRow(current)} now playing={playing} />
+                <View key={current.performanceId} className="cm-row-in">
+                  <Row {...trackRow(current)} now playing={playing} />
+                </View>
               ) : (
                 <Note>{t('재생 중인 곡이 없어요.')}</Note>
               )}
@@ -442,6 +501,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
 
             {forward.length ? (
               <Section title={t('다음에 재생')} action={showSource ? undefined : clearAction}>
+                {leavingAt === 'forward' ? leavingRow : null}
                 {forward.map((entry, index) => (
                   <Row
                     key={`f-${entry.track.performanceId}-${index}`}
@@ -459,6 +519,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
                 title={shuffle ? t('이어서 재생 · 셔플') : t('이어서 재생')}
                 detail={playlist ? t('{name}에서', { name: sourceName }) : undefined}
                 action={remaining.length || forward.length ? clearAction : undefined}>
+                {leavingAt === 'source' ? leavingRow : null}
                 {remaining.length ? (
                   remaining.map((item, index) => (
                     <Row
@@ -478,6 +539,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               title={t('자동 재생')}
               detail={t('취향에 맞춘 비슷한 곡이 이어져요')}
               action={<AutoplaySwitch on={autoplay} />}>
+              {leavingAt === 'autoplay' ? leavingRow : null}
               {!autoplay ? (
                 <Note>{t('꺼져 있어요. 목록이 끝나면 멈춰요.')}</Note>
               ) : repeatAll ? (

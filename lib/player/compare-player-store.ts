@@ -1243,6 +1243,37 @@ export const comparePlayer = {
     );
   },
 
+  /**
+   * 곡을 대기열 「다음에 재생」 칸에 끼운다. 'next' 는 그 칸 맨 앞(지금 곡 바로 다음), 'last' 는 그 칸 맨 뒤다.
+   * 듣던 연주자가 그 곡에도 있으면 그 연주로 넣는다. 듣는 곡이 없으면 바로 튼다. 틀 연주가 없으면 false
+   */
+  async enqueue(item: PlaylistItem, where: 'next' | 'last'): Promise<boolean> {
+    let resolved: Awaited<ReturnType<typeof resolvePlaylistItem>> = null;
+    try {
+      resolved = await resolvePlaylistItem(item, state.current?.artistId);
+    } catch {
+      resolved = null;
+    }
+    if (!resolved) return false;
+    if (!state.current) {
+      navToken += 1;
+      const options: SelectOptions = { play: true, queue: resolved.queue, startAt: 0 };
+      selectTrack(resolved.track, options, userQueuePatch(resolved.track, options));
+      return true;
+    }
+    const entry: QueueEntry = {
+      track: resolved.track,
+      origin: 'insert',
+      sourceIndex: null,
+      meta: item.meta,
+    };
+    const { forward } = state;
+    setState({ forward: where === 'next' ? [entry, ...forward] : [...forward, entry] });
+    dirty = true;
+    flushSession();
+    return true;
+  },
+
   /** 대기열에서 한 줄을 뺀다 */
   removeFromQueue(section: 'forward' | 'source' | 'autoplay', index: number) {
     const { forward, playlist } = state;

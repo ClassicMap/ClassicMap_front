@@ -32,7 +32,8 @@ import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
+import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
 
 interface CompareCatalogProps {
   onOpenGenre: (genre: PieceGenre) => void;
@@ -443,6 +444,14 @@ function PieceRow({
       <Text variant="caption" className="w-14 text-right tabular-nums text-foreground-subtle">
         {t('구간 {count}', { count: piece.sectorCount })}
       </Text>
+      {Platform.OS === 'web' ? (
+        <QueueAddMenu
+          piece={piece}
+          title={piece.pieceTitle}
+          className="opacity-0 web:focus-visible:opacity-100 web:group-hover:opacity-100"
+          openClassName="opacity-100"
+        />
+      ) : null}
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />
     </Pressable>
   );
