@@ -1,10 +1,9 @@
-import { MiniVideoTarget } from '@/features/player/components/mini-video-target';
+import { PieceArt } from '@/features/piece/components/piece-art';
 import { compareHrefFor, useDesktopPlayerBarVisible } from '@/features/player/components/player-bar-helpers';
 import { QueueButton, RepeatButton, ShuffleButton } from '@/features/player/components/queue-panel';
 import { PerformerStepper, useSongNav } from '@/features/player/components/song-nav';
 import { VolumeControl } from '@/features/player/components/volume-control';
 import { ScrubBar } from '@/features/player/components/scrub-bar';
-import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Equalizer } from '@/features/player/components/equalizer';
 import { Icon } from '@/components/ui/icon';
@@ -31,11 +30,12 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Image, Linking, Pressable, View } from 'react-native';
+import { Linking, Pressable, View } from 'react-native';
 
 /**
  * 바 배치. 가운데 재생 조작이 늘 바 한가운데 오도록 왼쪽(지금 곡)과 오른쪽(연주자·같은 지점·소리·대기열)을 같은 폭으로 나눈다.
- * 오른쪽 칸에 들어가는 만큼만 보이고, 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 소리 막대 → 셔플·반복 → 영상 순서로 접는다
+ * 오른쪽 칸에 들어가는 만큼만 보이고, 좁아질수록 연주자 사진 수 → 「같은 지점」 글자 → 소리 막대 → 셔플·반복 → 표지 순서로 접는다.
+ * 왼쪽 그림은 어느 화면에서나 음반 표지다(`video.height` 가 그 한 변). 영상은 비교 화면 본문에서만 보인다
  */
 interface BarLayout {
   center: number;
@@ -129,8 +129,6 @@ export function GlobalPlayerBar() {
   const layout = layoutFor(barWidth);
   const video = layout.video;
   const visible = useDesktopPlayerBarVisible();
-  // 영상이 본문(비교 화면)에 떠 있으면 왼쪽 칸에는 같은 크기의 정지 그림을 둔다. 칸 크기가 같아 글자가 움직이지 않는다
-  const onPage = useComparePlayer((state) => state.surface === 'slot');
 
   if (!current || !visible) return null;
   const duration = progress.duration || current.durationSec;
@@ -148,11 +146,13 @@ export function GlobalPlayerBar() {
             onPress={goToCompare}
             accessibilityRole="link"
             accessibilityLabel={t('{title} 비교 화면으로', { title: current.pieceTitle })}>
-            {onPage ? (
-              <VideoStill track={current} width={video.width} height={video.height} />
-            ) : (
-              <MiniVideoTarget width={video.width} height={video.height} />
-            )}
+            <PieceArt
+              coverVideoId={current.videoId}
+              fallbackImage={current.artistImageUrl}
+              fallbackName={current.artistName}
+              size={video.height}
+              radius={6}
+            />
           </Pressable>
         ) : null}
         <Pressable
@@ -251,32 +251,6 @@ export function GlobalPlayerBar() {
         <QueueButton />
         <MoreMenu track={current} onGoToCompare={goToCompare} />
       </View>
-    </View>
-  );
-}
-
-/** 영상이 본문에 떠 있을 때 왼쪽 칸에 두는 정지 그림. 영상 그림이 없으면 연주자 사진 */
-function VideoStill({
-  track,
-  width,
-  height,
-}: {
-  track: ComparePlayerTrack;
-  width: number;
-  height: number;
-}) {
-  const uri = track.videoId
-    ? `https://i.ytimg.com/vi/${track.videoId}/mqdefault.jpg`
-    : track.artistImageUrl;
-  return (
-    <View className="overflow-hidden rounded-md bg-surface-3" style={{ width, height }}>
-      {uri ? (
-        <Image source={{ uri }} resizeMode="cover" style={{ width, height }} accessible={false} />
-      ) : (
-        <View className="flex-1 items-center justify-center">
-          <EntityThumb name={track.artistName} image={null} shape="circle" size={height - 12} />
-        </View>
-      )}
     </View>
   );
 }
