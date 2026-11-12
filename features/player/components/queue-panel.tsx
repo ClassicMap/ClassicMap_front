@@ -33,7 +33,9 @@ export function QueueButton() {
   useLocale();
   const active = useShell((state) => state.queueOpen);
   // 곡을 대기열에 넣으면 단추가 한 번 통통 튄다(들어갔다는 표시)
-  const queued = useComparePlayer((state) => state.forward.length);
+  const queued = useComparePlayer(
+    (state) => state.forward.length + state.autoplayItems.filter((item) => item.pinned).length
+  );
   const seen = React.useRef(queued);
   const [bump, setBump] = React.useState(0);
   React.useEffect(() => {
@@ -466,7 +468,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   // 자동 재생을 이어 붙이는 동안 남은 줄 아래에 채워질 만큼 빈 줄 모양을 깔아 둔다
   const fillingRows =
     autoplayStatus === 'loading' && autoplayItems.length > 0
-      ? Math.max(0, fitRows - autoplayItems.length)
+      ? Math.max(0, fitRows - autoplayItems.filter((item) => !item.pinned).length)
       : 0;
 
   const tabs: { key: QueueTab; label: string }[] = [
@@ -596,7 +598,9 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
               ) : autoplayItems.length ? (
                 <>
                   {autoplayItems.map((item, index) => (
-                    <View key={autoplayKeys[index]} {...entering(autoplayKeys[index], 'fill')}>
+                    <View
+                      key={autoplayKeys[index]}
+                      {...entering(autoplayKeys[index], item.pinned ? 'insert' : 'fill')}>
                       <Row
                         {...itemRow(item)}
                         onPress={() => comparePlayer.playFromQueue('autoplay', index)}

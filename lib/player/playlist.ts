@@ -66,7 +66,10 @@ export async function resolvePlaylistItem(
   if (!sector) return null;
   const performances = await queryClient.fetchQuery(sectorPerformancesQueryOptions(sector.id));
   const playable = (performances ?? []).filter(isPlayablePerformance);
-  const lead = pickLead(sector, playable, preferArtistId);
+  // 연주를 정해서 넣은 곡이면 그 연주로, 아니면 평소 규칙(같은 연주자 먼저 → 대표 연주)
+  const lead =
+    playable.find((performance) => performance.id === item.performanceId) ??
+    pickLead(sector, playable, preferArtistId);
   if (!lead) return null;
   return {
     track: trackFromPerformance(lead, imageOf(lead)),
