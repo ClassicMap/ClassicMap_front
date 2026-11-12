@@ -63,6 +63,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
+import { ShortcutHelp } from '@/features/compare/components/shortcut-help';
 import { type PrefetchTarget, usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { t, useLocale } from '@/lib/i18n';
 
@@ -483,6 +484,7 @@ export function ComparePieceView({
             <Icon as={theater ? LayoutGridIcon : RectangleHorizontalIcon} size={14} className="text-foreground" />
             <Text className="text-label text-foreground">{theater ? t('mode::모아 보기') : t('mode::크게 보기')}</Text>
           </Pressable>
+          <ShortcutHelp />
         </View>
 
         {activeSector ? (

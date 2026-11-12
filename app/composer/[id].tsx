@@ -58,6 +58,7 @@ import { formatNumber, t, useLocale } from '@/lib/i18n';
 import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
+import { queueActionSheet } from '@/features/player/lib/queue-actions';
 
 interface PerformerSummary {
   artistId: number;
@@ -531,6 +532,12 @@ function ComparableRow({
   return (
     <Pressable
       onPress={onPress}
+      // 터치 화면: 길게 누르면 대기열 동작 시트
+      onLongPress={
+        Platform.OS === 'web'
+          ? undefined
+          : () => queueActionSheet.open({ piece, title: piece.pieceTitle, subtitle: piece.composerName })
+      }
       accessibilityRole="link"
       accessibilityLabel={t('{title} 비교하기', { title: piece.pieceTitle })}
       className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
@@ -560,16 +567,10 @@ function ComparableRow({
           {t('구간 {count}', { count: piece.sectorCount })}
         </Text>
       ) : null}
-      {Platform.OS === 'web' ? (
-        <QueueAddMenu
-          piece={piece}
-          title={piece.pieceTitle}
-          className="opacity-0 web:focus-visible:opacity-100 web:group-hover:opacity-100"
-          openClassName="opacity-100"
-        />
-      ) : null}
+      <QueueAddMenu piece={piece} title={piece.pieceTitle} subtitle={piece.composerName} hoverOnly />
       <FavoriteButton kind="pieces" id={piece.pieceId} name={piece.pieceTitle} />
-      <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" />
+      {/* 좁으면 ⋯ 가 그 자리를 쓴다 */}
+      {wide ? <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" /> : null}
     </Pressable>
   );
 }

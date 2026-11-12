@@ -4,6 +4,7 @@ import { RouteProgress } from '@/components/layout/route-progress';
 import { AutoplayTasteFeed } from '@/features/player/components/autoplay-taste-feed';
 import { ComparePlayerHost } from '@/features/player/components/compare-player-host';
 import { MiniPlayerBar } from '@/features/player/components/mini-player-bar';
+import { QueueActionSheet } from '@/features/player/components/queue-action-sheet';
 import { AppShell } from '@/components/layout/app-shell';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { usePathname } from 'expo-router';
@@ -36,6 +37,8 @@ export function RootChrome({ children }: { children: React.ReactNode }) {
       {nav === 'tabs' ? <RouteProgress key="progress" placement="viewport" /> : null}
       <ComparePlayerHost key="host" />
       <AutoplayTasteFeed key="taste" />
+      {/* 좁은 화면(터치)의 대기열 동작 시트 */}
+      {nav === 'tabs' ? <QueueActionSheet key="queue-actions" /> : null}
     </>
   );
 }
