@@ -1,5 +1,6 @@
 import { PieceArt } from '@/features/piece/components/piece-art';
 import { compareHrefFor, useDesktopPlayerBarVisible } from '@/features/player/components/player-bar-helpers';
+import { setPlayerBarOutlet } from '@/features/player/lib/player-bar-outlet';
 import { QueueButton, RepeatButton, ShuffleButton } from '@/features/player/components/queue-panel';
 import { PerformerStepper, useSongNav } from '@/features/player/components/song-nav';
 import { VolumeControl } from '@/features/player/components/volume-control';
@@ -112,6 +113,7 @@ function layoutFor(width: number): BarLayout {
  * 데스크톱 셸 하단 플레이바. 듣는 곡이 있으면 어느 화면에서나 같은 자리·같은 모양으로 뜬다(비교 화면도 이 바를 쓴다).
  * 제목을 누르면 그 비교 화면으로 가 같은 자리에서 이어진다.
  * ⏮ ⏭는 재생 목록을 따라 곡을 넘기고, 연주자는 오른쪽 ‹ 연주자 n/m ›로 바꾼다.
+ * 1:1 비교 중에는 그 화면의 조작부(재생·A⇄B·구간 반복 진행바)가 이 바 안에 들어온다.
  */
 export function GlobalPlayerBar() {
   const { locale } = useLocale();
@@ -129,7 +131,18 @@ export function GlobalPlayerBar() {
   const layout = layoutFor(barWidth);
   const video = layout.video;
   const visible = useDesktopPlayerBarVisible();
+  const focus = useComparePlayer((state) => state.focus !== null);
 
+  // 1:1 비교 중에는 그 화면이 두 영상을 직접 튼다. 바는 같은 자리·같은 모양으로 남기고 안쪽만 그 화면에 빌려준다
+  if (focus) {
+    return (
+      <View
+        ref={setPlayerBarOutlet}
+        className="h-full bg-surface-1"
+        style={{ borderRadius: SHELL.radius }}
+      />
+    );
+  }
   if (!current || !visible) return null;
   const duration = progress.duration || current.durationSec;
   const shownSeconds = scrub !== null ? scrub * duration : progress.current;
