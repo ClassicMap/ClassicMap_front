@@ -104,17 +104,15 @@ export function SocialConnections() {
   );
 }
 
-const useWarmUpBrowser = Platform.select({
-  web: () => {},
-  default: () => {
-    React.useEffect(() => {
-      // Preloads the browser for Android devices to reduce authentication load time
-      // See: https://docs.expo.dev/guides/authentication/#improving-user-experience
-      void WebBrowser.warmUpAsync();
-      return () => {
-        // Cleanup: closes browser when component unmounts
-        void WebBrowser.coolDownAsync();
-      };
-    }, []);
-  },
-});
+function useWarmUpBrowser() {
+  React.useEffect(() => {
+    if (Platform.OS === 'web') return;
+    // Preloads the browser for Android devices to reduce authentication load time
+    // See: https://docs.expo.dev/guides/authentication/#improving-user-experience
+    void WebBrowser.warmUpAsync();
+    return () => {
+      // Cleanup: closes browser when component unmounts
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+}

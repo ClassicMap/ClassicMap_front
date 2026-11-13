@@ -227,7 +227,9 @@ export function LegacyCompareScreen() {
           {performance.characteristic && (
             <View className="border-l-4 border-primary/40 bg-muted/30 px-4 py-3">
               <Text className="text-sm italic leading-relaxed text-muted-foreground">
-                "{performance.characteristic}"
+                {'"'}
+                {performance.characteristic}
+                {'"'}
               </Text>
             </View>
           )}
