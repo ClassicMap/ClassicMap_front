@@ -258,19 +258,20 @@ AppShell (components/layout/app-shell.tsx)      영역에 무엇을 넣을지 �
 2. 셸(6절)
 3. ui 프리미티브(4절): Base UI 도입, popover·select 다시 쓰기, dialog·sheet·tooltip·slider 추가
 
-## 10. 프리미티브 현황 (2026-11-12)
+## 10. 프리미티브 현황 (2026-11-13)
 
 | 프리미티브 | 웹 | 앱 | 쓰는 곳 |
 |---|---|---|---|
 | `popover` | Base UI | @rn-primitives | 공연 필터, 사용자 메뉴 |
 | `tooltip` | Base UI | 트리거만 | 접힌 사이드바 이름표 |
 | `slider` | Base UI | 직접 그린 끌기 | 재생 위치·볼륨(`features/player/components/scrub-bar`) |
-| `dialog` | Base UI | RN Modal | 아직 없음 |
-| `sheet` | Base UI | RN Modal | 모바일 대기열 |
+| `dialog` | Base UI | RN Modal(막 서서히) | 빠른 검색, 예매처·앨범 상세(넓은 화면), 영화 장면 스틸, 공연 사진 크게 보기(`fullscreen`) |
+| `sheet` | Base UI | RN Modal(막 서서히 + 패널 밀려 들어옴) | 모바일 대기열·동작 시트, 예매처·앨범 상세(좁은 화면), 공연 필터, 관리자 입력 폼 |
 | `select` | Base UI | @rn-primitives | 아직 없음 |
 | `button` `input` `label` `text` `badge` `chip` `card` `avatar` `separator` `skeleton` `icon` `kbd` `empty-state` `expandable-text` `more-link` `scrim` | 한 파일 (`Platform.select`) | 같은 파일 | 전반 |
 
-아직 프리미티브로 옮기지 않은 것은 다음과 같습니다. 모양과 닫는 방식이 화면마다 달라 하나씩 옮기며 확인해야 합니다.
+RN `Modal` 을 직접 쓰는 곳은 dialog·sheet 의 앱 구현뿐입니다(2026-11-13 옮김).
 
-- RN `Modal` 을 직접 쓰는 화면 6곳: `features/concert/components/{ticket-vendors-modal,concert-filter-bar,image-lightbox}`, `features/admin/components/form-modal`, `features/film/components/screen-cue-card`, `features/album/components/album-detail-modal`
-- 빠른 검색(`features/search/components/command-palette`): `position: fixed` 와 window 키 입력으로 직접 구현
+- 넓은 화면은 가운데 상자, 좁은 화면은 아래 시트인 팝업은 같은 `Dialog` 안에서 `const Content = dialog ? DialogContent : SheetContent` 로 고릅니다.
+- react-native-web 의 `TextInput` 은 모든 keydown 전파를 끊습니다. 그래서 팝업 안 입력 칸에서 누른 Esc 는 `components/ui/dialog/escape.ts` 가 window 캡처 단계에서 받아 닫습니다. 화면에서 Esc 를 따로 듣지 않습니다.
+- 앱 시트의 여는 움직임은 Modal 의 `onShow` 뒤에 시작합니다. 먼저 시작하면 iOS 에서 Modal 이 뜨기 전에 움직임이 끝나 패널이 그냥 나타납니다.
