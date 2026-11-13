@@ -21,7 +21,12 @@ export function GenreMark({ genre, size = 20 }: { genre: PieceGenre | null; size
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       className="shrink-0 items-center justify-center overflow-hidden"
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), backgroundColor: color }}>
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.28),
+        backgroundColor: color,
+      }}>
       <IconComponent size={Math.round(size * 0.72)} color="#FFFFFF" />
     </View>
   );

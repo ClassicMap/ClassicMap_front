@@ -8,7 +8,8 @@ export default function ForgotPasswordScreen() {
   useLocale();
   const router = useRouter();
   return (
-    <AuthShell onClose={() => (router.canGoBack() ? router.back() : router.replace('/sign-in' as Href))}>
+    <AuthShell
+      onClose={() => (router.canGoBack() ? router.back() : router.replace('/sign-in' as Href))}>
       <ForgotPasswordForm />
     </AuthShell>
   );

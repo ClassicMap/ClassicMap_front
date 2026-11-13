@@ -1,5 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/features/auth/components/auth-shell';
+import {
+  AUTH_BUTTON_CLASS,
+  AUTH_INPUT_CLASS,
+  AuthHeading,
+  FieldError,
+} from '@/features/auth/components/auth-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
@@ -87,9 +92,12 @@ export function VerifyEmailForm() {
     <View>
       <AuthHeading
         title={t('이메일 인증')}
-        description={t('{email}로 보낸 인증 코드를 입력해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.', {
-          email: email || t('입력한 이메일'),
-        })}
+        description={t(
+          '{email}로 보낸 인증 코드를 입력해 주세요. 메일이 안 보이면 스팸함도 확인해 주세요.',
+          {
+            email: email || t('입력한 이메일'),
+          }
+        )}
       />
       <View className="gap-4">
         <View className="gap-1.5">

@@ -111,15 +111,12 @@ export async function updatePreferences(
 }
 
 // 즐겨찾기 아티스트 추가
-export async function addFavoriteArtist(
-  artistId: string,
-  artistName: string
-): Promise<void> {
+export async function addFavoriteArtist(artistId: string, artistName: string): Promise<void> {
   const stored = await AsyncStorage.getItem(KEYS.FAVORITE_ARTISTS);
   const favorites: FavoriteArtist[] = stored ? JSON.parse(stored) : [];
-  
+
   // 중복 체크
-  if (!favorites.find(f => f.artistId === artistId)) {
+  if (!favorites.find((f) => f.artistId === artistId)) {
     favorites.push({
       artistId,
       artistName,
@@ -140,7 +137,7 @@ export async function removeFavoriteArtist(artistId: string): Promise<void> {
   const stored = await AsyncStorage.getItem(KEYS.FAVORITE_ARTISTS);
   if (stored) {
     const favorites: FavoriteArtist[] = JSON.parse(stored);
-    const filtered = favorites.filter(f => f.artistId !== artistId);
+    const filtered = favorites.filter((f) => f.artistId !== artistId);
     await AsyncStorage.setItem(KEYS.FAVORITE_ARTISTS, JSON.stringify(filtered));
   }
 }
@@ -154,7 +151,7 @@ export async function addConcertReview(
 ): Promise<void> {
   const stored = await AsyncStorage.getItem(KEYS.CONCERT_REVIEWS);
   const reviews: ConcertReview[] = stored ? JSON.parse(stored) : [];
-  
+
   reviews.push({
     concertId,
     concertTitle,
@@ -162,7 +159,7 @@ export async function addConcertReview(
     content,
     createdAt: new Date(),
   });
-  
+
   await AsyncStorage.setItem(KEYS.CONCERT_REVIEWS, JSON.stringify(reviews));
 }
 

@@ -504,7 +504,11 @@ function PeopleStep({
           return (
             <View key={kind} className="mt-6">
               <Text variant="label" className="mb-2.5 text-foreground-muted">
-                {kind === 'artist' ? (searching ? t('연주자') : t('이런 연주자는 어때요')) : t('작곡가')}
+                {kind === 'artist'
+                  ? searching
+                    ? t('연주자')
+                    : t('이런 연주자는 어때요')
+                  : t('작곡가')}
               </Text>
               <View className="flex-row flex-wrap gap-2">
                 {group.map((person) => (

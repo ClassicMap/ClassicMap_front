@@ -228,7 +228,8 @@ export function PerformanceFormModal({
 
   const sectorLabel =
     !loadingSectors && sectorId
-      ? sectors.find((s) => s.id === sectorId)?.sectorName || t('선택됨 · ID {id}', { id: sectorId })
+      ? sectors.find((s) => s.id === sectorId)?.sectorName ||
+        t('선택됨 · ID {id}', { id: sectorId })
       : undefined;
 
   const artistLabel = artistId

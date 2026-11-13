@@ -1,5 +1,11 @@
 import { RepertoireList } from '@/features/library/components/repertoire-list';
-import { ProfileAvatar, RatingGrid, ratingStats, type RatingSortKey, StatTile } from '@/features/profile/components/profile-parts';
+import {
+  ProfileAvatar,
+  RatingGrid,
+  ratingStats,
+  type RatingSortKey,
+  StatTile,
+} from '@/features/profile/components/profile-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -60,7 +66,8 @@ export default function MyPageScreen() {
   const displayName = visibility?.displayName || user?.fullName || email || t('사용자');
   const avatarUrl = visibility?.avatarUrl || user?.imageUrl;
 
-  const refreshing = ratingsQuery.isRefetching || favoritesQuery.isRefetching || visibilityQuery.isRefetching;
+  const refreshing =
+    ratingsQuery.isRefetching || favoritesQuery.isRefetching || visibilityQuery.isRefetching;
   const refresh = () => {
     void ratingsQuery.refetch();
     void favoritesQuery.refetch();
@@ -80,13 +87,20 @@ export default function MyPageScreen() {
       },
     ]);
 
-  const openPublicProfile = authProfile?.id ? () => router.push(`/users/${authProfile.id}` as Href) : undefined;
+  const openPublicProfile = authProfile?.id
+    ? () => router.push(`/users/${authProfile.id}` as Href)
+    : undefined;
 
   const identity = (
     <View className={cn(wide ? 'gap-5' : 'flex-row items-center gap-4')}>
       <ProfileAvatar name={displayName} uri={avatarUrl} size={wide ? 112 : 64} />
       <View className={cn('min-w-0', !wide && 'flex-1')}>
-        <Text numberOfLines={1} className={cn('font-bold text-foreground', wide ? 'text-[28px] leading-9' : 'text-title-3')}>
+        <Text
+          numberOfLines={1}
+          className={cn(
+            'font-bold text-foreground',
+            wide ? 'text-[28px] leading-9' : 'text-title-3'
+          )}>
           {displayName}
         </Text>
         {email ? (
@@ -111,7 +125,11 @@ export default function MyPageScreen() {
         <StatTile value={String(stats.count)} label={t('평가한 공연')} />
       </View>
       <View className={wide ? 'w-[48%] grow' : 'flex-1'}>
-        <StatTile value={stats.count > 0 ? stats.average.toFixed(1) : '–'} label={t('평균 별점')} accent />
+        <StatTile
+          value={stats.count > 0 ? stats.average.toFixed(1) : '–'}
+          label={t('평균 별점')}
+          accent
+        />
       </View>
       <View className={wide ? 'w-[48%] grow' : 'flex-1'}>
         <StatTile value={String(favoriteCount)} label={t('레퍼토리')} />
@@ -137,8 +155,15 @@ export default function MyPageScreen() {
           onPress={() => setTab(item.key)}
           accessibilityRole="tab"
           accessibilityState={{ selected: tab === item.key }}
-          className={cn('-mb-px h-11 flex-row items-center gap-1.5 border-b-2', tab === item.key ? 'border-primary' : 'border-transparent')}>
-          <Text className={cn('text-body font-semibold', tab === item.key ? 'text-foreground' : 'text-foreground-muted')}>
+          className={cn(
+            '-mb-px h-11 flex-row items-center gap-1.5 border-b-2',
+            tab === item.key ? 'border-primary' : 'border-transparent'
+          )}>
+          <Text
+            className={cn(
+              'text-body font-semibold',
+              tab === item.key ? 'text-foreground' : 'text-foreground-muted'
+            )}>
             {item.label}
           </Text>
           <Text variant="caption" className="tabular-nums">
@@ -202,7 +227,10 @@ export default function MyPageScreen() {
         icon={BookmarkIcon}
         title={t('아직 레퍼토리가 비어 있어요')}
         description={t('작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
-        action={{ label: t('비교할 수 있는 작품 보기'), onPress: () => router.push('/compare' as Href) }}
+        action={{
+          label: t('비교할 수 있는 작품 보기'),
+          onPress: () => router.push('/compare' as Href),
+        }}
       />
     ) : (
       <View className="mt-5">
@@ -240,12 +268,20 @@ export default function MyPageScreen() {
             {wide ? (
               <View className="flex-row gap-2">
                 {openPublicProfile ? (
-                  <Button variant="outline" size="sm" className="rounded-full" onPress={openPublicProfile}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onPress={openPublicProfile}>
                     <Icon as={EyeIcon} size={14} className="text-foreground" />
                     <Text>{t('공개 프로필 보기')}</Text>
                   </Button>
                 ) : null}
-                <Button variant="outline" size="sm" className="rounded-full" onPress={() => router.push('/settings' as Href)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onPress={() => router.push('/settings' as Href)}>
                   <Icon as={SettingsIcon} size={14} className="text-foreground" />
                   <Text>{t('설정')}</Text>
                 </Button>
@@ -260,7 +296,12 @@ export default function MyPageScreen() {
             ) : null}
             {wide ? (
               <View className="-mx-2.5 border-t border-border pt-3">
-                <MenuRow icon={CircleHelpIcon} label={t('도움말')} onPress={() => router.push('/help' as Href)} chevron />
+                <MenuRow
+                  icon={CircleHelpIcon}
+                  label={t('도움말')}
+                  onPress={() => router.push('/help' as Href)}
+                  chevron
+                />
                 <MenuRow icon={LogOutIcon} label={t('로그아웃')} onPress={confirmSignOut} />
               </View>
             ) : null}

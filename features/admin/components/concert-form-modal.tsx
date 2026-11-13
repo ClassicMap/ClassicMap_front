@@ -144,7 +144,10 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
   const pickPoster = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('사진 접근 권한이 필요해요'), t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.'));
+      Alert.alert(
+        t('사진 접근 권한이 필요해요'),
+        t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.')
+      );
       return;
     }
 
@@ -401,7 +404,12 @@ export function ConcertFormModal({ visible, concert, onClose, onSuccess }: Conce
           onChangeText={setPriceInfo}
           placeholder={t('R석 100,000원')}
         />
-        <ChoiceField label={t('상태')} options={STATUS_OPTIONS} value={status} onChange={setStatus} />
+        <ChoiceField
+          label={t('상태')}
+          options={STATUS_OPTIONS}
+          value={status}
+          onChange={setStatus}
+        />
       </FormSection>
     </FormModal>
   );

@@ -87,7 +87,10 @@ export function SocialConnections() {
             onPress={onSocialLoginPress(strategy.type)}
             className="h-12 flex-row items-center justify-center gap-2.5 rounded-full border border-border-strong active:bg-surface-2 web:transition-colors web:duration-fast web:hover:bg-surface-2">
             <Image
-              className={cn('size-[18px]', strategy.useTint && Platform.select({ web: 'dark:invert' }))}
+              className={cn(
+                'size-[18px]',
+                strategy.useTint && Platform.select({ web: 'dark:invert' })
+              )}
               tintColor={Platform.select({
                 native: strategy.useTint ? (colorScheme === 'dark' ? 'white' : 'black') : undefined,
               })}

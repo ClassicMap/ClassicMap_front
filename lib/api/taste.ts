@@ -101,7 +101,12 @@ function parseRecommended(value: unknown): RecommendedPiece {
     names: {
       ...piece.names,
       ...(typeof value.sectorName === 'string' && value.sectorName !== ''
-        ? { sectorName: bilingual(value.sectorName, typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null) }
+        ? {
+            sectorName: bilingual(
+              value.sectorName,
+              typeof value.sectorNameEn === 'string' ? value.sectorNameEn : null
+            ),
+          }
         : {}),
     },
     sectorId:
@@ -114,7 +119,9 @@ function parseRecommended(value: unknown): RecommendedPiece {
         : null,
     // 영어판이면 서버가 같이 만든 영어 이유를 쓴다
     reasons:
-      getLocale() === 'en' && strings(value.reasonsEn).length > 0 ? strings(value.reasonsEn) : strings(value.reasons),
+      getLocale() === 'en' && strings(value.reasonsEn).length > 0
+        ? strings(value.reasonsEn)
+        : strings(value.reasons),
     reasonsByLocale: { ko: strings(value.reasons), en: strings(value.reasonsEn) },
   };
 }
@@ -194,7 +201,10 @@ export const TasteAPI = {
     if (!Array.isArray(payload)) throw new Error('온보딩 곡 응답 형식이 올바르지 않습니다.');
     return payload.filter(isRecord).map((item) => ({
       pieceId: Number(item.pieceId),
-      pieceTitle: pick(String(item.pieceTitle ?? ''), typeof item.pieceTitleEn === 'string' ? item.pieceTitleEn : null),
+      pieceTitle: pick(
+        String(item.pieceTitle ?? ''),
+        typeof item.pieceTitleEn === 'string' ? item.pieceTitleEn : null
+      ),
       composerId: Number(item.composerId),
       composerName: pick(
         String(item.composerName ?? ''),

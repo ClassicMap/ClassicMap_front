@@ -1,4 +1,7 @@
-import { type OnboardingResult, TasteOnboarding } from '@/features/onboarding/components/taste-onboarding';
+import {
+  type OnboardingResult,
+  TasteOnboarding,
+} from '@/features/onboarding/components/taste-onboarding';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MyPageAPI } from '@/lib/api/client';
 import { useTaste } from '@/hooks/use-taste';
@@ -67,7 +70,9 @@ export default function OnboardingScreen() {
           icon={AlertCircleIcon}
           tone="error"
           title={t('취향을 불러오지 못했어요')}
-          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 나중에 설정에서 골라 주세요.')}
+          description={t(
+            '연결이 잠시 끊겼을 수 있어요. 다시 시도하거나 나중에 설정에서 골라 주세요.'
+          )}
           action={{ label: t('다시 시도'), onPress: taste.retry }}
         />
       </View>

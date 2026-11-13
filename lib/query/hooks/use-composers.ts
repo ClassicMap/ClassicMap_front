@@ -1,4 +1,10 @@
-import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { ComposerAPI } from '@/lib/api/client';
 import { AdminComposerAPI } from '@/lib/api/admin';
 import type { Composer } from '@/types/models';
@@ -95,7 +101,12 @@ export function useBrowseComposers(period: string | undefined, query: string) {
     queryFn: ({ pageParam }) =>
       q
         ? ComposerAPI.search({ q, period, offset: pageParam, limit: BROWSE_PAGE_SIZE })
-        : ComposerAPI.getAll({ offset: pageParam, limit: BROWSE_PAGE_SIZE, period, sort: 'recommended' }),
+        : ComposerAPI.getAll({
+            offset: pageParam,
+            limit: BROWSE_PAGE_SIZE,
+            period,
+            sort: 'recommended',
+          }),
     getNextPageParam: (lastPage, pages) =>
       lastPage.length < BROWSE_PAGE_SIZE ? undefined : pages.length * BROWSE_PAGE_SIZE,
     initialPageParam: 0,
@@ -124,7 +135,10 @@ export function useComposer(id: number | undefined) {
  * 작품 썸네일에 쓸 작곡가 초상. 목록 응답에 초상이 있으면 그대로 쓰고,
  * 없으면 작곡가 상세(작곡가 화면과 같은 캐시)에서 가져온다.
  */
-export function useComposerAvatar(composerId: number | undefined, direct?: string | null): string | null {
+export function useComposerAvatar(
+  composerId: number | undefined,
+  direct?: string | null
+): string | null {
   const lookup = !direct && composerId !== undefined && composerId > 0;
   const { data } = useQuery({
     queryKey: COMPOSER_QUERY_KEYS.detail(composerId ?? 0),
@@ -132,7 +146,7 @@ export function useComposerAvatar(composerId: number | undefined, direct?: strin
     enabled: lookup,
     staleTime: 1000 * 60 * 30,
   });
-  return direct || (lookup ? data?.avatarUrl ?? null : null);
+  return direct || (lookup ? (data?.avatarUrl ?? null) : null);
 }
 
 /**
@@ -142,7 +156,8 @@ export function useCreateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof AdminComposerAPI.create>[0]) => AdminComposerAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminComposerAPI.create>[0]) =>
+      AdminComposerAPI.create(data),
     onSuccess: () => {
       // 작곡가 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.all });
@@ -157,8 +172,13 @@ export function useUpdateComposer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminComposerAPI.update>[1] }) =>
-      AdminComposerAPI.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Parameters<typeof AdminComposerAPI.update>[1];
+    }) => AdminComposerAPI.update(id, data),
     onSuccess: (_, { id }) => {
       // 해당 작곡가 및 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: COMPOSER_QUERY_KEYS.detail(id) });

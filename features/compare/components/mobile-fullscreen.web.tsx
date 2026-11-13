@@ -2,7 +2,11 @@ import { FullscreenOverlay } from '@/features/compare/components/fullscreen-over
 import type { MobileFullscreenProps } from '@/features/compare/components/mobile-fullscreen';
 import { Icon } from '@/components/ui/icon';
 import { t, useLocale } from '@/lib/i18n';
-import { comparePlayer, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
+import {
+  comparePlayer,
+  useComparePlayer,
+  usePlayerOverlay,
+} from '@/lib/player/compare-player-store';
 import { MaximizeIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -18,7 +22,14 @@ function isTouchScreen(): boolean {
  * (지금 연주 이름·연주자 칩·재생·위치·나가기)를 쓴다. 전체 화면에서 연주자를 바꿔도 같은 영상이라
  * 풀리지 않는다. 영상 기본 조작부의 전체 화면은 영상만 띄워 연주자를 못 바꾸므로 쓰지 않는다
  */
-export function MobileFullscreen({ performances, active, sectorName, activeId, imageOf, onPick }: MobileFullscreenProps) {
+export function MobileFullscreen({
+  performances,
+  active,
+  sectorName,
+  activeId,
+  imageOf,
+  onPick,
+}: MobileFullscreenProps) {
   useLocale();
   const overlay = usePlayerOverlay();
   const fullscreen = useComparePlayer((state) => state.fullscreen);

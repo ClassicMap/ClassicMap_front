@@ -18,7 +18,6 @@ export type SectionPlacement = {
   endLabel: string;
 };
 
-
 /**
  * 한 연주자의 구간들을 그 연주의 타임라인 위에 배치합니다.
  *

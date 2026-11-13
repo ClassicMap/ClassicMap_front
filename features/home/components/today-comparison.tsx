@@ -54,7 +54,13 @@ interface PerformerLine {
  * 홈 히어로: 같은 구간을 연주자별로 한 장에 보여 준다 (설계 문서 7.1).
  * 홈에서는 영상을 불러오지 않고 썸네일만 둔다. 누르면 비교 화면에서 바로 재생된다.
  */
-export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }: TodayComparisonProps) {
+export function TodayComparison({
+  piece,
+  wide,
+  onOpen,
+  sectorId,
+  reasons = [],
+}: TodayComparisonProps) {
   const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(piece.pieceId);
   const sector = React.useMemo(() => {
@@ -66,7 +72,9 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
   const [selected, setSelected] = React.useState(0);
 
   const lines = React.useMemo<PerformerLine[]>(() => {
-    const images = new Map(piece.performers.map((performer) => [performer.artistId, performer.imageUrl]));
+    const images = new Map(
+      piece.performers.map((performer) => [performer.artistId, performer.imageUrl])
+    );
     return (performancesQuery.data ?? [])
       .filter((performance) => performance.clipStatus === 'ready')
       .slice(0, MAX_PERFORMERS)
@@ -75,7 +83,7 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
         return {
           performance,
           name: credit?.artistName ?? t('연주자 정보 없음'),
-          image: credit ? credit.imageUrl ?? images.get(credit.artistId) ?? null : null,
+          image: credit ? (credit.imageUrl ?? images.get(credit.artistId) ?? null) : null,
           durationMs: clipDurationMs(performance),
         };
       });
@@ -125,7 +133,9 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
         </View>
       </Pressable>
       {/* 연주자 토글: 고르면 썸네일과 길이가 바뀐다. 토글 밖을 누르면 아래 여는 버튼이 받는다 */}
-      <View className="absolute bottom-3 left-3 flex-row items-center gap-1.5" style={{ pointerEvents: 'box-none' }}>
+      <View
+        className="absolute bottom-3 left-3 flex-row items-center gap-1.5"
+        style={{ pointerEvents: 'box-none' }}>
         {lines.map((line, index) => (
           <Pressable
             key={line.performance.id}
@@ -134,12 +144,18 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
             accessibilityRole="button"
             accessibilityState={{ selected: index === selected }}
             accessibilityLabel={t('{name} 연주 미리 보기', { name: line.name })}
-            className={cn('rounded-full border-2', index === selected ? 'border-primary' : 'border-transparent')}>
+            className={cn(
+              'rounded-full border-2',
+              index === selected ? 'border-primary' : 'border-transparent'
+            )}>
             <EntityThumb name={line.name} image={line.image} shape="circle" size={wide ? 34 : 30} />
           </Pressable>
         ))}
         {current ? (
-          <Text numberOfLines={1} className="ml-1.5 text-label font-semibold text-white" style={{ pointerEvents: 'none' }}>
+          <Text
+            numberOfLines={1}
+            className="ml-1.5 text-label font-semibold text-white"
+            style={{ pointerEvents: 'none' }}>
             {current.name}
           </Text>
         ) : null}
@@ -168,7 +184,8 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
             </Text>
           ) : null}
           <Text variant="caption" numberOfLines={1} className="mt-1">
-            {lines.map((line) => `${line.name} ${clipClock(line.durationMs)}`).join(' · ') || piece.composerName}
+            {lines.map((line) => `${line.name} ${clipClock(line.durationMs)}`).join(' · ') ||
+              piece.composerName}
           </Text>
         </Pressable>
       </View>
@@ -208,7 +225,10 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
               onHoverIn={() => setSelected(index)}
               accessibilityRole="button"
               accessibilityState={{ selected: index === selected }}
-              className={cn('flex-row items-center gap-3 rounded-md px-2 py-1.5', index === selected && 'bg-surface-3')}>
+              className={cn(
+                'flex-row items-center gap-3 rounded-md px-2 py-1.5',
+                index === selected && 'bg-surface-3'
+              )}>
               <EntityThumb name={line.name} image={line.image} shape="circle" size={28} />
               <Text
                 numberOfLines={1}
@@ -220,7 +240,10 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
               </Text>
               <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
                 <View
-                  className={cn('h-full rounded-full', index === selected ? 'bg-primary' : 'bg-foreground-subtle')}
+                  className={cn(
+                    'h-full rounded-full',
+                    index === selected ? 'bg-primary' : 'bg-foreground-subtle'
+                  )}
                   style={{ width: `${Math.max(6, (line.durationMs / longest) * 100)}%` }}
                 />
               </View>
@@ -236,7 +259,11 @@ export function TodayComparison({ piece, wide, onOpen, sectorId, reasons = [] }:
             onPress={open}
             accessibilityRole="button"
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-5 web:transition-opacity web:hover:opacity-90">
-            <Icon as={PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
+            <Icon
+              as={PlayIcon}
+              size={16}
+              className="fill-primary-foreground text-primary-foreground"
+            />
             <Text className="text-label font-bold text-primary-foreground">{t('비교 듣기')}</Text>
           </Pressable>
           <Text variant="caption">
@@ -261,7 +288,7 @@ function TodaySkeleton({ wide }: { wide: boolean }) {
   }
   return (
     <View className="flex-row gap-7 rounded-2xl border border-border p-5">
-      <SkeletonMedia className="aspect-video flex-[1.35] w-auto" />
+      <SkeletonMedia className="aspect-video w-auto flex-[1.35]" />
       <View className="flex-1 gap-3 py-1">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="h-7 w-4/5" />

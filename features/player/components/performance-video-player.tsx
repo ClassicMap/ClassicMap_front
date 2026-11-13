@@ -2,7 +2,11 @@ import { t, useLocale } from '@/lib/i18n';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import * as React from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
-import { type YoutubeClipHandle, YoutubeClipPlayer, YT_STATE } from '@/features/player/components/youtube-clip-player';
+import {
+  type YoutubeClipHandle,
+  YoutubeClipPlayer,
+  YT_STATE,
+} from '@/features/player/components/youtube-clip-player';
 
 interface PerformanceVideoPlayerProps {
   videoId?: string;
@@ -60,7 +64,12 @@ export function PerformanceVideoPlayer({
   if (Platform.OS !== 'web') {
     if (videoId && startTime !== undefined && endTime !== undefined) {
       return (
-        <NativeYoutubeClip videoId={videoId} startTime={startTime} endTime={endTime} performanceId={performanceId} />
+        <NativeYoutubeClip
+          videoId={videoId}
+          startTime={startTime}
+          endTime={endTime}
+          performanceId={performanceId}
+        />
       );
     }
 
@@ -76,9 +85,7 @@ export function PerformanceVideoPlayer({
   if (!clipUrl) {
     return (
       <View className="h-full items-center justify-center bg-black px-4">
-        <Text className="text-center text-sm text-white/80">
-          {t('재생할 영상 주소가 없어요.')}
-        </Text>
+        <Text className="text-center text-sm text-white/80">{t('재생할 영상 주소가 없어요.')}</Text>
       </View>
     );
   }
@@ -178,7 +185,10 @@ function WebClip({
           : undefined
       }
       onVolumeChange={
-        linked ? (event) => comparePlayer.syncVolume(event.currentTarget.volume, event.currentTarget.muted) : undefined
+        linked
+          ? (event) =>
+              comparePlayer.syncVolume(event.currentTarget.volume, event.currentTarget.muted)
+          : undefined
       }
     />
   );

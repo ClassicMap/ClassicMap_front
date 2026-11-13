@@ -6,7 +6,15 @@ import { useWindowDimensions, View } from 'react-native';
 import Animated, { measure, useAnimatedRef, useFrameCallback } from 'react-native-reanimated';
 
 /** 루트의 비교 영상이 미니 플레이어로 올 때 뜨는 작은 자리 (네이티브) */
-export function MiniVideoTarget({ width, height, className }: { width: number; height: number; className?: string }) {
+export function MiniVideoTarget({
+  width,
+  height,
+  className,
+}: {
+  width: number;
+  height: number;
+  className?: string;
+}) {
   useLocale();
   const ref = useAnimatedRef<View>();
   const { height: windowHeight } = useWindowDimensions();
@@ -17,8 +25,14 @@ export function MiniVideoTarget({ width, height, className }: { width: number; h
     const frame = measure(ref);
     if (!frame) return;
     const previous = surfaceRects.mini.value;
-    if (previous.x === frame.pageX && previous.y === frame.pageY && previous.width === frame.width) return;
-    surfaceRects.mini.value = { x: frame.pageX, y: frame.pageY, width: frame.width, height: frame.height };
+    if (previous.x === frame.pageX && previous.y === frame.pageY && previous.width === frame.width)
+      return;
+    surfaceRects.mini.value = {
+      x: frame.pageX,
+      y: frame.pageY,
+      width: frame.width,
+      height: frame.height,
+    };
   }, false);
 
   React.useEffect(() => {

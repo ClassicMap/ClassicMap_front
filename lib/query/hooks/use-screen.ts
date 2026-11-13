@@ -1,4 +1,10 @@
-import { type QueryClient, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type QueryClient,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import * as React from 'react';
 
 import { ScreenAPI } from '@/lib/api/screen';
@@ -10,7 +16,8 @@ const WORKS_PAGE_SIZE = 40;
 
 export const SCREEN_QUERY_KEYS = {
   titles: (kind: ScreenTitleKind | 'all') => ['screen-titles', kind] as const,
-  search: (q: string, kind: ScreenTitleKind | 'all') => ['screen-titles', 'search', q, kind] as const,
+  search: (q: string, kind: ScreenTitleKind | 'all') =>
+    ['screen-titles', 'search', q, kind] as const,
   title: (titleId: number) => ['screen-titles', 'detail', titleId] as const,
   pieceCues: (pieceId: number) => ['pieces', pieceId, 'screen-cues'] as const,
   featured: ['screen-cues', 'featured'] as const,
@@ -23,8 +30,13 @@ export function useScreenTitles(kind: ScreenTitleKind | 'all') {
   return useInfiniteQuery({
     queryKey: SCREEN_QUERY_KEYS.titles(kind),
     queryFn: ({ pageParam }) =>
-      ScreenAPI.getTitles({ kind: kind === 'all' ? undefined : kind, offset: pageParam, limit: PAGE_SIZE }),
-    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length * PAGE_SIZE : undefined),
+      ScreenAPI.getTitles({
+        kind: kind === 'all' ? undefined : kind,
+        offset: pageParam,
+        limit: PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length * PAGE_SIZE : undefined,
     initialPageParam: 0,
     staleTime: STALE_MS,
   });
@@ -36,8 +48,14 @@ export function useScreenTitleSearch(q: string, kind: ScreenTitleKind | 'all') {
   return useInfiniteQuery({
     queryKey: SCREEN_QUERY_KEYS.search(query, kind),
     queryFn: ({ pageParam }) =>
-      ScreenAPI.search({ q: query, kind: kind === 'all' ? undefined : kind, offset: pageParam, limit: PAGE_SIZE }),
-    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length * PAGE_SIZE : undefined),
+      ScreenAPI.search({
+        q: query,
+        kind: kind === 'all' ? undefined : kind,
+        offset: pageParam,
+        limit: PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length * PAGE_SIZE : undefined,
     initialPageParam: 0,
     enabled: query.length > 0,
     staleTime: 60_000,
@@ -76,7 +94,10 @@ function summariesIn(data: unknown): ScreenTitleSummary[] {
   return [];
 }
 
-function findCachedSummary(queryClient: QueryClient, titleId: number): ScreenTitleSummary | undefined {
+function findCachedSummary(
+  queryClient: QueryClient,
+  titleId: number
+): ScreenTitleSummary | undefined {
   for (const queryKey of [['screen-titles'], ['search', 'screen-titles']]) {
     for (const [, data] of queryClient.getQueriesData<unknown>({ queryKey })) {
       const found = summariesIn(data).find((item) => item.id === titleId);
@@ -87,7 +108,9 @@ function findCachedSummary(queryClient: QueryClient, titleId: number): ScreenTit
 }
 
 /** 목록에서 이미 받은 작품 요약. 상세를 받는 동안 머리 부분을 먼저 그린다 */
-export function useCachedScreenTitleSummary(titleId: number | undefined): ScreenTitleSummary | undefined {
+export function useCachedScreenTitleSummary(
+  titleId: number | undefined
+): ScreenTitleSummary | undefined {
   const queryClient = useQueryClient();
   return React.useMemo(
     () => (titleId && titleId > 0 ? findCachedSummary(queryClient, titleId) : undefined),
@@ -109,7 +132,8 @@ export function useScreenWorks(enabled: boolean) {
   return useInfiniteQuery({
     queryKey: SCREEN_QUERY_KEYS.works,
     queryFn: ({ pageParam }) => ScreenAPI.getWorks({ offset: pageParam, limit: WORKS_PAGE_SIZE }),
-    getNextPageParam: (lastPage, pages) => (lastPage.hasMore ? pages.length * WORKS_PAGE_SIZE : undefined),
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.hasMore ? pages.length * WORKS_PAGE_SIZE : undefined,
     initialPageParam: 0,
     enabled,
     staleTime: STALE_MS,

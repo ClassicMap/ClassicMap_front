@@ -46,7 +46,11 @@ function targetKey(target: PrefetchTarget): string {
 
 async function prefetchPiece(
   queryClient: QueryClient,
-  { pieceId, composerId, sectorId }: { pieceId: number; composerId?: number; sectorId?: number | null }
+  {
+    pieceId,
+    composerId,
+    sectorId,
+  }: { pieceId: number; composerId?: number; sectorId?: number | null }
 ): Promise<void> {
   if (pieceId <= 0) return;
   // 머리에 쓰는 작품 정보: 받아 둔 목록에 있으면 그대로 옮기고, 없으면 작곡가 카탈로그에서 찾는다
@@ -54,7 +58,8 @@ async function prefetchPiece(
     const options = comparisonPieceQueryOptions(pieceId, composerId);
     if (queryClient.getQueryData(options.queryKey) === undefined) {
       const cached = findCachedComparisonPiece(queryClient, pieceId);
-      if (cached) queryClient.setQueryData(options.queryKey, cached.piece, { updatedAt: cached.updatedAt });
+      if (cached)
+        queryClient.setQueryData(options.queryKey, cached.piece, { updatedAt: cached.updatedAt });
       else void queryClient.prefetchQuery(options);
     }
   }
@@ -73,7 +78,8 @@ export function prefetchTarget(queryClient: QueryClient, target: PrefetchTarget)
         await prefetchPiece(queryClient, target);
         return;
       case 'artist':
-        if (target.artistId > 0) await queryClient.prefetchQuery(artistQueryOptions(target.artistId));
+        if (target.artistId > 0)
+          await queryClient.prefetchQuery(artistQueryOptions(target.artistId));
         return;
       case 'composer':
         if (target.composerId <= 0) return;
@@ -116,7 +122,10 @@ function cancelHover(key?: string) {
  * 훅을 쓸 수 없는 곳(목록 map 안)에서 쓰는 미리 부르기 핸들러.
  * 데스크톱 웹은 호버(80ms 머문 뒤)·키보드 포커스에서, 터치는 누르기 시작할 때 부른다.
  */
-export function createPrefetchHandlers(queryClient: QueryClient, target: PrefetchTarget | null | undefined): PrefetchHandlers {
+export function createPrefetchHandlers(
+  queryClient: QueryClient,
+  target: PrefetchTarget | null | undefined
+): PrefetchHandlers {
   if (!target) return {};
   const key = targetKey(target);
   const fire = () => {

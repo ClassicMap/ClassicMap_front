@@ -35,14 +35,16 @@ export const LEGAL: Readonly<Record<string, string>> = {
   '3. 개인정보의 처리 및 보유기간': '3. Processing and retention period',
   '회사는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를 수집시에 동의받은 개인정보 보유·이용기간 내에서 개인정보를 처리·보유합니다.':
     'The Company processes and retains personal information within the retention and use period required by law, or the period to which the data subject consented when the information was collected.',
-  '가. 회원 가입 및 관리: 회원 탈퇴 시까지': 'A. Member registration and management: until the member withdraws',
+  '가. 회원 가입 및 관리: 회원 탈퇴 시까지':
+    'A. Member registration and management: until the member withdraws',
   '다만, 다음의 사유에 해당하는 경우에는 해당 사유 종료 시까지':
     'However, in the following cases, until the relevant circumstance ends',
   '- 관계 법령 위반에 따른 수사·조사 등이 진행 중인 경우에는 해당 수사·조사 종료 시까지':
     '- If an investigation or inquiry into a violation of applicable laws is under way: until that investigation or inquiry ends',
   '- 서비스 이용에 따른 채권·채무관계 잔존 시에는 해당 채권·채무관계 정산 시까지':
     '- If claims or debts arising from use of the service remain: until they are settled',
-  '나. 서비스 제공: 서비스 제공 완료 시까지': 'B. Providing the service: until the service is completed',
+  '나. 서비스 제공: 서비스 제공 완료 시까지':
+    'B. Providing the service: until the service is completed',
   '- 취향 답과 들은 기록: 회원 탈퇴 시 또는 이용자가 설정에서 지울 때까지. 추천에는 최근 180일 안의 들은 기록만 사용하고, 관심 없음은 지울 때까지 사용합니다.':
     '- Taste answers and listening history: until the member withdraws or the user deletes them in Settings. Recommendations use only listening history from the last 180 days, and "not interested" marks are used until you delete them.',
   '다. 관련 법령에 의한 정보보유': 'C. Retention required by law',
@@ -112,7 +114,7 @@ export const LEGAL: Readonly<Record<string, string>> = {
     "▶ Supreme Prosecutors' Office Cyber Crime Investigation Unit: 02-3480-3573 (www.spo.go.kr)",
   '▶ 경찰청 사이버안전국: 182 (cyberbureau.police.go.kr)':
     '▶ National Police Agency Cyber Bureau: 182 (cyberbureau.police.go.kr)',
-  '이용약관': 'Terms of Service',
+  이용약관: 'Terms of Service',
   '최종 업데이트: 2025년 1월': 'Last updated: January 2025',
   '제 1 조 (목적)': 'Article 1 (Purpose)',
   '본 약관은 ClassicMap(이하 "서비스")이 제공하는 클래식 음악 정보 서비스의 이용과 관련하여 회사와 이용자의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.':
@@ -173,7 +175,8 @@ export const LEGAL: Readonly<Record<string, string>> = {
     "2. The Company shall maintain a security system to protect users' personal information so that users can use the Service safely.",
   '제 10 조 (이용자의 의무)': 'Article 10 (Obligations of Users)',
   '이용자는 다음 행위를 하여서는 안 됩니다:': 'Users must not do any of the following:',
-  '1. 신청 또는 변경 시 허위 내용의 등록': '1. Registering false information when applying or making changes',
+  '1. 신청 또는 변경 시 허위 내용의 등록':
+    '1. Registering false information when applying or making changes',
   '2. 타인의 정보 도용': "2. Misusing another person's information",
   '3. 회사가 게시한 정보의 변경': '3. Altering information posted by the Company',
   '4. 회사가 정한 정보 이외의 정보(컴퓨터 프로그램 등) 등의 송신 또는 게시':

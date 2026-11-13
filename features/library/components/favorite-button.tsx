@@ -19,10 +19,18 @@ interface FavoriteButtonProps {
 }
 
 /** 레퍼토리 담기. 담기면 브라스로 채운다 (1차 시안 북마크) */
-export function FavoriteButton({ kind, id, name, variant = 'icon', className }: FavoriteButtonProps) {
+export function FavoriteButton({
+  kind,
+  id,
+  name,
+  variant = 'icon',
+  className,
+}: FavoriteButtonProps) {
   useLocale();
   const { active, toggle, pending } = useFavorite(kind, id);
-  const label = active ? t('{name} 레퍼토리에서 빼기', { name }) : t('{name} 레퍼토리에 담기', { name });
+  const label = active
+    ? t('{name} 레퍼토리에서 빼기', { name })
+    : t('{name} 레퍼토리에 담기', { name });
   // 눌러서 담긴 순간에만 아이콘이 톡 튄다 (처음 불러올 때 담겨 있던 건 가만히)
   const pressed = React.useRef(false);
   const [pop, setPop] = React.useState(false);
@@ -52,13 +60,20 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
         accessibilityLabel={label}
         className={cn(
           'h-11 flex-row items-center gap-2 rounded-full border px-4 web:transition-colors web:duration-fast',
-          active ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
+          active
+            ? 'border-primary bg-primary-muted'
+            : 'border-border-strong web:hover:bg-surface-2',
           className
         )}>
         <View className={pop && Platform.OS === 'web' ? 'cm-pop' : undefined}>
-          <Icon as={BookmarkIcon} size={16} className={active ? 'fill-primary text-primary' : 'text-foreground'} />
+          <Icon
+            as={BookmarkIcon}
+            size={16}
+            className={active ? 'fill-primary text-primary' : 'text-foreground'}
+          />
         </View>
-        <Text className={cn('text-label font-semibold', active ? 'text-primary' : 'text-foreground')}>
+        <Text
+          className={cn('text-label font-semibold', active ? 'text-primary' : 'text-foreground')}>
           {active ? t('레퍼토리에 있어요') : t('레퍼토리에 담기')}
         </Text>
       </Pressable>
@@ -78,7 +93,11 @@ export function FavoriteButton({ kind, id, name, variant = 'icon', className }: 
         className
       )}>
       <View className={pop && Platform.OS === 'web' ? 'cm-pop' : undefined}>
-        <Icon as={BookmarkIcon} size={17} className={active ? 'fill-primary text-primary' : 'text-foreground-subtle'} />
+        <Icon
+          as={BookmarkIcon}
+          size={17}
+          className={active ? 'fill-primary text-primary' : 'text-foreground-subtle'}
+        />
       </View>
     </Pressable>
   );

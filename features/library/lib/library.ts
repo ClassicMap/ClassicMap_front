@@ -113,7 +113,13 @@ export function buildLibraryEntries(favorites: FavoriteGroups): LibraryEntry[] {
 }
 
 /** 레퍼토리 묶음 순서: 사람(작곡가·연주자) 먼저, 그다음 작품·앨범·공연 */
-export const LIBRARY_KIND_ORDER: readonly LibraryKind[] = ['composer', 'artist', 'piece', 'album', 'concert'];
+export const LIBRARY_KIND_ORDER: readonly LibraryKind[] = [
+  'composer',
+  'artist',
+  'piece',
+  'album',
+  'concert',
+];
 
 export interface LibrarySection {
   kind: LibraryKind;
@@ -128,7 +134,10 @@ export interface LibrarySection {
  * 담은 순서 목록을 종류별 묶음으로 나눈다. 묶음 안에서는 받은 순서(최근에 담은 것 먼저)를 지킨다.
  * perSection 을 주면 묶음마다 그만큼만 남긴다. 빈 묶음은 뺀다.
  */
-export function groupLibraryEntries(entries: readonly LibraryEntry[], perSection?: number): LibrarySection[] {
+export function groupLibraryEntries(
+  entries: readonly LibraryEntry[],
+  perSection?: number
+): LibrarySection[] {
   return LIBRARY_KIND_ORDER.map((kind) => {
     const all = entries.filter((entry) => entry.kind === kind);
     return {

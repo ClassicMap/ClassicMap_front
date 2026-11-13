@@ -22,7 +22,8 @@ export default function SignUpScreen() {
   }, [isSignedIn, router]);
 
   return (
-    <AuthShell onClose={() => (router.canGoBack() ? router.back() : router.replace('/home' as Href))}>
+    <AuthShell
+      onClose={() => (router.canGoBack() ? router.back() : router.replace('/home' as Href))}>
       <SignUpForm />
     </AuthShell>
   );

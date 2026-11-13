@@ -1,4 +1,10 @@
-import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthDivider, AuthHeading, FieldError } from '@/features/auth/components/auth-shell';
+import {
+  AUTH_BUTTON_CLASS,
+  AUTH_INPUT_CLASS,
+  AuthDivider,
+  AuthHeading,
+  FieldError,
+} from '@/features/auth/components/auth-shell';
 import { SocialConnections } from '@/features/auth/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,10 +17,18 @@ import { Link, router } from 'expo-router';
 import * as React from 'react';
 import { Platform, TextInput, View } from 'react-native';
 
-type SignUpErrors = { firstName?: string; lastName?: string; email?: string; password?: string; form?: string };
+type SignUpErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  form?: string;
+};
 
 /** 입력칸에 붙일 수 없는 오류(보안 확인·네트워크 등)도 사용자가 다음에 할 일을 알 수 있게 한다 */
-const SIGN_UP_FALLBACK_ERROR = msg('가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.');
+const SIGN_UP_FALLBACK_ERROR = msg(
+  '가입을 마치지 못했어요. 잠시 뒤 다시 시도하거나 다른 브라우저에서 가입해 주세요.'
+);
 
 export function SignUpForm() {
   useLocale();
@@ -70,7 +84,9 @@ export function SignUpForm() {
           }
         });
 
-        setError(Object.keys(newErrors).length > 0 ? newErrors : { form: t(SIGN_UP_FALLBACK_ERROR) });
+        setError(
+          Object.keys(newErrors).length > 0 ? newErrors : { form: t(SIGN_UP_FALLBACK_ERROR) }
+        );
         return;
       }
 
@@ -83,7 +99,8 @@ export function SignUpForm() {
         }
 
         const translatedMessage = translateClerkError(message);
-        const isEmailMessage = lowerMessage.includes('identifier') || lowerMessage.includes('email');
+        const isEmailMessage =
+          lowerMessage.includes('identifier') || lowerMessage.includes('email');
         const isPasswordMessage = lowerMessage.includes('password');
         const isFirstNameMessage = lowerMessage.includes('first');
         const isLastNameMessage = lowerMessage.includes('last');
@@ -105,7 +122,6 @@ export function SignUpForm() {
     }
   }
 
-
   function onEmailSubmitEditing() {
     passwordInputRef.current?.focus();
   }
@@ -121,7 +137,10 @@ export function SignUpForm() {
 
   return (
     <View>
-      <AuthHeading title={t('회원가입')} description={t('레퍼토리와 별점을 남기려면 계정이 필요해요.')} />
+      <AuthHeading
+        title={t('회원가입')}
+        description={t('레퍼토리와 별점을 남기려면 계정이 필요해요.')}
+      />
       <SocialConnections />
       <AuthDivider label={t('또는 이메일로')} />
       <View className="gap-4">

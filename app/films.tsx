@@ -22,7 +22,13 @@ import {
 import type { FeaturedScreenCue, ScreenTitleKind, ScreenTitleSummary } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  ClapperboardIcon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -109,7 +115,10 @@ export default function FilmsScreen() {
           className="flex-1 text-base text-foreground web:outline-none"
         />
         {query ? (
-          <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => setQuery('')}>
+          <Pressable
+            accessibilityLabel={t('검색어 지우기')}
+            hitSlop={10}
+            onPress={() => setQuery('')}>
             <Icon as={XIcon} size={16} className="text-foreground-subtle" />
           </Pressable>
         ) : null}
@@ -123,9 +132,18 @@ export default function FilmsScreen() {
               {t('작곡가별로 영화에 나온 곡을 모았어요.')}
             </Text>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1" contentContainerClassName="gap-2">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="flex-1"
+              contentContainerClassName="gap-2">
               {KIND_CHIPS.map((chip) => (
-                <Chip key={chip.key} label={t(chip.label)} selected={kind === chip.key} onPress={() => setKind(chip.key)} />
+                <Chip
+                  key={chip.key}
+                  label={t(chip.label)}
+                  selected={kind === chip.key}
+                  onPress={() => setKind(chip.key)}
+                />
               ))}
             </ScrollView>
           )}
@@ -146,8 +164,16 @@ export default function FilmsScreen() {
           </View>
           <View className="flex-row gap-3 overflow-hidden">
             {Array.from({ length: 4 }, (_, index) => (
-              <View key={index} style={{ width: FEATURED_WIDTH }} className="flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
-                <Skeleton style={{ width: FEATURED_POSTER, height: Math.round(FEATURED_POSTER * POSTER_ASPECT) }} />
+              <View
+                key={index}
+                style={{ width: FEATURED_WIDTH }}
+                className="flex-row gap-3 rounded-lg bg-surface-2 p-2.5">
+                <Skeleton
+                  style={{
+                    width: FEATURED_POSTER,
+                    height: Math.round(FEATURED_POSTER * POSTER_ASPECT),
+                  }}
+                />
                 <View className="flex-1 justify-center gap-2">
                   <Skeleton className="h-3.5 w-4/5" />
                   <Skeleton className="h-3 w-3/5" />
@@ -184,7 +210,9 @@ export default function FilmsScreen() {
             <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
               {Array.from({ length: columns * 2 }, (_, index) => (
                 <View key={index} style={{ width: posterWidth }} className="gap-1.5">
-                  <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
+                  <Skeleton
+                    style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }}
+                  />
                   <Skeleton className="mt-0.5 h-3.5 w-4/5" />
                   <Skeleton className="h-3 w-1/2" />
                 </View>
@@ -206,8 +234,16 @@ export default function FilmsScreen() {
             <EmptyState
               icon={ClapperboardIcon}
               compact
-              title={searching ? t('“{query}”가 나온 작품을 아직 못 찾았어요', { query: debounced }) : t('아직 정리한 작품이 없어요')}
-              description={searching ? t('다른 제목이나 곡 이름으로 찾아보세요.') : t('근거를 확인한 작품부터 하나씩 채우고 있어요.')}
+              title={
+                searching
+                  ? t('“{query}”가 나온 작품을 아직 못 찾았어요', { query: debounced })
+                  : t('아직 정리한 작품이 없어요')
+              }
+              description={
+                searching
+                  ? t('다른 제목이나 곡 이름으로 찾아보세요.')
+                  : t('근거를 확인한 작품부터 하나씩 채우고 있어요.')
+              }
             />
           ) : (
             <View className="flex-row flex-wrap" style={{ columnGap: GRID_GAP, rowGap: 18 }}>
@@ -222,7 +258,9 @@ export default function FilmsScreen() {
               className="mt-6 h-11 self-center rounded-full px-6"
               disabled={paging.isFetchingNextPage}
               onPress={() => void paging.fetchNextPage()}>
-              <Text className="font-semibold text-foreground">{paging.isFetchingNextPage ? t('불러오는 중…') : t('작품 더 보기')}</Text>
+              <Text className="font-semibold text-foreground">
+                {paging.isFetchingNextPage ? t('불러오는 중…') : t('작품 더 보기')}
+              </Text>
             </Button>
           ) : null}
         </View>
@@ -235,7 +273,9 @@ export default function FilmsScreen() {
             <Text variant="micro">{t('포스터는 한국영상자료원 KMDb에서 가져와요.')}</Text>
           ) : null}
           <Text variant="micro">
-            {t('포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.')}
+            {t(
+              '포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.'
+            )}
           </Text>
           {items.some((item) => item.posterPath || item.backdropPath) ? <TmdbAttribution /> : null}
         </View>
@@ -244,10 +284,19 @@ export default function FilmsScreen() {
   );
 }
 
-function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: BrowseView) => void }) {
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: BrowseView;
+  onChange: (value: BrowseView) => void;
+}) {
   useLocale();
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel={t('찾는 방법')} className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={t('찾는 방법')}
+      className="h-9 flex-row rounded-full bg-surface-2 p-0.5">
       {VIEW_OPTIONS.map((option) => {
         const selected = option.value === value;
         return (
@@ -257,8 +306,15 @@ function ViewToggle({ value, onChange }: { value: BrowseView; onChange: (value: 
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             style={selected ? SELECTED_SHADOW : undefined}
-            className={cn('h-8 items-center justify-center rounded-full px-4', selected && 'bg-surface-1')}>
-            <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+            className={cn(
+              'h-8 items-center justify-center rounded-full px-4',
+              selected && 'bg-surface-1'
+            )}>
+            <Text
+              className={cn(
+                'text-label',
+                selected ? 'font-semibold text-foreground' : 'text-foreground-muted'
+              )}>
               {t(option.label)}
             </Text>
           </Pressable>
@@ -297,7 +353,8 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
         {item.titleKo}
       </Text>
       <Text variant="micro" numberOfLines={1}>
-        {shortTitleMeta(item.kind, item.releaseYear)} · {t('film::{count}곡', { count: item.cueCount })}
+        {shortTitleMeta(item.kind, item.releaseYear)} ·{' '}
+        {t('film::{count}곡', { count: item.cueCount })}
       </Text>
     </Pressable>
   );

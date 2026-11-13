@@ -43,7 +43,8 @@ export const SCREEN: Readonly<Record<string, string>> = {
   '작품 더 보기': 'Show more titles',
   '{title}, {meta}, 클래식 {count}곡':
     '{title}, {meta}, {count} classical piece|{title}, {meta}, {count} classical pieces',
-  '{title}에 나온 {composer} {work} 비교해 듣기': 'Compare performances of {composer} {work}, from {title}',
+  '{title}에 나온 {composer} {work} 비교해 듣기':
+    'Compare performances of {composer} {work}, from {title}',
   '포스터는 한국영상자료원 KMDb에서 가져와요.': 'Posters are from KMDb (Korean Film Archive).',
   '포스터가 없는 작품은 배급사·방송사·OTT 공식 YouTube 예고편과 클립의 장면을 보여 줘요.':
     'Titles without a poster show a frame from an official YouTube trailer or clip from the distributor, broadcaster, or streaming service.',
@@ -59,7 +60,8 @@ export const SCREEN: Readonly<Record<string, string>> = {
   '나온 클래식 {count}곡': '{count} classical piece|{count} classical pieces',
   '비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.':
     'Comparison performances may differ from the recording used on screen.',
-  '곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.': 'Some piece details are based on KMDb (Korean Film Archive).',
+  '곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.':
+    'Some piece details are based on KMDb (Korean Film Archive).',
   "장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.":
     "Scene images are frames from official videos that the rights holder uploaded to YouTube. Tap 'YouTube · channel' to open the video.",
   '포스터와 스틸은 TMDB에서 가져와요. 이 앱은 TMDB와 TMDB API를 쓰지만 TMDB의 보증·인증·승인을 받지는 않았어요.':

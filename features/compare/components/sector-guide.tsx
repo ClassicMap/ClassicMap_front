@@ -13,7 +13,9 @@ const COLLAPSE_MIN_LENGTH = 70;
 /** 구간 칩 뒤에 붙는 편곡 표. 해석 비교 구간과 섞이지 않게 한다 */
 export function SectorTypeBadge({ sector }: { sector: Pick<ComparisonSector, 'sectorType'> }) {
   useLocale();
-  return isArrangementSector(sector) ? <Badge tone="accent" label={t('편곡')} className="self-center" /> : null;
+  return isArrangementSector(sector) ? (
+    <Badge tone="accent" label={t('편곡')} className="self-center" />
+  ) : null;
 }
 
 interface SectorGuideProps {
@@ -38,7 +40,8 @@ export function SectorGuide({ sector, collapsible = false, footer, className }: 
   const description = sector.description;
   if (!description && !arrangement && !footer) return null;
 
-  const canCollapse = collapsible && description !== null && description.length > COLLAPSE_MIN_LENGTH;
+  const canCollapse =
+    collapsible && description !== null && description.length > COLLAPSE_MIN_LENGTH;
   const collapsed = canCollapse && !expanded;
 
   return (
@@ -66,7 +69,9 @@ export function SectorGuide({ sector, collapsible = false, footer, className }: 
           accessibilityState={{ expanded }}
           hitSlop={8}
           className="self-start">
-          <Text className="text-caption font-semibold text-primary">{expanded ? t('접기') : t('더 보기')}</Text>
+          <Text className="text-caption font-semibold text-primary">
+            {expanded ? t('접기') : t('더 보기')}
+          </Text>
         </Pressable>
       ) : null}
       {footer}

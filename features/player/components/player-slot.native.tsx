@@ -42,7 +42,12 @@ export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotP
     ) {
       return;
     }
-    surfaceRects.slot.value = { x: frame.pageX, y: frame.pageY, width: frame.width, height: frame.height };
+    surfaceRects.slot.value = {
+      x: frame.pageX,
+      y: frame.pageY,
+      width: frame.width,
+      height: frame.height,
+    };
   }, false);
 
   // 처음 배치되기 전에 재면 Reanimated가 경고를 낸다. 배치된 뒤부터 잰다

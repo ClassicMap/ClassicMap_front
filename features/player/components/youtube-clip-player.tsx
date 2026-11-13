@@ -89,93 +89,95 @@ function parseMessage(raw: string): PlayerMessage | null {
  * 명령은 스크립트 주입으로 보내고(라이브러리의 postMessage 명령은 iOS·안드로이드에서 전달되지 않았다),
  * 상태·위치는 페이지가 알려 준다. 준비 전에 받은 명령은 준비되면 한꺼번에 적용한다.
  */
-export const YoutubeClipPlayer = React.forwardRef<YoutubeClipHandle, YoutubeClipPlayerProps>(function YoutubeClipPlayer(
-  { videoId, start, end, height, onReady, onState, onTime, onError },
-  ref
-) {
-  useLocale();
-  const webView = React.useRef<WebView>(null);
-  const ready = React.useRef(false);
-  // 준비 전에 받은 명령. 준비되면 이 순서로 적용한다
-  const pending = React.useRef<{ sound?: string; seek?: string; play?: boolean }>({});
-  // 처음 만들 때만 정한다. 바꾸면 페이지를 새로 싣는다
-  const [html] = React.useState(() => playerHtml(videoId, start, end));
+export const YoutubeClipPlayer = React.forwardRef<YoutubeClipHandle, YoutubeClipPlayerProps>(
+  function YoutubeClipPlayer(
+    { videoId, start, end, height, onReady, onState, onTime, onError },
+    ref
+  ) {
+    useLocale();
+    const webView = React.useRef<WebView>(null);
+    const ready = React.useRef(false);
+    // 준비 전에 받은 명령. 준비되면 이 순서로 적용한다
+    const pending = React.useRef<{ sound?: string; seek?: string; play?: boolean }>({});
+    // 처음 만들 때만 정한다. 바꾸면 페이지를 새로 싣는다
+    const [html] = React.useState(() => playerHtml(videoId, start, end));
 
-  const run = React.useCallback((script: string) => {
-    webView.current?.injectJavaScript(`try { ${script} } catch (e) {} true;`);
-  }, []);
+    const run = React.useCallback((script: string) => {
+      webView.current?.injectJavaScript(`try { ${script} } catch (e) {} true;`);
+    }, []);
 
-  React.useImperativeHandle(
-    ref,
-    () => ({
-      play: () => {
-        if (ready.current) run('player.playVideo();');
-        else pending.current.play = true;
-      },
-      pause: () => {
-        if (ready.current) run('player.pauseVideo();');
-        else pending.current.play = false;
-      },
-      seekTo: (seconds: number) => {
-        const script = `player.seekTo(${Number(seconds.toFixed(2))}, true);`;
-        if (ready.current) run(script);
-        else pending.current.seek = script;
-      },
-      setVolume: (volume: number, muted: boolean) => {
-        const script = `player.setVolume(${Math.round(volume * 100)}); ${muted ? 'player.mute();' : 'player.unMute();'}`;
-        if (ready.current) run(script);
-        else pending.current.sound = script;
-      },
-    }),
-    [run]
-  );
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        play: () => {
+          if (ready.current) run('player.playVideo();');
+          else pending.current.play = true;
+        },
+        pause: () => {
+          if (ready.current) run('player.pauseVideo();');
+          else pending.current.play = false;
+        },
+        seekTo: (seconds: number) => {
+          const script = `player.seekTo(${Number(seconds.toFixed(2))}, true);`;
+          if (ready.current) run(script);
+          else pending.current.seek = script;
+        },
+        setVolume: (volume: number, muted: boolean) => {
+          const script = `player.setVolume(${Math.round(volume * 100)}); ${muted ? 'player.mute();' : 'player.unMute();'}`;
+          if (ready.current) run(script);
+          else pending.current.sound = script;
+        },
+      }),
+      [run]
+    );
 
-  const onMessage = (event: WebViewMessageEvent) => {
-    const message = parseMessage(event.nativeEvent.data);
-    if (!message) return;
-    if (message.type === 'ready') {
-      ready.current = true;
-      const { sound, seek, play } = pending.current;
-      pending.current = {};
-      if (sound) run(sound);
-      if (seek) run(seek);
-      if (play) run('player.playVideo();');
-      onReady?.();
-    } else if (message.type === 'state' && typeof message.state === 'number') {
-      onState?.(message.state);
-    } else if (message.type === 'time' && typeof message.time === 'number') {
-      onTime?.(message.time);
-    } else if (message.type === 'error' && typeof message.code === 'number') {
-      onError?.(message.code);
-    }
-  };
+    const onMessage = (event: WebViewMessageEvent) => {
+      const message = parseMessage(event.nativeEvent.data);
+      if (!message) return;
+      if (message.type === 'ready') {
+        ready.current = true;
+        const { sound, seek, play } = pending.current;
+        pending.current = {};
+        if (sound) run(sound);
+        if (seek) run(seek);
+        if (play) run('player.playVideo();');
+        onReady?.();
+      } else if (message.type === 'state' && typeof message.state === 'number') {
+        onState?.(message.state);
+      } else if (message.type === 'time' && typeof message.time === 'number') {
+        onTime?.(message.time);
+      } else if (message.type === 'error' && typeof message.code === 'number') {
+        onError?.(message.code);
+      }
+    };
 
-  // 영상 안의 링크(YouTube로 보기 등)는 앱 밖에서 연다
-  const onShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
-    if (request.isTopFrame === false) return true;
-    if (request.url.startsWith(EMBED_ORIGIN) || request.url.startsWith('about:')) return true;
-    void Linking.openURL(request.url).catch(() => undefined);
-    return false;
-  };
+    // 영상 안의 링크(YouTube로 보기 등)는 앱 밖에서 연다
+    const onShouldStartLoadWithRequest = (request: ShouldStartLoadRequest) => {
+      if (request.isTopFrame === false) return true;
+      if (request.url.startsWith(EMBED_ORIGIN) || request.url.startsWith('about:')) return true;
+      void Linking.openURL(request.url).catch(() => undefined);
+      return false;
+    };
 
-  return (
-    <View style={{ height, backgroundColor: '#000000' }}>
-      <WebView
-        ref={webView}
-        source={{ html, baseUrl: EMBED_ORIGIN }}
-        originWhitelist={['*']}
-        onMessage={onMessage}
-        onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-        allowsInlineMediaPlayback
-        mediaPlaybackRequiresUserAction={false}
-        allowsFullscreenVideo
-        javaScriptEnabled
-        bounces={false}
-        scrollEnabled={false}
-        androidLayerType="hardware"
-        userAgent={Platform.OS === 'android' ? ANDROID_DESKTOP_UA : undefined}
-        style={{ backgroundColor: '#000000' }}
-      />
-    </View>
-  );
-});
+    return (
+      <View style={{ height, backgroundColor: '#000000' }}>
+        <WebView
+          ref={webView}
+          source={{ html, baseUrl: EMBED_ORIGIN }}
+          originWhitelist={['*']}
+          onMessage={onMessage}
+          onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          allowsFullscreenVideo
+          javaScriptEnabled
+          bounces={false}
+          scrollEnabled={false}
+          androidLayerType="hardware"
+          userAgent={Platform.OS === 'android' ? ANDROID_DESKTOP_UA : undefined}
+          style={{ backgroundColor: '#000000' }}
+        />
+      </View>
+    );
+  }
+);

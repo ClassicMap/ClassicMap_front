@@ -35,14 +35,21 @@ function NativeSkeleton({ className, children, ...props }: React.ComponentProps<
 
   React.useEffect(() => {
     if (reduceMotion) return;
-    opacity.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
+    opacity.value = withRepeat(
+      withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
     return () => cancelAnimation(opacity);
   }, [opacity, reduceMotion]);
 
   const highlightStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
-    <View aria-hidden className={cn('overflow-hidden rounded-md bg-surface-2', className)} {...props}>
+    <View
+      aria-hidden
+      className={cn('overflow-hidden rounded-md bg-surface-2', className)}
+      {...props}>
       <Animated.View
         pointerEvents="none"
         style={[
@@ -114,11 +121,19 @@ function SkeletonList({
 }
 
 /** 포스터·커버가 위에 오는 카드 */
-function SkeletonCard({ aspect = 'square', className }: { aspect?: 'square' | 'poster'; className?: string }) {
+function SkeletonCard({
+  aspect = 'square',
+  className,
+}: {
+  aspect?: 'square' | 'poster';
+  className?: string;
+}) {
   useLocale();
   return (
     <View className={cn('gap-2', className)}>
-      <Skeleton className={cn('w-full rounded-lg', aspect === 'square' ? 'aspect-square' : 'aspect-[3/4]')} />
+      <Skeleton
+        className={cn('w-full rounded-lg', aspect === 'square' ? 'aspect-square' : 'aspect-[3/4]')}
+      />
       <Skeleton className="h-3.5 w-4/5" />
       <Skeleton className="h-3 w-1/2" />
     </View>
@@ -144,7 +159,10 @@ function SkeletonMedia({ performers = 3, className }: { performers?: number; cla
           {Array.from({ length: performers }, (_, index) => (
             <View
               key={index}
-              className={cn('size-8 rounded-full border-2 border-surface-2 bg-background/40', index > 0 && '-ml-2')}
+              className={cn(
+                'size-8 rounded-full border-2 border-surface-2 bg-background/40',
+                index > 0 && '-ml-2'
+              )}
             />
           ))}
         </View>

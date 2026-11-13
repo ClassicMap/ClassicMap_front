@@ -1,7 +1,16 @@
-import { ConcertCard, EraTile, PersonCard, PieceCard, RecentTile } from '@/features/home/components/cards';
+import {
+  ConcertCard,
+  EraTile,
+  PersonCard,
+  PieceCard,
+  RecentTile,
+} from '@/features/home/components/cards';
 import { TasteInviteCard } from '@/features/home/components/taste-invite-card';
 import { Grid, ScrollShelf, ShelfHeader, ShelfRow } from '@/components/shared/shelf';
-import { TodayComparison, type TodayComparisonTarget } from '@/features/home/components/today-comparison';
+import {
+  TodayComparison,
+  type TodayComparisonTarget,
+} from '@/features/home/components/today-comparison';
 import { useGenreShelves } from '@/features/compare/components/genre-browse';
 import { Chip } from '@/components/ui/chip';
 import { usePinnedToday } from '@/features/home/hooks/use-pinned-today';
@@ -123,7 +132,8 @@ export default function HomeScreen() {
 
   // 가입하고 처음 들어온 사람에게 취향 묻기를 한 번 연다. 닫거나 끝내면 다시 열지 않는다
   React.useEffect(() => {
-    if (!taste.ready || !taste.signedIn || taste.onboardingStatus !== null || onboardingOpened) return;
+    if (!taste.ready || !taste.signedIn || taste.onboardingStatus !== null || onboardingOpened)
+      return;
     onboardingOpened = true;
     router.push('/onboarding' as Href);
   }, [router, taste.onboardingStatus, taste.ready, taste.signedIn]);
@@ -139,7 +149,13 @@ export default function HomeScreen() {
   const reco = useHomeRecommendations();
   // 오늘의 비교는 하루 동안 고정한다. 작품을 보고 돌아올 때마다 추천이 다시 계산돼 곡이 바뀌었다
   // 추천을 바꾸는 답만 본다(로그인하면 answers 에 온보딩 상태·기록 설정까지 실려 와서 골라 담는다)
-  const { listeningLevel, sounds, instrument, favoritePeriods: periods, seedPieceIds } = taste.answers;
+  const {
+    listeningLevel,
+    sounds,
+    instrument,
+    favoritePeriods: periods,
+    seedPieceIds,
+  } = taste.answers;
   const todayContext = `${taste.signedIn ? 'user' : 'guest'}:${JSON.stringify([
     listeningLevel,
     sounds,
@@ -160,7 +176,9 @@ export default function HomeScreen() {
   const today = React.useMemo(() => {
     // 좋아하는 시대가 있으면 그 시대 작곡가의 작품 중에서 고른다
     const preferredIds = new Set(
-      composers.filter((composer) => favoritePeriods.includes(composer.period)).map((composer) => composer.id)
+      composers
+        .filter((composer) => favoritePeriods.includes(composer.period))
+        .map((composer) => composer.id)
     );
     const preferred = pieces.filter((piece) => preferredIds.has(piece.composerId));
     return pickDailyPiece(preferred.length > 0 ? preferred : pieces, new Date());
@@ -187,7 +205,9 @@ export default function HomeScreen() {
   const favoriteArtistIds = React.useMemo(
     () =>
       new Set(
-        taste.signedIn ? (favorites.data?.artists ?? []).map((item) => item.artistId) : taste.guest.favoriteArtistIds
+        taste.signedIn
+          ? (favorites.data?.artists ?? []).map((item) => item.artistId)
+          : taste.guest.favoriteArtistIds
       ),
     [favorites.data, taste.guest.favoriteArtistIds, taste.signedIn, locale]
   );
@@ -195,7 +215,9 @@ export default function HomeScreen() {
     const favoriteComposers = taste.signedIn
       ? (favorites.data?.composers ?? []).map((item) => item.composerId)
       : taste.guest.favoriteComposerIds;
-    const known = recoShelves.find((shelf) => shelf.key === 'known')?.items.map((item) => item.composerId) ?? [];
+    const known =
+      recoShelves.find((shelf) => shelf.key === 'known')?.items.map((item) => item.composerId) ??
+      [];
     return new Set([...favoriteComposers, ...known]);
   }, [favorites.data, recoShelves, taste.guest.favoriteComposerIds, taste.signedIn, locale]);
 
@@ -212,14 +234,21 @@ export default function HomeScreen() {
     .filter((label): label is string => Boolean(label))
     .map((label) => t(label))
     .join(' · ');
-  const concerts = React.useMemo(() => weekConcerts(concertsQuery.data?.pages[0] ?? []), [concertsQuery.data, locale]);
+  const concerts = React.useMemo(
+    () => weekConcerts(concertsQuery.data?.pages[0] ?? []),
+    [concertsQuery.data, locale]
+  );
   const eras = React.useMemo(
     () =>
-      PERIODS.filter((era) => (PREFERENCE_ERAS as readonly string[]).includes(era.name)).map((era) => ({
-        era,
-        // 시대 대표 초상: 추천 순에서 그 시대 첫 작곡가
-        portrait: composers.find((composer) => composer.period === era.name && composer.avatarUrl),
-      })),
+      PERIODS.filter((era) => (PREFERENCE_ERAS as readonly string[]).includes(era.name)).map(
+        (era) => ({
+          era,
+          // 시대 대표 초상: 추천 순에서 그 시대 첫 작곡가
+          portrait: composers.find(
+            (composer) => composer.period === era.name && composer.avatarUrl
+          ),
+        })
+      ),
     [composers, locale]
   );
 
@@ -238,7 +267,10 @@ export default function HomeScreen() {
   };
 
   const openPiece = (target: { composerId: number; pieceId: number; sectorId?: number | null }) => {
-    const params = new URLSearchParams({ composerId: String(target.composerId), pieceId: String(target.pieceId) });
+    const params = new URLSearchParams({
+      composerId: String(target.composerId),
+      pieceId: String(target.pieceId),
+    });
     if (target.sectorId) params.append('sectorId', String(target.sectorId));
     router.push(`/compare?${params.toString()}` as Href);
   };
@@ -254,14 +286,23 @@ export default function HomeScreen() {
           items: shelf.items.filter((item) => item.pieceId !== pieceId),
         })),
       };
-    queryClient.setQueriesData<HomeRecommendations>({ queryKey: TASTE_QUERY_KEYS.myRecommendations }, without);
-    queryClient.setQueriesData<HomeRecommendations>({ queryKey: TASTE_QUERY_KEYS.guestRecommendations }, without);
+    queryClient.setQueriesData<HomeRecommendations>(
+      { queryKey: TASTE_QUERY_KEYS.myRecommendations },
+      without
+    );
+    queryClient.setQueriesData<HomeRecommendations>(
+      { queryKey: TASTE_QUERY_KEYS.guestRecommendations },
+      without
+    );
     if (taste.signedIn) {
       TasteAPI.sendEvents([{ pieceId, kind: 'not_interested' }])
         .then(() => queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations }))
         .catch(() => {
           void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
-          Alert.alert(t('추천에서 빼지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.'));
+          Alert.alert(
+            t('추천에서 빼지 못했어요'),
+            t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.')
+          );
         });
     } else {
       void taste.updateGuest((current) => ({
@@ -279,32 +320,35 @@ export default function HomeScreen() {
     taste.ready && taste.onboardingStatus === null ? (
       <TasteInviteCard
         onStart={() => router.push('/onboarding' as Href)}
-        onDismiss={() => taste.save(taste.answers, { onboarding: 'skipped' }).catch(() => undefined)}
+        onDismiss={() =>
+          taste.save(taste.answers, { onboarding: 'skipped' }).catch(() => undefined)
+        }
       />
     ) : null;
 
-  const todaySection = catalog.isLoading || (reco.isLoading && !recoToday) || recoToday === undefined ? (
-    <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
-  ) : catalog.isError ? (
-    <View className="rounded-xl border border-border">
-      <EmptyState
-        compact
-        icon={AlertCircleIcon}
-        tone="error"
-        title={t('비교할 작품을 불러오지 못했어요')}
-        description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
-        action={{ label: t('다시 시도'), onPress: () => catalog.refetch() }}
+  const todaySection =
+    catalog.isLoading || (reco.isLoading && !recoToday) || recoToday === undefined ? (
+      <SkeletonMedia className={wide ? 'h-[300px]' : 'aspect-video'} />
+    ) : catalog.isError ? (
+      <View className="rounded-xl border border-border">
+        <EmptyState
+          compact
+          icon={AlertCircleIcon}
+          tone="error"
+          title={t('비교할 작품을 불러오지 못했어요')}
+          description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
+          action={{ label: t('다시 시도'), onPress: () => catalog.refetch() }}
+        />
+      </View>
+    ) : todayPiece ? (
+      <TodayComparison
+        piece={todayPiece}
+        wide={wide}
+        onOpen={openToday}
+        sectorId={recoToday?.sectorId}
+        reasons={recoToday?.reasons}
       />
-    </View>
-  ) : todayPiece ? (
-    <TodayComparison
-      piece={todayPiece}
-      wide={wide}
-      onOpen={openToday}
-      sectorId={recoToday?.sectorId}
-      reasons={recoToday?.reasons}
-    />
-  ) : null;
+    ) : null;
 
   const eraGrid = (
     <View className="flex-row flex-wrap" style={{ gap: 10 }}>
@@ -342,9 +386,7 @@ export default function HomeScreen() {
             gap={wide ? 12 : 8}
             rowGap={wide ? 12 : 8}
             keyOf={(item) => item.pieceId}
-            renderItem={(item) => (
-              <RecentTile item={item} onPress={() => openRecent(item)} />
-            )}
+            renderItem={(item) => <RecentTile item={item} onPress={() => openRecent(item)} />}
           />
         </View>
       ) : null}
@@ -354,7 +396,12 @@ export default function HomeScreen() {
         <View className="min-w-0 flex-[2]">{todaySection}</View>
         {wide ? (
           <View className="w-[320px]">
-            <ShelfHeader title={t('시대로 듣기')} wide onAction={() => router.push('/timeline' as Href)} actionLabel={t('타임라인')} />
+            <ShelfHeader
+              title={t('시대로 듣기')}
+              wide
+              onAction={() => router.push('/timeline' as Href)}
+              actionLabel={t('타임라인')}
+            />
             {eraGrid}
           </View>
         ) : null}
@@ -409,11 +456,17 @@ export default function HomeScreen() {
       <Section
         wide={wide}
         title={t('비교할 수 있는 작품')}
-        onAction={() => router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)}>
+        onAction={() =>
+          router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)
+        }>
         {/* 장르 칩: 이 줄만 그 장르로 걸러 본다 (스포티파이 홈 칩) */}
         {genreShelves.shelves.length > 0 ? (
           <ScrollShelf gap={8} className="mb-4">
-            <Chip label={t('전체')} selected={shelfGenre === null} onPress={() => setShelfGenre(null)} />
+            <Chip
+              label={t('전체')}
+              selected={shelfGenre === null}
+              onPress={() => setShelfGenre(null)}
+            />
             {genreShelves.shelves.map((shelf) => (
               <Chip
                 key={shelf.genre}
@@ -433,7 +486,13 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(piece) => piece.pieceId}
             renderItem={(piece, width) => (
-              <PieceCard piece={piece} width={width} list={shelfPieces} listName={catalogName} onPress={() => openPiece(piece)} />
+              <PieceCard
+                piece={piece}
+                width={width}
+                list={shelfPieces}
+                listName={catalogName}
+                onPress={() => openPiece(piece)}
+              />
             )}
           />
         ) : (
@@ -443,17 +502,29 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(piece) => piece.pieceId}
             renderItem={(piece, width) => (
-              <PieceCard piece={piece} width={width} list={shelfPieces.slice(0, 6)} listName={catalogName} onPress={() => openPiece(piece)} />
+              <PieceCard
+                piece={piece}
+                width={width}
+                list={shelfPieces.slice(0, 6)}
+                listName={catalogName}
+                onPress={() => openPiece(piece)}
+              />
             )}
           />
         )}
       </Section>
 
-      <Section wide={wide} title={t('연주자')} onAction={() => router.push('/artists?type=artist' as Href)}>
+      <Section
+        wide={wide}
+        title={t('연주자')}
+        onAction={() => router.push('/artists?type=artist' as Href)}>
         {artistsQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="circle" />
         ) : artistsQuery.isError ? (
-          <InlineError message={t('연주자를 불러오지 못했어요.')} onRetry={() => artistsQuery.refetch()} />
+          <InlineError
+            message={t('연주자를 불러오지 못했어요.')}
+            onRetry={() => artistsQuery.refetch()}
+          />
         ) : wide ? (
           <ShelfRow
             items={artists}
@@ -480,7 +551,7 @@ export default function HomeScreen() {
                   image={artist.imageUrl}
                   width={76}
                   onPress={() => router.push(`/artist/${artist.id}` as Href)}
-                prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
+                  prefetchTarget={{ kind: 'artist', artistId: Number(artist.id) }}
                 />
               </View>
             ))}
@@ -500,7 +571,10 @@ export default function HomeScreen() {
         {composersQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="circle" />
         ) : composersQuery.isError ? (
-          <InlineError message={t('작곡가를 불러오지 못했어요.')} onRetry={() => composersQuery.refetch()} />
+          <InlineError
+            message={t('작곡가를 불러오지 못했어요.')}
+            onRetry={() => composersQuery.refetch()}
+          />
         ) : wide ? (
           <ShelfRow
             items={featuredComposers}
@@ -527,7 +601,7 @@ export default function HomeScreen() {
                   image={composer.avatarUrl}
                   width={76}
                   onPress={() => router.push(`/composer/${composer.id}` as Href)}
-                prefetchTarget={{ kind: 'composer', composerId: composer.id }}
+                  prefetchTarget={{ kind: 'composer', composerId: composer.id }}
                 />
               </View>
             ))}
@@ -552,7 +626,10 @@ export default function HomeScreen() {
         {concertsQuery.isLoading ? (
           <CardSkeletonRow wide={wide} shape="poster" />
         ) : concertsQuery.isError ? (
-          <InlineError message={t('공연을 불러오지 못했어요.')} onRetry={() => concertsQuery.refetch()} />
+          <InlineError
+            message={t('공연을 불러오지 못했어요.')}
+            onRetry={() => concertsQuery.refetch()}
+          />
         ) : concerts.items.length === 0 ? (
           <Text variant="bodySm" className="text-foreground-muted">
             {t('예정된 공연이 없어요. 공연 탭에서 지역을 바꿔 보세요.')}
@@ -564,7 +641,11 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(concert) => concert.id}
             renderItem={(concert, width) => (
-              <ConcertCard concert={concert} width={width} onPress={() => router.push(`/concert/${concert.id}` as Href)} />
+              <ConcertCard
+                concert={concert}
+                width={width}
+                onPress={() => router.push(`/concert/${concert.id}` as Href)}
+              />
             )}
           />
         ) : (
@@ -574,7 +655,11 @@ export default function HomeScreen() {
             gap={gap}
             keyOf={(concert) => concert.id}
             renderItem={(concert, width) => (
-              <ConcertCard concert={concert} width={width} onPress={() => router.push(`/concert/${concert.id}` as Href)} />
+              <ConcertCard
+                concert={concert}
+                width={width}
+                onPress={() => router.push(`/concert/${concert.id}` as Href)}
+              />
             )}
           />
         )}
@@ -601,7 +686,13 @@ function Section({
   useLocale();
   return (
     <View className={wide ? 'mt-11' : 'mt-9'}>
-      <ShelfHeader title={title} meta={meta} actionLabel={actionLabel} onAction={onAction} wide={wide} />
+      <ShelfHeader
+        title={title}
+        meta={meta}
+        actionLabel={actionLabel}
+        onAction={onAction}
+        wide={wide}
+      />
       {children}
     </View>
   );
@@ -623,17 +714,29 @@ function InlineError({ message, onRetry }: { message: string; onRetry: () => voi
   );
 }
 
-function CardSkeletonRow({ wide, shape }: { wide: boolean; shape: 'square' | 'circle' | 'poster' }) {
+function CardSkeletonRow({
+  wide,
+  shape,
+}: {
+  wide: boolean;
+  shape: 'square' | 'circle' | 'poster';
+}) {
   useLocale();
   const count = wide ? 6 : shape === 'circle' ? 4 : 3;
   return (
     <View className="flex-row gap-4 overflow-hidden">
       {Array.from({ length: count }, (_, index) => (
-        <View key={index} className={cn('gap-2', wide ? 'flex-1' : shape === 'circle' ? 'w-[76px]' : 'flex-1')}>
+        <View
+          key={index}
+          className={cn('gap-2', wide ? 'flex-1' : shape === 'circle' ? 'w-[76px]' : 'flex-1')}>
           <Skeleton
             className={cn(
               'w-full',
-              shape === 'circle' ? 'aspect-square rounded-full' : shape === 'poster' ? 'aspect-[3/4] rounded-lg' : 'aspect-square rounded-lg'
+              shape === 'circle'
+                ? 'aspect-square rounded-full'
+                : shape === 'poster'
+                  ? 'aspect-[3/4] rounded-lg'
+                  : 'aspect-square rounded-lg'
             )}
           />
           <Skeleton className="h-3 w-4/5" />
@@ -643,4 +746,3 @@ function CardSkeletonRow({ wide, shape }: { wide: boolean; shape: 'square' | 'ci
     </View>
   );
 }
-

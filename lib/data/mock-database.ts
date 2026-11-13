@@ -2,13 +2,7 @@
 // Mock Database - database_schema.sql과 동일한 구조
 // ============================================
 
-import type { 
-  Composer, 
-  Piece, 
-  ComposerMajorPiece, 
-  Artist, 
-  Performance 
-} from '@/types/models';
+import type { Composer, Piece, ComposerMajorPiece, Artist, Performance } from '@/types/models';
 
 // ============================================
 // 1. 작곡가 (Composers)
@@ -124,7 +118,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 1,
     title: '골드베르크 변주곡',
-    description: '바흐의 건반 음악 중 최고봉으로 평가받는 작품입니다. 아리아 주제와 30개의 변주로 구성되어 있으며, 연주자의 해석에 따라 완전히 다른 곡이 됩니다.',
+    description:
+      '바흐의 건반 음악 중 최고봉으로 평가받는 작품입니다. 아리아 주제와 30개의 변주로 구성되어 있으며, 연주자의 해석에 따라 완전히 다른 곡이 됩니다.',
     opusNumber: 'BWV 988',
     compositionYear: 1741,
   },
@@ -152,7 +147,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 2,
     title: '피아노 협주곡 21번',
-    description: '모차르트의 협주곡 중 가장 서정적이고 아름다운 작품입니다. 2악장은 영화 "엘비라 마디간"에 사용되어 유명해졌습니다.',
+    description:
+      '모차르트의 협주곡 중 가장 서정적이고 아름다운 작품입니다. 2악장은 영화 "엘비라 마디간"에 사용되어 유명해졌습니다.',
     opusNumber: 'K. 467',
     compositionYear: 1785,
   },
@@ -161,7 +157,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 2,
     title: '레퀴엠',
-    description: '모차르트가 생전에 완성하지 못하고 세상을 떠난 작품입니다. 죽음에 대한 명상과 구원의 메시지가 담겨 있습니다.',
+    description:
+      '모차르트가 생전에 완성하지 못하고 세상을 떠난 작품입니다. 죽음에 대한 명상과 구원의 메시지가 담겨 있습니다.',
     opusNumber: 'K. 626',
     compositionYear: 1791,
   },
@@ -180,7 +177,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 3,
     title: '피아노 소나타 23번 "열정"',
-    description: '베토벤의 가장 극적이고 격렬한 소나타 중 하나입니다. 1악장의 강렬한 리듬과 3악장의 폭풍 같은 전개가 인상적입니다.',
+    description:
+      '베토벤의 가장 극적이고 격렬한 소나타 중 하나입니다. 1악장의 강렬한 리듬과 3악장의 폭풍 같은 전개가 인상적입니다.',
     opusNumber: 'Op. 57',
     compositionYear: 1806,
   },
@@ -189,7 +187,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 3,
     title: '피아노 소나타 14번 "월광"',
-    description: '베토벤이 사랑했던 여제자에게 헌정한 작품입니다. 1악장의 명상적인 분위기와 3악장의 격정적인 대비가 특징입니다.',
+    description:
+      '베토벤이 사랑했던 여제자에게 헌정한 작품입니다. 1악장의 명상적인 분위기와 3악장의 격정적인 대비가 특징입니다.',
     opusNumber: 'Op. 27 No. 2',
     compositionYear: 1801,
   },
@@ -198,7 +197,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 3,
     title: '교향곡 9번 "합창"',
-    description: '베토벤의 마지막 교향곡이자 인류 역사상 가장 위대한 작품 중 하나입니다. 4악장의 "환희의 송가"는 전 세계인이 사랑하는 선율입니다.',
+    description:
+      '베토벤의 마지막 교향곡이자 인류 역사상 가장 위대한 작품 중 하나입니다. 4악장의 "환희의 송가"는 전 세계인이 사랑하는 선율입니다.',
     opusNumber: 'Op. 125',
     compositionYear: 1824,
   },
@@ -226,7 +226,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 4,
     title: '영웅 폴로네즈',
-    description: '쇼팽의 폴로네즈 중 가장 웅장하고 화려한 곡으로, 폴란드의 영웅적 정신을 담았습니다.',
+    description:
+      '쇼팽의 폴로네즈 중 가장 웅장하고 화려한 곡으로, 폴란드의 영웅적 정신을 담았습니다.',
     opusNumber: 'Op. 53',
     compositionYear: 1842,
   },
@@ -291,7 +292,8 @@ export const MOCK_PIECES: Piece[] = [
     type: 'album',
     composerId: 6,
     title: '보칼리제',
-    description: '가사 없이 모음으로만 부르는 성악곡으로, 라흐마니노프 특유의 애절한 선율이 돋보입니다.',
+    description:
+      '가사 없이 모음으로만 부르는 성악곡으로, 라흐마니노프 특유의 애절한 선율이 돋보입니다.',
     opusNumber: 'Op. 34 No. 14',
     compositionYear: 1915,
   },
@@ -619,40 +621,39 @@ export const MOCK_PERFORMANCES: Performance[] = [
 // ============================================
 
 export function getComposerById(id: number): Composer | undefined {
-  return MOCK_COMPOSERS.find(c => c.id === id);
+  return MOCK_COMPOSERS.find((c) => c.id === id);
 }
 
 export function getPieceById(id: number): Piece | undefined {
-  return MOCK_PIECES.find(p => p.id === id);
+  return MOCK_PIECES.find((p) => p.id === id);
 }
 
 export function getArtistById(id: number): Artist | undefined {
-  return MOCK_ARTISTS.find(a => a.id === id);
+  return MOCK_ARTISTS.find((a) => a.id === id);
 }
 
 export function getPiecesByComposerId(composerId: number): Piece[] {
-  return MOCK_PIECES.filter(p => p.composerId === composerId);
+  return MOCK_PIECES.filter((p) => p.composerId === composerId);
 }
 
 export function getMajorPiecesByComposerId(composerId: number): Piece[] {
-  const majorPieceIds = MOCK_COMPOSER_MAJOR_PIECES
-    .filter(cmp => cmp.composerId === composerId)
+  const majorPieceIds = MOCK_COMPOSER_MAJOR_PIECES.filter((cmp) => cmp.composerId === composerId)
     .sort((a, b) => a.displayOrder - b.displayOrder)
-    .map(cmp => cmp.pieceId);
-  
+    .map((cmp) => cmp.pieceId);
+
   return majorPieceIds
-    .map(id => MOCK_PIECES.find(p => p.id === id))
+    .map((id) => MOCK_PIECES.find((p) => p.id === id))
     .filter((p): p is Piece => p !== undefined);
 }
 
 export function getPerformancesByPieceId(pieceId: number): Performance[] {
-  return MOCK_PERFORMANCES.filter(p => p.pieceId === pieceId);
+  return MOCK_PERFORMANCES.filter((p) => p.pieceId === pieceId);
 }
 
 export function getPerformancesByArtistId(artistId: number): Performance[] {
-  return MOCK_PERFORMANCES.filter(p => p.artistId === artistId);
+  return MOCK_PERFORMANCES.filter((p) => p.artistId === artistId);
 }
 
 export function getComposersByPeriod(period: string): Composer[] {
-  return MOCK_COMPOSERS.filter(c => c.period === period);
+  return MOCK_COMPOSERS.filter((c) => c.period === period);
 }

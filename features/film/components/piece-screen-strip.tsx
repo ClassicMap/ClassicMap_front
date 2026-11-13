@@ -60,7 +60,9 @@ export function PieceScreenStrip({
           accessibilityLabel={t('영화 속 클래식 모두 보기')}
           hitSlop={8}
           className="flex-row items-center gap-0.5 rounded-full px-2 py-1 active:bg-surface-2 web:hover:bg-surface-2">
-          <Text className="text-label font-semibold text-foreground-muted">{t('strip::모두 보기')}</Text>
+          <Text className="text-label font-semibold text-foreground-muted">
+            {t('strip::모두 보기')}
+          </Text>
           <Icon as={ChevronRightIcon} size={14} className="text-foreground-muted" />
         </Pressable>
       </View>
@@ -72,7 +74,11 @@ export function PieceScreenStrip({
             onPressIn={() => prefetch(cue.titleId)}
             onPress={() => router.push(`/film/${cue.titleId}` as Href)}
             accessibilityRole="link"
-            accessibilityLabel={[cue.titleKo, t(SCREEN_KIND_LABELS[cue.kind]), sameSector ? t('지금 구간이 나와요') : null]
+            accessibilityLabel={[
+              cue.titleKo,
+              t(SCREEN_KIND_LABELS[cue.kind]),
+              sameSector ? t('지금 구간이 나와요') : null,
+            ]
               .filter(Boolean)
               .join(', ')}
             style={{ width: cardWidth }}
@@ -88,7 +94,9 @@ export function PieceScreenStrip({
               />
               {sameSector ? (
                 <View className="absolute bottom-2 left-2 rounded-full bg-primary px-2.5 py-0.5">
-                  <Text className="text-[11px] font-bold text-primary-foreground">{t('이 구간')}</Text>
+                  <Text className="text-[11px] font-bold text-primary-foreground">
+                    {t('이 구간')}
+                  </Text>
                 </View>
               ) : null}
             </View>

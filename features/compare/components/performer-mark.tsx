@@ -28,7 +28,7 @@ export function performerOf(
   const credit = primaryCredit(performance);
   return {
     name: credit?.artistName ?? t('연주자 정보 없음'),
-    image: imageOf ? imageOf(performance) : credit?.imageUrl ?? null,
+    image: imageOf ? imageOf(performance) : (credit?.imageUrl ?? null),
   };
 }
 

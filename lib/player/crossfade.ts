@@ -14,7 +14,7 @@ const MANUAL_FADE_SEC = 0.6;
 export type SwitchCause = 'manual' | 'auto';
 
 export function fadeSeconds(cause: SwitchCause, autoInterval: number): number {
-  return cause === 'auto' ? AUTO_FADE_SEC[autoInterval] ?? MANUAL_FADE_SEC : MANUAL_FADE_SEC;
+  return cause === 'auto' ? (AUTO_FADE_SEC[autoInterval] ?? MANUAL_FADE_SEC) : MANUAL_FADE_SEC;
 }
 
 let volumeWritable: boolean | null = null;
@@ -37,7 +37,10 @@ const gains = new WeakMap<HTMLMediaElement, GainNode>();
 
 function sameOrigin(element: HTMLMediaElement): boolean {
   try {
-    return new URL(element.currentSrc || element.src, window.location.href).origin === window.location.origin;
+    return (
+      new URL(element.currentSrc || element.src, window.location.href).origin ===
+      window.location.origin
+    );
   } catch {
     return false;
   }
@@ -47,7 +50,9 @@ function sameOrigin(element: HTMLMediaElement): boolean {
 function gainFor(element: HTMLMediaElement): GainNode | null {
   const existing = gains.get(element);
   if (existing) return existing;
-  const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const Context =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Context) return null;
   context ??= new Context();
   const source = context.createMediaElementSource(element);

@@ -269,8 +269,6 @@ interface APIVenue {
   capacity?: number;
 }
 
-
-
 // Performance API 타입
 interface APIPerformance {
   id: number;
@@ -419,12 +417,17 @@ function mapBanner(banner: APIArtist['banner']): ArtistBanner | null {
   const credit = mapImageCredit(banner);
   if (!url || !/^https?:\/\//.test(url) || !credit) return null;
   const focal = banner?.focalPoint?.trim();
-  return { url, focalPoint: focal && /^\d{1,3}% \d{1,3}%$/.test(focal) ? focal : undefined, credit };
+  return {
+    url,
+    focalPoint: focal && /^\d{1,3}% \d{1,3}%$/.test(focal) ? focal : undefined,
+    credit,
+  };
 }
 
 /** 출처 주소가 없으면 밝힐 것이 없으므로 버린다. 빈 문자열은 없는 값으로 본다 */
 function mapImageCredit(credit: APIArtist['imageCredit']): ImageCredit | null {
-  const text = (value: string | null | undefined) => (value && value.trim() ? value.trim() : undefined);
+  const text = (value: string | null | undefined) =>
+    value && value.trim() ? value.trim() : undefined;
   const sourceUrl = text(credit?.sourceUrl);
   if (!credit || !sourceUrl || !/^https?:\/\//.test(sourceUrl)) return null;
   return {
@@ -692,11 +695,19 @@ function localizeFavoriteArtist(item: FavoriteArtistItem): FavoriteArtistItem {
 }
 
 function localizeFavoriteComposer(item: FavoriteComposerItem): FavoriteComposerItem {
-  return { ...item, name: pick(item.name, item.englishName), fullName: pick(item.fullName, item.englishName) };
+  return {
+    ...item,
+    name: pick(item.name, item.englishName),
+    fullName: pick(item.fullName, item.englishName),
+  };
 }
 
 function localizeFavoritePiece(item: FavoritePieceItem): FavoritePieceItem {
-  return { ...item, title: pick(item.title, item.titleEn), composerName: pick(item.composerName, item.composerNameEn) };
+  return {
+    ...item,
+    title: pick(item.title, item.titleEn),
+    composerName: pick(item.composerName, item.composerNameEn),
+  };
 }
 
 function localizeFavoriteGroups(groups: FavoriteGroups): FavoriteGroups {
@@ -740,7 +751,9 @@ export const MyPageAPI = {
   },
 
   async getFavoriteArtists(): Promise<FavoriteArtistItem[]> {
-    return (await requestJson<FavoriteArtistItem[]>('/me/favorites/artists')).map(localizeFavoriteArtist);
+    return (await requestJson<FavoriteArtistItem[]>('/me/favorites/artists')).map(
+      localizeFavoriteArtist
+    );
   },
 
   async addFavoriteArtist(artistId: number): Promise<void> {
@@ -755,7 +768,9 @@ export const MyPageAPI = {
   },
 
   async getFavoriteComposers(): Promise<FavoriteComposerItem[]> {
-    return (await requestJson<FavoriteComposerItem[]>('/me/favorites/composers')).map(localizeFavoriteComposer);
+    return (await requestJson<FavoriteComposerItem[]>('/me/favorites/composers')).map(
+      localizeFavoriteComposer
+    );
   },
 
   async addFavoriteComposer(composerId: number): Promise<void> {
@@ -770,7 +785,9 @@ export const MyPageAPI = {
   },
 
   async getFavoritePieces(): Promise<FavoritePieceItem[]> {
-    return (await requestJson<FavoritePieceItem[]>('/me/favorites/pieces')).map(localizeFavoritePiece);
+    return (await requestJson<FavoritePieceItem[]>('/me/favorites/pieces')).map(
+      localizeFavoritePiece
+    );
   },
 
   async addFavoritePiece(pieceId: number): Promise<void> {
@@ -823,8 +840,12 @@ export const MyPageAPI = {
   },
 
   async getPublicProfile(userId: number): Promise<PublicProfileResponse | null> {
-    const profile = await requestJson<PublicProfileResponse | null>(`/users/${userId}/public-profile`);
-    return profile?.favorites ? { ...profile, favorites: localizeFavoriteGroups(profile.favorites) } : profile;
+    const profile = await requestJson<PublicProfileResponse | null>(
+      `/users/${userId}/public-profile`
+    );
+    return profile?.favorites
+      ? { ...profile, favorites: localizeFavoriteGroups(profile.favorites) }
+      : profile;
   },
 };
 
@@ -1011,7 +1032,11 @@ export const PieceAPI = {
   /**
    * 작품 이름 검색. 제목 일치 > 접두사 > 포함·별칭 > 작품번호 > 작곡가 이름 순으로 온다.
    */
-  async search(params: { q: string; offset?: number; limit?: number }): Promise<PieceSearchResult[]> {
+  async search(params: {
+    q: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<PieceSearchResult[]> {
     if (USE_REAL_API) {
       const queryParams = new URLSearchParams({ q: params.q });
       if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
@@ -1040,9 +1065,13 @@ export const PieceAPI = {
     params: { offset: number; limit: number } & ComposerPieceFilter
   ): Promise<ComposerPiece[]> {
     if (USE_REAL_API) {
-      const query = new URLSearchParams({ offset: String(params.offset), limit: String(params.limit) });
+      const query = new URLSearchParams({
+        offset: String(params.offset),
+        limit: String(params.limit),
+      });
       // '기타'(장르 없음)는 'unclassified' 로 묻는다. 옛 앱이 쓰는 'other' 는 서버가 사운드트랙까지 묶어 준다.
-      if (params.genre) query.append('genre', params.genre === 'other' ? 'unclassified' : params.genre);
+      if (params.genre)
+        query.append('genre', params.genre === 'other' ? 'unclassified' : params.genre);
       if (params.form) query.append('form', params.form);
       if (params.sort) query.append('sort', params.sort);
       if (params.q?.trim()) query.append('q', params.q.trim());
@@ -1350,11 +1379,15 @@ export const ConcertAPI = {
    * 이 엔드포인트가 없는 배포 전 백엔드면 null을 돌려준다. 그 백엔드는 `artists`를 공연 id로
    * 읽다가 422를 준다(없는 경로면 404).
    */
-  async getArtists(params: { q?: string; limit?: number } = {}): Promise<ConcertArtistOption[] | null> {
+  async getArtists(
+    params: { q?: string; limit?: number } = {}
+  ): Promise<ConcertArtistOption[] | null> {
     const queryParams = new URLSearchParams();
     if (params.q) queryParams.append('q', params.q);
     if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
-    const response = await authenticatedFetch(`${API_BASE_URL}/concerts/artists?${queryParams.toString()}`);
+    const response = await authenticatedFetch(
+      `${API_BASE_URL}/concerts/artists?${queryParams.toString()}`
+    );
     if (response.status === 404 || response.status === 422) return null;
     if (!response.ok) throw new Error('Failed to fetch concert artists');
     const data: ConcertArtistOption[] = await response.json();
@@ -1437,7 +1470,11 @@ export const RecordingAPI = {
   },
 
   /** 레퍼토리에 담은 연주자의 최근 앨범 (로그인 필요) */
-  async newForMe(params: { days: number; offset: number; limit: number }): Promise<RecordingListItem[]> {
+  async newForMe(params: {
+    days: number;
+    offset: number;
+    limit: number;
+  }): Promise<RecordingListItem[]> {
     return requestOptionalJson<RecordingListItem[]>(
       `/me/recordings/new?days=${params.days}&offset=${params.offset}&limit=${params.limit}`
     );

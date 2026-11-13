@@ -50,12 +50,16 @@ export function getComposerDTO(composerId: number): ComposerDTO | null {
     bio: composer.bio,
     style: composer.style,
     influence: composer.influence,
-    majorPieces: majorPieces.map(piece => getPieceDTO(piece.id)).filter((p): p is PieceDTO => p !== null),
+    majorPieces: majorPieces
+      .map((piece) => getPieceDTO(piece.id))
+      .filter((p): p is PieceDTO => p !== null),
   };
 }
 
 export function getAllComposerDTOs(): ComposerDTO[] {
-  return MOCK_COMPOSERS.map(c => getComposerDTO(c.id)).filter((c): c is ComposerDTO => c !== null);
+  return MOCK_COMPOSERS.map((c) => getComposerDTO(c.id)).filter(
+    (c): c is ComposerDTO => c !== null
+  );
 }
 
 // ============================================
@@ -76,7 +80,9 @@ export function getPieceDTO(pieceId: number): PieceDTO | null {
     description: piece.description,
     opusNumber: piece.opusNumber,
     compositionYear: piece.compositionYear,
-    performances: performances.map(perf => getPerformanceDTO(perf.id)).filter((p): p is PerformanceDTO => p !== null),
+    performances: performances
+      .map((perf) => getPerformanceDTO(perf.id))
+      .filter((p): p is PerformanceDTO => p !== null),
   };
 }
 
@@ -89,7 +95,7 @@ export function getPieceWithPerformances(pieceId: number): PieceWithPerformances
 
   const performances = getPerformancesByPieceId(pieceId);
   const performancesWithArtist: PerformanceWithArtist[] = performances
-    .map(perf => {
+    .map((perf) => {
       const artist = getArtistById(perf.artistId);
       if (!artist) return null;
       return { ...perf, artist };
@@ -108,7 +114,7 @@ export function getPieceWithPerformances(pieceId: number): PieceWithPerformances
 // ============================================
 
 export function getPerformanceDTO(performanceId: number): PerformanceDTO | null {
-  const performance = MOCK_PERFORMANCES.find(p => p.id === performanceId);
+  const performance = MOCK_PERFORMANCES.find((p) => p.id === performanceId);
   if (!performance) return null;
 
   const artist = getArtistById(performance.artistId);
@@ -158,7 +164,7 @@ export function getArtistDTO(artistId: number): ArtistDTO | null {
 }
 
 export function getAllArtistDTOs(): ArtistDTO[] {
-  return MOCK_ARTISTS.map(a => getArtistDTO(a.id)).filter((a): a is ArtistDTO => a !== null);
+  return MOCK_ARTISTS.map((a) => getArtistDTO(a.id)).filter((a): a is ArtistDTO => a !== null);
 }
 
 // ============================================
@@ -216,7 +222,7 @@ export interface TimelineComposer {
 }
 
 export function getTimelineComposers(): TimelineComposer[] {
-  return MOCK_COMPOSERS.map(c => ({
+  return MOCK_COMPOSERS.map((c) => ({
     id: c.id,
     name: c.name,
     fullName: c.fullName,
@@ -328,7 +334,8 @@ export function getAllPeriods(): PeriodInfo[] {
       color: '#9333ea',
       gradient: ['#7c3aed', '#a855f7'],
       emoji: '🎻',
-      description: '화려하고 장식적인 음악의 시대. 대위법이 발달하고 협주곡, 푸가 등의 형식이 확립되었습니다.',
+      description:
+        '화려하고 장식적인 음악의 시대. 대위법이 발달하고 협주곡, 푸가 등의 형식이 확립되었습니다.',
       characteristics: ['정교한 대위법', '화려한 장식음', '통주저음의 사용', '극적 대비'],
       keyComposers: ['바흐', '헨델', '비발디'],
     },
@@ -354,7 +361,8 @@ export function getAllPeriods(): PeriodInfo[] {
       color: '#ec4899',
       gradient: ['#db2777', '#f472b6'],
       emoji: '🎼',
-      description: '감정 표현과 개성을 중시한 시대. 민족주의 음악이 발전하고 형식이 자유로워졌습니다.',
+      description:
+        '감정 표현과 개성을 중시한 시대. 민족주의 음악이 발전하고 형식이 자유로워졌습니다.',
       characteristics: ['강렬한 감정 표현', '개성 중시', '민족주의', '형식의 자유'],
       keyComposers: ['쇼팽', '리스트', '브람스', '차이콥스키'],
     },
@@ -367,7 +375,8 @@ export function getAllPeriods(): PeriodInfo[] {
       color: '#22c55e',
       gradient: ['#16a34a', '#4ade80'],
       emoji: '🎵',
-      description: '전통에서 벗어나 새로운 음악 언어를 탐구한 시대. 불협화음, 무조성, 미니멀리즘 등 다양한 실험이 이루어졌습니다.',
+      description:
+        '전통에서 벗어나 새로운 음악 언어를 탐구한 시대. 불협화음, 무조성, 미니멀리즘 등 다양한 실험이 이루어졌습니다.',
       characteristics: ['실험적 음향', '새로운 화성', '다양한 기법', '장르의 융합'],
       keyComposers: ['드뷔시', '스트라빈스키', '쇼스타코비치', '존 윌리엄스'],
     },
@@ -375,5 +384,5 @@ export function getAllPeriods(): PeriodInfo[] {
 }
 
 export function getPeriodByName(name: string): PeriodInfo | undefined {
-  return getAllPeriods().find(p => p.name === name);
+  return getAllPeriods().find((p) => p.name === name);
 }

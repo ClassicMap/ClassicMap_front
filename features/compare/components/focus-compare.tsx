@@ -1,6 +1,10 @@
 import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { FeaturedPairNote, PerformanceNote } from '@/features/compare/components/listening-note';
-import { type Performer, PerformerMark, performerOf } from '@/features/compare/components/performer-mark';
+import {
+  type Performer,
+  PerformerMark,
+  performerOf,
+} from '@/features/compare/components/performer-mark';
 import { LoudnessMeasures, LoudnessOverlay } from '@/features/compare/components/loudness-curve';
 import { OptimizedImage } from '@/components/shared/optimized-image';
 import { PlayerSlot } from '@/features/player/components/player-slot';
@@ -108,17 +112,34 @@ function artistKey(performance: ComparisonPerformance): number {
  * 두 연주자 집중 비교 (기획 A). 두 영상을 나란히 크게 두고 같은 대목을 바로 넘나든다.
  * 웹은 두 클립만 미리 불러 두고 소리 나는 쪽만 튼다. 네이티브는 플레이어 하나로 전환한다.
  */
-export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onChangeSector }: FocusCompareProps) {
+export function FocusCompare({
+  pieceId,
+  composerId,
+  sectorId,
+  focus,
+  onExit,
+  onChangeSector,
+}: FocusCompareProps) {
   const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
+  const sectors = React.useMemo(
+    () => sortComparisonSectors(sectorsQuery.data ?? []),
+    [sectorsQuery.data, locale]
+  );
+  const activeSector =
+    sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
-  const performances = React.useMemo(() => performancesQuery.data ?? [], [performancesQuery.data, locale]);
+  const performances = React.useMemo(
+    () => performancesQuery.data ?? [],
+    [performancesQuery.data, locale]
+  );
   const first = performances[0];
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const images = React.useMemo(
-    () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
+    () =>
+      new Map(
+        (pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])
+      ),
     [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
@@ -228,7 +249,8 @@ export function FocusCompare({ pieceId, composerId, sectorId, focus, onExit, onC
 
   // 이 두 연주가 구간의 추천 비교 쌍이면 큐레이터 노트를 먼저 보인다 (A·B 순서는 상관없다)
   const pair = activeSector?.featuredPair ?? null;
-  const featuredPair = pair && pair.performanceIds.includes(a.id) && pair.performanceIds.includes(b.id) ? pair : null;
+  const featuredPair =
+    pair && pair.performanceIds.includes(a.id) && pair.performanceIds.includes(b.id) ? pair : null;
 
   return (
     <FocusStage
@@ -311,7 +333,19 @@ interface SideProgress {
 
 function FocusStage(props: FocusStageProps) {
   useLocale();
-  const { a, b, imageOf, screenFocused, sectors, activeSectorId, rows, onExit, onChangeSector, queue, featuredPair } = props;
+  const {
+    a,
+    b,
+    imageOf,
+    screenFocused,
+    sectors,
+    activeSectorId,
+    rows,
+    onExit,
+    onChangeSector,
+    queue,
+    featuredPair,
+  } = props;
   const { nav } = useBreakpoint();
   const narrow = nav === 'tabs';
   const insets = useSafeAreaInsets();
@@ -377,7 +411,11 @@ function FocusStage(props: FocusStageProps) {
       queue: queue.map((performance) => trackFromPerformance(performance, imageOf(performance))),
       ...compareQueueFor(current.pieceId, sectors, current.sectorId, current),
     });
-    comparePlayer.rememberPosition(other.id, latest.side === 'a' ? positions.b : positions.a, clipDurationMs(other) / 1000);
+    comparePlayer.rememberPosition(
+      other.id,
+      latest.side === 'a' ? positions.b : positions.a,
+      clipDurationMs(other) / 1000
+    );
     // 넘긴 뒤에는 이 화면 영상이 앱 플레이어를 멈추지 않는다
     if (Platform.OS === 'web') webRef.current.suspend();
   }, [a, b, imageOf, queue, sectors]);
@@ -482,8 +520,13 @@ function FocusStage(props: FocusStageProps) {
 
   return (
     <View className="flex-1">
-      <ScrollView className="flex-1" contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
-        <Pressable onPress={exit} accessibilityRole="button" className="mb-3 flex-row items-center gap-1 self-start">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
+        <Pressable
+          onPress={exit}
+          accessibilityRole="button"
+          className="mb-3 flex-row items-center gap-1 self-start">
           <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
           <Text variant="caption" className="text-foreground-muted">
             {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
@@ -494,7 +537,11 @@ function FocusStage(props: FocusStageProps) {
             <Text variant="micro" className="uppercase tracking-widest text-primary">
               {t('1:1 집중 비교')}
             </Text>
-            <Text className={cn('font-extrabold tracking-tight text-foreground', narrow ? 'mt-1 text-[24px]' : 'mt-1.5 text-[32px] leading-[36px]')}>
+            <Text
+              className={cn(
+                'font-extrabold tracking-tight text-foreground',
+                narrow ? 'mt-1 text-[24px]' : 'mt-1.5 text-[32px] leading-[36px]'
+              )}>
               {`${primaryCredit(a)?.artistName ?? 'A'}  ·  ${primaryCredit(b)?.artistName ?? 'B'}`}
             </Text>
             <Text variant="caption" className="mt-1">
@@ -511,7 +558,9 @@ function FocusStage(props: FocusStageProps) {
               />
             ) : null}
             {/* 동시 재생 중에는 늘 같은 지점이라 전환 방식(같은 지점·이어서)을 쓰지 않는다. 크로스페이드는 소리만 겹쳐 넘긴다 */}
-            <View pointerEvents={together ? 'none' : 'auto'} className={cn('flex-row items-center gap-2', together && 'opacity-40')}>
+            <View
+              pointerEvents={together ? 'none' : 'auto'}
+              className={cn('flex-row items-center gap-2', together && 'opacity-40')}>
               <Segmented
                 label={t('전환')}
                 value={mode}
@@ -525,12 +574,13 @@ function FocusStage(props: FocusStageProps) {
             <Segmented
               label={t('자동 전환')}
               value={auto}
-              options={AUTO_OPTIONS.map((value) => ({ value, label: value === 0 ? t('끔') : t('{n}초', { n: value }) }))}
+              options={AUTO_OPTIONS.map((value) => ({
+                value,
+                label: value === 0 ? t('끔') : t('{n}초', { n: value }),
+              }))}
               onChange={setAuto}
             />
-            {Platform.OS === 'web' ? (
-              <CrossfadeToggle />
-            ) : null}
+            {Platform.OS === 'web' ? <CrossfadeToggle /> : null}
             {Platform.OS !== 'web' ? (
               <NativeLoopButton loop={loop} progress={engine.progress} onChange={setLoop} />
             ) : (
@@ -541,10 +591,20 @@ function FocusStage(props: FocusStageProps) {
                 accessibilityLabel={loop ? t('구간 반복 해제') : t('구간 반복 지정')}
                 className={cn(
                   'h-8 flex-row items-center gap-1.5 rounded-full border px-3',
-                  loop || editingLoop ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2'
+                  loop || editingLoop
+                    ? 'border-primary bg-primary-muted'
+                    : 'border-border-strong web:hover:bg-surface-2'
                 )}>
-                <Icon as={RepeatIcon} size={14} className={loop || editingLoop ? 'text-primary' : 'text-foreground'} />
-                <Text className={cn('text-label', loop || editingLoop ? 'text-primary' : 'text-foreground')}>
+                <Icon
+                  as={RepeatIcon}
+                  size={14}
+                  className={loop || editingLoop ? 'text-primary' : 'text-foreground'}
+                />
+                <Text
+                  className={cn(
+                    'text-label',
+                    loop || editingLoop ? 'text-primary' : 'text-foreground'
+                  )}>
                   {loop ? t('반복 해제') : editingLoop ? t('진행바를 끌어 지정') : t('구간 반복')}
                 </Text>
               </Pressable>
@@ -553,18 +613,29 @@ function FocusStage(props: FocusStageProps) {
         </View>
 
         {/* 구간: 두 연주자가 모두 있는 구간만 고를 수 있다 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-4" contentContainerClassName="gap-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-4"
+          contentContainerClassName="gap-2">
           {rows.map((row) => {
-            const available = Boolean(row.a && row.b && isPlayablePerformance(row.a) && isPlayablePerformance(row.b));
+            const available = Boolean(
+              row.a && row.b && isPlayablePerformance(row.a) && isPlayablePerformance(row.b)
+            );
             return (
               <Chip
                 key={row.sector.id}
-                label={available || row.loading ? row.sector.sectorName : t('{name} · 없음', { name: row.sector.sectorName })}
+                label={
+                  available || row.loading
+                    ? row.sector.sectorName
+                    : t('{name} · 없음', { name: row.sector.sectorName })
+                }
                 selected={row.sector.id === activeSectorId}
                 disabled={!available}
                 className={cn(!available && 'opacity-50')}
                 onPress={() => {
-                  if (row.a && row.b && row.sector.id !== activeSectorId) onChangeSector(row.sector.id, row.a.id, row.b.id);
+                  if (row.a && row.b && row.sector.id !== activeSectorId)
+                    onChangeSector(row.sector.id, row.a.id, row.b.id);
                 }}
               />
             );
@@ -593,7 +664,11 @@ function FocusStage(props: FocusStageProps) {
                 <Pressable
                   onPress={() => (on ? engine.togglePlay() : engine.switchTo(side))}
                   accessibilityRole="button"
-                  accessibilityLabel={on ? t('{name} 재생·일시정지', { name: performer.name }) : t('{name} 연주로 바꾸기', { name: performer.name })}
+                  accessibilityLabel={
+                    on
+                      ? t('{name} 재생·일시정지', { name: performer.name })
+                      : t('{name} 연주로 바꾸기', { name: performer.name })
+                  }
                   // 테두리는 늘 두고 색만 바꾼다. ring(그림자)을 켜고 끄면 NativeWind가 개발 모드에서 컴포넌트를 바꿔 끼우며 오류를 낸다
                   className={cn(
                     'relative aspect-video w-full overflow-hidden rounded-xl border-2 bg-black',
@@ -615,18 +690,27 @@ function FocusStage(props: FocusStageProps) {
                   {/* 듣는 쪽에만 상태를 띄운다. 누구인지는 아래 얼굴과 이름이 말한다 */}
                   {on ? (
                     <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
-                      <Text className="text-micro font-bold text-primary">{engine.playing ? t('재생 중') : t('status::일시정지')}</Text>
+                      <Text className="text-micro font-bold text-primary">
+                        {engine.playing ? t('재생 중') : t('status::일시정지')}
+                      </Text>
                     </View>
                   ) : together ? (
                     <View className="absolute left-3 top-3 rounded-full bg-black/60 px-2 py-0.5">
-                      <Text className="text-micro font-bold text-white/80">{t('소리 끔 · 같은 지점')}</Text>
+                      <Text className="text-micro font-bold text-white/80">
+                        {t('소리 끔 · 같은 지점')}
+                      </Text>
                     </View>
                   ) : null}
                 </Pressable>
                 <View className="mt-3 flex-row items-center gap-3">
                   <PerformerMark performer={performer} tone={side} size={40} dim={!on} />
                   <View className="min-w-0 flex-1">
-                    <Text numberOfLines={1} className={cn('text-body font-bold', on ? 'text-primary' : 'text-foreground')}>
+                    <Text
+                      numberOfLines={1}
+                      className={cn(
+                        'text-body font-bold',
+                        on ? 'text-primary' : 'text-foreground'
+                      )}>
                       {primaryCredit(performance)?.artistName ?? t('연주자 정보 없음')}
                     </Text>
                     {/* 크레딧이 없다고 독주라는 뜻은 아니다. 없으면 적지 않는다 */}
@@ -651,7 +735,9 @@ function FocusStage(props: FocusStageProps) {
                   featuredPair ? (
                     <View className="mt-4 flex-row items-center gap-2.5 rounded-lg border border-border px-3 py-2.5">
                       <PerformerMark performer={performer} tone={side} size={22} />
-                      <Text className="min-w-0 flex-1 text-body font-bold text-foreground">{performance.note.headline}</Text>
+                      <Text className="min-w-0 flex-1 text-body font-bold text-foreground">
+                        {performance.note.headline}
+                      </Text>
                     </View>
                   ) : (
                     <PerformanceNote
@@ -680,8 +766,14 @@ function FocusStage(props: FocusStageProps) {
               active={engine.side}
               playing={engine.playing}
               positions={{
-                a: engine.sideProgress.a.duration > 0 ? engine.sideProgress.a.current / engine.sideProgress.a.duration : undefined,
-                b: engine.sideProgress.b.duration > 0 ? engine.sideProgress.b.current / engine.sideProgress.b.duration : undefined,
+                a:
+                  engine.sideProgress.a.duration > 0
+                    ? engine.sideProgress.a.current / engine.sideProgress.a.duration
+                    : undefined,
+                b:
+                  engine.sideProgress.b.duration > 0
+                    ? engine.sideProgress.b.current / engine.sideProgress.b.duration
+                    : undefined,
               }}
             />
             <LoudnessMeasures
@@ -705,7 +797,10 @@ function FocusStage(props: FocusStageProps) {
         ) : null
       ) : (
         // iOS 는 탭바가 화면 위에 떠 있어서, 그만큼 띄우지 않으면 조작부가 탭바 뒤에 깔린다
-        <View style={TAB_CHROME_TRANSLUCENT ? { paddingBottom: tabBarHeight(insets.bottom) } : undefined}>
+        <View
+          style={
+            TAB_CHROME_TRANSLUCENT ? { paddingBottom: tabBarHeight(insets.bottom) } : undefined
+          }>
           <FocusBar {...focusBar} />
         </View>
       )}
@@ -771,7 +866,11 @@ function useWebFocusEngine(
   const onSideSounding = (key: Side, video: HTMLVideoElement) => {
     if (key !== sideRef.current || takeover.current === null) return;
     const live = comparePlayer.livePosition(performancesRef.current[key].id);
-    if (live !== null && Math.abs(live - video.currentTime) > TAKEOVER_DRIFT_SEC && live < video.duration) {
+    if (
+      live !== null &&
+      Math.abs(live - video.currentTime) > TAKEOVER_DRIFT_SEC &&
+      live < video.duration
+    ) {
       video.currentTime = live;
     }
     releaseShell();
@@ -833,7 +932,10 @@ function useWebFocusEngine(
     if (Math.abs(drift) > TOGETHER_DRIFT_SEC) other.currentTime = target;
     // 작은 어긋남은 옮기지 않고 빠르기를 조금 더하거나 빼서 메운다. 옮기면 화면이 잠깐 멈춘다
     const nudge = Math.max(-0.05, Math.min(0.05, drift * 0.5));
-    other.playbackRate = Math.max(0.5, Math.min(2, followRate(lead.currentTime, leadClip, otherClip) * (1 + nudge)));
+    other.playbackRate = Math.max(
+      0.5,
+      Math.min(2, followRate(lead.currentTime, leadClip, otherClip) * (1 + nudge))
+    );
     if (!lead.paused && other.paused && !lead.ended) void other.play().catch(() => undefined);
     else if (lead.paused && !other.paused) other.pause();
   }, []);
@@ -919,7 +1021,11 @@ function useWebFocusEngine(
         releaseShell();
         const video = get(sideRef.current);
         if (!video) return;
-        if (video.paused) void video.play().then(() => togetherRef.current && follow()).catch(() => setPlaying(false));
+        if (video.paused)
+          void video
+            .play()
+            .then(() => togetherRef.current && follow())
+            .catch(() => setPlaying(false));
         else {
           video.pause();
           if (togetherRef.current) follow();
@@ -968,11 +1074,17 @@ function useWebFocusEngine(
         const player = comparePlayer.getState();
         // 크로스페이드: 재생 중이고 소리가 날 때만 두 소리를 겹쳐 넘긴다. 못 겹치는 환경이면 바로 바꾼다
         if (wasPlaying && player.crossfade && !player.muted && player.volume > 0) {
-          const fade = crossfade(from, to, fadeSeconds(cause, autoRef.current), player.volume, () => {
-            fadeRef.current = null;
-            from.muted = true;
-            to.muted = comparePlayer.getState().muted;
-          });
+          const fade = crossfade(
+            from,
+            to,
+            fadeSeconds(cause, autoRef.current),
+            player.volume,
+            () => {
+              fadeRef.current = null;
+              from.muted = true;
+              to.muted = comparePlayer.getState().muted;
+            }
+          );
           if (fade) {
             fadeRef.current = fade;
             return;
@@ -985,12 +1097,17 @@ function useWebFocusEngine(
       },
       seekRatio: (ratio: number) => {
         const video = get(sideRef.current);
-        if (video && video.duration > 0) video.currentTime = Math.max(0, Math.min(1, ratio)) * video.duration;
+        if (video && video.duration > 0)
+          video.currentTime = Math.max(0, Math.min(1, ratio)) * video.duration;
         if (togetherRef.current) follow();
       },
       seekBy: (seconds: number) => {
         const video = get(sideRef.current);
-        if (video) video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + seconds));
+        if (video)
+          video.currentTime = Math.max(
+            0,
+            Math.min(video.duration || 0, video.currentTime + seconds)
+          );
         if (togetherRef.current) follow();
       },
       positions: () => ({ a: get('a')?.currentTime ?? 0, b: get('b')?.currentTime ?? 0 }),
@@ -1002,14 +1119,27 @@ function useWebFocusEngine(
         // 동시 재생에서 소리 안 나는 쪽을 옮기면 두 연주 사이 어긋남으로 기억해 그대로 붙여 간다
         const a = get('a');
         const b = get('b');
-        if (togetherRef.current && key !== sideRef.current && a && b && a.duration > 0 && b.duration > 0) {
+        if (
+          togetherRef.current &&
+          key !== sideRef.current &&
+          a &&
+          b &&
+          a.duration > 0 &&
+          b.duration > 0
+        ) {
           offsetRef.current =
             key === 'b'
               ? seconds - momentAcross('a', 'b', a.currentTime)
               : b.currentTime - momentAcross('a', 'b', seconds);
         }
-        video.currentTime = Math.max(0, duration > 0 ? Math.min(duration - 0.05, seconds) : seconds);
-        setSideProgress((prev) => ({ ...prev, [key]: { current: video.currentTime, duration: duration || prev[key].duration } }));
+        video.currentTime = Math.max(
+          0,
+          duration > 0 ? Math.min(duration - 0.05, seconds) : seconds
+        );
+        setSideProgress((prev) => ({
+          ...prev,
+          [key]: { current: video.currentTime, duration: duration || prev[key].duration },
+        }));
       },
       playAt: (target: Side, seconds: number) => {
         finishFade();
@@ -1049,7 +1179,8 @@ function useWebFocusEngine(
       const id = key === 'a' ? a.id : b.id;
       const position = comparePlayer.livePosition(id) ?? comparePlayer.positionFor(id);
       if (!video || !(position > 0)) return;
-      if (!Number.isFinite(video.duration) || position < video.duration) video.currentTime = position;
+      if (!Number.isFinite(video.duration) || position < video.duration)
+        video.currentTime = position;
     });
     const currentId = state.current?.performanceId;
     const target: Side | null = currentId === a.id ? 'a' : currentId === b.id ? 'b' : null;
@@ -1085,15 +1216,27 @@ function useWebFocusEngine(
         src={performance.clipUrl}
         playsInline
         preload="auto"
-        style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', background: '#000' }}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          display: 'block',
+          background: '#000',
+        }}
         onLoadedMetadata={(event) => {
           const video = event.currentTarget;
           video.muted = key === sideRef.current ? comparePlayer.getState().muted : true;
           video.volume = comparePlayer.getState().volume;
           // 앱 플레이어에서 지금 나오는 연주면 그 자리, 아니면 비교 화면에서 듣던 자리에서 시작한다
-          const resume = comparePlayer.livePosition(performance.id) ?? comparePlayer.positionFor(performance.id);
+          const resume =
+            comparePlayer.livePosition(performance.id) ?? comparePlayer.positionFor(performance.id);
           if (resume > 0 && resume < video.duration) video.currentTime = resume;
-          if (key === start.side && start.playing && sideRef.current === key && takeover.current !== null) {
+          if (
+            key === start.side &&
+            start.playing &&
+            sideRef.current === key &&
+            takeover.current !== null
+          ) {
             void video.play().catch(() => {
               setPlaying(false);
               releaseShell();
@@ -1132,13 +1275,17 @@ function useNativeFocusEngine(
   // 소리 안 나는 쪽 위치는 스토어가 조용히 적어서, 조정할 때 다시 그리게 한다
   const [adjusted, bump] = React.useReducer((count: number) => count + 1, 0);
   const idOf = React.useCallback((key: Side) => (key === 'a' ? a.id : b.id), [a.id, b.id]);
-  const lengthOf = React.useCallback((key: Side) => clipDurationMs(key === 'a' ? a : b) / 1000, [a, b]);
+  const lengthOf = React.useCallback(
+    (key: Side) => clipDurationMs(key === 'a' ? a : b) / 1000,
+    [a, b]
+  );
 
   // 구간 반복: 네이티브는 위치를 초마다 받아서 끝 지점을 넘으면 시작 지점으로 돌린다 (1초 안팎 오차)
   React.useEffect(() => {
     if (Platform.OS === 'web' || !loop || !playing || progress.duration <= 0) return;
     const ratio = progress.current / progress.duration;
-    if (ratio >= loop.end || ratio < loop.start - 0.02) comparePlayer.seek(loop.start * progress.duration);
+    if (ratio >= loop.end || ratio < loop.start - 0.02)
+      comparePlayer.seek(loop.start * progress.duration);
   }, [loop, playing, progress]);
 
   React.useEffect(() => {
@@ -1165,14 +1312,23 @@ function useNativeFocusEngine(
       switchTo: (target: Side) => {
         if (target === side) return;
         const performance = target === 'a' ? a : b;
-        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: playing, mode });
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+          play: playing,
+          mode,
+        });
       },
       seekRatio: (ratio: number) => comparePlayer.seek(ratio * (progress.duration || 0)),
       seekBy: (seconds: number) => comparePlayer.seekBy(seconds),
       positions: () => ({ a: comparePlayer.positionFor(a.id), b: comparePlayer.positionFor(b.id) }),
       sideProgress: {
-        a: side === 'a' ? progress : { current: comparePlayer.positionFor(a.id), duration: lengthOf('a') },
-        b: side === 'b' ? progress : { current: comparePlayer.positionFor(b.id), duration: lengthOf('b') },
+        a:
+          side === 'a'
+            ? progress
+            : { current: comparePlayer.positionFor(a.id), duration: lengthOf('a') },
+        b:
+          side === 'b'
+            ? progress
+            : { current: comparePlayer.positionFor(b.id), duration: lengthOf('b') },
       },
       seekSide: (key: Side, seconds: number) => {
         const target = Math.max(0, Math.min(lengthOf(key) - 0.05, seconds));
@@ -1190,7 +1346,10 @@ function useNativeFocusEngine(
           return;
         }
         const performance = key === 'a' ? a : b;
-        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), { play: true, startAt: target });
+        comparePlayer.select(trackFromPerformance(performance, imageOf(performance)), {
+          play: true,
+          startAt: target,
+        });
       },
     }),
     // adjusted: 소리 안 나는 쪽을 조정하면 그 위치를 다시 읽는다
@@ -1237,8 +1396,17 @@ function NativeLoopButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
-      accessibilityLabel={loop ? t('구간 반복 해제') : start !== null ? t('구간 반복 끝 지점 정하기') : t('구간 반복 시작 지점 정하기')}
-      className={cn('h-8 flex-row items-center gap-1.5 rounded-full border px-3', active ? 'border-primary bg-primary-muted' : 'border-border-strong')}>
+      accessibilityLabel={
+        loop
+          ? t('구간 반복 해제')
+          : start !== null
+            ? t('구간 반복 끝 지점 정하기')
+            : t('구간 반복 시작 지점 정하기')
+      }
+      className={cn(
+        'h-8 flex-row items-center gap-1.5 rounded-full border px-3',
+        active ? 'border-primary bg-primary-muted' : 'border-border-strong'
+      )}>
       <Icon as={RepeatIcon} size={14} className={active ? 'text-primary' : 'text-foreground'} />
       <Text className={cn('text-label', active ? 'text-primary' : 'text-foreground')}>
         {loop ? t('반복 해제') : start !== null ? t('여기까지 반복') : t('구간 반복')}
@@ -1260,7 +1428,10 @@ function Segmented<T extends string | number>({
 }) {
   useLocale();
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel={label} className="flex-row items-center gap-2">
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={label}
+      className="flex-row items-center gap-2">
       <Text variant="caption" className="text-foreground-subtle">
         {label}
       </Text>
@@ -1274,8 +1445,15 @@ function Segmented<T extends string | number>({
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               style={selected ? SELECTED_SHADOW : undefined}
-              className={cn('h-7 items-center justify-center rounded-full px-2.5', selected && 'bg-surface-1')}>
-              <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+              className={cn(
+                'h-7 items-center justify-center rounded-full px-2.5',
+                selected && 'bg-surface-1'
+              )}>
+              <Text
+                className={cn(
+                  'text-label',
+                  selected ? 'font-semibold text-foreground' : 'text-foreground-muted'
+                )}>
                 {option.label}
               </Text>
             </Pressable>
@@ -1311,7 +1489,9 @@ function SideControls({
   return (
     <View className="mt-3 gap-2">
       <View className="flex-row items-center gap-2.5">
-        <Text variant="mono" className={cn('w-14 text-right', on ? 'text-foreground' : 'text-foreground-muted')}>
+        <Text
+          variant="mono"
+          className={cn('w-14 text-right', on ? 'text-foreground' : 'text-foreground-muted')}>
           {fineClock(shown)}
         </Text>
         <View className="min-w-0 flex-1">
@@ -1334,14 +1514,20 @@ function SideControls({
             <Pressable
               accessibilityRole="adjustable"
               accessibilityLabel={t('{name} 영상 위치', { name })}
-              accessibilityValue={{ text: `${fineClock(progress.current)} / ${fineClock(duration)}` }}
+              accessibilityValue={{
+                text: `${fineClock(progress.current)} / ${fineClock(duration)}`,
+              }}
               onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
               onPress={(event) => {
-                if (trackWidth > 0 && duration > 0) onSeek((event.nativeEvent.locationX / trackWidth) * duration);
+                if (trackWidth > 0 && duration > 0)
+                  onSeek((event.nativeEvent.locationX / trackWidth) * duration);
               }}
               className="h-6 justify-center">
               <View className="h-1 overflow-hidden rounded-full bg-surface-3">
-                <View className={cn('h-full', on ? 'bg-primary' : 'bg-foreground-muted')} style={{ width: `${ratio * 100}%` }} />
+                <View
+                  className={cn('h-full', on ? 'bg-primary' : 'bg-foreground-muted')}
+                  style={{ width: `${ratio * 100}%` }}
+                />
               </View>
             </Pressable>
           )}
@@ -1394,7 +1580,9 @@ function LengthTable({
     <View className="mt-8 rounded-xl border border-border bg-surface-1 p-4">
       <View className="flex-row items-baseline justify-between gap-3">
         <Text className="text-body font-bold text-foreground">{t('구간별 길이')}</Text>
-        <Text variant="caption">{t('차이: {name} 연주가 길면 +, 짧으면 −', { name: performerB.name })}</Text>
+        <Text variant="caption">
+          {t('차이: {name} 연주가 길면 +, 짧으면 −', { name: performerB.name })}
+        </Text>
       </View>
       <View className="mt-3 flex-row border-b border-border pb-2">
         <Text variant="caption" className="flex-[1.4] font-semibold text-foreground-subtle">
@@ -1412,8 +1600,18 @@ function LengthTable({
         const diff = da && db ? Math.round((db - da) / 1000) : null;
         const current = row.sector.id === activeSectorId;
         return (
-          <View key={row.sector.id} className={cn('flex-row items-center border-b border-border py-2.5', current && 'bg-primary-muted/40')}>
-            <Text numberOfLines={1} className={cn('flex-[1.4] text-body-sm', current ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+          <View
+            key={row.sector.id}
+            className={cn(
+              'flex-row items-center border-b border-border py-2.5',
+              current && 'bg-primary-muted/40'
+            )}>
+            <Text
+              numberOfLines={1}
+              className={cn(
+                'flex-[1.4] text-body-sm',
+                current ? 'font-semibold text-foreground' : 'text-foreground-muted'
+              )}>
               {row.sector.sectorName}
             </Text>
             <Text variant="mono" className="flex-1 text-right text-foreground">
@@ -1424,8 +1622,17 @@ function LengthTable({
             </Text>
             <Text
               variant="mono"
-              className={cn('w-16 text-right', diff === null ? 'text-foreground-subtle' : diff > 0 ? 'text-primary' : 'text-foreground')}>
-              {diff === null ? '—' : t('{n}초', { n: `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}` })}
+              className={cn(
+                'w-16 text-right',
+                diff === null
+                  ? 'text-foreground-subtle'
+                  : diff > 0
+                    ? 'text-primary'
+                    : 'text-foreground'
+              )}>
+              {diff === null
+                ? '—'
+                : t('{n}초', { n: `${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff)}` })}
             </Text>
           </View>
         );
@@ -1448,7 +1655,17 @@ function CrossfadeToggle() {
   );
 }
 
-function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (on: boolean) => void; label: string; hint: string }) {
+function SwitchToggle({
+  on,
+  onChange,
+  label,
+  hint,
+}: {
+  on: boolean;
+  onChange: (on: boolean) => void;
+  label: string;
+  hint: string;
+}) {
   useLocale();
   return (
     <Pressable
@@ -1458,10 +1675,25 @@ function SwitchToggle({ on, onChange, label, hint }: { on: boolean; onChange: (o
       accessibilityLabel={label}
       accessibilityHint={hint}
       className="h-8 flex-row items-center gap-2 rounded-full px-1.5 web:hover:bg-surface-2">
-      <View className={cn('h-5 w-9 justify-center rounded-full px-0.5', on ? 'bg-primary' : 'bg-surface-3')}>
-        <View className={cn('size-4 rounded-full', on ? 'translate-x-4 bg-primary-foreground' : 'bg-foreground-subtle')} />
+      <View
+        className={cn(
+          'h-5 w-9 justify-center rounded-full px-0.5',
+          on ? 'bg-primary' : 'bg-surface-3'
+        )}>
+        <View
+          className={cn(
+            'size-4 rounded-full',
+            on ? 'translate-x-4 bg-primary-foreground' : 'bg-foreground-subtle'
+          )}
+        />
       </View>
-      <Text className={cn('text-label', on ? 'font-semibold text-foreground' : 'text-foreground-muted')}>{label}</Text>
+      <Text
+        className={cn(
+          'text-label',
+          on ? 'font-semibold text-foreground' : 'text-foreground-muted'
+        )}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -1472,7 +1704,10 @@ function LengthHead({ performer, tone }: { performer: Performer; tone: 'a' | 'b'
   return (
     <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
       <PerformerMark performer={performer} tone={tone} size={16} />
-      <Text variant="caption" numberOfLines={1} className="shrink font-semibold text-foreground-subtle">
+      <Text
+        variant="caption"
+        numberOfLines={1}
+        className="shrink font-semibold text-foreground-subtle">
         {performer.name}
       </Text>
     </View>
@@ -1509,7 +1744,11 @@ function FocusBar({
       onPress={engine.togglePlay}
       accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
       className="size-10 items-center justify-center rounded-full bg-foreground">
-      <Icon as={engine.playing ? PauseIcon : PlayIcon} size={17} className="fill-background text-background" />
+      <Icon
+        as={engine.playing ? PauseIcon : PlayIcon}
+        size={17}
+        className="fill-background text-background"
+      />
     </Pressable>
   );
   const other: Side = engine.side === 'a' ? 'b' : 'a';
@@ -1521,7 +1760,9 @@ function FocusBar({
       className="h-10 flex-row items-center gap-1.5 rounded-full border border-border-strong pl-1.5 pr-2 web:hover:bg-surface-2">
       {(['a', 'b'] as const).map((side, index) => (
         <React.Fragment key={side}>
-          {index === 1 ? <Icon as={ArrowLeftRightIcon} size={14} className="text-foreground-subtle" /> : null}
+          {index === 1 ? (
+            <Icon as={ArrowLeftRightIcon} size={14} className="text-foreground-subtle" />
+          ) : null}
           <PerformerMark
             performer={performers[side]}
             tone={side}
@@ -1557,7 +1798,10 @@ function FocusBar({
           />
         ) : (
           <View className="h-1 overflow-hidden rounded-full bg-surface-3">
-            <View className="h-full bg-foreground" style={{ width: `${duration > 0 ? (progress.current / duration) * 100 : 0}%` }} />
+            <View
+              className="h-full bg-foreground"
+              style={{ width: `${duration > 0 ? (progress.current / duration) * 100 : 0}%` }}
+            />
           </View>
         )}
       </View>
@@ -1604,7 +1848,11 @@ function FocusBar({
               accessibilityRole="button"
               accessibilityLabel={engine.playing ? t('일시정지 (스페이스)') : t('재생 (스페이스)')}
               className="cm-press-solid size-9 items-center justify-center rounded-full bg-foreground">
-              <Icon as={engine.playing ? PauseIcon : PlayIcon} size={16} className="fill-background text-background" />
+              <Icon
+                as={engine.playing ? PauseIcon : PlayIcon}
+                size={16}
+                className="fill-background text-background"
+              />
             </Pressable>
             <Pressable
               onPress={() => engine.seekBy(SEEK_STEP_SEC)}
@@ -1678,7 +1926,10 @@ function LoopProgress({
     if (!rect || rect.width <= 0) return 0;
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
-  const shown = drag && editing ? { start: Math.min(drag.from, drag.to), end: Math.max(drag.from, drag.to) } : loop;
+  const shown =
+    drag && editing
+      ? { start: Math.min(drag.from, drag.to), end: Math.max(drag.from, drag.to) }
+      : loop;
   const clamped = Math.max(0, Math.min(1, value));
 
   return (
@@ -1727,7 +1978,16 @@ function LoopProgress({
         touchAction: 'none',
         outline: 'none',
       }}>
-      <div style={{ position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 4, background: 'hsl(var(--surface-3))' }} />
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          height: 4,
+          borderRadius: 4,
+          background: 'hsl(var(--surface-3))',
+        }}
+      />
       <div
         style={{
           position: 'absolute',

@@ -1,4 +1,10 @@
-import { useQuery, useInfiniteQuery, useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { ArtistAPI, ConcertAPI, type ConcertArtistOption } from '@/lib/api/client';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import type { Artist, Concert } from '@/types/models';
@@ -89,7 +95,8 @@ export function useCreateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof AdminConcertAPI.create>[0]) => AdminConcertAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminConcertAPI.create>[0]) =>
+      AdminConcertAPI.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
     },
@@ -103,8 +110,13 @@ export function useUpdateConcert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminConcertAPI.update>[1] }) =>
-      AdminConcertAPI.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Parameters<typeof AdminConcertAPI.update>[1];
+    }) => AdminConcertAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: CONCERT_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ['concerts'] });
@@ -180,7 +192,11 @@ interface FilteredConcertsOptions {
  * 연주자 필터는 새 백엔드면 `artist` id로, 배포 전 백엔드면 이름을 검색어로 보낸다.
  * 이때 사용자가 친 검색어는 서버에 못 보내니 `localQuery`로 돌려줘 화면에서 거르게 한다.
  */
-export function useFilteredConcerts(filter: ConcertFilter, range: DayRange, options: FilteredConcertsOptions = {}) {
+export function useFilteredConcerts(
+  filter: ConcertFilter,
+  range: DayRange,
+  options: FilteredConcertsOptions = {}
+) {
   const support = useConcertSearchSupport();
   const typed = filter.q.trim();
   const artistName = options.artistName?.trim();
@@ -310,7 +326,9 @@ const FAVORITE_ARTIST_LIMIT = 12;
  * 공연-아티스트 연결이 비어 있어 출연진·제목에 이름이 들어간 공연을 이름으로 찾는다.
  */
 export function useFavoriteArtistConcerts(artists: readonly FavoriteArtistRef[], from: string) {
-  const targets = artists.filter((artist) => isSearchableArtistName(artist.name)).slice(0, FAVORITE_ARTIST_LIMIT);
+  const targets = artists
+    .filter((artist) => isSearchableArtistName(artist.name))
+    .slice(0, FAVORITE_ARTIST_LIMIT);
   const results = useQueries({
     queries: targets.map((artist) => ({
       queryKey: ['concerts', 'by-artist-name', artist.name.trim(), from] as const,
@@ -326,7 +344,8 @@ export function useFavoriteArtistConcerts(artists: readonly FavoriteArtistRef[],
     for (const concert of result.data ?? []) {
       if (!overlapsRange(concert, { from })) continue;
       const entry = byConcert.get(concert.id) ?? { concert, artists: [] };
-      if (!entry.artists.some((item) => item.artistId === artist.artistId)) entry.artists.push(artist);
+      if (!entry.artists.some((item) => item.artistId === artist.artistId))
+        entry.artists.push(artist);
       byConcert.set(concert.id, entry);
     }
   });
@@ -338,6 +357,7 @@ export function useFavoriteArtistConcerts(artists: readonly FavoriteArtistRef[],
     items,
     isLoading: results.some((result) => result.isLoading),
     isError: targets.length > 0 && results.every((result) => result.isError),
-    refetch: () => results.filter((result) => result.isError).forEach((result) => void result.refetch()),
+    refetch: () =>
+      results.filter((result) => result.isError).forEach((result) => void result.refetch()),
   };
 }

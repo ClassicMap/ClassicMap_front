@@ -117,13 +117,12 @@ export function useCreatePiece() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Parameters<typeof AdminPieceAPI.create>[0]) =>
-      AdminPieceAPI.create(data),
+    mutationFn: (data: Parameters<typeof AdminPieceAPI.create>[0]) => AdminPieceAPI.create(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.all });
       if (variables.composerId) {
         queryClient.invalidateQueries({
-          queryKey: PIECE_QUERY_KEYS.byComposer(variables.composerId)
+          queryKey: PIECE_QUERY_KEYS.byComposer(variables.composerId),
         });
       }
     },

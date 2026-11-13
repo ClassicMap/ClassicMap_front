@@ -17,10 +17,12 @@ export const MISC: Readonly<Record<string, string>> = {
   '보여 줄 작곡가가 아직 없어요': 'No composers to show yet',
   '다른 범위를 골라 보세요.': 'Try a different range.',
   '전체 작곡가 보기': 'See all composers',
-  '10년마다 살았던 작곡가 수 · 누르면 그 해로 가요': 'Composers alive per decade · Tap to jump to that year',
+  '10년마다 살았던 작곡가 수 · 누르면 그 해로 가요':
+    'Composers alive per decade · Tap to jump to that year',
   '10년마다 살았던 작곡가 수 · 누르면 확대해요': 'Composers alive per decade · Tap to zoom in',
   '한 화면으로 접기': 'Fit to one screen',
-  '{count}명은 시대별로 묶었어요': '{count} composer grouped by era|{count} composers grouped by era',
+  '{count}명은 시대별로 묶었어요':
+    '{count} composer grouped by era|{count} composers grouped by era',
   '비교 영상 있음': 'Has comparison video',
   '사진은 대표 작곡가 · 막대는 생애': 'Photos: leading composers · Bars: lifespans',
   닫기: 'Close',
@@ -28,7 +30,8 @@ export const MISC: Readonly<Record<string, string>> = {
   '아직 비교할 수 있는 작품이 없어요': 'No works to compare yet',
   '비교 보기': 'See comparison',
   '작곡가 정보': 'Composer info',
-  '{era} 작곡가 {count}명 더 보기': 'See {count} more {era} composer|See {count} more {era} composers',
+  '{era} 작곡가 {count}명 더 보기':
+    'See {count} more {era} composer|See {count} more {era} composers',
   '시대별 작곡가 밀도': 'Composer density by era',
   '누른 연도로 타임라인을 옮겨요': 'Moves the timeline to the year you tap',
   // 시대(작곡가 period 값이 한국어로 온다)

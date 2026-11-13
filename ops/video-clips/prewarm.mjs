@@ -27,9 +27,7 @@ function isLocalIpv4(hostname) {
   if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) {
     return false;
   }
-  const [first, second, ...rest] = hostname
-    .split('.')
-    .map((value) => Number.parseInt(value, 10));
+  const [first, second, ...rest] = hostname.split('.').map((value) => Number.parseInt(value, 10));
   if ([first, second, ...rest].some((value) => value < 0 || value > 255)) {
     return false;
   }
@@ -140,9 +138,7 @@ export function parseArgs(args) {
 
   options.manifestPath = resolve(options.manifestPath);
   options.reportPath = resolve(options.reportPath ?? `${options.manifestPath}.prewarm-report.json`);
-  options.bundlePath = resolve(
-    options.bundlePath ?? `${options.manifestPath}.clip-assets.jsonl`
-  );
+  options.bundlePath = resolve(options.bundlePath ?? `${options.manifestPath}.clip-assets.jsonl`);
   options.baseUrl = options.baseUrl.replace(/\/+$/, '');
   if (!options.publicBaseUrl) {
     try {
@@ -239,10 +235,7 @@ function parseManifestRow(value, line, encodingProfileVersion) {
   };
 }
 
-export function parseManifest(
-  content,
-  encodingProfileVersion = DEFAULT_ENCODING_PROFILE_VERSION
-) {
+export function parseManifest(content, encodingProfileVersion = DEFAULT_ENCODING_PROFILE_VERSION) {
   const clipsByKey = new Map();
   const cacheKeyByPerformanceId = new Map();
   const invalid = [];
@@ -258,24 +251,25 @@ export function parseManifest(
       const performanceId = clip.performanceIds[0];
       const previousCacheKey = cacheKeyByPerformanceId.get(performanceId);
       if (previousCacheKey && previousCacheKey !== clip.cacheKey) {
-        throw new Error(
-          `performanceId ${performanceId}가 서로 다른 클립에 중복 지정되었습니다.`
-        );
+        throw new Error(`performanceId ${performanceId}가 서로 다른 클립에 중복 지정되었습니다.`);
       }
       cacheKeyByPerformanceId.set(performanceId, clip.cacheKey);
       const existing = clipsByKey.get(clip.cacheKey);
       if (existing) {
         existing.lines.push(line);
-        existing.performanceIds = [...new Set([...existing.performanceIds, ...clip.performanceIds])];
+        existing.performanceIds = [
+          ...new Set([...existing.performanceIds, ...clip.performanceIds]),
+        ];
       } else {
         clipsByKey.set(clip.cacheKey, clip);
       }
     } catch (error) {
-      const message = error instanceof SyntaxError
-        ? `JSON을 해석할 수 없습니다: ${error.message}`
-        : error instanceof Error
-          ? error.message
-          : '알 수 없는 manifest 오류입니다.';
+      const message =
+        error instanceof SyntaxError
+          ? `JSON을 해석할 수 없습니다: ${error.message}`
+          : error instanceof Error
+            ? error.message
+            : '알 수 없는 manifest 오류입니다.';
       invalid.push(validationError(line, message));
     }
   });
@@ -342,7 +336,9 @@ async function readResumeResults(reportPath, resume) {
     if (error && typeof error === 'object' && error.code === 'ENOENT') {
       return new Map();
     }
-    throw new Error(`이전 보고서를 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `이전 보고서를 읽지 못했습니다: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
@@ -367,18 +363,9 @@ function parseAssetHeaders(response, clip, contentRange) {
   const storageKey = requireHeader(response, 'x-classicmap-clip-storage-key');
   const sha256 = requireHeader(response, 'x-classicmap-clip-sha256');
   const fileSize = parsePositiveIntegerHeader(response, 'x-classicmap-clip-file-size');
-  const probedDurationMs = parsePositiveIntegerHeader(
-    response,
-    'x-classicmap-clip-duration-ms'
-  );
-  const responseProfile = requireHeader(
-    response,
-    'x-classicmap-clip-encoding-profile'
-  );
-  const assetValidatedAt = requireHeader(
-    response,
-    'x-classicmap-clip-asset-validated-at'
-  );
+  const probedDurationMs = parsePositiveIntegerHeader(response, 'x-classicmap-clip-duration-ms');
+  const responseProfile = requireHeader(response, 'x-classicmap-clip-encoding-profile');
+  const assetValidatedAt = requireHeader(response, 'x-classicmap-clip-asset-validated-at');
   const contentRangeSize = Number(contentRange.match(/\/(\d+)$/)?.[1]);
 
   if (
@@ -462,13 +449,19 @@ export async function prewarmClip(
       if (!responseText) {
         await response.body?.cancel();
       }
-      const error = new Error(`HTTP Range 검증에 실패했습니다. (${response.status})${responseText ? ` ${responseText}` : ''}`);
+      const error = new Error(
+        `HTTP Range 검증에 실패했습니다. (${response.status})${responseText ? ` ${responseText}` : ''}`
+      );
       error.httpStatus = response.status;
       throw error;
     }
 
     const body = new Uint8Array(await response.arrayBuffer());
-    if (acceptRanges !== 'bytes' || !/^bytes 0-0\/\d+$/.test(contentRange ?? '') || body.byteLength !== 1) {
+    if (
+      acceptRanges !== 'bytes' ||
+      !/^bytes 0-0\/\d+$/.test(contentRange ?? '') ||
+      body.byteLength !== 1
+    ) {
       throw new Error('응답의 Accept-Ranges, Content-Range 또는 본문 길이가 올바르지 않습니다.');
     }
     const assetMetadata = parseAssetHeaders(response, clip, contentRange);
@@ -526,10 +519,7 @@ function countResults(results) {
 export function createAssetBundleRows(report) {
   const rows = [];
   for (const result of report.results ?? []) {
-    if (
-      !['succeeded', 'skipped'].includes(result.status) ||
-      !hasVerifiedAssetMetadata(result)
-    ) {
+    if (!['succeeded', 'skipped'].includes(result.status) || !hasVerifiedAssetMetadata(result)) {
       continue;
     }
     for (const performanceId of result.performanceIds ?? []) {
@@ -549,8 +539,7 @@ export function createAssetBundleRows(report) {
 
   return rows.sort(
     (left, right) =>
-      left.performanceId - right.performanceId ||
-      left.storageKey.localeCompare(right.storageKey)
+      left.performanceId - right.performanceId || left.storageKey.localeCompare(right.storageKey)
   );
 }
 
@@ -585,10 +574,7 @@ async function runWorkers(items, concurrency, worker) {
 
 export async function runPrewarm(options, fetchImplementation = fetch) {
   const manifestContent = await readFile(options.manifestPath, 'utf8');
-  const { clips, invalid } = parseManifest(
-    manifestContent,
-    options.encodingProfileVersion
-  );
+  const { clips, invalid } = parseManifest(manifestContent, options.encodingProfileVersion);
   const resumeResults = await readResumeResults(options.reportPath, options.resume);
   const startedAt = new Date().toISOString();
   const results = [...invalid];
@@ -629,14 +615,9 @@ export async function runPrewarm(options, fetchImplementation = fetch) {
 
   const writeCheckpoint = async (completedAt = null) => {
     const report = buildReport(completedAt);
-    await writeTextAtomic(
-      options.reportPath,
-      `${JSON.stringify(report, null, 2)}\n`
-    );
+    await writeTextAtomic(options.reportPath, `${JSON.stringify(report, null, 2)}\n`);
     const isPublishable =
-      completedAt !== null &&
-      report.counts.failed === 0 &&
-      report.counts.invalid === 0;
+      completedAt !== null && report.counts.failed === 0 && report.counts.invalid === 0;
     if (isPublishable) {
       await writeTextAtomic(options.bundlePath, serializeAssetBundle(report));
     } else {
@@ -691,7 +672,9 @@ async function main() {
     }
 
     const report = await runPrewarm(options);
-    console.info(`클립 선생성 완료: 성공 ${report.counts.succeeded}, 재사용 ${report.counts.skipped}, 실패 ${report.counts.failed}, 입력 오류 ${report.counts.invalid}`);
+    console.info(
+      `클립 선생성 완료: 성공 ${report.counts.succeeded}, 재사용 ${report.counts.skipped}, 실패 ${report.counts.failed}, 입력 오류 ${report.counts.invalid}`
+    );
     console.info(`검증 보고서: ${options.reportPath}`);
     console.info(`clip_assets 적재 번들: ${options.bundlePath}`);
     if (report.counts.failed > 0 || report.counts.invalid > 0) {

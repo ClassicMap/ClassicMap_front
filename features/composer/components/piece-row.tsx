@@ -9,7 +9,14 @@ import type { ComposerPiece, Piece, PiecePart, PiecePartKind } from '@/types/mod
 import { cn } from '@/lib/utils';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { THEME } from '@/lib/theme';
-import { ChevronDownIcon, ChevronUpIcon, EditIcon, ExternalLinkIcon, StarIcon, TrashIcon } from 'lucide-react-native';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  EditIcon,
+  ExternalLinkIcon,
+  StarIcon,
+  TrashIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
@@ -66,7 +73,8 @@ function orderParts(parts: readonly PiecePart[]): OrderedPart[] {
     siblings.push(part);
     childrenOf.set(parentId, siblings);
   }
-  const bySequence = (a: PiecePart, b: PiecePart) => a.sequenceNumber - b.sequenceNumber || a.id - b.id;
+  const bySequence = (a: PiecePart, b: PiecePart) =>
+    a.sequenceNumber - b.sequenceNumber || a.id - b.id;
   const ordered: OrderedPart[] = [];
   const placed = new Set<number>();
   const visit = (parentId: number | null, depth: number) => {
@@ -171,7 +179,10 @@ export function PieceRow({
   const links = listenLinks(piece);
   const notableParts = isComposerPiece(piece) ? piece.notableParts : [];
   const matchedPart = isComposerPiece(piece) ? piece.matchedPart : null;
-  const detail = [catalogueLabel(piece), piece.compositionYear ? `${piece.compositionYear}` : null].filter(Boolean);
+  const detail = [
+    catalogueLabel(piece),
+    piece.compositionYear ? `${piece.compositionYear}` : null,
+  ].filter(Boolean);
   return (
     <View className="border-b border-border">
       <View className="flex-row items-center gap-3 py-2.5">
@@ -189,15 +200,27 @@ export function PieceRow({
                 accessibilityState={{ expanded }}
                 accessibilityLabel={
                   expanded
-                    ? t('{title} 안의 {unit} {count}개 접기', { title: piece.title, unit, count: partCount })
-                    : t('{title} 안의 {unit} {count}개 펼치기', { title: piece.title, unit, count: partCount })
+                    ? t('{title} 안의 {unit} {count}개 접기', {
+                        title: piece.title,
+                        unit,
+                        count: partCount,
+                      })
+                    : t('{title} 안의 {unit} {count}개 펼치기', {
+                        title: piece.title,
+                        unit,
+                        count: partCount,
+                      })
                 }
                 hitSlop={8}
                 className="shrink-0 flex-row items-center gap-0.5 rounded-full px-1.5 py-0.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
                 <Text variant="caption" className="tabular-nums">
                   {partCountLabel(partCount, piece.partKind)}
                 </Text>
-                <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={14} className="text-foreground-subtle" />
+                <Icon
+                  as={expanded ? ChevronUpIcon : ChevronDownIcon}
+                  size={14}
+                  className="text-foreground-subtle"
+                />
               </Pressable>
             ) : null}
           </View>
@@ -212,7 +235,9 @@ export function PieceRow({
                 <View className="flex-row items-center gap-1">
                   <NotableStar size={11} label={t('대표 곡')} />
                   <Text variant="caption" className="text-foreground">
-                    {notableParts.map((sequence) => partLabel(sequence, piece.partKind)).join(' · ')}
+                    {notableParts
+                      .map((sequence) => partLabel(sequence, piece.partKind))
+                      .join(' · ')}
                   </Text>
                 </View>
               ) : null}
@@ -227,22 +252,40 @@ export function PieceRow({
           ) : null}
         </View>
         {comparable ? (
-          <Chip size="sm" label={t('비교 듣기')} onPress={onCompare} accessibilityLabel={t('{title} 비교 듣기', { title: piece.title })} />
+          <Chip
+            size="sm"
+            label={t('비교 듣기')}
+            onPress={onCompare}
+            accessibilityLabel={t('{title} 비교 듣기', { title: piece.title })}
+          />
         ) : null}
         <FavoriteButton kind="pieces" id={piece.id} name={piece.title} />
         {canEdit ? (
           <View className="flex-row">
-            <Pressable onPress={onEdit} accessibilityLabel={t('{title} 수정', { title: piece.title })} hitSlop={6} className="size-8 items-center justify-center">
+            <Pressable
+              onPress={onEdit}
+              accessibilityLabel={t('{title} 수정', { title: piece.title })}
+              hitSlop={6}
+              className="size-8 items-center justify-center">
               <Icon as={EditIcon} size={15} className="text-foreground-muted" />
             </Pressable>
-            <Pressable onPress={onDelete} accessibilityLabel={t('{title} 삭제', { title: piece.title })} hitSlop={6} className="size-8 items-center justify-center">
+            <Pressable
+              onPress={onDelete}
+              accessibilityLabel={t('{title} 삭제', { title: piece.title })}
+              hitSlop={6}
+              className="size-8 items-center justify-center">
               <Icon as={TrashIcon} size={15} className="text-destructive" />
             </Pressable>
           </View>
         ) : null}
       </View>
       {expanded ? (
-        <PiecePartList query={partsQuery} partCount={partCount} partKind={piece.partKind} onCompare={onComparePart} />
+        <PiecePartList
+          query={partsQuery}
+          partCount={partCount}
+          partKind={piece.partKind}
+          onCompare={onComparePart}
+        />
       ) : null}
     </View>
   );
@@ -329,7 +372,13 @@ function PiecePartList({
   return (
     <View className="mb-3 ml-1 border-l border-border pl-3">
       {ordered.map(({ part, depth }) => (
-        <PiecePartRow key={part.id} part={part} depth={depth} partKind={partKind} onCompare={onCompare} />
+        <PiecePartRow
+          key={part.id}
+          part={part}
+          depth={depth}
+          partKind={partKind}
+          onCompare={onCompare}
+        />
       ))}
     </View>
   );
@@ -355,8 +404,12 @@ function PiecePartRow({
     ? listenLinks(linked)
     : listenLinks({ appleMusicUrl: part.appleMusicUrl, spotifyUrl: part.spotifyUrl });
   return (
-    <View className="flex-row items-center gap-3 py-2" style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
-      <Text variant="mono" className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
+    <View
+      className="flex-row items-center gap-3 py-2"
+      style={depth > 0 ? { paddingLeft: depth * 16 } : undefined}>
+      <Text
+        variant="mono"
+        className={cn('text-right text-foreground-subtle', movement ? 'w-11' : 'w-6')}>
         {movement ? t('{n}악장', { n: part.sequenceNumber }) : `${part.sequenceNumber}.`}
       </Text>
       <View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-x-3 gap-y-1">

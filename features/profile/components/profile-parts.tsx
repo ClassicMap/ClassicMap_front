@@ -19,7 +19,10 @@ export const RATING_SORTS: { key: RatingSortKey; label: string }[] = [
   { key: 'concertDate', label: msg('공연일순') },
 ];
 
-export function sortRatings(ratings: readonly RatedConcertListItem[], key: RatingSortKey): RatedConcertListItem[] {
+export function sortRatings(
+  ratings: readonly RatedConcertListItem[],
+  key: RatingSortKey
+): RatedConcertListItem[] {
   return [...ratings].sort((a, b) => {
     switch (key) {
       case 'highest':
@@ -43,21 +46,44 @@ export interface RatingStats {
 
 export function ratingStats(ratings: readonly RatedConcertListItem[]): RatingStats {
   const count = ratings.length;
-  const average = count > 0 ? Math.round((ratings.reduce((sum, item) => sum + item.myRating, 0) / count) * 10) / 10 : 0;
+  const average =
+    count > 0
+      ? Math.round((ratings.reduce((sum, item) => sum + item.myRating, 0) / count) * 10) / 10
+      : 0;
   return { count, average, fiveStars: ratings.filter((item) => item.myRating >= 5).length };
 }
 
 /** 사람은 원형. 사진이 없으면 이름 첫 글자 타일 */
-export function ProfileAvatar({ name, uri, size }: { name: string; uri?: string | null; size: number }) {
+export function ProfileAvatar({
+  name,
+  uri,
+  size,
+}: {
+  name: string;
+  uri?: string | null;
+  size: number;
+}) {
   useLocale();
   return <EntityThumb name={name} image={uri} shape="circle" size={size} />;
 }
 
-export function StatTile({ value, label, accent = false }: { value: string; label: string; accent?: boolean }) {
+export function StatTile({
+  value,
+  label,
+  accent = false,
+}: {
+  value: string;
+  label: string;
+  accent?: boolean;
+}) {
   useLocale();
   return (
     <View className="flex-1 rounded-lg bg-surface-2 px-3.5 py-3">
-      <Text className={cn('text-[24px] font-bold leading-8 tabular-nums', accent ? 'text-primary' : 'text-foreground')}>
+      <Text
+        className={cn(
+          'text-[24px] font-bold tabular-nums leading-8',
+          accent ? 'text-primary' : 'text-foreground'
+        )}>
         {value}
       </Text>
       <Text variant="caption" numberOfLines={1}>
@@ -77,7 +103,9 @@ export function RatingStars({ value, size = 13 }: { value: number; size?: number
           key={index}
           as={StarIcon}
           size={size}
-          className={index < rounded ? 'fill-primary text-primary' : 'fill-surface-3 text-surface-3'}
+          className={
+            index < rounded ? 'fill-primary text-primary' : 'fill-surface-3 text-surface-3'
+          }
         />
       ))}
     </View>
@@ -94,7 +122,13 @@ interface RatingGridProps {
 }
 
 /** 평가한 공연: 포스터 그리드 + 별점. 칸 폭은 부모 폭에서 계산한다 */
-export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidth }: RatingGridProps) {
+export function RatingGrid({
+  ratings,
+  sortKey,
+  onSortChange,
+  onOpen,
+  minItemWidth,
+}: RatingGridProps) {
   const { locale } = useLocale();
   const [width, setWidth] = React.useState(0);
   const gap = 16;
@@ -104,7 +138,10 @@ export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidt
 
   return (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2">
         {RATING_SORTS.map((option) => (
           <Chip
             key={option.key}
@@ -124,18 +161,31 @@ export function RatingGrid({ ratings, sortKey, onSortChange, onOpen, minItemWidt
                 key={rating.concertId}
                 onPress={() => onOpen(rating.concertId)}
                 accessibilityRole="link"
-                accessibilityLabel={t('{title} 별점 {count}점', { title: rating.title, count: rating.myRating })}
+                accessibilityLabel={t('{title} 별점 {count}점', {
+                  title: rating.title,
+                  count: rating.myRating,
+                })}
                 style={{ width: itemWidth }}
                 className="web:hover:opacity-90">
-                <EntityThumb name={rating.title} image={rating.posterUrl} shape="square" size={itemWidth} aspect={4 / 3} />
+                <EntityThumb
+                  name={rating.title}
+                  image={rating.posterUrl}
+                  shape="square"
+                  size={itemWidth}
+                  aspect={4 / 3}
+                />
                 <View className="mt-2">
                   <RatingStars value={rating.myRating} />
                 </View>
-                <Text numberOfLines={2} className="mt-1.5 text-body-sm font-semibold text-foreground">
+                <Text
+                  numberOfLines={2}
+                  className="mt-1.5 text-body-sm font-semibold text-foreground">
                   {rating.title}
                 </Text>
                 <Text variant="caption" numberOfLines={1} className="mt-0.5">
-                  {[formatShortDay(rating.startDate), shortVenue(rating.facilityName ?? undefined)].filter(Boolean).join(' · ')}
+                  {[formatShortDay(rating.startDate), shortVenue(rating.facilityName ?? undefined)]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
               </Pressable>
             ))

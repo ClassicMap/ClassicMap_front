@@ -17,7 +17,12 @@ interface SubPageProps {
 }
 
 /** 설정 아래 화면(이름·비밀번호·계정 삭제·도움말·약관)의 틀. 한 줄기 640px */
-export function SubPage({ title, description, fallbackHref = '/settings', children }: SubPageProps) {
+export function SubPage({
+  title,
+  description,
+  fallbackHref = '/settings',
+  children,
+}: SubPageProps) {
   useLocale();
   const router = useRouter();
   const { layout } = useBreakpoint();
@@ -31,7 +36,9 @@ export function SubPage({ title, description, fallbackHref = '/settings', childr
       <View className="w-full max-w-[640px]">
         {!wide ? (
           <Pressable
-            onPress={() => (router.canGoBack() ? router.back() : router.replace(fallbackHref as Href))}
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace(fallbackHref as Href)
+            }
             accessibilityLabel={t('뒤로')}
             className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
             <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
@@ -51,7 +58,13 @@ export function SubPage({ title, description, fallbackHref = '/settings', childr
   );
 }
 
-export function FieldMessage({ error, success }: { error?: string | null; success?: string | null }) {
+export function FieldMessage({
+  error,
+  success,
+}: {
+  error?: string | null;
+  success?: string | null;
+}) {
   useLocale();
   if (error) {
     return (

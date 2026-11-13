@@ -31,7 +31,10 @@ export function AuthShell({ children, onClose }: AuthShellProps) {
           accessibilityRole="button"
           accessibilityLabel={t('닫기')}
           hitSlop={8}
-          className={cn('mb-4 size-11 items-center justify-center rounded-full', wide ? 'self-end bg-surface-2' : '-ml-2.5')}>
+          className={cn(
+            'mb-4 size-11 items-center justify-center rounded-full',
+            wide ? 'self-end bg-surface-2' : '-ml-2.5'
+          )}>
           <Icon as={XIcon} size={20} className="text-foreground" />
         </Pressable>
       ) : null}
@@ -45,7 +48,11 @@ export function AuthShell({ children, onClose }: AuthShellProps) {
       className="flex-1 bg-background"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
-      contentContainerClassName={wide ? 'min-h-full items-center justify-center px-12 py-12' : 'px-6 pt-safe-offset-4 pb-safe-offset-10'}>
+      contentContainerClassName={
+        wide
+          ? 'min-h-full items-center justify-center px-12 py-12'
+          : 'px-6 pt-safe-offset-4 pb-safe-offset-10'
+      }>
       {form}
     </ScrollView>
   );
@@ -59,7 +66,9 @@ export function AuthHeading({ title, description }: { title: string; description
   useLocale();
   return (
     <View className="mb-6">
-      <Text className="text-[28px] font-bold leading-9 tracking-tight text-foreground">{title}</Text>
+      <Text className="text-[28px] font-bold leading-9 tracking-tight text-foreground">
+        {title}
+      </Text>
       {description ? (
         <Text variant="bodySm" className="mt-1.5 text-foreground-muted">
           {description}

@@ -50,7 +50,9 @@ function referenceAt(alignment: ClipAlignment, clipMs: number): number {
 /** 두 연주가 같은 기준의 지도를 가졌는지. 기준 연주 자신도 자기 지도(그대로)를 가진다 */
 export function sharesMap(from: AlignedClip, to: AlignedClip): boolean {
   return Boolean(
-    from.alignment && to.alignment && from.alignment.referencePerformanceId === to.alignment.referencePerformanceId
+    from.alignment &&
+    to.alignment &&
+    from.alignment.referencePerformanceId === to.alignment.referencePerformanceId
   );
 }
 
@@ -77,7 +79,12 @@ export function sameMoment(seconds: number, from: AlignedClip, to: AlignedClip):
  * 지금 자리에서 `to` 가 `from` 을 따라가려면 얼마나 빨리 가야 하는지(재생 빠르기).
  * 앞으로 몇 초 사이의 같은 지점 변화로 잰다. 지도가 없으면 길이 비다
  */
-export function followRate(seconds: number, from: AlignedClip, to: AlignedClip, aheadSec = 2): number {
+export function followRate(
+  seconds: number,
+  from: AlignedClip,
+  to: AlignedClip,
+  aheadSec = 2
+): number {
   if (!(from.lengthSec > 0) || !(to.lengthSec > 0)) return 1;
   if (!sharesMap(from, to)) return to.lengthSec / from.lengthSec;
   const start = Math.min(seconds, Math.max(0, from.lengthSec - aheadSec));

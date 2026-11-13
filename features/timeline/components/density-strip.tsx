@@ -40,7 +40,8 @@ export function DensityStrip({
   useLocale();
   const inner = Math.max(1, width - padLeft - padRight);
   const pxPerYear = inner / Math.max(1, toYear - fromYear);
-  const x = (year: number) => padLeft + (Math.min(toYear, Math.max(fromYear, year)) - fromYear) * pxPerYear;
+  const x = (year: number) =>
+    padLeft + (Math.min(toYear, Math.max(fromYear, year)) - fromYear) * pxPerYear;
   const maxTotal = Math.max(1, ...buckets.map((bucket) => bucket.total));
   const plotHeight = DENSITY_STRIP_HEIGHT - 2;
   const decadeWidth = 10 * pxPerYear;
@@ -90,7 +91,10 @@ export function DensityStrip({
           />
         ) : null}
       </Svg>
-      <View className="absolute bottom-0 left-0 right-0 h-px bg-border" style={{ pointerEvents: 'none' }} />
+      <View
+        className="absolute bottom-0 left-0 right-0 h-px bg-border"
+        style={{ pointerEvents: 'none' }}
+      />
       {/* 막대 위가 아니라 이 판이 눌려야 locationX가 띠 기준으로 잡힌다 */}
       <View
         className="absolute inset-0 web:cursor-pointer"

@@ -74,7 +74,11 @@ async function withNames(items: RecentPiece[]): Promise<RecentPiece[]> {
       changed = true;
       return {
         ...item,
-        names: { pieceTitle: names.pieceTitle, composerName: names.composerName, sectorName: names.sectorName },
+        names: {
+          pieceTitle: names.pieceTitle,
+          composerName: names.composerName,
+          sectorName: names.sectorName,
+        },
       };
     })
   );
@@ -103,7 +107,11 @@ export function useRecordRecentPiece() {
       const current = await readRecentPieces();
       // 들은 기록의 '열기'는 작품을 새로 열었을 때만 남긴다. 구간만 바꾼 것은 세지 않는다
       const previous = current[0];
-      if (!previous || previous.pieceId !== piece.pieceId || Date.now() - previous.viewedAt > REOPEN_AFTER_MS) {
+      if (
+        !previous ||
+        previous.pieceId !== piece.pieceId ||
+        Date.now() - previous.viewedAt > REOPEN_AFTER_MS
+      ) {
         recordListeningEvent({ pieceId: piece.pieceId, sectorId: piece.sectorId, kind: 'open' });
       }
       const next = [

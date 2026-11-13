@@ -1,7 +1,8 @@
 /** 영어 사전: 로그인·가입·설정·도움말·온보딩·계정. 키는 화면의 한국어 원문 그대로, 값은 영어. */
 export const ACCOUNT: Readonly<Record<string, string>> = {
   // 로그인·가입·비밀번호
-  '레퍼토리와 별점을 어느 기기에서든 이어서 봐요.': 'Pick up your repertoire and ratings on any device.',
+  '레퍼토리와 별점을 어느 기기에서든 이어서 봐요.':
+    'Pick up your repertoire and ratings on any device.',
   '또는 이메일로': 'Or use your email',
   이메일: 'Email',
   비밀번호: 'Password',
@@ -10,7 +11,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   회원가입: 'Sign up',
   '로그인 없이도 비교·검색·공연은 모두 볼 수 있어요.':
     'You can use comparison, search and concerts without signing in.',
-  '레퍼토리와 별점을 남기려면 계정이 필요해요.': 'You need an account to save a repertoire and ratings.',
+  '레퍼토리와 별점을 남기려면 계정이 필요해요.':
+    'You need an account to save a repertoire and ratings.',
   'family::성': 'Last name',
   'given::이름': 'First name',
   '8자 이상': 'At least 8 characters',
@@ -47,7 +49,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
     'This password has appeared in a data breach. Choose a different one.',
   '너무 흔한 비밀번호예요. 다른 비밀번호로 바꿔 주세요.':
     'This password is too common. Choose a different one.',
-  '비밀번호가 너무 짧아요. 8자 이상 입력해 주세요.': 'Password is too short. Use at least 8 characters.',
+  '비밀번호가 너무 짧아요. 8자 이상 입력해 주세요.':
+    'Password is too short. Use at least 8 characters.',
   '비밀번호가 너무 길어요. 조금 줄여 주세요.': 'Password is too long. Shorten it a little.',
   '비밀번호 조건을 채우지 못했어요. 더 길고 복잡한 비밀번호로 다시 입력해 주세요.':
     "Password doesn't meet the requirements. Try a longer, more complex one.",
@@ -57,7 +60,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '비밀번호를 입력해 주세요.': 'Enter your password.',
   '이메일 주소 형식이 맞지 않아요. 다시 확인해 주세요.':
     "That doesn't look like a valid email address. Check it and try again.",
-  '이미 가입된 이메일이에요. 로그인해 주세요.': 'This email is already registered. Sign in instead.',
+  '이미 가입된 이메일이에요. 로그인해 주세요.':
+    'This email is already registered. Sign in instead.',
   '이메일 주소를 입력해 주세요.': 'Enter your email address.',
   '이메일을 입력해 주세요.': 'Enter your email.',
   '이름을 입력해 주세요.': 'Enter your first name.',
@@ -110,8 +114,10 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '프로필을 불러오지 못했어요': "Couldn't load the profile",
   '프로필을 찾을 수 없어요': 'Profile not found',
   '주소가 맞는지 확인해 주세요.': 'Check that the address is correct.',
-  '이 사용자가 평가한 공연 목록을 공개하지 않았어요.': "This user hasn't made their rated concerts public.",
-  '이 사용자가 레퍼토리 목록을 공개하지 않았어요.': "This user hasn't made their repertoire public.",
+  '이 사용자가 평가한 공연 목록을 공개하지 않았어요.':
+    "This user hasn't made their rated concerts public.",
+  '이 사용자가 레퍼토리 목록을 공개하지 않았어요.':
+    "This user hasn't made their repertoire public.",
   '이 사용자가 컬렉션 목록을 공개하지 않았어요.': "This user hasn't made their collections public.",
   'profile::아직 레퍼토리가 비어 있어요': 'Nothing in the repertoire yet',
   '최근 평가순': 'Recently rated',
@@ -153,7 +159,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '비워 두면 로그인 계정의 사진을 써요.': "Leave blank to use your sign-in account's photo.",
   '표시 이름': 'Display name',
   '한 줄 소개': 'Bio',
-  '예: 라흐마니노프 협주곡을 연주자별로 모으고 있어요': 'e.g. Collecting Rachmaninoff concertos by performer',
+  '예: 라흐마니노프 협주곡을 연주자별로 모으고 있어요':
+    'e.g. Collecting Rachmaninoff concertos by performer',
   '저장했어요.': 'Saved.',
   되돌리기: 'Revert',
   '저장 중…': 'Saving…',
@@ -188,17 +195,22 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '계정 이름': 'Account name',
   '로그인 계정에 쓰는 이름이에요. 공개 프로필에 보이는 이름은 설정 > 프로필에서 따로 바꿔요.':
     'The name on your sign-in account. Change the name on your public profile under Settings > Profile.',
-  '이름을 바꾸지 못했어요. 잠시 뒤 다시 시도해 주세요.': "Couldn't change your name. Try again in a moment.",
+  '이름을 바꾸지 못했어요. 잠시 뒤 다시 시도해 주세요.':
+    "Couldn't change your name. Try again in a moment.",
   '성과 이름을 모두 입력해 주세요.': 'Enter both your last name and first name.',
   '이름을 바꿨어요.': 'Name updated.',
-  '이메일 주소는 계정 보안 때문에 바꿀 수 없어요.': "For account security, your email address can't be changed.",
+  '이메일 주소는 계정 보안 때문에 바꿀 수 없어요.':
+    "For account security, your email address can't be changed.",
   '비밀번호 변경': 'Change password',
-  '이메일로 가입한 계정의 비밀번호를 바꿔요.': 'Change the password of an account created with email.',
+  '이메일로 가입한 계정의 비밀번호를 바꿔요.':
+    'Change the password of an account created with email.',
   '비밀번호를 바꾸지 못했어요. 현재 비밀번호를 확인한 뒤 다시 시도해 주세요.':
     "Couldn't change your password. Check your current password and try again.",
   '세 칸을 모두 입력해 주세요.': 'Fill in all three fields.',
-  '새 비밀번호는 {min}자 이상으로 정해 주세요.': 'Your new password must be at least {min} characters.',
-  '새 비밀번호 두 칸이 달라요. 다시 입력해 주세요.': "The two new passwords don't match. Enter them again.",
+  '새 비밀번호는 {min}자 이상으로 정해 주세요.':
+    'Your new password must be at least {min} characters.',
+  '새 비밀번호 두 칸이 달라요. 다시 입력해 주세요.':
+    "The two new passwords don't match. Enter them again.",
   '현재 비밀번호': 'Current password',
   '{min}자 이상': 'At least {min} characters',
   '새 비밀번호 확인': 'Confirm new password',
@@ -215,11 +227,13 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '삭제 중…': 'Deleting…',
   '메일로 삭제 요청': 'Request deletion by email',
   '계정을 삭제할까요?': 'Delete your account?',
-  '평가와 레퍼토리가 모두 지워지고 되돌릴 수 없어요.': 'Your ratings and repertoire will be erased for good.',
+  '평가와 레퍼토리가 모두 지워지고 되돌릴 수 없어요.':
+    'Your ratings and repertoire will be erased for good.',
   'ClassicMap 계정 삭제 요청': 'ClassicMap account deletion request',
   '계정 삭제를 요청합니다.\n\n이메일: {email}\n삭제 사유: ':
     'I would like to request deletion of my account.\n\nEmail: {email}\nReason: ',
-  '메일 앱을 열지 못했어요. {email}로 직접 보내 주세요.': "Couldn't open your mail app. Please email {email} directly.",
+  '메일 앱을 열지 못했어요. {email}로 직접 보내 주세요.':
+    "Couldn't open your mail app. Please email {email} directly.",
   '기록은 지웠지만 로그인 계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.':
     "Your data was erased, but we couldn't delete your sign-in account. Try again in a moment or request deletion by email.",
   '이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 {email}에 삭제를 요청해 주세요.':
@@ -254,13 +268,15 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   'ClassicMap 문의': 'ClassicMap inquiry',
   '메일로 문의하기': 'Email us',
   'ClassicMap 문제 신고': 'ClassicMap problem report',
-  '문제 내용:\n\n\n발생 시점:\n\n\n기기 정보:\n\n': 'What happened:\n\n\nWhen it happened:\n\n\nDevice info:\n\n',
+  '문제 내용:\n\n\n발생 시점:\n\n\n기기 정보:\n\n':
+    'What happened:\n\n\nWhen it happened:\n\n\nDevice info:\n\n',
   '문제 신고하기': 'Report a problem',
   '약관 및 정책': 'Terms and policies',
   // 찾는 화면 없음
   '찾는 화면이 없어요': "We can't find that screen",
-  '주소가 바뀌었거나 없어진 화면이에요.': 'The address may have changed, or the screen no longer exists.',
-  '홈으로': 'Go to Home',
+  '주소가 바뀌었거나 없어진 화면이에요.':
+    'The address may have changed, or the screen no longer exists.',
+  홈으로: 'Go to Home',
   // 취향 묻기(온보딩)
   이전: 'Back',
   건너뛰기: 'Skip',
@@ -269,7 +285,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '{total}단계 중 {step}단계': 'Step {step} of {total}',
   '나중에 할게요': 'Maybe later',
   '클래식, 얼마나 들어요?': 'How much classical do you listen to?',
-  '답에 따라 처음 열어 드릴 곡과 구간이 달라져요.': 'Your answer changes the pieces and sections we show first.',
+  '답에 따라 처음 열어 드릴 곡과 구간이 달라져요.':
+    'Your answer changes the pieces and sections we show first.',
   '어떤 악기를 연주해요?': 'Which instrument do you play?',
   '어떤 소리에 끌려요?': 'Which sounds draw you in?',
   '여러 개 골라도 돼요. 고른 소리마다 한 곡씩은 꼭 보여 드려요.':
@@ -277,7 +294,8 @@ export const ACCOUNT: Readonly<Record<string, string>> = {
   '아는 곡이 있으면 골라 주세요': 'Pick any pieces you know',
   '하나도 없어도 괜찮아요. 고른 곡과 닮은 곡을 먼저 보여 드려요.':
     "It's fine if you don't know any. We'll show pieces similar to your picks first.",
-  '곡 목록을 불러오지 못했어요. 이 장은 건너뛰어도 괜찮아요.': "Couldn't load the list of pieces. You can skip this step.",
+  '곡 목록을 불러오지 못했어요. 이 장은 건너뛰어도 괜찮아요.':
+    "Couldn't load the list of pieces. You can skip this step.",
   '좋아하는 연주자나 작곡가가 있어요?': 'Any performers or composers you love?',
   '고르면 레퍼토리에 담아 두고, 그 사람이 나오는 비교를 앞에 보여 드려요.':
     "We'll add them to your repertoire and show comparisons featuring them first.",

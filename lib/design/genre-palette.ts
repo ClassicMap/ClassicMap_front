@@ -43,4 +43,3 @@ export function isPieceGenre(value: unknown): value is PieceGenre {
 export function genreStyle(genre: string | null | undefined): GenreStyle | undefined {
   return isPieceGenre(genre) ? GENRE_STYLES[genre] : undefined;
 }
-

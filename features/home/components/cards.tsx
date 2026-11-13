@@ -63,7 +63,9 @@ export function PieceCard({
     : undefined;
   const genre = genreStyle(piece.genre);
   const isCurrent = useComparePlayer((state) => state.current?.pieceId === piece.pieceId);
-  const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === piece.pieceId);
+  const playing = useComparePlayer(
+    (state) => state.playing && state.current?.pieceId === piece.pieceId
+  );
   // 그 자리에서 바로 튼다(영상은 하단 플레이바). 틀 연주가 없으면 비교 화면을 연다
   const playHere = () => {
     playPiece({ pieceId: piece.pieceId }, list, listName)
@@ -71,7 +73,11 @@ export function PieceCard({
       .catch(() => onPress());
   };
   // 데스크톱은 호버, 터치는 누르기 시작할 때 다음 화면 데이터를 미리 받는다
-  const prefetch = usePrefetchOnHover({ kind: 'piece', pieceId: piece.pieceId, composerId: piece.composerId });
+  const prefetch = usePrefetchOnHover({
+    kind: 'piece',
+    pieceId: piece.pieceId,
+    composerId: piece.composerId,
+  });
   return (
     <Pressable
       {...prefetch}
@@ -91,7 +97,10 @@ export function PieceCard({
       })}
       accessibilityActions={onDismiss ? [{ name: 'dismiss', label: t('관심 없음') }] : undefined}
       onAccessibilityAction={(event) => event.nativeEvent.actionName === 'dismiss' && onDismiss?.()}
-      className={cn(WEB_CARD, 'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
+      className={cn(
+        WEB_CARD,
+        'group -m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2'
+      )}>
       <View>
         <PieceArt
           coverVideoId={piece.coverVideoId}
@@ -149,7 +158,10 @@ export function PieceCard({
             <Icon
               as={playing ? PauseIcon : PlayIcon}
               size={17}
-              className={cn('fill-primary-foreground text-primary-foreground', !playing && 'ml-0.5')}
+              className={cn(
+                'fill-primary-foreground text-primary-foreground',
+                !playing && 'ml-0.5'
+              )}
             />
           </Pressable>
         ) : null}
@@ -160,7 +172,8 @@ export function PieceCard({
       <Text variant="caption" numberOfLines={1} className="mt-0.5">
         {[
           piece.composerName,
-          (!hideGenre && genre && t(genre.label)) || t('연주자 {count}', { count: piece.performerCount }),
+          (!hideGenre && genre && t(genre.label)) ||
+            t('연주자 {count}', { count: piece.performerCount }),
         ].join(' · ')}
       </Text>
       {reason ? (
@@ -200,12 +213,19 @@ export function PersonCard({
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={inRepertoire ? t('{name}, 레퍼토리에 있어요', { name }) : name}
-      className={cn(WEB_CARD, '-m-1.5 items-center rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
-      <RepertoireThumb active={inRepertoire} badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
+      className={cn(
+        WEB_CARD,
+        '-m-1.5 items-center rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2'
+      )}>
+      <RepertoireThumb
+        active={inRepertoire}
+        badgeSize={Math.max(18, Math.min(30, Math.round(width / 5)))}>
         <EntityThumb name={name} image={image} shape="circle" size={width} />
       </RepertoireThumb>
       <View className="mt-2.5 max-w-full flex-row items-center justify-center gap-1">
-        <Text numberOfLines={1} className="shrink text-center text-body-sm font-semibold text-foreground">
+        <Text
+          numberOfLines={1}
+          className="shrink text-center text-body-sm font-semibold text-foreground">
           {name}
         </Text>
         {inRepertoire ? <RepertoireMark /> : null}
@@ -220,20 +240,39 @@ export function PersonCard({
 }
 
 /** 공연 포스터. KOPIS 포스터는 세로가 길어 3:4로 자른다 */
-export function ConcertCard({ concert, width, onPress }: { concert: Concert; width: number; onPress: () => void }) {
+export function ConcertCard({
+  concert,
+  width,
+  onPress,
+}: {
+  concert: Concert;
+  width: number;
+  onPress: () => void;
+}) {
   useLocale();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="link"
       accessibilityLabel={concert.title}
-      className={cn(WEB_CARD, '-m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2')}>
-      <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={width} aspect={4 / 3} />
+      className={cn(
+        WEB_CARD,
+        '-m-1.5 rounded-xl p-1.5 active:bg-surface-2 web:hover:bg-surface-2'
+      )}>
+      <EntityThumb
+        name={concert.title}
+        image={concert.posterUrl}
+        shape="square"
+        size={width}
+        aspect={4 / 3}
+      />
       <Text numberOfLines={2} className="mt-2.5 text-body-sm font-semibold text-foreground">
         {concert.title}
       </Text>
       <Text variant="caption" numberOfLines={1} className="mt-0.5">
-        {[formatShortDay(concert.startDate), shortVenue(concert.facilityName)].filter(Boolean).join(' · ')}
+        {[formatShortDay(concert.startDate), shortVenue(concert.facilityName)]
+          .filter(Boolean)
+          .join(' · ')}
       </Text>
     </Pressable>
   );
@@ -314,13 +353,21 @@ export function RecentTile({
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={t('{title} 다시 보기', { title: `${item.composerName} ${item.pieceTitle}` })}
+      accessibilityLabel={t('{title} 다시 보기', {
+        title: `${item.composerName} ${item.pieceTitle}`,
+      })}
       className={cn(
         WEB_CARD,
         'group h-14 flex-row items-center gap-3 overflow-hidden rounded-md bg-surface-2 pr-3 active:bg-surface-3 web:hover:bg-surface-3',
         className
       )}>
-      <PieceArt coverVideoId={item.coverVideoId} fallbackImage={item.composerAvatarUrl} fallbackName={item.composerName} size={56} radius={0} />
+      <PieceArt
+        coverVideoId={item.coverVideoId}
+        fallbackImage={item.composerAvatarUrl}
+        fallbackName={item.composerName}
+        size={56}
+        radius={0}
+      />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-label font-semibold text-foreground">
           {item.pieceTitle}

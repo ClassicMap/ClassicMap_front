@@ -10,10 +10,17 @@ const config = getDefaultConfig(__dirname);
 const BASE_UI_ROOT = path.dirname(require.resolve('@base-ui/react/package.json'));
 const upstreamResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName.startsWith('#prehydration/') && context.originModulePath.startsWith(BASE_UI_ROOT)) {
+  if (
+    moduleName.startsWith('#prehydration/') &&
+    context.originModulePath.startsWith(BASE_UI_ROOT)
+  ) {
     return {
       type: 'sourceFile',
-      filePath: path.join(BASE_UI_ROOT, moduleName.slice('#prehydration/'.length), 'prehydrationScript.min.js'),
+      filePath: path.join(
+        BASE_UI_ROOT,
+        moduleName.slice('#prehydration/'.length),
+        'prehydrationScript.min.js'
+      ),
     };
   }
   return (upstreamResolveRequest ?? context.resolveRequest)(context, moduleName, platform);

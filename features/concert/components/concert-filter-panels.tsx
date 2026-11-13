@@ -51,10 +51,18 @@ function OptionRow({
         'h-10 flex-row items-center gap-3 rounded-md px-3 active:bg-surface-2 web:hover:bg-surface-2',
         selected && 'bg-primary-muted web:hover:bg-primary-muted'
       )}>
-      <Text className={cn('flex-1 text-body-sm', selected ? 'font-semibold text-foreground' : 'text-foreground')}>
+      <Text
+        className={cn(
+          'flex-1 text-body-sm',
+          selected ? 'font-semibold text-foreground' : 'text-foreground'
+        )}>
         {label}
       </Text>
-      {detail ? <Text variant="mono" className="text-foreground-subtle">{detail}</Text> : null}
+      {detail ? (
+        <Text variant="mono" className="text-foreground-subtle">
+          {detail}
+        </Text>
+      ) : null}
       <View className="w-4">
         {selected ? <Icon as={CheckIcon} size={16} className="text-primary" /> : null}
       </View>
@@ -62,7 +70,13 @@ function OptionRow({
   );
 }
 
-export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSelect: (key: ConcertGenreKey) => void }) {
+export function GenrePanel({
+  value,
+  onSelect,
+}: {
+  value: ConcertGenreKey;
+  onSelect: (key: ConcertGenreKey) => void;
+}) {
   useLocale();
   return (
     <View className="gap-0.5">
@@ -79,7 +93,13 @@ export function GenrePanel({ value, onSelect }: { value: ConcertGenreKey; onSele
 }
 
 /** 기간 프리셋. 오른쪽에 실제 날짜를 붙여 '이번 주'가 언제까지인지 바로 보이게 한다 */
-export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSelect: (key: ConcertPeriodKey) => void }) {
+export function PeriodPanel({
+  value,
+  onSelect,
+}: {
+  value: ConcertPeriodKey;
+  onSelect: (key: ConcertPeriodKey) => void;
+}) {
   useLocale();
   const now = new Date();
   return (
@@ -97,7 +117,15 @@ export function PeriodPanel({ value, onSelect }: { value: ConcertPeriodKey; onSe
   );
 }
 
-function AreaPill({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+function AreaPill({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
   useLocale();
   return (
     <Pressable
@@ -110,7 +138,11 @@ function AreaPill({ label, selected, onPress }: { label: string; selected: boole
           ? 'border-primary bg-primary-muted'
           : 'border-border bg-surface-1 active:bg-surface-2 web:hover:bg-surface-2'
       )}>
-      <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+      <Text
+        className={cn(
+          'text-label',
+          selected ? 'font-semibold text-foreground' : 'text-foreground-muted'
+        )}>
         {label}
       </Text>
     </Pressable>
@@ -134,7 +166,9 @@ export function AreaPanel({
   const regions = [
     ...AREA_REGIONS.map((region) => ({
       label: t(region.label),
-      areas: region.areas.map((value) => byValue.get(value)).filter((area): area is AreaOption => Boolean(area)),
+      areas: region.areas
+        .map((value) => byValue.get(value))
+        .filter((area): area is AreaOption => Boolean(area)),
     })),
     { label: t('그 밖'), areas: others },
   ].filter((region) => region.areas.length > 0);
@@ -209,13 +243,17 @@ export function InstrumentPanel({
                   {count !== undefined ? (
                     <Text
                       variant="mono"
-                      className={cn(count === 0 ? 'text-foreground-subtle/60' : 'text-foreground-subtle')}>
+                      className={cn(
+                        count === 0 ? 'text-foreground-subtle/60' : 'text-foreground-subtle'
+                      )}>
                       {count}
                     </Text>
                   ) : null}
                 </View>
                 <View>
-                  <Text className="text-body-sm font-semibold text-foreground">{t(instrument.label)}</Text>
+                  <Text className="text-body-sm font-semibold text-foreground">
+                    {t(instrument.label)}
+                  </Text>
                   <Text variant="micro" numberOfLines={1} className="mt-0.5">
                     {t(instrument.hint)}
                   </Text>
@@ -226,7 +264,9 @@ export function InstrumentPanel({
         })}
       </View>
       {counts ? (
-        <Text variant="micro">{t('숫자는 지금 불러온 공연 기준이에요. 공연 제목으로 나눠 조금 다를 수 있어요.')}</Text>
+        <Text variant="micro">
+          {t('숫자는 지금 불러온 공연 기준이에요. 공연 제목으로 나눠 조금 다를 수 있어요.')}
+        </Text>
       ) : null}
     </View>
   );
@@ -250,7 +290,10 @@ function ArtistRow({
   onPress: () => void;
 }) {
   useLocale();
-  const meta = [option.category ? getArtistCategoryLabel(option.category) : null, option.englishName]
+  const meta = [
+    option.category ? getArtistCategoryLabel(option.category) : null,
+    option.englishName,
+  ]
     .filter(Boolean)
     .join(' · ');
   return (
@@ -281,7 +324,9 @@ function ArtistRow({
           {t('공연 {count}', { count: option.concertCount })}
         </Text>
       ) : null}
-      <View className="w-4">{selected ? <Icon as={CheckIcon} size={16} className="text-primary" /> : null}</View>
+      <View className="w-4">
+        {selected ? <Icon as={CheckIcon} size={16} className="text-primary" /> : null}
+      </View>
     </Pressable>
   );
 }
@@ -318,7 +363,9 @@ export function ArtistPanel({
   const rest = options.filter((option) => !favoriteIds.has(option.artistId));
   const pick = (option: ConcertArtistOption) =>
     onSelect(
-      value === option.artistId ? undefined : { artistId: option.artistId, name: option.name, imageUrl: option.imageUrl }
+      value === option.artistId
+        ? undefined
+        : { artistId: option.artistId, name: option.name, imageUrl: option.imageUrl }
     );
 
   return (
@@ -336,7 +383,10 @@ export function ArtistPanel({
           className="min-w-0 flex-1 text-body-sm text-foreground web:outline-none"
         />
         {search ? (
-          <Pressable accessibilityLabel={t('이름 지우기')} hitSlop={10} onPress={() => setSearch('')}>
+          <Pressable
+            accessibilityLabel={t('이름 지우기')}
+            hitSlop={10}
+            onPress={() => setSearch('')}>
             <Icon as={XIcon} size={14} className="text-foreground-subtle" />
           </Pressable>
         ) : null}
@@ -388,7 +438,9 @@ export function ArtistPanel({
         ) : rest.length === 0 ? (
           <Text variant="caption" className="px-2 py-2">
             {needle
-              ? t("'{name}' 이름의 연주자가 없어요. 철자를 바꿔 보세요.", { name: debounced.trim() })
+              ? t("'{name}' 이름의 연주자가 없어요. 철자를 바꿔 보세요.", {
+                  name: debounced.trim(),
+                })
               : t('앞으로 공연이 잡힌 연주자가 아직 없어요.')}
           </Text>
         ) : (
@@ -435,7 +487,10 @@ export function ToggleRow({
           'h-7 w-12 justify-center rounded-full px-0.5',
           value ? 'items-end bg-primary' : 'items-start bg-surface-3'
         )}>
-        <View className="size-6 rounded-full bg-white" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.25)' }} />
+        <View
+          className="size-6 rounded-full bg-white"
+          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.25)' }}
+        />
       </View>
     </Pressable>
   );

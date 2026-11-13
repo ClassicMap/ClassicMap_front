@@ -8,7 +8,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 
-function isFavorite(groups: FavoriteGroups | undefined, kind: FavoriteTargetType, id: number): boolean {
+function isFavorite(
+  groups: FavoriteGroups | undefined,
+  kind: FavoriteTargetType,
+  id: number
+): boolean {
   if (!groups) return false;
   switch (kind) {
     case 'concerts':
@@ -54,7 +58,13 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
   // 로그아웃 직후 남은 캐시로 '담김'이 보이지 않게, 로그인 상태에서만 서버 목록을 믿는다
   const groups: FavoriteGroups | undefined =
     kind === 'recordings'
-      ? recordings.data && { concerts: [], artists: [], composers: [], pieces: [], recordings: recordings.data }
+      ? recordings.data && {
+          concerts: [],
+          artists: [],
+          composers: [],
+          pieces: [],
+          recordings: recordings.data,
+        }
       : favorites.data;
   const saved = isSignedIn ? isFavorite(groups, kind, id) : false;
   const active = optimistic ?? saved;
@@ -64,7 +74,10 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_PAGE_QUERY_KEYS.favorites }),
     onError: () => {
       setOptimistic(null);
-      Alert.alert(t('레퍼토리에 반영하지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
+      Alert.alert(
+        t('레퍼토리에 반영하지 못했어요'),
+        t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.')
+      );
     },
   });
 
@@ -75,10 +88,14 @@ export function useFavorite(kind: FavoriteTargetType, id: number) {
 
   const toggle = React.useCallback(() => {
     if (!isSignedIn) {
-      Alert.alert(t('로그인이 필요해요'), t('로그인하면 레퍼토리에 담아 두고 언제든 다시 볼 수 있어요.'), [
-        { text: t('취소'), style: 'cancel' },
-        { text: t('로그인'), onPress: () => router.push('/(auth)/sign-in' as Href) },
-      ]);
+      Alert.alert(
+        t('로그인이 필요해요'),
+        t('로그인하면 레퍼토리에 담아 두고 언제든 다시 볼 수 있어요.'),
+        [
+          { text: t('취소'), style: 'cancel' },
+          { text: t('로그인'), onPress: () => router.push('/(auth)/sign-in' as Href) },
+        ]
+      );
       return;
     }
     const next = !active;

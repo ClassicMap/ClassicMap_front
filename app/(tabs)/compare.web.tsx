@@ -2,7 +2,10 @@ import { useLocale } from '@/lib/i18n';
 import { FocusCompare, parseFocusParam } from '@/features/compare/components/focus-compare';
 import { CompareMobileScreen } from '@/features/compare/components/compare-mobile-screen';
 import { CompareGenrePieces } from '@/features/compare/components/genre-browse';
-import { CompareCatalog, CompareComposerPieces } from '@/features/compare/components/compare-catalog';
+import {
+  CompareCatalog,
+  CompareComposerPieces,
+} from '@/features/compare/components/compare-catalog';
 import { ComparePieceView } from '@/features/compare/components/compare-piece-view';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { isPieceGenre } from '@/lib/design/genre-palette';
@@ -48,7 +51,9 @@ export default function CompareScreenWeb() {
           sectorId={sectorId}
           focus={focus}
           onExit={() => router.setParams({ focus: undefined })}
-          onChangeSector={(id, a, b) => router.setParams({ sectorId: String(id), focus: `${a},${b}` })}
+          onChangeSector={(id, a, b) =>
+            router.setParams({ sectorId: String(id), focus: `${a},${b}` })
+          }
         />
       ) : pieceId ? (
         <ComparePieceView
@@ -64,7 +69,12 @@ export default function CompareScreenWeb() {
             })
           }
           onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
-          onFocus={(a, b) => router.setParams({ sectorId: sectorId ? String(sectorId) : undefined, focus: `${a},${b}` })}
+          onFocus={(a, b) =>
+            router.setParams({
+              sectorId: sectorId ? String(sectorId) : undefined,
+              focus: `${a},${b}`,
+            })
+          }
         />
       ) : genre ? (
         <CompareGenrePieces
@@ -73,20 +83,28 @@ export default function CompareScreenWeb() {
           onBack={() => router.setParams({ genre: undefined })}
           onSelectGenre={(key) => router.setParams({ genre: key })}
           // 장르에서 연 작품은 새 기록으로 쌓아 브라우저 뒤로가 장르 목록으로 돌아오게 한다
-          onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
+          onOpen={(piece) =>
+            router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)
+          }
         />
       ) : composerId ? (
         <CompareComposerPieces
           composerId={composerId}
           onBack={() => router.setParams({ composerId: undefined })}
-          onOpen={(piece) => router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })}
+          onOpen={(piece) =>
+            router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })
+          }
         />
       ) : (
         <CompareCatalog
           onOpenGenre={(key) => router.push(`/compare?genre=${key}` as Href)}
           onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
           onOpenPiece={(piece) =>
-            router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })
+            router.setParams({
+              composerId: String(piece.composerId),
+              pieceId: String(piece.pieceId),
+              sectorId: undefined,
+            })
           }
         />
       )}

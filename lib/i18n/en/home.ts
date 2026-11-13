@@ -39,7 +39,8 @@ export const HOME: Readonly<Record<string, string>> = {
   '작은 앙상블': 'Small ensemble',
   // 카드
   '이 곡을 추천에서 뺄까요?': 'Remove this piece from your recommendations?',
-  '설정에서 들은 기록을 지우면 다시 보여요.': 'Clear your listening history in Settings to see it again.',
+  '설정에서 들은 기록을 지우면 다시 보여요.':
+    'Clear your listening history in Settings to see it again.',
   '관심 없음': 'Not interested',
   '{title} 관심 없음': 'Not interested in {title}',
   '{title} 일시정지': 'Pause {title}',

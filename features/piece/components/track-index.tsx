@@ -13,7 +13,15 @@ import { Platform, Pressable, View } from 'react-native';
  * 이퀄라이저. 누르면 그 자리에서 재생하고, 이미 듣는 작품이면 재생·일시정지를 바꾼다.
  * 줄(부모 Pressable)에 group 클래스가 있어야 호버 아이콘이 뜬다.
  */
-export function TrackIndex({ index, pieceId, onPlay }: { index: number; pieceId: number; onPlay: () => void }) {
+export function TrackIndex({
+  index,
+  pieceId,
+  onPlay,
+}: {
+  index: number;
+  pieceId: number;
+  onPlay: () => void;
+}) {
   useLocale();
   const isCurrent = useComparePlayer((state) => state.current?.pieceId === pieceId);
   const playing = useComparePlayer((state) => state.playing && state.current?.pieceId === pieceId);

@@ -1,6 +1,10 @@
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
-import { comparePlayer, type SwitchMode, useComparePlayer } from '@/lib/player/compare-player-store';
+import {
+  comparePlayer,
+  type SwitchMode,
+  useComparePlayer,
+} from '@/lib/player/compare-player-store';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
@@ -23,7 +27,10 @@ export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
     { value: 'align', label: t('같은 지점'), hint: t('지금 듣던 대목에서 바로 넘어가요') },
   ];
   return (
-    <View accessibilityRole="radiogroup" accessibilityLabel={t('연주자 전환 방식')} className="flex-row items-center gap-2">
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel={t('연주자 전환 방식')}
+      className="flex-row items-center gap-2">
       {!compact ? (
         <Text variant="caption" className="text-foreground-subtle">
           {t('전환')}
@@ -43,7 +50,11 @@ export function SwitchModeToggle({ compact = false }: { compact?: boolean }) {
               // 그림자는 style로 준다
               style={selected ? SELECTED_SHADOW : undefined}
               className={cn('h-7 justify-center rounded-full px-3', selected && 'bg-surface-1')}>
-              <Text className={cn('text-label', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+              <Text
+                className={cn(
+                  'text-label',
+                  selected ? 'font-semibold text-foreground' : 'text-foreground-muted'
+                )}>
                 {option.label}
               </Text>
             </Pressable>

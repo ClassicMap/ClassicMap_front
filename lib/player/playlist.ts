@@ -102,7 +102,9 @@ function listItem(piece: ListPiece): PlaylistItem {
 /** 작품 카드 목록이나 이미 만든 목록 줄을 대기열 줄로 */
 export function listItems(list: readonly ListPiece[] | readonly PlaylistItem[]): PlaylistItem[] {
   // 작품 카드는 제목을 갖고 있고, 이미 만든 목록 줄은 meta 에 담아 둔다
-  return list.map((entry) => ('pieceTitle' in entry ? listItem(entry as ListPiece) : (entry as PlaylistItem)));
+  return list.map((entry) =>
+    'pieceTitle' in entry ? listItem(entry as ListPiece) : (entry as PlaylistItem)
+  );
 }
 
 /** 작품 목록(홈 선반·작곡가 화면·비교 둘러보기)을 재생 목록으로. 이 작품이 목록에 없으면 이 곡 하나만 */
@@ -128,7 +130,12 @@ export function sectorPlaylist(
     pieceId,
     sectorId: sector.id,
     meta: piece
-      ? { title: `${sector.sectorName} · ${piece.title}`, composer: piece.composer, image: piece.image, composerId: piece.composerId }
+      ? {
+          title: `${sector.sectorName} · ${piece.title}`,
+          composer: piece.composer,
+          image: piece.image,
+          composerId: piece.composerId,
+        }
       : undefined,
   }));
   const index = items.findIndex((item) => item.sectorId === sectorId);

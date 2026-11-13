@@ -28,7 +28,15 @@ interface HeroBannerProps {
  * 작곡가·아티스트 화면 머리 (스포티파이 아티스트 화면 꼴). 초상을 화면 폭 배너로 깔고
  * 아래쪽을 어둡게 눌러 그 위 왼쪽 아래에 이름을 크게 쓴다. 본문 좌우 여백을 뚫고 가장자리까지 채운다.
  */
-export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout = 'cover', focalPoint }: HeroBannerProps) {
+export function HeroBanner({
+  image,
+  title,
+  meta = [],
+  wide,
+  onBack,
+  imageLayout = 'cover',
+  focalPoint,
+}: HeroBannerProps) {
   useLocale();
   const [width, setWidth] = React.useState(0);
   const insets = useSafeAreaInsets();
@@ -42,7 +50,13 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
       className={cn('relative overflow-hidden bg-surface-2', wide ? '-mx-7' : '-mx-4')}
       style={{ height }}>
       {image ? (
-        <HeroImage uri={image} width={width} height={height} layout={imageLayout} focalPoint={focalPoint} />
+        <HeroImage
+          uri={image}
+          width={width}
+          height={height}
+          layout={imageLayout}
+          focalPoint={focalPoint}
+        />
       ) : null}
       {hasImage ? (
         <>
@@ -75,7 +89,10 @@ export function HeroBanner({ image, title, meta = [], wide, onBack, imageLayout 
           <Text
             variant="bodySm"
             numberOfLines={1}
-            className={cn('mt-2.5 font-medium', hasImage ? 'text-white/80' : 'text-foreground-muted')}>
+            className={cn(
+              'mt-2.5 font-medium',
+              hasImage ? 'text-white/80' : 'text-foreground-muted'
+            )}>
             {metaLine}
           </Text>
         ) : null}

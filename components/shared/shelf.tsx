@@ -15,7 +15,13 @@ interface ShelfHeaderProps {
   wide: boolean;
 }
 
-export function ShelfHeader({ title, meta, actionLabel = t('전체 보기'), onAction, wide }: ShelfHeaderProps) {
+export function ShelfHeader({
+  title,
+  meta,
+  actionLabel = t('전체 보기'),
+  onAction,
+  wide,
+}: ShelfHeaderProps) {
   useLocale();
   return (
     <View className="mb-3.5 flex-row items-end justify-between gap-3">
@@ -56,11 +62,19 @@ interface ShelfRowProps<T> {
  * 데스크톱 셸프: 폭에 맞는 칸 수만큼 한 줄만 보여 준다 (Spotify 셸프 규칙).
  * 칸 폭은 남는 폭을 나눠 늘린다. 그리드 칸이 콘텐츠에 밀리지 않게 폭을 직접 계산한다 (부록 D-1).
  */
-export function ShelfRow<T>({ items, minItemWidth, gap = 20, keyOf, renderItem, initialColumns = 5 }: ShelfRowProps<T>) {
+export function ShelfRow<T>({
+  items,
+  minItemWidth,
+  gap = 20,
+  keyOf,
+  renderItem,
+  initialColumns = 5,
+}: ShelfRowProps<T>) {
   useLocale();
   const [width, setWidth] = React.useState(0);
   const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
-  const columns = width > 0 ? Math.max(1, Math.floor((width + gap) / (minItemWidth + gap))) : initialColumns;
+  const columns =
+    width > 0 ? Math.max(1, Math.floor((width + gap) / (minItemWidth + gap))) : initialColumns;
   const itemWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : minItemWidth;
   return (
     <View onLayout={onLayout} className="flex-row" style={{ gap }}>
@@ -108,7 +122,15 @@ export function Grid<T>({ items, columns, gap = 12, rowGap, keyOf, renderItem }:
  * 모바일 가로 스크롤 셸프. 본문 좌우 여백을 뚫고 화면 끝까지 흘려서
  * 더 있다는 게 보이게 한다 (설계 문서 7.1).
  */
-export function ScrollShelf({ children, gap = 14, className }: { children: React.ReactNode; gap?: number; className?: string }) {
+export function ScrollShelf({
+  children,
+  gap = 14,
+  className,
+}: {
+  children: React.ReactNode;
+  gap?: number;
+  className?: string;
+}) {
   useLocale();
   return (
     <ScrollView

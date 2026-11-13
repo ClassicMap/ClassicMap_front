@@ -47,7 +47,9 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
       variant="ghost"
       className="rounded-full"
       accessibilityLabel={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}>
-      <Text className="text-[13px] font-semibold text-foreground-muted">{locale === 'ko' ? 'EN' : '한'}</Text>
+      <Text className="text-[13px] font-semibold text-foreground-muted">
+        {locale === 'ko' ? 'EN' : '한'}
+      </Text>
     </Button>
   );
 
@@ -78,7 +80,16 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
           ? () => (
               <BlurView tint={scheme} intensity={60} style={StyleSheet.absoluteFill}>
                 <View
-                  style={[StyleSheet.absoluteFill, { backgroundColor: withAlpha(scheme, 'background', scheme === 'dark' ? 0.8 : 0.72) }]}
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      backgroundColor: withAlpha(
+                        scheme,
+                        'background',
+                        scheme === 'dark' ? 0.8 : 0.72
+                      ),
+                    },
+                  ]}
                 />
               </BlurView>
             )
@@ -112,9 +123,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
           ...(translucent ? { position: 'absolute' as const } : null),
         },
         tabBarBackground: translucent
-          ? () => (
-              <BlurView tint={blurTint} intensity={80} style={StyleSheet.absoluteFill} />
-            )
+          ? () => <BlurView tint={blurTint} intensity={80} style={StyleSheet.absoluteFill} />
           : undefined,
       }}>
       <Tabs.Screen

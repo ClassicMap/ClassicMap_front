@@ -22,7 +22,7 @@ export function PhotoCredit({
   const label = credit
     ? credit.author && credit.license
       ? `${credit.author} · ${credit.license}`
-      : credit.creditLine ?? credit.author ?? null
+      : (credit.creditLine ?? credit.author ?? null)
     : imageUrl && /(^|\.)mzstatic\.com\//.test(imageUrl.replace(/^https?:\/\//, ''))
       ? 'Apple Music'
       : null;
@@ -37,7 +37,10 @@ export function PhotoCredit({
       onPress={() => void Linking.openURL(credit.sourceUrl).catch(() => undefined)}
       accessibilityRole="link"
       accessibilityLabel={t('사진 출처: {label}', { label })}
-      className={cn('mt-4 max-w-full web:hover:opacity-80', centered ? 'self-center' : 'self-start')}>
+      className={cn(
+        'mt-4 max-w-full web:hover:opacity-80',
+        centered ? 'self-center' : 'self-start'
+      )}>
       {text}
     </Pressable>
   ) : (

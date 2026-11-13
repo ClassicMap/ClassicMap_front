@@ -27,8 +27,7 @@ const VERIFIED_ASSET = {
   rangeVerifiedAt: '2026-08-05T00:01:00.000Z',
   sha256: 'a'.repeat(64),
   storageKey: 'abcdefghijk-10000-10000-v1-copy.mp4',
-  publicUrl:
-    'https://cdn.example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
+  publicUrl: 'https://cdn.example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
   url: 'https://example.com/clips/abcdefghijk?end=20&profile=v1-copy&start=10',
 };
 
@@ -78,9 +77,7 @@ test('manifest를 검증하고 동일 클립을 하나로 합친다', () => {
   const content = [
     JSON.stringify(approvedManifestRow({ performanceId: 11, end: 70 })),
     JSON.stringify(approvedManifestRow({ performanceId: 12, end: 70 })),
-    JSON.stringify(
-      approvedManifestRow({ performanceId: 13, start: 0, end: MAX_CLIP_SECONDS + 1 })
-    ),
+    JSON.stringify(approvedManifestRow({ performanceId: 13, start: 0, end: MAX_CLIP_SECONDS + 1 })),
     '{broken',
   ].join('\n');
 
@@ -90,7 +87,10 @@ test('manifest를 검증하고 동일 클립을 하나로 합친다', () => {
   assert.deepEqual(parsed.clips[0].performanceIds, [11, 12]);
   assert.deepEqual(parsed.clips[0].lines, [1, 2]);
   assert.equal(parsed.invalid.length, 2);
-  assert.deepEqual(parsed.invalid.map((item) => item.line), [3, 4]);
+  assert.deepEqual(
+    parsed.invalid.map((item) => item.line),
+    [3, 4]
+  );
 });
 
 test('같은 performanceId가 서로 다른 클립에 있으면 입력 오류로 분리한다', () => {
@@ -139,33 +139,16 @@ test('CLI 기본 동시성은 1이고 보고서 기본 경로를 만든다', () 
 
 test('localhost를 backend public_url 기본 주소로 허용하지 않는다', () => {
   assert.throws(
-    () =>
-      parseArgs([
-        '--manifest',
-        './clips.jsonl',
-        '--public-base-url',
-        'http://127.0.0.1:3200',
-      ]),
+    () => parseArgs(['--manifest', './clips.jsonl', '--public-base-url', 'http://127.0.0.1:3200']),
     /외부에서 접근 가능한 HTTPS/
   );
   assert.throws(
     () =>
-      parseArgs([
-        '--manifest',
-        './clips.jsonl',
-        '--public-base-url',
-        'https://127.0.0.2/clips',
-      ]),
+      parseArgs(['--manifest', './clips.jsonl', '--public-base-url', 'https://127.0.0.2/clips']),
     /외부에서 접근 가능한 HTTPS/
   );
   assert.throws(
-    () =>
-      parseArgs([
-        '--manifest',
-        './clips.jsonl',
-        '--public-base-url',
-        'https://[::1]/clips',
-      ]),
+    () => parseArgs(['--manifest', './clips.jsonl', '--public-base-url', 'https://[::1]/clips']),
     /외부에서 접근 가능한 HTTPS/
   );
 });
@@ -181,13 +164,7 @@ test('private 및 link-local 주소를 backend public_url로 허용하지 않는
     'https://[::ffff:127.0.0.1]/clips',
   ]) {
     assert.throws(
-      () =>
-        parseArgs([
-          '--manifest',
-          './clips.jsonl',
-          '--public-base-url',
-          publicBaseUrl,
-        ]),
+      () => parseArgs(['--manifest', './clips.jsonl', '--public-base-url', publicBaseUrl]),
       /외부에서 접근 가능한 HTTPS/
     );
   }
@@ -201,10 +178,7 @@ test('클립 URL에 원본 타임라인의 시작과 끝을 넣는다', () => {
     end: 30.25,
   });
 
-  assert.equal(
-    url,
-    'https://example.com/clips/abcdefghijk?end=30.25&profile=v1-copy&start=10.5'
-  );
+  assert.equal(url, 'https://example.com/clips/abcdefghijk?end=30.25&profile=v1-copy&start=10.5');
 });
 
 test('Range 206과 1바이트 응답을 검증한다', async () => {
@@ -291,7 +265,10 @@ test('검증 보고서에서 performanceId 순서의 결정적 clip_assets 번�
   };
 
   const rows = createAssetBundleRows(report);
-  assert.deepEqual(rows.map((row) => row.performanceId), [10, 20]);
+  assert.deepEqual(
+    rows.map((row) => row.performanceId),
+    [10, 20]
+  );
   assert.equal(rows[0].storageKey, VERIFIED_ASSET.storageKey);
   assert.equal(
     rows[0].publicUrl,
@@ -308,10 +285,7 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
   const manifestPath = join(directory, 'clips.jsonl');
   const reportPath = join(directory, 'report.json');
   const bundlePath = join(directory, 'bundle.jsonl');
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify(approvedManifestRow())}\n`
-  );
+  await writeFile(manifestPath, `${JSON.stringify(approvedManifestRow())}\n`);
 
   try {
     const options = parseArgs([
@@ -332,12 +306,9 @@ test('prewarm 실행은 보고서와 적재 번들을 원자적으로 만들고 
     assert.equal(JSON.parse(bundle).storageKey, VERIFIED_ASSET.storageKey);
     assert.match(JSON.parse(bundle).publicUrl, /profile=v1-copy/);
 
-    const resumedReport = await runPrewarm(
-      { ...options, resume: true },
-      async () => {
-        throw new Error('resume 항목을 다시 요청하면 안 됩니다.');
-      }
-    );
+    const resumedReport = await runPrewarm({ ...options, resume: true }, async () => {
+      throw new Error('resume 항목을 다시 요청하면 안 됩니다.');
+    });
     assert.equal(resumedReport.counts.skipped, 1);
     assert.equal(resumedReport.results[0].rangeVerifiedAt, firstReport.results[0].rangeVerifiedAt);
   } finally {
@@ -350,10 +321,7 @@ test('실패나 입력 오류가 있으면 최종 clip_assets 번들을 남기�
   const manifestPath = join(directory, 'clips.jsonl');
   const reportPath = join(directory, 'report.json');
   const bundlePath = join(directory, 'bundle.jsonl');
-  await writeFile(
-    manifestPath,
-    `${JSON.stringify(approvedManifestRow())}\n`
-  );
+  await writeFile(manifestPath, `${JSON.stringify(approvedManifestRow())}\n`);
   await writeFile(bundlePath, '이전 성공 번들은 제거되어야 합니다.\n');
 
   try {
@@ -367,11 +335,13 @@ test('실패나 입력 오류가 있으면 최종 clip_assets 번들을 남기�
       '--public-base-url',
       'https://cdn.example.com/clips',
     ]);
-    const report = await runPrewarm(options, async () =>
-      new Response(JSON.stringify({ error: '생성 실패' }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 502,
-      })
+    const report = await runPrewarm(
+      options,
+      async () =>
+        new Response(JSON.stringify({ error: '생성 실패' }), {
+          headers: { 'Content-Type': 'application/json' },
+          status: 502,
+        })
     );
 
     assert.equal(report.counts.failed, 1);

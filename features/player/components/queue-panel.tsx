@@ -417,13 +417,17 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   React.useEffect(() => {
     const previous = upcomingRef.current;
     const currentId = current?.performanceId ?? null;
-    const changed = current !== null && currentIdRef.current !== null && currentIdRef.current !== currentId;
+    const changed =
+      current !== null && currentIdRef.current !== null && currentIdRef.current !== currentId;
     currentIdRef.current = currentId;
     upcomingRef.current = upcoming;
     if (!changed || !current) return;
     const at = previous.findIndex((row) => row.pieceId === current.pieceId);
     if (at < 0) return;
-    setLeaving({ id: current.performanceId, rows: previous.slice(Math.max(0, at + 1 - MAX_LEAVING), at + 1) });
+    setLeaving({
+      id: current.performanceId,
+      rows: previous.slice(Math.max(0, at + 1 - MAX_LEAVING), at + 1),
+    });
   });
   React.useEffect(() => {
     if (!leaving) return;
@@ -447,7 +451,10 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   if (knownKeys.current) {
     for (const key of allKeys) {
       if (knownKeys.current.has(key)) continue;
-      freshKeys.current.set(key, { delay: Math.min(freshCount, MAX_STAGGER) * STAGGER_MS, at: now });
+      freshKeys.current.set(key, {
+        delay: Math.min(freshCount, MAX_STAGGER) * STAGGER_MS,
+        at: now,
+      });
       freshCount += 1;
     }
   }

@@ -128,7 +128,10 @@ export function shortVenue(name?: string): string {
   }
   const outer = trimmed.slice(0, trimmed.indexOf('(')).trim();
   if (open <= 0 || !outer) return trimmed;
-  const inner = trimmed.slice(open + 1, -1).replace(/\([^()]*\)/g, '').trim();
+  const inner = trimmed
+    .slice(open + 1, -1)
+    .replace(/\([^()]*\)/g, '')
+    .trim();
   const squash = (value: string) => value.replace(/\s+/g, '');
   if (!inner || squash(outer).includes(squash(inner))) return outer;
   return `${outer} ${inner}`;
@@ -167,11 +170,15 @@ export function parsePrices(priceInfo?: string): SeatPrice[] {
     });
 }
 
-export function concertStatusLabel(concert: Concert): { label: string; tone: 'accent' | 'neutral' | 'danger' | 'success' } {
+export function concertStatusLabel(concert: Concert): {
+  label: string;
+  tone: 'accent' | 'neutral' | 'danger' | 'success';
+} {
   if (concert.status === 'cancelled') return { label: t('status::취소'), tone: 'danger' };
   const days = daysLeft(concert.startDate);
   const endDays = daysLeft(concert.endDate ?? concert.startDate);
-  if (days === 0 || (days === null && endDays !== null)) return { label: t('공연 중'), tone: 'success' };
+  if (days === 0 || (days === null && endDays !== null))
+    return { label: t('공연 중'), tone: 'success' };
   if (days === null) return { label: t('종료'), tone: 'neutral' };
   return { label: t('D-{days}', { days, count: days }), tone: 'accent' };
 }
@@ -195,7 +202,13 @@ export function CastChip({ cast }: { cast: ConcertArtist }) {
 /**
  * 공연 → 비교 다리. 출연자의 비교 구간을 보여 줄 뿐, 공연 프로그램과 같은 곡이라고 주장하지 않는다.
  */
-export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; horizontal: boolean }) {
+export function CastComparisons({
+  cast,
+  horizontal,
+}: {
+  cast: ConcertArtist[];
+  horizontal: boolean;
+}) {
   const { locale } = useLocale();
   const router = useRouter();
   const first = cast[0];
@@ -204,36 +217,47 @@ export function CastComparisons({ cast, horizontal }: { cast: ConcertArtist[]; h
     const all = query.data?.pages.flatMap((page) => page.items) ?? [];
     // 곡마다 하나씩만
     const seen = new Set<number>();
-    return all.filter((item) => (seen.has(item.pieceId) ? false : (seen.add(item.pieceId), true))).slice(0, 3);
+    return all
+      .filter((item) => (seen.has(item.pieceId) ? false : (seen.add(item.pieceId), true)))
+      .slice(0, 3);
   }, [query.data, locale]);
   if (!first || items.length === 0) return null;
 
-  const cards = items.map((item) => <ComparisonMiniCard key={item.id} item={item} compact={horizontal} />);
+  const cards = items.map((item) => (
+    <ComparisonMiniCard key={item.id} item={item} compact={horizontal} />
+  ));
   return (
     <View>
       <Text variant="headline" className="mb-3">
         {t('출연자의 연주 비교')}
       </Text>
       {horizontal ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2.5">
           {cards}
         </ScrollView>
       ) : (
         <View className="gap-2">{cards}</View>
       )}
-      <Pressable onPress={() => router.push(`/artist/${first.artistId}` as Href)} className="mt-3 self-start">
-        <Text variant="label" className="text-foreground-muted">{t('{name}의 연주 비교 전체 보기', { name: first.artistName })}</Text>
+      <Pressable
+        onPress={() => router.push(`/artist/${first.artistId}` as Href)}
+        className="mt-3 self-start">
+        <Text variant="label" className="text-foreground-muted">
+          {t('{name}의 연주 비교 전체 보기', { name: first.artistName })}
+        </Text>
       </Pressable>
     </View>
   );
 }
 
-
 function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; compact: boolean }) {
   useLocale();
   const router = useRouter();
   const piece = useComparisonPiece(item.pieceId, item.composerId).data;
-  const href = `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
+  const href =
+    `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
   return (
     <Pressable
       onPress={() => router.push(href)}
@@ -242,7 +266,12 @@ function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; co
           ? 'w-[150px] rounded-lg bg-surface-2 p-3 active:bg-surface-3'
           : 'flex-row items-center gap-3 rounded-lg bg-surface-2 px-3 py-2.5 active:bg-surface-3 web:hover:bg-surface-3'
       }>
-      <EntityThumb name={item.composerName} image={piece?.composerAvatarUrl} shape="circle" size={compact ? 36 : 44} />
+      <EntityThumb
+        name={item.composerName}
+        image={piece?.composerAvatarUrl}
+        shape="circle"
+        size={compact ? 36 : 44}
+      />
       <View className={compact ? 'mt-2.5' : 'min-w-0 flex-1'}>
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {item.sectorName === '전곡' ? item.pieceTitle : item.sectorName}
@@ -272,15 +301,22 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
     () => [...images].sort((a, b) => a.displayOrder - b.displayOrder),
     [images, locale]
   );
-  const uris = React.useMemo(() => sorted.map((image) => getImageUrl(image.imageUrl)), [sorted, locale]);
+  const uris = React.useMemo(
+    () => sorted.map((image) => getImageUrl(image.imageUrl)),
+    [sorted, locale]
+  );
   if (sorted.length === 0) return null;
   return (
     <View>
       <View className="mb-3 flex-row items-baseline gap-2">
         <Text variant="headline">{t('공연 소개')}</Text>
-        {sorted.length > 1 ? <Text variant="caption">{t('이미지 {count}장', { count: sorted.length })}</Text> : null}
+        {sorted.length > 1 ? (
+          <Text variant="caption">{t('이미지 {count}장', { count: sorted.length })}</Text>
+        ) : null}
       </View>
-      <View className="relative w-full max-w-[420px] overflow-hidden rounded-md" style={expanded ? undefined : { maxHeight: 330 }}>
+      <View
+        className="relative w-full max-w-[420px] overflow-hidden rounded-md"
+        style={expanded ? undefined : { maxHeight: 330 }}>
         {uris.map((uri, index) => (
           <Pressable
             key={sorted[index].id}
@@ -317,7 +353,12 @@ export function IntroImages({ images }: { images: ConcertImage[] }) {
           </Text>
         </Pressable>
       </View>
-      <ImageLightbox images={uris} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
+      <ImageLightbox
+        images={uris}
+        index={viewing}
+        onIndexChange={setViewing}
+        onClose={() => setViewing(null)}
+      />
     </View>
   );
 }
@@ -334,5 +375,7 @@ function ScaledImage({ uri }: { uri: string }) {
       () => undefined
     );
   }, [uri]);
-  return <Image source={{ uri }} style={{ width: '100%', aspectRatio: ratio }} resizeMode="contain" />;
+  return (
+    <Image source={{ uri }} style={{ width: '100%', aspectRatio: ratio }} resizeMode="contain" />
+  );
 }

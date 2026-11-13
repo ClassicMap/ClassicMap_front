@@ -35,9 +35,20 @@ const PERIOD_OPTIONS = [
   label: period,
 }));
 
-type ComposerField = 'name' | 'fullName' | 'englishName' | 'birthYear' | 'deathYear' | 'nationality';
+type ComposerField =
+  | 'name'
+  | 'fullName'
+  | 'englishName'
+  | 'birthYear'
+  | 'deathYear'
+  | 'nationality';
 
-export function ComposerFormModal({ visible, composer, onClose, onSuccess }: ComposerFormModalProps) {
+export function ComposerFormModal({
+  visible,
+  composer,
+  onClose,
+  onSuccess,
+}: ComposerFormModalProps) {
   useLocale();
   const [name, setName] = React.useState('');
   const [fullName, setFullName] = React.useState('');
@@ -179,7 +190,13 @@ export function ComposerFormModal({ visible, composer, onClose, onSuccess }: Com
           placeholder="Johann Sebastian Bach"
           error={shown.englishName}
         />
-        <ChoiceField label={t('시대')} required options={PERIOD_OPTIONS} value={period} onChange={setPeriod} />
+        <ChoiceField
+          label={t('시대')}
+          required
+          options={PERIOD_OPTIONS}
+          value={period}
+          onChange={setPeriod}
+        />
         <FormRow>
           <TextField
             label={t('출생 연도')}

@@ -12,7 +12,9 @@ export function clipClock(ms: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-export function clipDurationMs(performance: Pick<ComparisonPerformance, 'startMs' | 'endMs'>): number {
+export function clipDurationMs(
+  performance: Pick<ComparisonPerformance, 'startMs' | 'endMs'>
+): number {
   return Math.max(0, performance.endMs - performance.startMs);
 }
 
@@ -23,8 +25,14 @@ export function primaryCredit(performance: ComparisonPerformance): PerformanceCr
 /** 지휘자·악단처럼 주 연주자 곁에 붙는 이름 */
 export function supportingCredits(performance: ComparisonPerformance): string {
   return performance.credits
-    .filter((credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra'))
-    .map((credit) => (credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName))
+    .filter(
+      (credit) => !credit.isPrimary && (credit.role === 'conductor' || credit.role === 'orchestra')
+    )
+    .map((credit) =>
+      credit.role === 'conductor'
+        ? t('{name} 지휘', { name: credit.artistName })
+        : credit.artistName
+    )
     .join(' · ');
 }
 
@@ -35,7 +43,9 @@ export function youtubeWatchUrl(performance: ComparisonPerformance): string | un
 }
 
 export function youtubeThumbnailUrl(performance: ComparisonPerformance): string | undefined {
-  return performance.videoId ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg` : undefined;
+  return performance.videoId
+    ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg`
+    : undefined;
 }
 
 /**
@@ -54,7 +64,18 @@ export function sortComparisonSectors(sectors: readonly ComparisonSector[]): Com
   );
 }
 
-const ROMAN: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9, X: 10 };
+const ROMAN: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+  VIII: 8,
+  IX: 9,
+  X: 10,
+};
 
 /** 구간 이름에서 악장 번호(「3악장」, 「III. Allegro」). 모르면 맨 뒤 */
 function movementNumber(sector: Pick<ComparisonSector, 'sectorName' | 'sectorNameEn'>): number {
@@ -65,7 +86,10 @@ function movementNumber(sector: Pick<ComparisonSector, 'sectorName' | 'sectorNam
   return Number.MAX_SAFE_INTEGER;
 }
 
-function measureOrder(a: Pick<ComparisonSector, 'measureStart'>, b: Pick<ComparisonSector, 'measureStart'>): number {
+function measureOrder(
+  a: Pick<ComparisonSector, 'measureStart'>,
+  b: Pick<ComparisonSector, 'measureStart'>
+): number {
   const left = Number.parseInt(a.measureStart ?? '', 10);
   const right = Number.parseInt(b.measureStart ?? '', 10);
   return Number.isFinite(left) && Number.isFinite(right) ? left - right : 0;
@@ -79,7 +103,9 @@ export function isWholeWorkSector(sector: Pick<ComparisonSector, 'sectorType'>):
 /**
  * 처음 열 구간. 전곡은 맨 앞에 있어도 길어서, 발췌 구간이 있으면 그 첫 구간부터 연다
  */
-export function defaultComparisonSector(sectors: readonly ComparisonSector[]): ComparisonSector | undefined {
+export function defaultComparisonSector(
+  sectors: readonly ComparisonSector[]
+): ComparisonSector | undefined {
   return sectors.find((sector) => !isWholeWorkSector(sector)) ?? sectors[0];
 }
 
@@ -128,8 +154,13 @@ export function pickDailyPiece(
 }
 
 /** 목록 줄 부제: 연주자 이름 셋까지, 나머지는 '외 n명' (스포티파이 곡 목록의 아티스트 줄) */
-export function performerNamesLine(performers: readonly { artistName: string }[], total: number): string {
+export function performerNamesLine(
+  performers: readonly { artistName: string }[],
+  total: number
+): string {
   const names = performers.slice(0, 3).map((performer) => performer.artistName);
   const rest = Math.max(0, total - names.length);
-  return rest > 0 ? t('{names} 외 {count}명', { names: names.join(', '), count: rest }) : names.join(', ');
+  return rest > 0
+    ? t('{names} 외 {count}명', { names: names.join(', '), count: rest })
+    : names.join(', ');
 }

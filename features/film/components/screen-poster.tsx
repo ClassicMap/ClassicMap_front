@@ -27,7 +27,14 @@ interface ScreenPosterProps {
  * 포스터 칸. 실제 포스터(TMDB → KMDb)가 먼저, 없으면 공식 클립 장면(가운데를 잘라),
  * 그것도 없으면 제목을 적은 슬레이트 카드로 대신한다
  */
-export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, coverThumbs, width }: ScreenPosterProps) {
+export function ScreenPoster({
+  title,
+  posterPath,
+  posterUrl,
+  coverVideoId,
+  coverThumbs,
+  width,
+}: ScreenPosterProps) {
   useLocale();
   const height = Math.round(width * POSTER_ASPECT);
   const radius = Math.max(4, Math.round(width * 0.06));
@@ -47,7 +54,9 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
   }
   if (posterUrl && !posterFailed) {
     return (
-      <View style={{ width, height, borderRadius: radius, overflow: 'hidden' }} className="bg-surface-3">
+      <View
+        style={{ width, height, borderRadius: radius, overflow: 'hidden' }}
+        className="bg-surface-3">
         <FadeInPoster uri={posterUrl} title={title} onError={() => setPosterFailed(true)} />
       </View>
     );
@@ -55,7 +64,9 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
   if (!coverVideoId) return slate;
   // 출처는 화면 아래 문구로 적고, 칸마다 배지를 달지 않는다
   return (
-    <View style={{ width, height, borderRadius: radius, overflow: 'hidden' }} className="bg-surface-3">
+    <View
+      style={{ width, height, borderRadius: radius, overflow: 'hidden' }}
+      className="bg-surface-3">
       <YoutubeThumb
         videoId={coverVideoId}
         thumbs={coverThumbs}
@@ -70,7 +81,15 @@ export function ScreenPoster({ title, posterPath, posterUrl, coverVideoId, cover
 const shownPosters = new Set<string>();
 
 /** 받는 동안 쉬머를 깔고, 다 받으면 서서히 드러낸다 */
-function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onError: () => void }) {
+function FadeInPoster({
+  uri,
+  title,
+  onError,
+}: {
+  uri: string;
+  title: string;
+  onError: () => void;
+}) {
   useLocale();
   const seen = shownPosters.has(uri);
   const [revealed, setRevealed] = React.useState(seen);
@@ -80,7 +99,11 @@ function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onE
     // 웹은 그릴 때마다 onLoad 가 다시 올 수 있어 한 번만 드러낸다
     if (started.current) return;
     started.current = true;
-    Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(() => {
       shownPosters.add(uri);
       setRevealed(true);
     });
@@ -100,7 +123,17 @@ function FadeInPoster({ uri, title, onError }: { uri: string; title: string; onE
   );
 }
 
-function PosterSlate({ title, width, height, radius }: { title: string; width: number; height: number; radius: number }) {
+function PosterSlate({
+  title,
+  width,
+  height,
+  radius,
+}: {
+  title: string;
+  width: number;
+  height: number;
+  radius: number;
+}) {
   useLocale();
   const small = width < 70;
   return (
@@ -111,7 +144,10 @@ function PosterSlate({ title, width, height, radius }: { title: string; width: n
       <Text
         numberOfLines={small ? 2 : 4}
         className="font-bold text-background dark:text-foreground"
-        style={{ fontSize: small ? 9 : Math.min(18, Math.max(11, width / 8)), lineHeight: small ? 11 : undefined }}>
+        style={{
+          fontSize: small ? 9 : Math.min(18, Math.max(11, width / 8)),
+          lineHeight: small ? 11 : undefined,
+        }}>
         {title}
       </Text>
     </View>

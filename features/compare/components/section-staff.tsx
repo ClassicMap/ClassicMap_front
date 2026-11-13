@@ -29,7 +29,13 @@ interface SectionStaffProps {
  * 같은 원본 영상 안에서 각 구간이 어디쯤인지를 실제 시작·끝 시각으로 그린다.
  * 선은 한 곳에서만 긋고(부록 D-15) 강조 면은 모서리 없이 선 사이에 둔다(D-14).
  */
-export function SectionStaff({ sectors, activeSectorId, reference, onSelect, labels = 'all' }: SectionStaffProps) {
+export function SectionStaff({
+  sectors,
+  activeSectorId,
+  reference,
+  onSelect,
+  labels = 'all',
+}: SectionStaffProps) {
   useLocale();
   const queries = useAllSectorPerformances(sectors.map((sector) => sector.id));
   const referenceArtist = reference ? primaryCredit(reference)?.artistId : undefined;
@@ -48,7 +54,9 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
       const match = list.find((item) => item.sourceId === sourceId);
       return match ? { sector, clip: match } : null;
     })
-    .filter((item): item is { sector: ComparisonSector; clip: ComparisonPerformance } => item !== null);
+    .filter(
+      (item): item is { sector: ComparisonSector; clip: ComparisonPerformance } => item !== null
+    );
 
   const placements = placeSections(clips.map((item) => item.clip));
   if (clips.length < (whole ? 1 : 2) || placements.length !== clips.length) return null;
@@ -58,47 +66,53 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
     <View accessibilityLabel={t('곡 안에서 구간 위치')} className="pb-5">
       <View style={{ height: STAFF_HEIGHT + 1 }}>
         {/* 높은음자리표: SMuFL 원점이 G선(아래에서 둘째 줄)에 오도록 캔버스 가운데를 맞춘다 */}
-        <View pointerEvents="none" className="absolute left-1" style={{ top: LINE_GAP * 3 - LINE_GAP * 4 }}>
+        <View
+          pointerEvents="none"
+          className="absolute left-1"
+          style={{ top: LINE_GAP * 3 - LINE_GAP * 4 }}>
           <NotationGlyph glyph="gClef" lineSpacing={LINE_GAP} className="text-foreground-muted" />
         </View>
         <View className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
-        {wholeActive ? (
-          <Pressable
-            onPress={() => onSelect(whole.id)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: true }}
-            accessibilityLabel={whole.sectorName}
-            className="absolute bg-primary/80"
-            style={{ left: 0, right: 0, top: 1, height: STAFF_HEIGHT - 1 }}
-          />
-        ) : null}
-        {clips.map(({ sector }, index) => {
-          const placement = placements[index];
-          const active = sector.id === activeSectorId;
-          return (
+          {wholeActive ? (
             <Pressable
-              key={sector.id}
-              onPress={() => onSelect(sector.id)}
+              onPress={() => onSelect(whole.id)}
               accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={t('{name} {start}부터', { name: sector.sectorName, start: placement.startLabel })}
-              className={cn(
-                'absolute',
-                active
-                  ? 'bg-primary/80'
-                  : wholeActive
-                    ? 'bg-black/25 web:hover:bg-black/40'
-                    : 'bg-foreground-subtle/30 web:hover:bg-foreground-subtle/50'
-              )}
-              style={{
-                left: `${placement.leftPercent}%`,
-                width: `${Math.max(1.2, placement.widthPercent)}%`,
-                top: 1,
-                height: STAFF_HEIGHT - 1,
-              }}
+              accessibilityState={{ selected: true }}
+              accessibilityLabel={whole.sectorName}
+              className="absolute bg-primary/80"
+              style={{ left: 0, right: 0, top: 1, height: STAFF_HEIGHT - 1 }}
             />
-          );
-        })}
+          ) : null}
+          {clips.map(({ sector }, index) => {
+            const placement = placements[index];
+            const active = sector.id === activeSectorId;
+            return (
+              <Pressable
+                key={sector.id}
+                onPress={() => onSelect(sector.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={t('{name} {start}부터', {
+                  name: sector.sectorName,
+                  start: placement.startLabel,
+                })}
+                className={cn(
+                  'absolute',
+                  active
+                    ? 'bg-primary/80'
+                    : wholeActive
+                      ? 'bg-black/25 web:hover:bg-black/40'
+                      : 'bg-foreground-subtle/30 web:hover:bg-foreground-subtle/50'
+                )}
+                style={{
+                  left: `${placement.leftPercent}%`,
+                  width: `${Math.max(1.2, placement.widthPercent)}%`,
+                  top: 1,
+                  height: STAFF_HEIGHT - 1,
+                }}
+              />
+            );
+          })}
         </View>
         {/* 다섯 줄은 여기서만 긋는다 */}
         {Array.from({ length: 5 }, (_, line) => (
@@ -109,38 +123,52 @@ export function SectionStaff({ sectors, activeSectorId, reference, onSelect, lab
             style={{ top: line * LINE_GAP }}
           />
         ))}
-        <View pointerEvents="none" className="absolute bottom-0 left-0 top-0 w-px bg-foreground-faint" />
-        <View pointerEvents="none" className="absolute bottom-0 right-0 top-0 w-[3px] bg-foreground-faint" />
+        <View
+          pointerEvents="none"
+          className="absolute bottom-0 left-0 top-0 w-px bg-foreground-faint"
+        />
+        <View
+          pointerEvents="none"
+          className="absolute bottom-0 right-0 top-0 w-[3px] bg-foreground-faint"
+        />
       </View>
-      <View pointerEvents="none" className="absolute bottom-0 right-1 top-0" style={{ left: CLEF_WIDTH }}>
-      {wholeActive && labels === 'active' ? (
-        <Text numberOfLines={1} className="absolute text-micro text-primary" style={{ left: 0, top: STAFF_HEIGHT + 5 }}>
-          {whole.sectorName}
-        </Text>
-      ) : null}
-      {clips.map(({ sector }, index) => {
-        if (labels === 'active' && sector.id !== activeSectorId) return null;
-        const { leftPercent, widthPercent } = placements[index];
-        // 오른쪽 끝 구간은 라벨을 구간 오른쪽 끝에 맞춰 화면 밖으로 나가지 않게 한다
-        const alignEnd = leftPercent > 65;
-        return (
+      <View
+        pointerEvents="none"
+        className="absolute bottom-0 right-1 top-0"
+        style={{ left: CLEF_WIDTH }}>
+        {wholeActive && labels === 'active' ? (
           <Text
-            key={sector.id}
             numberOfLines={1}
-            className={cn(
-              'absolute text-micro',
-              alignEnd && 'text-right',
-              sector.id === activeSectorId ? 'text-primary' : 'text-foreground-subtle'
-            )}
-            style={{
-              ...(alignEnd ? { right: `${Math.max(0, 100 - leftPercent - widthPercent)}%` } : { left: `${leftPercent}%` }),
-              top: STAFF_HEIGHT + 5,
-              maxWidth: 96,
-            }}>
-            {sector.sectorName}
+            className="absolute text-micro text-primary"
+            style={{ left: 0, top: STAFF_HEIGHT + 5 }}>
+            {whole.sectorName}
           </Text>
-        );
-      })}
+        ) : null}
+        {clips.map(({ sector }, index) => {
+          if (labels === 'active' && sector.id !== activeSectorId) return null;
+          const { leftPercent, widthPercent } = placements[index];
+          // 오른쪽 끝 구간은 라벨을 구간 오른쪽 끝에 맞춰 화면 밖으로 나가지 않게 한다
+          const alignEnd = leftPercent > 65;
+          return (
+            <Text
+              key={sector.id}
+              numberOfLines={1}
+              className={cn(
+                'absolute text-micro',
+                alignEnd && 'text-right',
+                sector.id === activeSectorId ? 'text-primary' : 'text-foreground-subtle'
+              )}
+              style={{
+                ...(alignEnd
+                  ? { right: `${Math.max(0, 100 - leftPercent - widthPercent)}%` }
+                  : { left: `${leftPercent}%` }),
+                top: STAFF_HEIGHT + 5,
+                maxWidth: 96,
+              }}>
+              {sector.sectorName}
+            </Text>
+          );
+        })}
       </View>
     </View>
   );
@@ -158,16 +186,25 @@ function sourceForStaff(
 ): number | undefined {
   const counts = new Map<number, number>();
   for (const { list } of parts) {
-    for (const id of new Set(list.map((item) => item.sourceId))) counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const id of new Set(list.map((item) => item.sourceId)))
+      counts.set(id, (counts.get(id) ?? 0) + 1);
   }
-  const enough = (id: number | undefined) => id !== undefined && (counts.get(id) ?? 0) >= Math.min(2, parts.length);
+  const enough = (id: number | undefined) =>
+    id !== undefined && (counts.get(id) ?? 0) >= Math.min(2, parts.length);
   if (enough(reference?.sourceId)) return reference?.sourceId;
   const sameArtist = parts
     .flatMap(({ list }) => list)
-    .find((item) => referenceArtist !== undefined && primaryCredit(item)?.artistId === referenceArtist && enough(item.sourceId));
+    .find(
+      (item) =>
+        referenceArtist !== undefined &&
+        primaryCredit(item)?.artistId === referenceArtist &&
+        enough(item.sourceId)
+    );
   if (sameArtist) return sameArtist.sourceId;
   const holdsActive = new Set(
-    parts.filter(({ sector }) => sector.id === activeSectorId).flatMap(({ list }) => list.map((item) => item.sourceId))
+    parts
+      .filter(({ sector }) => sector.id === activeSectorId)
+      .flatMap(({ list }) => list.map((item) => item.sourceId))
   );
   const score = (id: number) => (holdsActive.has(id) ? 1000 : 0) + (counts.get(id) ?? 0);
   let best: number | undefined;

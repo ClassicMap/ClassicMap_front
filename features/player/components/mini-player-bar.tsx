@@ -1,5 +1,9 @@
 import { MiniVideoTarget } from '@/features/player/components/mini-video-target';
-import { compareHrefFor, tabBarHeight, usePlayerBarVisible } from '@/features/player/components/player-bar-helpers';
+import {
+  compareHrefFor,
+  tabBarHeight,
+  usePlayerBarVisible,
+} from '@/features/player/components/player-bar-helpers';
 import { QueuePanel } from '@/features/player/components/queue-panel';
 import { useSongNav } from '@/features/player/components/song-nav';
 import { EntityThumb } from '@/components/shared/entity-thumb';

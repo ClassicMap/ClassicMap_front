@@ -51,7 +51,12 @@ export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: Com
     [comparable.data?.pieces, repertoire.pieces, locale]
   );
   const composers = React.useMemo(
-    () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
+    () =>
+      sortComposersByRepertoire(
+        comparable.data?.composers ?? [],
+        repertoire.composers,
+        repertoirePieces
+      ),
     [comparable.data?.composers, repertoire.composers, repertoirePieces, locale]
   );
   const [query, setQuery] = React.useState('');
@@ -63,7 +68,10 @@ export function CompareCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: Com
   const genreCount = useGenreShelves().shelves.length;
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="px-7 pb-16 pt-2" keyboardShouldPersistTaps="handled">
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="px-7 pb-16 pt-2"
+      keyboardShouldPersistTaps="handled">
       <View className="flex-row items-end justify-between gap-6">
         <View className="min-w-0 flex-1">
           <Text variant="display">{t('비교')}</Text>
@@ -153,7 +161,8 @@ export function countRepertoirePieces(
   const counts = new Map<number, number>();
   if (repertoirePieces.size === 0) return counts;
   for (const piece of pieces) {
-    if (repertoirePieces.has(piece.pieceId)) counts.set(piece.composerId, (counts.get(piece.composerId) ?? 0) + 1);
+    if (repertoirePieces.has(piece.pieceId))
+      counts.set(piece.composerId, (counts.get(piece.composerId) ?? 0) + 1);
   }
   return counts;
 }
@@ -166,7 +175,10 @@ export function sortComposersByRepertoire(
   repertoireComposers: ReadonlySet<number>,
   repertoirePieces: ReadonlyMap<number, number>
 ): ComparableComposer[] {
-  const withPieces = repertoireFirst(composers, (composer) => (repertoirePieces.get(composer.composerId) ?? 0) > 0);
+  const withPieces = repertoireFirst(
+    composers,
+    (composer) => (repertoirePieces.get(composer.composerId) ?? 0) > 0
+  );
   return repertoireFirst(withPieces, (composer) => repertoireComposers.has(composer.composerId));
 }
 
@@ -190,13 +202,24 @@ function ComposerCard({
       accessibilityRole="link"
       accessibilityLabel={
         inRepertoire
-          ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
-          : t('{name}, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+          ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', {
+              name: composer.composerName,
+              count: composer.pieceCount,
+            })
+          : t('{name}, 비교할 수 있는 작품 {count}곡', {
+              name: composer.composerName,
+              count: composer.pieceCount,
+            })
       }
-      className="w-[188px] items-center rounded-lg p-2 -m-2 transition-colors duration-instant web:hover:bg-surface-2">
+      className="-m-2 w-[188px] items-center rounded-lg p-2 transition-colors duration-instant web:hover:bg-surface-2">
       {/* 작곡가는 사람이라 원형 */}
       <RepertoireThumb active={inRepertoire} badgeSize={36}>
-        <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={172} />
+        <EntityThumb
+          name={composer.composerName}
+          image={composer.composerAvatarUrl}
+          shape="circle"
+          size={172}
+        />
       </RepertoireThumb>
       <View className="mt-3 flex-row items-center gap-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
@@ -238,20 +261,31 @@ export function Faces({
   useLocale();
   if (performers.length === 0) return null;
   const ordered = (
-    highlightIds?.size ? repertoireFirst(performers, (performer) => highlightIds.has(performer.artistId)) : performers
+    highlightIds?.size
+      ? repertoireFirst(performers, (performer) => highlightIds.has(performer.artistId))
+      : performers
   ).slice(0, max ?? performers.length);
   return (
     <View className={cn('flex-row', className)}>
       {ordered.map((performer, index) => (
         <View
           key={performer.artistId}
-          accessibilityLabel={highlightIds?.has(performer.artistId) ? t('{name}, 레퍼토리에 있어요', { name: performer.artistName }) : undefined}
+          accessibilityLabel={
+            highlightIds?.has(performer.artistId)
+              ? t('{name}, 레퍼토리에 있어요', { name: performer.artistName })
+              : undefined
+          }
           className={cn(
             'rounded-full border-2',
             highlightIds?.has(performer.artistId) ? 'z-raised border-primary' : ringClassName
           )}
           style={{ marginLeft: index === 0 ? 0 : -8 }}>
-          <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={22} />
+          <EntityThumb
+            name={performer.artistName}
+            image={performer.imageUrl}
+            shape="circle"
+            size={22}
+          />
         </View>
       ))}
     </View>
@@ -272,7 +306,10 @@ export function CompareComposerPieces({ composerId, onBack, onOpen }: CompareCom
   const repertoire = useRepertoireIds();
   // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
   const pieces = React.useMemo(
-    () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
+    () =>
+      repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) =>
+        repertoire.pieces.has(piece.pieceId)
+      ),
     [catalog.data, repertoire.pieces, locale]
   );
   const summary = useComparableComposers().data?.byId.get(composerId);
@@ -415,12 +452,20 @@ function PieceRow({
       accessibilityRole="link"
       accessibilityLabel={
         inRepertoire
-          ? t('{name} {title}, 레퍼토리에 있어요 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+          ? t('{name} {title}, 레퍼토리에 있어요 비교하기', {
+              name: piece.composerName,
+              title: piece.pieceTitle,
+            })
           : t('{name} {title} 비교하기', { name: piece.composerName, title: piece.pieceTitle })
       }
       className="group flex-row items-center gap-4 rounded-md px-3 py-2.5 transition-colors duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index} pieceId={piece.pieceId} onPlay={playHere} />
-      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={44} />
+      <PieceArt
+        coverVideoId={piece.coverVideoId}
+        fallbackImage={piece.composerAvatarUrl}
+        fallbackName={piece.composerName}
+        size={44}
+      />
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
@@ -445,11 +490,7 @@ function PieceRow({
         {t('구간 {count}', { count: piece.sectorCount })}
       </Text>
       {Platform.OS === 'web' ? (
-        <QueueAddMenu
-          piece={piece}
-          title={piece.pieceTitle}
-          hoverOnly
-        />
+        <QueueAddMenu piece={piece} title={piece.pieceTitle} hoverOnly />
       ) : null}
       <Icon as={ChevronRightIcon} size={16} className="text-foreground-subtle" />
     </Pressable>

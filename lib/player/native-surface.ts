@@ -80,5 +80,9 @@ function subscribe(listener: () => void) {
 
 /** 지금 영상을 받는 자리 */
 export function useNativeSurface(): NativeSurfaceTarget | null {
-  return React.useSyncExternalStore(subscribe, () => active, () => null);
+  return React.useSyncExternalStore(
+    subscribe,
+    () => active,
+    () => null
+  );
 }

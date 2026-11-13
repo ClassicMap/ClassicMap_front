@@ -108,7 +108,10 @@ export function CommandPalette() {
         key: `composer-${composer.id}`,
         kind: 'composer',
         title: composer.name,
-        meta: [t(composer.period), composer.birthYear ? `${composer.birthYear}–${composer.deathYear ?? ''}` : '']
+        meta: [
+          t(composer.period),
+          composer.birthYear ? `${composer.birthYear}–${composer.deathYear ?? ''}` : '',
+        ]
           .filter(Boolean)
           .join(' · '),
         image: composer.avatarUrl,
@@ -151,7 +154,10 @@ export function CommandPalette() {
         kind: 'screen',
         title: title.titleKo,
         meta: titleMeta(title.kind, title.releaseYear),
-        image: tmdbImageUrl(title.posterPath, 'w185') ?? youtubeClipThumbnail(title.coverVideoId)?.fallback ?? null,
+        image:
+          tmdbImageUrl(title.posterPath, 'w185') ??
+          youtubeClipThumbnail(title.coverVideoId)?.fallback ??
+          null,
         shape: 'square',
         run: () => go(`/film/${title.id}`),
       }));
@@ -192,7 +198,8 @@ export function CommandPalette() {
     go,
     toggleColorScheme,
     close,
-   locale,]);
+    locale,
+  ]);
 
   const flat = React.useMemo(() => groups.flatMap((group) => group.items), [groups, locale]);
 
@@ -203,7 +210,10 @@ export function CommandPalette() {
   const activePrefetch = open ? flat[activeIndex]?.prefetch : undefined;
   React.useEffect(() => {
     if (!activePrefetch) return;
-    const timer = setTimeout(() => void prefetchTarget(queryClient, activePrefetch), PREFETCH_DELAY_MS);
+    const timer = setTimeout(
+      () => void prefetchTarget(queryClient, activePrefetch),
+      PREFETCH_DELAY_MS
+    );
     return () => clearTimeout(timer);
   }, [activePrefetch, queryClient]);
 
@@ -221,7 +231,9 @@ export function CommandPalette() {
       } else if (event.key === 'ArrowUp') {
         event.preventDefault();
         event.stopPropagation();
-        setActiveIndex((index) => (flat.length === 0 ? 0 : (index - 1 + flat.length) % flat.length));
+        setActiveIndex((index) =>
+          flat.length === 0 ? 0 : (index - 1 + flat.length) % flat.length
+        );
       } else if (event.key === 'Enter' && !event.isComposing) {
         event.preventDefault();
         event.stopPropagation();
@@ -259,7 +271,13 @@ export function CommandPalette() {
           'mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2',
           closing ? 'cm-layer-out' : 'cm-layer-in'
         )}
-        style={{ maxHeight: 480, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)', transformOrigin: '50% 0' } as object}>
+        style={
+          {
+            maxHeight: 480,
+            boxShadow: '0 16px 48px -12px rgba(0,0,0,0.7)',
+            transformOrigin: '50% 0',
+          } as object
+        }>
         <View className="h-12 flex-row items-center gap-3 border-b border-border px-4">
           <Icon as={SearchIcon} size={16} className="text-foreground-subtle" />
           <TextInput
@@ -277,7 +295,9 @@ export function CommandPalette() {
           {trimmed && !hasResults && !result.isFetching && !showSkeleton ? (
             <View className="items-center px-6 py-10">
               <Text variant="bodySm" className="text-foreground-muted">
-                {t('“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.', { q: trimmed })}
+                {t('“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.', {
+                  q: trimmed,
+                })}
               </Text>
             </View>
           ) : null}
@@ -312,7 +332,9 @@ export function CommandPalette() {
                       {item.title}
                     </Text>
                     {item.meta ? (
-                      <Text numberOfLines={1} className="max-w-[40%] text-caption text-foreground-subtle">
+                      <Text
+                        numberOfLines={1}
+                        className="max-w-[40%] text-caption text-foreground-subtle">
                         {item.meta}
                       </Text>
                     ) : null}

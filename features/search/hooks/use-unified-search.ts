@@ -6,7 +6,10 @@ import { useQuery } from '@tanstack/react-query';
  * 작곡가·작품·아티스트·공연·영화 검색을 병렬로 부른다 (통합 검색 API가 없어서, B1).
  * 팔레트(⌘K)와 검색 화면이 같이 쓴다. 한 종류가 실패해도 나머지는 보여 준다.
  */
-export function useUnifiedSearch(query: string, options: { enabled?: boolean; limit?: number } = {}) {
+export function useUnifiedSearch(
+  query: string,
+  options: { enabled?: boolean; limit?: number } = {}
+) {
   const q = query.trim();
   const limit = options.limit ?? 5;
   const active = (options.enabled ?? true) && q.length > 0;

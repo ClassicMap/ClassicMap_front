@@ -29,7 +29,13 @@ const TYPE_OPTIONS: ReadonlyArray<ChoiceOption<Piece['type']>> = [
   { value: 'album', label: msg('앨범·모음집') },
 ];
 
-export function PieceFormModal({ visible, composerId, piece, onClose, onSuccess }: PieceFormModalProps) {
+export function PieceFormModal({
+  visible,
+  composerId,
+  piece,
+  onClose,
+  onSuccess,
+}: PieceFormModalProps) {
   useLocale();
   const [title, setTitle] = React.useState('');
   const [titleEn, setTitleEn] = React.useState('');

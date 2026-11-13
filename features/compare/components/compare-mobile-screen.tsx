@@ -40,7 +40,9 @@ export function CompareMobileScreen() {
         sectorId={toId(params.sectorId)}
         focus={focus}
         onExit={() => router.setParams({ focus: undefined })}
-        onChangeSector={(id, a, b) => router.setParams({ sectorId: String(id), focus: `${a},${b}` })}
+        onChangeSector={(id, a, b) =>
+          router.setParams({ sectorId: String(id), focus: `${a},${b}` })
+        }
       />
     );
   }
@@ -72,7 +74,9 @@ export function CompareMobileScreen() {
         wide={false}
         onBack={() => router.setParams({ genre: undefined })}
         onSelectGenre={(key) => router.setParams({ genre: key })}
-        onOpen={(piece) => router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)}
+        onOpen={(piece) =>
+          router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)
+        }
       />
     );
   }
@@ -82,7 +86,9 @@ export function CompareMobileScreen() {
       <CompareMobileComposerPieces
         composerId={composerId}
         onBack={() => router.setParams({ composerId: undefined })}
-        onOpen={(piece) => router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })}
+        onOpen={(piece) =>
+          router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })
+        }
       />
     );
   }
@@ -92,7 +98,11 @@ export function CompareMobileScreen() {
       onOpenGenre={(key) => router.push(`/compare?genre=${key}` as Href)}
       onOpenComposer={(id) => router.setParams({ composerId: String(id) })}
       onOpenPiece={(piece) =>
-        router.setParams({ composerId: String(piece.composerId), pieceId: String(piece.pieceId), sectorId: undefined })
+        router.setParams({
+          composerId: String(piece.composerId),
+          pieceId: String(piece.pieceId),
+          sectorId: undefined,
+        })
       }
     />
   );
