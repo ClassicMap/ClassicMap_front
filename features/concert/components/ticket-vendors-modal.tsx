@@ -1,4 +1,6 @@
 import { EntityThumb } from '@/components/shared/entity-thumb';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { SheetContent } from '@/components/ui/sheet';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -8,16 +10,7 @@ import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { ChevronRightIcon, ExternalLinkIcon, TicketIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import {
-  Animated,
-  Easing,
-  Linking,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** 예매 모달 위에 보이는 공연 요약 */
@@ -67,178 +60,117 @@ export function TicketVendorsModal({
   const { layout } = useBreakpoint();
   const dialog = layout === 'desktop' || layout === 'wide';
   const insets = useSafeAreaInsets();
-  const progress = React.useRef(new Animated.Value(0)).current;
-  const [mounted, setMounted] = React.useState(visible);
-  const panelRef = React.useRef<View>(null);
-
-  React.useEffect(() => {
-    if (visible) setMounted(true);
-    Animated.timing(progress, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? 220 : 160,
-      easing: visible ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
-    }).start(({ finished }) => {
-      if (finished && !visible) setMounted(false);
-    });
-  }, [progress, visible]);
-
-  // 웹: ESC로 닫고, 열리면 모달로 포커스를 옮긴다
-  React.useEffect(() => {
-    if (!visible || Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKeyDown);
-    const node = panelRef.current as unknown as HTMLElement | null;
-    node?.focus?.();
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose, visible]);
 
   const sorted = React.useMemo(
     () => [...vendors].sort((a, b) => a.displayOrder - b.displayOrder),
     [vendors, locale]
   );
 
-  const panelStyle = dialog
-    ? {
-        opacity: progress,
-        transform: [
-          { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
-        ],
-      }
-    : {
-        transform: [
-          { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [480, 0] }) },
-        ],
-      };
-
+  // 넓은 화면은 가운데 상자, 좁은 화면은 아래에서 올라오는 시트. 여닫기·포커스·Esc 는 프리미티브가 맡는다
+  const Content = dialog ? DialogContent : SheetContent;
   return (
-    <Modal
-      visible={mounted}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-      statusBarTranslucent>
-      <View className={cn('flex-1', dialog ? 'items-center justify-center p-6' : 'justify-end')}>
-        <Animated.View
-          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: progress }}>
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel={t('예매처 닫기')}
-            style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.55)' }}
-            className="web:cursor-default"
-          />
-        </Animated.View>
+    <Dialog
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}>
+      <Content
+        aria-label={t('예매처 고르기')}
+        closeLabel={t('예매처 닫기')}
+        className={cn(
+          'gap-0 overflow-hidden border-border bg-background p-0',
+          dialog
+            ? 'rounded-2xl border shadow-2xl shadow-black/40 sm:max-w-[480px]'
+            : 'rounded-t-3xl border-t'
+        )}
+        style={
+          dialog ? { maxHeight: '86%' } : { maxHeight: '86%', paddingBottom: insets.bottom + 12 }
+        }>
+        {!dialog ? (
+          <View className="mt-2.5 h-1 w-10 self-center rounded-full bg-border-strong" />
+        ) : null}
 
-        {/* Animated.View에는 className이 안 먹어 움직임만 맡기고 모양은 안쪽 View가 맡는다 */}
-        <Animated.View
-          style={[
-            panelStyle,
-            dialog ? { width: '100%', maxWidth: 480, maxHeight: '86%' } : { maxHeight: '86%' },
-          ]}>
-          <View
-            ref={panelRef}
-            role="dialog"
-            aria-modal
-            aria-label={t('예매처 고르기')}
-            tabIndex={-1}
-            style={
-              dialog
-                ? { maxHeight: '100%' }
-                : { maxHeight: '100%', paddingBottom: insets.bottom + 12 }
-            }
-            className={cn(
-              'overflow-hidden border-border bg-background web:outline-none',
-              dialog ? 'rounded-2xl border shadow-2xl shadow-black/40' : 'rounded-t-3xl border-t'
-            )}>
-            {!dialog ? (
-              <View className="mt-2.5 h-1 w-10 self-center rounded-full bg-border-strong" />
-            ) : null}
-
-            <View className={cn('flex-row items-start gap-3.5 px-5', dialog ? 'pt-5' : 'pt-4')}>
-              {summary ? (
-                <>
-                  <EntityThumb
-                    name={summary.title}
-                    image={summary.posterUrl}
-                    shape="square"
-                    size={56}
-                    aspect={4 / 3}
-                  />
-                  <View className="min-w-0 flex-1">
-                    <Text variant="caption" className="font-semibold text-primary">
-                      {t('예매하기')}
-                    </Text>
-                    <Text numberOfLines={2} className="mt-0.5 text-body font-bold text-foreground">
-                      {summary.title}
-                    </Text>
-                    {[summary.when, summary.where].some(Boolean) ? (
-                      <Text variant="caption" numberOfLines={2} className="mt-1">
-                        {[summary.when, summary.where].filter(Boolean).join(' · ')}
-                      </Text>
-                    ) : null}
-                    {summary.price ? (
-                      <Text variant="mono" className="mt-1 text-caption text-foreground">
-                        {summary.price}
-                      </Text>
-                    ) : null}
-                  </View>
-                </>
-              ) : (
-                <Text className="min-w-0 flex-1 text-title-3 font-bold text-foreground">
+        <View className={cn('flex-row items-start gap-3.5 px-5', dialog ? 'pt-5' : 'pt-4')}>
+          {summary ? (
+            <>
+              <EntityThumb
+                name={summary.title}
+                image={summary.posterUrl}
+                shape="square"
+                size={56}
+                aspect={4 / 3}
+              />
+              <View className="min-w-0 flex-1">
+                <Text variant="caption" className="font-semibold text-primary">
                   {t('예매하기')}
                 </Text>
-              )}
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel={t('닫기')}
-                hitSlop={8}
-                className="-mr-1.5 -mt-1 size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
-                <Icon as={XIcon} size={18} className="text-foreground-muted" />
-              </Pressable>
-            </View>
-
-            <View className="mx-5 mt-4 h-px bg-border" />
-
-            <ScrollView
-              className="shrink"
-              contentContainerClassName="px-5 pb-2 pt-4"
-              showsVerticalScrollIndicator={false}>
-              {sorted.length === 0 ? (
-                <View className="items-center gap-2 rounded-xl bg-surface-2 px-4 py-6">
-                  <Icon as={TicketIcon} size={22} className="text-foreground-subtle" />
-                  <Text className="text-body-sm font-semibold text-foreground">
-                    {t('아직 등록된 예매처가 없어요')}
+                <Text numberOfLines={2} className="mt-0.5 text-body font-bold text-foreground">
+                  {summary.title}
+                </Text>
+                {[summary.when, summary.where].some(Boolean) ? (
+                  <Text variant="caption" numberOfLines={2} className="mt-1">
+                    {[summary.when, summary.where].filter(Boolean).join(' · ')}
                   </Text>
-                  <Text variant="caption" className="text-center">
-                    {t('공연장이나 주최 측 사이트에서 예매 일정을 확인해 주세요.')}
+                ) : null}
+                {summary.price ? (
+                  <Text variant="mono" className="mt-1 text-caption text-foreground">
+                    {summary.price}
                   </Text>
-                </View>
-              ) : (
-                <>
-                  <Text variant="caption" className="mb-2 font-semibold text-foreground-subtle">
-                    {t('예매처 {count}곳', { count: sorted.length })}
-                  </Text>
-                  <View className="gap-2">
-                    {sorted.map((vendor) => (
-                      <VendorRow key={vendor.id} vendor={vendor} />
-                    ))}
-                  </View>
-                </>
-              )}
-            </ScrollView>
-
-            <Text variant="caption" className="px-5 pb-5 pt-3 text-foreground-subtle">
-              {t(
-                '예매는 각 판매처 사이트에서 진행돼요. 좌석과 가격은 판매처에서 한 번 더 확인해 주세요.'
-              )}
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <Text className="min-w-0 flex-1 text-title-3 font-bold text-foreground">
+              {t('예매하기')}
             </Text>
-          </View>
-        </Animated.View>
-      </View>
-    </Modal>
+          )}
+          <Pressable
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('닫기')}
+            hitSlop={8}
+            className="-mr-1.5 -mt-1 size-9 items-center justify-center rounded-full active:bg-surface-2 web:hover:bg-surface-2">
+            <Icon as={XIcon} size={18} className="text-foreground-muted" />
+          </Pressable>
+        </View>
+
+        <View className="mx-5 mt-4 h-px bg-border" />
+
+        <ScrollView
+          className="shrink"
+          contentContainerClassName="px-5 pb-2 pt-4"
+          showsVerticalScrollIndicator={false}>
+          {sorted.length === 0 ? (
+            <View className="items-center gap-2 rounded-xl bg-surface-2 px-4 py-6">
+              <Icon as={TicketIcon} size={22} className="text-foreground-subtle" />
+              <Text className="text-body-sm font-semibold text-foreground">
+                {t('아직 등록된 예매처가 없어요')}
+              </Text>
+              <Text variant="caption" className="text-center">
+                {t('공연장이나 주최 측 사이트에서 예매 일정을 확인해 주세요.')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text variant="caption" className="mb-2 font-semibold text-foreground-subtle">
+                {t('예매처 {count}곳', { count: sorted.length })}
+              </Text>
+              <View className="gap-2">
+                {sorted.map((vendor) => (
+                  <VendorRow key={vendor.id} vendor={vendor} />
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+
+        <Text variant="caption" className="px-5 pb-5 pt-3 text-foreground-subtle">
+          {t(
+            '예매는 각 판매처 사이트에서 진행돼요. 좌석과 가격은 판매처에서 한 번 더 확인해 주세요.'
+          )}
+        </Text>
+      </Content>
+    </Dialog>
   );
 }
 

@@ -1,3 +1,4 @@
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { OptimizedImage } from '@/components/shared/optimized-image';
 import { Button } from '@/components/ui/button';
 import { ExpandableText } from '@/components/ui/expandable-text';
@@ -31,7 +32,7 @@ import {
   XIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 
 function openExternal(url: string) {
   Linking.openURL(url).catch(() => {
@@ -354,63 +355,68 @@ function StillPicker({
     );
   };
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center bg-black/60 p-4">
-        <View className="max-h-[85%] w-full max-w-[720px] overflow-hidden rounded-xl bg-background">
-          <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
-            <Text variant="headline" numberOfLines={1} className="flex-1">
-              {t('{work} 장면 스틸', { work: cue.workTitle })}
-            </Text>
-            <Pressable
-              onPress={onClose}
-              accessibilityLabel={t('cue::닫기')}
-              className="size-9 items-center justify-center">
-              <Icon as={XIcon} size={18} className="text-foreground" />
-            </Pressable>
-          </View>
-          <ScrollView contentContainerClassName="flex-row flex-wrap gap-2 p-4">
-            {candidates.isLoading ? <Text variant="caption">{t('불러오는 중이에요.')}</Text> : null}
-            {candidates.isError ? (
-              <Text variant="caption">
-                {t('스틸 후보를 불러오지 못했어요. 창을 닫고 다시 열어 주세요.')}
-              </Text>
-            ) : null}
-            {!candidates.isLoading && !candidates.isError && paths.length === 0 ? (
-              <Text variant="caption">
-                {t('TMDB 스틸 후보가 아직 없어요. 이미지 갱신 작업을 먼저 돌려 주세요.')}
-              </Text>
-            ) : null}
-            {paths.map((path) => {
-              const uri = tmdbImageUrl(path, 'w300');
-              return (
-                <Pressable
-                  key={path}
-                  onPress={() => choose(path)}
-                  disabled={setStill.isPending}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: cue.stillPath === path }}
-                  className={cn(
-                    'w-[48%] overflow-hidden rounded-md border-2',
-                    cue.stillPath === path ? 'border-primary' : 'border-transparent'
-                  )}>
-                  {uri ? (
-                    <OptimizedImage
-                      uri={uri}
-                      resizeMode="cover"
-                      style={{ width: '100%', aspectRatio: 16 / 9 }}
-                    />
-                  ) : null}
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-          {cue.stillPath ? (
-            <Pressable onPress={() => choose(null)} className="border-t border-border px-4 py-3">
-              <Text className="text-label text-destructive">{t('스틸 빼기')}</Text>
-            </Pressable>
-          ) : null}
+    <Dialog
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}>
+      <DialogContent
+        aria-label={t('{work} 장면 스틸', { work: cue.workTitle })}
+        closeLabel={t('cue::닫기')}
+        className="max-h-[85%] gap-0 overflow-hidden rounded-xl border-0 bg-background p-0 sm:max-w-[720px]">
+        <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+          <Text variant="headline" numberOfLines={1} className="flex-1">
+            {t('{work} 장면 스틸', { work: cue.workTitle })}
+          </Text>
+          <Pressable
+            onPress={onClose}
+            accessibilityLabel={t('cue::닫기')}
+            className="size-9 items-center justify-center">
+            <Icon as={XIcon} size={18} className="text-foreground" />
+          </Pressable>
         </View>
-      </View>
-    </Modal>
+        <ScrollView contentContainerClassName="flex-row flex-wrap gap-2 p-4">
+          {candidates.isLoading ? <Text variant="caption">{t('불러오는 중이에요.')}</Text> : null}
+          {candidates.isError ? (
+            <Text variant="caption">
+              {t('스틸 후보를 불러오지 못했어요. 창을 닫고 다시 열어 주세요.')}
+            </Text>
+          ) : null}
+          {!candidates.isLoading && !candidates.isError && paths.length === 0 ? (
+            <Text variant="caption">
+              {t('TMDB 스틸 후보가 아직 없어요. 이미지 갱신 작업을 먼저 돌려 주세요.')}
+            </Text>
+          ) : null}
+          {paths.map((path) => {
+            const uri = tmdbImageUrl(path, 'w300');
+            return (
+              <Pressable
+                key={path}
+                onPress={() => choose(path)}
+                disabled={setStill.isPending}
+                accessibilityRole="button"
+                accessibilityState={{ selected: cue.stillPath === path }}
+                className={cn(
+                  'w-[48%] overflow-hidden rounded-md border-2',
+                  cue.stillPath === path ? 'border-primary' : 'border-transparent'
+                )}>
+                {uri ? (
+                  <OptimizedImage
+                    uri={uri}
+                    resizeMode="cover"
+                    style={{ width: '100%', aspectRatio: 16 / 9 }}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+        {cue.stillPath ? (
+          <Pressable onPress={() => choose(null)} className="border-t border-border px-4 py-3">
+            <Text className="text-label text-destructive">{t('스틸 빼기')}</Text>
+          </Pressable>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
