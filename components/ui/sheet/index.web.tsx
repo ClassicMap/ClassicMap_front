@@ -6,6 +6,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useCloseOnEscapeFromInput } from '@/components/ui/dialog/escape';
 import { OVERLAY_CLASS } from '@/components/ui/dialog/overlay';
 import type { SheetContentProps } from '@/components/ui/dialog/types';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,8 @@ function SheetContent({
   style,
   children,
 }: SheetContentProps) {
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
+  useCloseOnEscapeFromInput(popupRef);
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop
@@ -32,6 +35,7 @@ function SheetContent({
         className={cn(OVERLAY_CLASS, 'bg-black/40')}
       />
       <DialogPrimitive.Popup
+        ref={popupRef}
         data-slot="sheet-content"
         data-side={side}
         aria-label={ariaLabel}

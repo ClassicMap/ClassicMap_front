@@ -1,3 +1,4 @@
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
   AreaPanel,
   type ArtistChoice,
@@ -39,7 +40,7 @@ import {
   XIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { Modal, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ConcertSearchFieldProps {
@@ -470,111 +471,100 @@ function FilterSheet({
   const insets = useSafeAreaInsets();
   const count = countActiveFilters(filter);
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent>
-      <View className="flex-1 justify-end">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('필터 닫기')}
-          onPress={onClose}
-          className="absolute inset-0 bg-black/40"
-        />
-        <View
-          className="max-h-[88%] rounded-t-2xl bg-background"
-          style={{ paddingBottom: insets.bottom }}>
-          <View className="items-center pt-2">
-            <View className="h-1 w-10 rounded-full bg-border-strong" />
-          </View>
-          <View className="flex-row items-center justify-between px-4 pb-1 pt-2">
-            <Text variant="headline">{t('필터')}</Text>
-            <View className="flex-row items-center gap-1">
-              {count > 0 ? (
-                <Pressable
-                  onPress={onReset}
-                  accessibilityRole="button"
-                  hitSlop={6}
-                  className="h-9 justify-center px-2">
-                  <Text className="text-label text-foreground-muted">{t('초기화')}</Text>
-                </Pressable>
-              ) : null}
+    <Sheet
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}>
+      <SheetContent
+        aria-label={t('필터')}
+        closeLabel={t('필터 닫기')}
+        className="max-h-[88%] rounded-t-2xl bg-background"
+        style={{ paddingBottom: insets.bottom }}>
+        <View className="items-center pt-2">
+          <View className="h-1 w-10 rounded-full bg-border-strong" />
+        </View>
+        <View className="flex-row items-center justify-between px-4 pb-1 pt-2">
+          <Text variant="headline">{t('필터')}</Text>
+          <View className="flex-row items-center gap-1">
+            {count > 0 ? (
               <Pressable
-                onPress={onClose}
+                onPress={onReset}
                 accessibilityRole="button"
-                accessibilityLabel={t('닫기')}
-                className="size-9 items-center justify-center rounded-full bg-surface-2">
-                <Icon as={XIcon} size={16} className="text-foreground" />
+                hitSlop={6}
+                className="h-9 justify-center px-2">
+                <Text className="text-label text-foreground-muted">{t('초기화')}</Text>
               </Pressable>
-            </View>
-          </View>
-          <ScrollView contentContainerClassName="px-4 pb-4" keyboardShouldPersistTaps="handled">
-            <SheetSection title={t('장르')}>
-              <View className="flex-row flex-wrap gap-2">
-                {(['classic', 'gugak', 'musical', 'all'] as const).map((key) => (
-                  <Chip
-                    key={key}
-                    label={genreLabel(key)}
-                    selected={filter.genre === key}
-                    onPress={() => onChange({ genre: key })}
-                  />
-                ))}
-              </View>
-            </SheetSection>
-            <SheetSection title={t('날짜')}>
-              <PeriodPanel value={filter.period} onSelect={(period) => onChange({ period })} />
-            </SheetSection>
-            <SheetSection title={t('편성')}>
-              <InstrumentPanel
-                value={filter.instrument}
-                counts={instrumentCounts}
-                onSelect={(instrument) => onChange({ instrument })}
-              />
-            </SheetSection>
-            <SheetSection title={t('지역')}>
-              <AreaPanel
-                areas={areas}
-                value={filter.area}
-                onSelect={(area) => onChange({ area })}
-              />
-            </SheetSection>
-            <SheetSection title={t('filter::연주자')}>
-              <ArtistPanel
-                value={filter.artist}
-                favorites={favoriteArtists}
-                onSelect={onArtistChange}
-              />
-            </SheetSection>
-            <View className="pt-2">
-              <ToggleRow
-                label={t('내한 공연')}
-                description={t('해외 연주자·단체가 한국에 와서 여는 공연')}
-                value={filter.visit}
-                onChange={(visit) => onChange({ visit })}
-              />
-              <ToggleRow
-                label={t('페스티벌')}
-                description={t('음악제·축제 안에서 열리는 공연')}
-                value={filter.festival}
-                onChange={(festival) => onChange({ festival })}
-              />
-            </View>
-          </ScrollView>
-          <View className="border-t border-border px-4 pt-3">
-            <Button className="h-12 rounded-full" onPress={onClose}>
-              <Text className="font-semibold text-primary-foreground">
-                {resultCount === 0 && !more
-                  ? t('조건에 맞는 공연이 없어요')
-                  : more
-                    ? t('공연 {count}개 이상 보기', { count: resultCount })
-                    : t('공연 {count}개 보기', { count: resultCount })}
-              </Text>
-            </Button>
+            ) : null}
+            <Pressable
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel={t('닫기')}
+              className="size-9 items-center justify-center rounded-full bg-surface-2">
+              <Icon as={XIcon} size={16} className="text-foreground" />
+            </Pressable>
           </View>
         </View>
-      </View>
-    </Modal>
+        <ScrollView contentContainerClassName="px-4 pb-4" keyboardShouldPersistTaps="handled">
+          <SheetSection title={t('장르')}>
+            <View className="flex-row flex-wrap gap-2">
+              {(['classic', 'gugak', 'musical', 'all'] as const).map((key) => (
+                <Chip
+                  key={key}
+                  label={genreLabel(key)}
+                  selected={filter.genre === key}
+                  onPress={() => onChange({ genre: key })}
+                />
+              ))}
+            </View>
+          </SheetSection>
+          <SheetSection title={t('날짜')}>
+            <PeriodPanel value={filter.period} onSelect={(period) => onChange({ period })} />
+          </SheetSection>
+          <SheetSection title={t('편성')}>
+            <InstrumentPanel
+              value={filter.instrument}
+              counts={instrumentCounts}
+              onSelect={(instrument) => onChange({ instrument })}
+            />
+          </SheetSection>
+          <SheetSection title={t('지역')}>
+            <AreaPanel areas={areas} value={filter.area} onSelect={(area) => onChange({ area })} />
+          </SheetSection>
+          <SheetSection title={t('filter::연주자')}>
+            <ArtistPanel
+              value={filter.artist}
+              favorites={favoriteArtists}
+              onSelect={onArtistChange}
+            />
+          </SheetSection>
+          <View className="pt-2">
+            <ToggleRow
+              label={t('내한 공연')}
+              description={t('해외 연주자·단체가 한국에 와서 여는 공연')}
+              value={filter.visit}
+              onChange={(visit) => onChange({ visit })}
+            />
+            <ToggleRow
+              label={t('페스티벌')}
+              description={t('음악제·축제 안에서 열리는 공연')}
+              value={filter.festival}
+              onChange={(festival) => onChange({ festival })}
+            />
+          </View>
+        </ScrollView>
+        <View className="border-t border-border px-4 pt-3">
+          <Button className="h-12 rounded-full" onPress={onClose}>
+            <Text className="font-semibold text-primary-foreground">
+              {resultCount === 0 && !more
+                ? t('조건에 맞는 공연이 없어요')
+                : more
+                  ? t('공연 {count}개 이상 보기', { count: resultCount })
+                  : t('공연 {count}개 보기', { count: resultCount })}
+            </Text>
+          </Button>
+        </View>
+      </SheetContent>
+    </Sheet>
   );
 }

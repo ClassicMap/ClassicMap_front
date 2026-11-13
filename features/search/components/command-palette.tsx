@@ -1,4 +1,5 @@
 import { EntityThumb } from '@/components/shared/entity-thumb';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -24,8 +25,8 @@ import { tmdbImageUrl, youtubeClipThumbnail } from '@/features/film/lib/tmdb';
 const GROUP_LIMIT = 5;
 /** 고른 줄에 이만큼 머물면 그 화면 데이터를 미리 받는다 (화살표로 훑을 때는 부르지 않는다) */
 const PREFETCH_DELAY_MS = 120;
-/** 닫는 움직임 길이 (global.css .cm-layer-out) */
-const CLOSE_MS = 80;
+/** 닫는 움직임 길이 (dialog 프리미티브의 duration-200). 다 닫힌 뒤 검색어를 비운다 */
+const CLOSE_MS = 200;
 
 type ResultKind = 'composer' | 'piece' | 'artist' | 'concert' | 'screen' | 'action';
 
@@ -63,9 +64,6 @@ export function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
   const queryClient = useQueryClient();
   const router = useRouter();
-  // 닫을 때도 잠깐(80ms) 그려 두고 0.98배로 줄며 사라지게 한다
-  const [closing, setClosing] = React.useState(false);
-  const wasOpen = React.useRef(open);
   const { toggleColorScheme } = useColorScheme();
   const [query, setQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -77,20 +75,14 @@ export function CommandPalette() {
   }, [setOpen]);
   const skeletonRef = React.useRef(false);
 
+  // 닫히는 움직임 동안은 결과를 그대로 두고, 다 닫힌 뒤 검색어를 비운다
   React.useEffect(() => {
-    if (open) {
-      setClosing(false);
-    } else if (wasOpen.current) {
-      setClosing(true);
-      const timer = setTimeout(() => {
-        setClosing(false);
-        setQuery('');
-        setActiveIndex(0);
-      }, CLOSE_MS);
-      wasOpen.current = open;
-      return () => clearTimeout(timer);
-    }
-    wasOpen.current = open;
+    if (open) return;
+    const timer = setTimeout(() => {
+      setQuery('');
+      setActiveIndex(0);
+    }, CLOSE_MS);
+    return () => clearTimeout(timer);
   }, [open]);
 
   const go = React.useCallback(
@@ -220,11 +212,8 @@ export function CommandPalette() {
   React.useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        close();
-      } else if (event.key === 'ArrowDown') {
+      // Esc 는 dialog 프리미티브가 닫는다
+      if (event.key === 'ArrowDown') {
         event.preventDefault();
         event.stopPropagation();
         setActiveIndex((index) => (flat.length === 0 ? 0 : (index + 1) % flat.length));
@@ -244,9 +233,7 @@ export function CommandPalette() {
     // 입력 칸(RN TextInput)은 키 이벤트 전파를 끊으므로 캡처 단계에서 먼저 받는다
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [open, flat, activeIndex, close]);
-
-  if (!open && !closing) return null;
+  }, [open, flat, activeIndex]);
 
   const trimmed = debounced.trim();
   const hasResults = groups.length > 1;
@@ -259,18 +246,11 @@ export function CommandPalette() {
   let running = -1;
 
   return (
-    <View className="absolute inset-0 z-overlay" style={{ position: 'fixed' as 'absolute' }}>
-      <Pressable
-        accessibilityLabel={t('검색 닫기')}
-        className={cn('absolute inset-0 bg-black/50', closing ? 'cm-scrim-out' : 'cm-scrim-in')}
-        onPress={close}
-      />
-      <View
-        accessibilityRole="search"
-        className={cn(
-          'mx-auto mt-[12vh] w-[640px] max-w-[92vw] overflow-hidden rounded-xl border border-border-strong bg-surface-2',
-          closing ? 'cm-layer-out' : 'cm-layer-in'
-        )}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        aria-label={t('빠른 검색')}
+        closeLabel={t('검색 닫기')}
+        className="top-[12vh] w-[640px] max-w-[92vw] translate-y-0 gap-0 overflow-hidden rounded-xl border-border-strong bg-surface-2 p-0 sm:max-w-[92vw]"
         style={
           {
             maxHeight: 480,
@@ -358,8 +338,8 @@ export function CommandPalette() {
             {t('열기')}
           </Text>
         </View>
-      </View>
-    </View>
+      </DialogContent>
+    </Dialog>
   );
 }
 

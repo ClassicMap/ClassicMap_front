@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 
+import { CloseContext, useCloseOnEscapeFromInput } from './escape';
 import { OVERLAY_CLASS } from './overlay';
 import type {
   DialogContentProps,
@@ -18,12 +19,15 @@ import type {
  */
 
 function Dialog({ open, defaultOpen, onOpenChange, children }: DialogProps) {
+  const actionsRef = React.useRef<DialogPrimitive.Root.Actions | null>(null);
+  const close = React.useCallback(() => actionsRef.current?.close(), []);
   return (
     <DialogPrimitive.Root
       open={open}
       defaultOpen={defaultOpen}
+      actionsRef={actionsRef}
       onOpenChange={(next) => onOpenChange?.(next)}>
-      {children}
+      <CloseContext.Provider value={close}>{children}</CloseContext.Provider>
     </DialogPrimitive.Root>
   );
 }
@@ -50,14 +54,37 @@ function DialogClose({ render, children }: DialogTriggerProps) {
 
 function DialogContent({
   'aria-label': ariaLabel,
+  fullscreen,
   className,
   style,
   children,
 }: DialogContentProps) {
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
+  useCloseOnEscapeFromInput(popupRef);
+  if (fullscreen) {
+    return (
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Popup
+          ref={popupRef}
+          data-slot="dialog-content"
+          data-fullscreen=""
+          aria-label={ariaLabel}
+          className={cn(
+            'fixed inset-0 z-overlay flex flex-col outline-none',
+            'transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none',
+            className
+          )}
+          style={StyleSheet.flatten(style) as React.CSSProperties | undefined}>
+          {children}
+        </DialogPrimitive.Popup>
+      </DialogPrimitive.Portal>
+    );
+  }
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={OVERLAY_CLASS} />
       <DialogPrimitive.Popup
+        ref={popupRef}
         data-slot="dialog-content"
         aria-label={ariaLabel}
         className={cn(

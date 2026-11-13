@@ -22,6 +22,8 @@ export interface DialogContentProps {
   'aria-label'?: string;
   /** 바깥(어두운 막)을 눌러 닫는 단추의 이름 (앱) */
   closeLabel: string;
+  /** 화면 전체를 덮는다(사진 크게 보기 등). 가운데 상자 모양과 어두운 막 없이 안쪽이 배경까지 그린다 */
+  fullscreen?: boolean;
   className?: string;
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;

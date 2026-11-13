@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -6,26 +7,11 @@ import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { XIcon } from 'lucide-react-native';
 import * as React from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-  type ModalProps,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, ScrollView, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** 저장을 눌렀는데 검증에 걸렸을 때 푸터에 띄우는 안내 */
 export const FORM_INVALID_MESSAGE = msg('표시된 항목을 채우거나 고친 뒤 다시 저장해 주세요.');
-
-/** 모바일 시트: iOS는 페이지 시트, 안드로이드는 시스템 바 아래까지 그리고 여백은 인셋으로 준다. */
-const SHEET_PROPS: Partial<ModalProps> =
-  Platform.select<Partial<ModalProps>>({
-    ios: { presentationStyle: 'pageSheet' },
-    android: { statusBarTranslucent: true, navigationBarTranslucent: true },
-  }) ?? {};
 
 /** 오버레이에만 그림자를 허용한다 (설계 문서 4.5) */
 const PANEL_SHADOW: ViewStyle = { boxShadow: '-12px 0 32px -8px rgba(0, 0, 0, 0.28)' };
@@ -50,7 +36,7 @@ export interface FormModalProps {
 /**
  * 관리자 폼 공통 셸 (설계 문서 7.10).
  * 데스크톱 웹은 오른쪽 슬라이드오버(폭 480)로 띄워 뒤의 목록을 보면서 고칠 수 있게 하고,
- * 그 밖에는 전체 화면 시트로 띄운다. Escape·뒤로 가기는 onRequestClose로 닫는다.
+ * 그 밖에는 화면 전체를 덮는 시트로 띄운다. 여닫기·Esc·뒤로 가기는 sheet 프리미티브가 맡는다.
  */
 export function FormModal({
   visible,
@@ -67,11 +53,10 @@ export function FormModal({
   useLocale();
   const { nav } = useBreakpoint();
   const insets = useSafeAreaInsets();
-  const titleId = React.useId();
   const panel = nav !== 'tabs';
   const locked = submitting || busy;
-  // iOS 페이지 시트는 상태 표시줄 아래에서 시작하므로 위쪽 인셋을 더하지 않는다
-  const sheetTop = Platform.OS === 'ios' ? 0 : insets.top;
+  // 시트가 화면 위끝까지 덮으므로 상태 표시줄만큼 내려서 시작한다
+  const sheetTop = insets.top;
 
   const header = (
     <View
@@ -81,11 +66,7 @@ export function FormModal({
       )}
       style={panel ? undefined : { paddingTop: sheetTop + 14 }}>
       <View className="min-w-0 flex-1">
-        <Text
-          nativeID={titleId}
-          role="heading"
-          variant={panel ? 'headline' : 'title3'}
-          numberOfLines={1}>
+        <Text role="heading" variant={panel ? 'headline' : 'title3'} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (
@@ -144,44 +125,36 @@ export function FormModal({
     </Text>
   ) : null;
 
+  const onOpenChange = (open: boolean) => {
+    if (!open) onClose();
+  };
+
   if (panel) {
     return (
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={onClose}
-        aria-labelledby={titleId}>
-        <View className="flex-1">
-          {/* 패널을 스크림보다 먼저 두어 초점이 패널 안에서 시작하게 하고, 겹침은 z-raised 로 올린다 */}
-          <View
-            className="absolute bottom-0 right-0 top-0 z-raised w-[480px] max-w-[100vw] border-l border-border bg-surface-1 duration-base ease-emphasized animate-in slide-in-from-right motion-reduce:animate-none"
-            style={PANEL_SHADOW}>
-            {header}
-            {body}
-            <View className="flex-row items-center gap-2 border-t border-border px-6 py-3">
-              <View className="min-w-0 flex-1">{errorText}</View>
-              {buttons}
-            </View>
+      <Sheet open={visible} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          aria-label={title}
+          closeLabel={t('패널 닫기')}
+          className="w-[480px] max-w-[100vw] border-l border-border bg-surface-1"
+          style={PANEL_SHADOW}>
+          {header}
+          {body}
+          <View className="flex-row items-center gap-2 border-t border-border px-6 py-3">
+            <View className="min-w-0 flex-1">{errorText}</View>
+            {buttons}
           </View>
-          <Pressable
-            accessibilityLabel={t('패널 닫기')}
-            onPress={onClose}
-            className="absolute inset-0 bg-black/30"
-          />
-        </View>
-      </Modal>
+        </SheetContent>
+      </Sheet>
     );
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      onRequestClose={onClose}
-      aria-labelledby={titleId}
-      {...SHEET_PROPS}>
-      <View className="flex-1 bg-background">
+    <Sheet open={visible} onOpenChange={onOpenChange}>
+      <SheetContent
+        aria-label={title}
+        closeLabel={t('닫기')}
+        className="h-full rounded-none bg-background">
         {header}
         {body}
         <View
@@ -190,7 +163,7 @@ export function FormModal({
           {errorText}
           <View className="flex-row gap-2">{buttons}</View>
         </View>
-      </View>
-    </Modal>
+      </SheetContent>
+    </Sheet>
   );
 }
