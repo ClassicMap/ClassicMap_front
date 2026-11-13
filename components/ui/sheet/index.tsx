@@ -44,20 +44,39 @@ function SheetContent({
   const progress = React.useRef(new Animated.Value(0)).current;
   // 닫는 움직임이 끝날 때까지 Modal 을 남겨 둔다
   const [mounted, setMounted] = React.useState(open);
+  // Modal 이 화면에 다 뜬 뒤에 여는 움직임을 시작한다. iOS 는 Modal 을 띄우는 데 시간이 걸려,
+  // 그 전에 시작하면 움직임이 다 끝난 뒤에야 보여 패널이 그냥 나타난다
+  const shown = React.useRef(false);
+  const slideIn = React.useCallback(() => {
+    shown.current = true;
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: OPEN_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [progress]);
 
   React.useEffect(() => {
-    if (open) setMounted(true);
+    if (open) {
+      setMounted(true);
+      // 닫히는 중에 다시 열면 Modal 이 그대로 떠 있어 onShow 가 다시 오지 않는다
+      if (shown.current) slideIn();
+      return;
+    }
     const animation = Animated.timing(progress, {
-      toValue: open ? 1 : 0,
-      duration: open ? OPEN_MS : CLOSE_MS,
-      easing: open ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      toValue: 0,
+      duration: CLOSE_MS,
+      easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     });
     animation.start(({ finished }) => {
-      if (finished && !open) setMounted(false);
+      if (!finished) return;
+      shown.current = false;
+      setMounted(false);
     });
     return () => animation.stop();
-  }, [open, progress]);
+  }, [open, progress, slideIn]);
 
   const offset =
     side === 'bottom'
@@ -70,6 +89,7 @@ function SheetContent({
       transparent
       animationType="none"
       statusBarTranslucent
+      onShow={slideIn}
       onRequestClose={() => setOpen(false)}>
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: progress }]}>
         <Pressable
