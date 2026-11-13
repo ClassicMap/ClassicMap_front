@@ -273,13 +273,7 @@ export interface Performance {
   updatedAt?: Date;
 }
 
-export type ClipStatus =
-  | 'pending'
-  | 'queued'
-  | 'generating'
-  | 'ready'
-  | 'failed'
-  | 'retired';
+export type ClipStatus = 'pending' | 'queued' | 'generating' | 'ready' | 'failed' | 'retired';
 
 export type PerformanceCreditRole =
   | 'soloist'

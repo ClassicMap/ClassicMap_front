@@ -146,7 +146,9 @@ export function FullscreenOverlay({
           gap: 2,
         }}>
         {artist ? (
-          <Text numberOfLines={1} className={cn('font-semibold text-white', touch ? 'text-body' : 'text-title-3')}>
+          <Text
+            numberOfLines={1}
+            className={cn('font-semibold text-white', touch ? 'text-body' : 'text-title-3')}>
             {artist}
           </Text>
         ) : null}
@@ -208,7 +210,13 @@ export function FullscreenOverlay({
         <div
           style={
             touch
-              ? { display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }
+              ? {
+                  display: 'flex',
+                  gap: 8,
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                }
               : { display: 'flex', flexWrap: 'wrap', gap: 8 }
           }>
           {performances.map((performance, index) => {
@@ -224,11 +232,24 @@ export function FullscreenOverlay({
                   'h-10 shrink-0 flex-row items-center gap-2 rounded-full pl-1 pr-3.5',
                   selected ? 'bg-primary' : 'bg-white/15'
                 )}>
-                <EntityThumb name={credit?.artistName ?? '?'} image={imageOf(performance)} shape="circle" size={32} />
-                <Text className={cn('text-label font-semibold', selected ? 'text-primary-foreground' : 'text-white')}>
+                <EntityThumb
+                  name={credit?.artistName ?? '?'}
+                  image={imageOf(performance)}
+                  shape="circle"
+                  size={32}
+                />
+                <Text
+                  className={cn(
+                    'text-label font-semibold',
+                    selected ? 'text-primary-foreground' : 'text-white'
+                  )}>
                   {credit?.artistName ?? t('연주 {n}', { n: index + 1 })}
                 </Text>
-                <Text className={cn('font-mono text-micro', selected ? 'text-primary-foreground/80' : 'text-white/60')}>
+                <Text
+                  className={cn(
+                    'font-mono text-micro',
+                    selected ? 'text-primary-foreground/80' : 'text-white/60'
+                  )}>
                   {clipClock(clipDurationMs(performance))}
                 </Text>
               </Pressable>

@@ -28,13 +28,23 @@ import {
   type LabeledSpanInput,
 } from '@/features/timeline/lib/timeline-layout';
 import { useAuth } from '@/hooks/use-auth';
-import { useComparableComposers, useComparisonPieces } from '@/lib/query/hooks/use-comparison-performances';
+import {
+  useComparableComposers,
+  useComparisonPieces,
+} from '@/lib/query/hooks/use-comparison-performances';
 import { useAllComposers } from '@/lib/query/hooks/use-composers';
 import type { Composer, Period } from '@/types/models';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ChevronLeftIcon, MinusIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ChevronLeftIcon,
+  MinusIcon,
+  PlusIcon,
+  UsersIcon,
+  XIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import {
@@ -72,9 +82,21 @@ const MAX_LANES = 26;
 const STRIP_BLOCK = 16 + DENSITY_STRIP_HEIGHT + 10;
 
 /** 줄이 모자랄 때 먼저 자리를 받는 순서: 초점 시대 → S → A → 비교 영상 → 나머지 */
-function priorityOf(composer: Composer, hasComparison: boolean, focusEraName: string | null): number {
+function priorityOf(
+  composer: Composer,
+  hasComparison: boolean,
+  focusEraName: string | null
+): number {
   const base =
-    composer.tier === 'S' ? 0 : composer.tier === 'A' ? 1 : hasComparison ? 2 : composer.tier === 'B' ? 3 : 4;
+    composer.tier === 'S'
+      ? 0
+      : composer.tier === 'A'
+        ? 1
+        : hasComparison
+          ? 2
+          : composer.tier === 'B'
+            ? 3
+            : 4;
   return focusEraName !== null && composer.period === focusEraName ? base - 10 : base;
 }
 
@@ -92,7 +114,8 @@ function layoutOverflowGroups(
   chartWidth: number
 ): OverflowGroup[] {
   const counts = new Map<string, number>();
-  for (const composer of overflow) counts.set(composer.period, (counts.get(composer.period) ?? 0) + 1);
+  for (const composer of overflow)
+    counts.set(composer.period, (counts.get(composer.period) ?? 0) + 1);
   const groups: OverflowGroup[] = [];
   for (const era of eras) {
     const count = counts.get(era.name) ?? 0;
@@ -105,10 +128,17 @@ function layoutOverflowGroups(
   for (let index = 0; index < groups.length; index += 1) {
     const previous = groups[index - 1];
     const minLeft = previous ? previous.left + previous.width + 6 : 4;
-    groups[index].left = clamp(Math.max(groups[index].left, minLeft), 4, chartWidth - groups[index].width - 4);
+    groups[index].left = clamp(
+      Math.max(groups[index].left, minLeft),
+      4,
+      chartWidth - groups[index].width - 4
+    );
   }
   for (let index = groups.length - 2; index >= 0; index -= 1) {
-    groups[index].left = Math.min(groups[index].left, groups[index + 1].left - groups[index].width - 6);
+    groups[index].left = Math.min(
+      groups[index].left,
+      groups[index + 1].left - groups[index].width - 6
+    );
   }
   return groups;
 }
@@ -145,14 +175,17 @@ export default function TimelineScreen() {
   const comparable = React.useMemo<ReadonlyMap<number, number> | undefined>(
     () =>
       comparableQuery.data
-        ? new Map(comparableQuery.data.composers.map((entry) => [entry.composerId, entry.pieceCount]))
+        ? new Map(
+            comparableQuery.data.composers.map((entry) => [entry.composerId, entry.pieceCount])
+          )
         : undefined,
     [comparableQuery.data, locale]
   );
   const currentYear = new Date().getFullYear();
 
   const validComposers = React.useMemo(
-    () => (composersQuery.data ?? []).filter((c) => Number.isFinite(c.birthYear) && c.birthYear > 0),
+    () =>
+      (composersQuery.data ?? []).filter((c) => Number.isFinite(c.birthYear) && c.birthYear > 0),
     [composersQuery.data, locale]
   );
   const composers = React.useMemo(() => {
@@ -169,27 +202,41 @@ export default function TimelineScreen() {
   const toYear = Math.max(currentYear, ...validComposers.map((c) => c.deathYear ?? currentYear));
   const span = Math.max(1, toYear - fromYear);
 
-  const fitPxPerYear = viewportWidth > 0 ? (viewportWidth - PAD_LEFT - PAD_RIGHT) / span : MIN_PX_PER_YEAR;
+  const fitPxPerYear =
+    viewportWidth > 0 ? (viewportWidth - PAD_LEFT - PAD_RIGHT) / span : MIN_PX_PER_YEAR;
   const basePxPerYear = wide ? fitPxPerYear : Math.max(fitPxPerYear, MIN_PX_PER_YEAR);
   const pxPerYearAt = React.useCallback(
-    (level: number) => basePxPerYear * ZOOM_MULTIPLIERS[clamp(level, 0, ZOOM_MULTIPLIERS.length - 1)],
+    (level: number) =>
+      basePxPerYear * ZOOM_MULTIPLIERS[clamp(level, 0, ZOOM_MULTIPLIERS.length - 1)],
     [basePxPerYear]
   );
   const ppy = pxPerYearAt(zoom);
-  const x = React.useCallback((year: number) => PAD_LEFT + (year - fromYear) * ppy, [fromYear, ppy]);
+  const x = React.useCallback(
+    (year: number) => PAD_LEFT + (year - fromYear) * ppy,
+    [fromYear, ppy]
+  );
   const chartWidth = Math.max(viewportWidth, PAD_LEFT + span * ppy + PAD_RIGHT);
   const scrollable = chartWidth > viewportWidth + 1;
 
   // 화면 높이에서 머리·밀도 띠·차트 머리를 빼고 남는 만큼만 줄을 쓴다
   const laneBudget =
     pageHeight > 0 && headerHeight > 0
-      ? pageHeight - (wide ? 8 : 12) - headerHeight - STRIP_BLOCK - GANTT_LANES_TOP - GANTT_OVERFLOW_ROW - 20
+      ? pageHeight -
+        (wide ? 8 : 12) -
+        headerHeight -
+        STRIP_BLOCK -
+        GANTT_LANES_TOP -
+        GANTT_OVERFLOW_ROW -
+        20
       : windowHeight * 0.45;
   const maxLanes = expanded
     ? Number.POSITIVE_INFINITY
     : clamp(Math.floor(laneBudget / GANTT_ROW_HEIGHT), MIN_LANES, MAX_LANES);
 
-  const eras = React.useMemo(() => PERIODS.filter((era) => era.endYear > fromYear), [fromYear, locale]);
+  const eras = React.useMemo(
+    () => PERIODS.filter((era) => era.endYear > fromYear),
+    [fromYear, locale]
+  );
   const focusEra = eras.find((era) => era.id === focusEraId) ?? null;
 
   const { placed, overflow, laneCount } = React.useMemo(() => {
@@ -262,9 +309,14 @@ export default function TimelineScreen() {
   }, [zoom, viewportWidth, scrollToYear]);
 
   const currentCenterYear = () =>
-    scrollable ? yearAt(scrollX + viewportWidth / 2) : focusEra ? eraMid(focusEra) : (fromYear + toYear) / 2;
+    scrollable
+      ? yearAt(scrollX + viewportWidth / 2)
+      : focusEra
+        ? eraMid(focusEra)
+        : (fromYear + toYear) / 2;
 
-  const eraMid = (era: Period) => (Math.max(era.startYear, fromYear) + Math.min(era.endYear, toYear)) / 2;
+  const eraMid = (era: Period) =>
+    (Math.max(era.startYear, fromYear) + Math.min(era.endYear, toYear)) / 2;
 
   /** 데스크톱은 그 시대가 화면에 꽉 차게 확대하고, 모바일은 그 자리로 옮기기만 한다 */
   const focusOnEra = (era: Period) => {
@@ -323,7 +375,17 @@ export default function TimelineScreen() {
     const center = stars.length > 0 ? stars[Math.floor(stars.length / 2)] : (fromYear + toYear) / 2;
     const frame = requestAnimationFrame(() => scrollToYear(center, zoom, false));
     return () => cancelAnimationFrame(frame);
-  }, [ready, focusEraParam, scrollable, validComposers, currentYear, fromYear, toYear, scrollToYear, zoom]);
+  }, [
+    ready,
+    focusEraParam,
+    scrollable,
+    validComposers,
+    currentYear,
+    fromYear,
+    toYear,
+    scrollToYear,
+    zoom,
+  ]);
 
   // 스크롤할 때마다 화면이 다시 그려진다. 막대 줄(memo)이 다시 그려지지 않게 콜백을 고정한다
   const toggleSelected = React.useCallback(
@@ -340,7 +402,10 @@ export default function TimelineScreen() {
         accessibilityLabel={t('축소')}
         disabled={zoom === 0}
         onPress={() => centerAt(currentCenterYear(), zoom - 1)}
-        className={cn('size-8 items-center justify-center rounded-full bg-surface-2', zoom === 0 && 'opacity-40')}>
+        className={cn(
+          'size-8 items-center justify-center rounded-full bg-surface-2',
+          zoom === 0 && 'opacity-40'
+        )}>
         <Icon as={MinusIcon} size={16} className="text-foreground" />
       </Pressable>
       <Pressable
@@ -378,7 +443,8 @@ export default function TimelineScreen() {
         {...scrollInsets}
         onLayout={(event: LayoutChangeEvent) => setPageHeight(event.nativeEvent.layout.height)}
         contentContainerClassName={cn('pb-40', wide ? 'px-7 pt-2' : 'px-4 pt-3')}>
-        <View onLayout={(event: LayoutChangeEvent) => setHeaderHeight(event.nativeEvent.layout.height)}>
+        <View
+          onLayout={(event: LayoutChangeEvent) => setHeaderHeight(event.nativeEvent.layout.height)}>
           <View className={cn('gap-4', wide && 'flex-row items-end justify-between')}>
             <View className="min-w-0 flex-1">
               <Pressable
@@ -396,7 +462,9 @@ export default function TimelineScreen() {
               </Text>
             </View>
             <View className="flex-row items-center gap-2.5">
-              <View className="flex-row gap-0.5 rounded-full bg-surface-2 p-[3px]" accessibilityRole="tablist">
+              <View
+                className="flex-row gap-0.5 rounded-full bg-surface-2 p-[3px]"
+                accessibilityRole="tablist">
                 {SCOPES.map((item) => (
                   <Pressable
                     key={item.key}
@@ -406,7 +474,10 @@ export default function TimelineScreen() {
                       setScope(item.key);
                       setExpanded(false);
                     }}
-                    className={cn('h-[30px] justify-center rounded-full px-3.5', scope === item.key && 'bg-surface-3')}>
+                    className={cn(
+                      'h-[30px] justify-center rounded-full px-3.5',
+                      scope === item.key && 'bg-surface-3'
+                    )}>
                     <Text
                       className={cn(
                         'text-label font-semibold',
@@ -444,7 +515,11 @@ export default function TimelineScreen() {
               <View className="mt-3 flex-row flex-wrap items-center gap-3">
                 <Legend />
                 {canEdit ? (
-                  <Button variant="outline" size="sm" className="ml-auto" onPress={() => setShowForm(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onPress={() => setShowForm(true)}>
                     <Icon as={PlusIcon} size={14} className="text-foreground" />
                     <Text>{t('작곡가 추가')}</Text>
                   </Button>
@@ -456,7 +531,9 @@ export default function TimelineScreen() {
 
         <View
           className="mt-4"
-          onLayout={(event: LayoutChangeEvent) => setViewportWidth(Math.floor(event.nativeEvent.layout.width))}>
+          onLayout={(event: LayoutChangeEvent) =>
+            setViewportWidth(Math.floor(event.nativeEvent.layout.width))
+          }>
           {composersQuery.isLoading || comparableLoading ? (
             <TimelineSkeleton />
           ) : composersQuery.isError ? (
@@ -485,13 +562,18 @@ export default function TimelineScreen() {
           ) : viewportWidth > 0 ? (
             <>
               <View className="h-4 flex-row items-center justify-between gap-3">
-                <Text numberOfLines={1} className="min-w-0 shrink text-micro text-foreground-subtle">
+                <Text
+                  numberOfLines={1}
+                  className="min-w-0 shrink text-micro text-foreground-subtle">
                   {scrollable
                     ? t('10년마다 살았던 작곡가 수 · 누르면 그 해로 가요')
                     : t('10년마다 살았던 작곡가 수 · 누르면 확대해요')}
                 </Text>
                 {expanded ? (
-                  <Pressable accessibilityRole="button" onPress={() => setExpanded(false)} hitSlop={8}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setExpanded(false)}
+                    hitSlop={8}>
                     <Text className="text-micro text-primary">{t('한 화면으로 접기')}</Text>
                   </Pressable>
                 ) : hiddenCount > 0 && wide ? (
@@ -588,7 +670,9 @@ function TimelineSkeleton() {
     <View className="gap-2.5">
       <Skeleton className="h-8 w-full rounded-md" />
       {Array.from({ length: 12 }, (_, index) => (
-        <View key={index} style={{ marginLeft: `${(index * 13) % 60}%`, width: `${14 + ((index * 17) % 26)}%` }}>
+        <View
+          key={index}
+          style={{ marginLeft: `${(index * 13) % 60}%`, width: `${14 + ((index * 17) % 26)}%` }}>
           <Skeleton className="h-2.5 w-3/5 rounded-sm" />
           <Skeleton className="mt-1 h-1 rounded-full" />
         </View>
@@ -617,7 +701,12 @@ function SelectedComposer({
   return (
     <View
       className="rounded-xl border border-border-strong bg-surface-2 p-4"
-      style={{ shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } }}>
+      style={{
+        shadowColor: '#000',
+        shadowOpacity: 0.35,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
+      }}>
       <View className="flex-row items-center gap-3">
         <EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={48} />
         <View className="min-w-0 flex-1">
@@ -626,7 +715,11 @@ function SelectedComposer({
             {`${composer.birthYear}–${composer.deathYear ?? ''} · ${t(composer.period)}`}
           </Text>
         </View>
-        <Pressable accessibilityLabel={t('닫기')} onPress={onClose} hitSlop={10} className="size-8 items-center justify-center">
+        <Pressable
+          accessibilityLabel={t('닫기')}
+          onPress={onClose}
+          hitSlop={10}
+          className="size-8 items-center justify-center">
           <Icon as={XIcon} size={16} className="text-foreground-muted" />
         </Pressable>
       </View>
@@ -641,7 +734,9 @@ function SelectedComposer({
             size="sm"
             className="rounded-full"
             onPress={() =>
-              router.push(`/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}` as Href)
+              router.push(
+                `/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}` as Href
+              )
             }>
             <Text className="text-primary-foreground">{t('비교 보기')}</Text>
           </Button>

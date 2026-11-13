@@ -62,7 +62,13 @@ interface RepertoireListProps {
  * 레퍼토리 목록: 종류 칩 + 행 (레퍼토리 탭·마이페이지·공개 프로필이 같이 쓴다).
  * '전체'에서는 작곡가·연주자·작품·공연 묶음으로 나눠 보여 주고, 묶음 안은 최근에 담은 순서다.
  */
-export function RepertoireList({ favorites, editable = false, limit, onShowAll, initialFilter }: RepertoireListProps) {
+export function RepertoireList({
+  favorites,
+  editable = false,
+  limit,
+  onShowAll,
+  initialFilter,
+}: RepertoireListProps) {
   const { locale } = useLocale();
   const router = useRouter();
   const [filter, setFilter] = React.useState<Filter>(initialFilter ?? 'all');
@@ -71,7 +77,14 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
   }, [initialFilter]);
   const entries = React.useMemo(() => buildLibraryEntries(favorites), [favorites, locale]);
   const counts = React.useMemo(() => {
-    const map: Record<Filter, number> = { all: entries.length, composer: 0, artist: 0, piece: 0, album: 0, concert: 0 };
+    const map: Record<Filter, number> = {
+      all: entries.length,
+      composer: 0,
+      artist: 0,
+      piece: 0,
+      album: 0,
+      concert: 0,
+    };
     for (const entry of entries) map[entry.kind] += 1;
     return map;
   }, [entries, locale]);
@@ -80,7 +93,10 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
 
   return (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="gap-2">
         {FILTERS.filter((key) => key === 'all' || counts[key] > 0).map((key) => (
           <Chip
             key={key}
@@ -128,7 +144,10 @@ export function RepertoireList({ favorites, editable = false, limit, onShowAll, 
         </View>
       )}
       {limit && filtered.length > limit && onShowAll ? (
-        <Pressable onPress={onShowAll} accessibilityRole="link" className="mt-2 self-start px-1 py-1.5">
+        <Pressable
+          onPress={onShowAll}
+          accessibilityRole="link"
+          className="mt-2 self-start px-1 py-1.5">
           <Text variant="label" className="text-foreground-muted">
             {t('{count}개 모두 보기', { count: filtered.length })}
           </Text>
@@ -173,7 +192,9 @@ function RepertoireRow({ entry, editable, onPress, grouped = false }: Repertoire
           {[meta, addedDay(entry.createdAt)].filter(Boolean).join(' · ')}
         </Text>
       </View>
-      {editable ? <FavoriteButton kind={FAVORITE_KIND[entry.kind]} id={entry.id} name={entry.title} /> : null}
+      {editable ? (
+        <FavoriteButton kind={FAVORITE_KIND[entry.kind]} id={entry.id} name={entry.title} />
+      ) : null}
     </Pressable>
   );
 }

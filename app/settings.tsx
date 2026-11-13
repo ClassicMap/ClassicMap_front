@@ -8,7 +8,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import type { ProfileVisibility, UpdateProfileVisibilityInput } from '@/lib/api/client';
-import { INSTRUMENT_OPTIONS, LEVEL_OPTIONS, PREFERENCE_ERAS, SOUND_OPTIONS } from '@/lib/data/taste-labels';
+import {
+  INSTRUMENT_OPTIONS,
+  LEVEL_OPTIONS,
+  PREFERENCE_ERAS,
+  SOUND_OPTIONS,
+} from '@/lib/data/taste-labels';
 import { getEraForeground } from '@/lib/design/era-palette';
 import type { TasteAnswers } from '@/types/models';
 import { THEME } from '@/lib/theme';
@@ -26,7 +31,14 @@ import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { LOCALES, type Locale, msg, t, useLocale } from '@/lib/i18n';
-import { type LayoutChangeEvent, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
+import {
+  type LayoutChangeEvent,
+  Platform,
+  Pressable,
+  ScrollView,
+  Switch,
+  View,
+} from 'react-native';
 
 type SectionKey = 'profile' | 'visibility' | 'taste' | 'display' | 'account' | 'info';
 
@@ -42,10 +54,22 @@ const SECTIONS: { key: SectionKey; label: string }[] = [
 type VisibilityKey = 'summaryPublic' | 'ratingsPublic' | 'favoritesPublic' | 'collectionsPublic';
 
 const VISIBILITY_ROWS: { key: VisibilityKey; title: string; description: string }[] = [
-  { key: 'summaryPublic', title: msg('활동 요약'), description: msg('평가 수 · 평균 별점 · 레퍼토리 수') },
+  {
+    key: 'summaryPublic',
+    title: msg('활동 요약'),
+    description: msg('평가 수 · 평균 별점 · 레퍼토리 수'),
+  },
   { key: 'ratingsPublic', title: msg('평가한 공연'), description: msg('별점과 공연 목록') },
-  { key: 'favoritesPublic', title: msg('레퍼토리'), description: msg('담아 둔 작곡가·연주자·작품·공연') },
-  { key: 'collectionsPublic', title: msg('컬렉션'), description: msg('별점 5점 공연처럼 자동으로 묶인 목록') },
+  {
+    key: 'favoritesPublic',
+    title: msg('레퍼토리'),
+    description: msg('담아 둔 작곡가·연주자·작품·공연'),
+  },
+  {
+    key: 'collectionsPublic',
+    title: msg('컬렉션'),
+    description: msg('별점 5점 공연처럼 자동으로 묶인 목록'),
+  },
 ];
 
 const THEMES: { key: 'system' | 'light' | 'dark'; label: string }[] = [
@@ -80,7 +104,10 @@ export default function SettingsScreen() {
   };
   const jump = (key: SectionKey) => {
     setActive(key);
-    scrollRef.current?.scrollTo({ y: Math.max(0, (offsets.current[key] ?? 0) - 12), animated: true });
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, (offsets.current[key] ?? 0) - 12),
+      animated: true,
+    });
   };
 
   const confirmSignOut = () =>
@@ -100,7 +127,10 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
-      <ScrollView ref={scrollRef} className="flex-1" contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
         {wide ? (
           <Text variant="display">{t('설정')}</Text>
         ) : (
@@ -142,13 +172,17 @@ export default function SettingsScreen() {
 
           <View className="min-w-0 max-w-[700px] flex-1 gap-5">
             <View onLayout={track('profile')}>
-              <Group title={t('프로필')} description={t('공개 프로필과 마이페이지에 보이는 정보예요.')}>
+              <Group
+                title={t('프로필')}
+                description={t('공개 프로필과 마이페이지에 보이는 정보예요.')}>
                 {visibilityQuery.isLoading ? (
                   <Skeleton className="h-48 w-full rounded-lg" />
                 ) : (
                   <ProfileForm
                     profile={visibilityQuery.data}
-                    defaultName={user?.fullName || user?.emailAddresses[0]?.emailAddress || t('사용자')}
+                    defaultName={
+                      user?.fullName || user?.emailAddresses[0]?.emailAddress || t('사용자')
+                    }
                     defaultAvatar={user?.imageUrl}
                   />
                 )}
@@ -156,11 +190,16 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('visibility')}>
-              <Group title={t('공개 범위')} description={t('공개 프로필은 누구나 볼 수 있어요. 괜찮은 것만 켜 두세요.')}>
+              <Group
+                title={t('공개 범위')}
+                description={t('공개 프로필은 누구나 볼 수 있어요. 괜찮은 것만 켜 두세요.')}>
                 {visibilityQuery.isLoading ? (
                   <Skeleton className="h-40 w-full rounded-lg" />
                 ) : visibilityQuery.isError ? (
-                  <RetryLine message={t('공개 범위를 불러오지 못했어요.')} onRetry={() => visibilityQuery.refetch()} />
+                  <RetryLine
+                    message={t('공개 범위를 불러오지 못했어요.')}
+                    onRetry={() => visibilityQuery.refetch()}
+                  />
                 ) : (
                   <VisibilityToggles profile={visibilityQuery.data} />
                 )}
@@ -168,7 +207,9 @@ export default function SettingsScreen() {
             </View>
 
             <View onLayout={track('taste')}>
-              <Group title={t('취향')} description={t('홈의 오늘의 비교와 추천 셸프가 고른 답 쪽으로 기울어요.')}>
+              <Group
+                title={t('취향')}
+                description={t('홈의 오늘의 비교와 추천 셸프가 고른 답 쪽으로 기울어요.')}>
                 <TastePreferences />
               </Group>
             </View>
@@ -177,16 +218,25 @@ export default function SettingsScreen() {
               <Group title={t('화면')} description={t('시스템을 고르면 기기 설정을 따라가요.')}>
                 <ThemeSelector />
               </Group>
-              <Group title={t('언어')} description={t('처음에는 기기 언어를 따라가요. 여기서 고르면 그 언어로 고정돼요.')}>
+              <Group
+                title={t('언어')}
+                description={t('처음에는 기기 언어를 따라가요. 여기서 고르면 그 언어로 고정돼요.')}>
                 <LanguageSelector />
               </Group>
             </View>
 
             <View onLayout={track('account')}>
               <Group title={t('계정')}>
-                <LinkRow label={t('계정 이름')} value={user?.fullName ?? undefined} onPress={() => router.push('/edit-profile' as Href)} />
+                <LinkRow
+                  label={t('계정 이름')}
+                  value={user?.fullName ?? undefined}
+                  onPress={() => router.push('/edit-profile' as Href)}
+                />
                 {user?.passwordEnabled ? (
-                  <LinkRow label={t('비밀번호 변경')} onPress={() => router.push('/change-password' as Href)} />
+                  <LinkRow
+                    label={t('비밀번호 변경')}
+                    onPress={() => router.push('/change-password' as Href)}
+                  />
                 ) : null}
                 <LinkRow label={t('로그아웃')} onPress={confirmSignOut} chevron={false} />
                 <LinkRow
@@ -201,9 +251,17 @@ export default function SettingsScreen() {
             <View onLayout={track('info')}>
               <Group title={t('정보')}>
                 <LinkRow label={t('도움말')} onPress={() => router.push('/help' as Href)} />
-                <LinkRow label={t('이용약관')} onPress={() => router.push('/terms-of-service' as Href)} />
-                <LinkRow label={t('개인정보 처리방침')} onPress={() => router.push('/privacy-policy' as Href)} />
-                {version ? <LinkRow label={t('버전')} value={version} chevron={false} mono /> : null}
+                <LinkRow
+                  label={t('이용약관')}
+                  onPress={() => router.push('/terms-of-service' as Href)}
+                />
+                <LinkRow
+                  label={t('개인정보 처리방침')}
+                  onPress={() => router.push('/privacy-policy' as Href)}
+                />
+                {version ? (
+                  <LinkRow label={t('버전')} value={version} chevron={false} mono />
+                ) : null}
               </Group>
             </View>
           </View>
@@ -213,7 +271,15 @@ export default function SettingsScreen() {
   );
 }
 
-function Group({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Group({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   useLocale();
   return (
     <View className="gap-4 rounded-xl border border-border px-5 py-5 web:px-6">
@@ -234,7 +300,9 @@ function RetryLine({ message, onRetry }: { message: string; onRetry: () => void 
   useLocale();
   return (
     <View className="flex-row items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
-      <Text variant="bodySm" className="flex-1 text-foreground-muted">{message}</Text>
+      <Text variant="bodySm" className="flex-1 text-foreground-muted">
+        {message}
+      </Text>
       <Pressable onPress={onRetry} hitSlop={8} accessibilityRole="button">
         <Text variant="label" className="text-primary">
           {t('다시 시도')}
@@ -271,14 +339,18 @@ function ProfileForm({
     const before = previousInitial.current;
     previousInitial.current = initial;
     setDraft((current) =>
-      current.displayName === before.displayName && current.bio === before.bio && current.avatarUrl === before.avatarUrl
+      current.displayName === before.displayName &&
+      current.bio === before.bio &&
+      current.avatarUrl === before.avatarUrl
         ? initial
         : current
     );
   }, [initial]);
 
   const dirty =
-    draft.displayName !== initial.displayName || draft.bio !== initial.bio || draft.avatarUrl !== initial.avatarUrl;
+    draft.displayName !== initial.displayName ||
+    draft.bio !== initial.bio ||
+    draft.avatarUrl !== initial.avatarUrl;
 
   const save = () => {
     const avatarUrl = draft.avatarUrl.trim();
@@ -296,7 +368,9 @@ function ProfileForm({
       { displayName: draft.displayName.trim(), bio: draft.bio.trim(), avatarUrl },
       {
         onError: () =>
-          setError(t('저장하지 못했어요. 연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 저장해 주세요.')),
+          setError(
+            t('저장하지 못했어요. 연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 저장해 주세요.')
+          ),
       }
     );
   };
@@ -304,7 +378,11 @@ function ProfileForm({
   return (
     <View className="gap-4">
       <View className="flex-row items-center gap-4">
-        <ProfileAvatar name={draft.displayName || defaultName} uri={draft.avatarUrl || defaultAvatar} size={64} />
+        <ProfileAvatar
+          name={draft.displayName || defaultName}
+          uri={draft.avatarUrl || defaultAvatar}
+          size={64}
+        />
         <View className="flex-1 gap-1.5">
           <Label htmlFor="avatarUrl">{t('프로필 사진 주소')}</Label>
           <Input
@@ -352,10 +430,19 @@ function ProfileForm({
         </Text>
       ) : null}
       <View className="flex-row justify-end gap-2">
-        <Button variant="outline" size="sm" className="rounded-full" disabled={!dirty || update.isPending} onPress={() => setDraft(initial)}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+          disabled={!dirty || update.isPending}
+          onPress={() => setDraft(initial)}>
           <Text>{t('되돌리기')}</Text>
         </Button>
-        <Button size="sm" className="rounded-full px-5" disabled={!dirty || update.isPending} onPress={save}>
+        <Button
+          size="sm"
+          className="rounded-full px-5"
+          disabled={!dirty || update.isPending}
+          onPress={save}>
           <Text>{update.isPending ? t('저장 중…') : t('저장')}</Text>
         </Button>
       </View>
@@ -383,7 +470,10 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
     update.mutate(input, {
       onError: () => {
         setValues((current) => ({ ...current, [key]: previous }));
-        Alert.alert(t('공개 범위를 바꾸지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
+        Alert.alert(
+          t('공개 범위를 바꾸지 못했어요'),
+          t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.')
+        );
       },
     });
   };
@@ -391,7 +481,9 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
   return (
     <View>
       {VISIBILITY_ROWS.map((row, index) => (
-        <View key={row.key} className={cn('flex-row items-center gap-4 py-3', index > 0 && 'border-t border-border')}>
+        <View
+          key={row.key}
+          className={cn('flex-row items-center gap-4 py-3', index > 0 && 'border-t border-border')}>
           <View className="min-w-0 flex-1">
             <Text className="text-body-sm font-semibold text-foreground">{t(row.title)}</Text>
             <Text variant="caption" className="mt-0.5">
@@ -405,7 +497,9 @@ function VisibilityToggles({ profile }: { profile?: ProfileVisibility }) {
             trackColor={{ false: colors.surface3, true: colors.primary }}
             thumbColor={values[row.key] ? colors.primaryForeground : colors.foregroundMuted}
             // 웹(RNW)은 켜진 손잡이 색을 activeThumbColor로만 받는다. 없으면 기본 청록이 나온다
-            {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.primaryForeground } as object) : null)}
+            {...(Platform.OS === 'web'
+              ? ({ activeThumbColor: colors.primaryForeground } as object)
+              : null)}
           />
         </View>
       ))}
@@ -423,13 +517,17 @@ function TastePreferences() {
 
   const save = (next: TasteAnswers) => {
     taste.save(next).catch(() => {
-      Alert.alert(t('취향을 저장하지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 골라 주세요.'));
+      Alert.alert(
+        t('취향을 저장하지 못했어요'),
+        t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 골라 주세요.')
+      );
     });
   };
   const toggle = <T extends string>(list: readonly T[], value: T): T[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
-  if (taste.failed) return <RetryLine message={t('취향을 불러오지 못했어요.')} onRetry={taste.retry} />;
+  if (taste.failed)
+    return <RetryLine message={t('취향을 불러오지 못했어요.')} onRetry={taste.retry} />;
   if (!taste.loaded) return <Skeleton className="h-40 w-full rounded-lg" />;
 
   const answered = taste.onboardingStatus === 'completed';
@@ -440,12 +538,19 @@ function TastePreferences() {
       {!answered ? (
         <View className="gap-3 rounded-xl border border-border bg-surface-2 p-4">
           <View className="gap-1">
-            <Text className="text-body-sm font-semibold text-foreground">{t('아직 취향을 알려 주지 않았어요')}</Text>
+            <Text className="text-body-sm font-semibold text-foreground">
+              {t('아직 취향을 알려 주지 않았어요')}
+            </Text>
             <Text variant="caption">
-              {t('질문 네 개, 30초면 끝나요. 아는 곡과 좋아하는 연주자까지 고르면 홈 추천이 그쪽으로 맞춰져요.')}
+              {t(
+                '질문 네 개, 30초면 끝나요. 아는 곡과 좋아하는 연주자까지 고르면 홈 추천이 그쪽으로 맞춰져요.'
+              )}
             </Text>
           </View>
-          <Button size="sm" className="self-start" onPress={() => router.push('/onboarding' as Href)}>
+          <Button
+            size="sm"
+            className="self-start"
+            onPress={() => router.push('/onboarding' as Href)}>
             <Text>{t('취향 알려 주기')}</Text>
           </Button>
         </View>
@@ -479,7 +584,10 @@ function TastePreferences() {
                 label={t(option.label)}
                 selected={answers.instrument === option.key}
                 onPress={() =>
-                  save({ ...answers, instrument: answers.instrument === option.key ? null : option.key })
+                  save({
+                    ...answers,
+                    instrument: answers.instrument === option.key ? null : option.key,
+                  })
                 }
               />
             ))}
@@ -515,7 +623,9 @@ function TastePreferences() {
                 key={era}
                 label={t(era)}
                 selected={answers.favoritePeriods.includes(era)}
-                onPress={() => save({ ...answers, favoritePeriods: toggle(answers.favoritePeriods, era) })}
+                onPress={() =>
+                  save({ ...answers, favoritePeriods: toggle(answers.favoritePeriods, era) })
+                }
                 leading={color ? <ChipDot color={color} /> : undefined}
               />
             );
@@ -524,7 +634,10 @@ function TastePreferences() {
       </View>
 
       {answered ? (
-        <Pressable onPress={() => router.push('/onboarding' as Href)} accessibilityRole="button" className="self-start">
+        <Pressable
+          onPress={() => router.push('/onboarding' as Href)}
+          accessibilityRole="button"
+          className="self-start">
           <Text variant="label" className="text-primary">
             {t('아는 곡부터 다시 고르기')}
           </Text>
@@ -547,35 +660,53 @@ function ListeningHistory() {
 
   const toggle = (next: boolean) => {
     taste.save(taste.answers, { historyEnabled: next }).catch(() => {
-      Alert.alert(t('기록 설정을 바꾸지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.'));
+      Alert.alert(
+        t('기록 설정을 바꾸지 못했어요'),
+        t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 눌러 주세요.')
+      );
     });
   };
   const clear = () =>
-    Alert.alert(t('들은 기록을 지울까요?'), t('열어 본 곡, 끝까지 들은 곡, 관심 없음으로 뺀 곡이 모두 지워져요.'), [
-      { text: t('취소'), style: 'cancel' },
-      {
-        text: t('지우기'),
-        style: 'destructive',
-        onPress: () => {
-          setClearing(true);
-          TasteAPI.deleteEvents()
-            .then(() => {
-              void queryClient.invalidateQueries({ queryKey: TASTE_QUERY_KEYS.myRecommendations });
-              Alert.alert(t('들은 기록을 지웠어요'), t('홈 추천이 고른 답만으로 다시 골라져요.'));
-            })
-            .catch(() => Alert.alert(t('기록을 지우지 못했어요'), t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.')))
-            .finally(() => setClearing(false));
+    Alert.alert(
+      t('들은 기록을 지울까요?'),
+      t('열어 본 곡, 끝까지 들은 곡, 관심 없음으로 뺀 곡이 모두 지워져요.'),
+      [
+        { text: t('취소'), style: 'cancel' },
+        {
+          text: t('지우기'),
+          style: 'destructive',
+          onPress: () => {
+            setClearing(true);
+            TasteAPI.deleteEvents()
+              .then(() => {
+                void queryClient.invalidateQueries({
+                  queryKey: TASTE_QUERY_KEYS.myRecommendations,
+                });
+                Alert.alert(t('들은 기록을 지웠어요'), t('홈 추천이 고른 답만으로 다시 골라져요.'));
+              })
+              .catch(() =>
+                Alert.alert(
+                  t('기록을 지우지 못했어요'),
+                  t('연결이 잠시 끊겼을 수 있어요. 잠시 뒤 다시 시도해 주세요.')
+                )
+              )
+              .finally(() => setClearing(false));
+          },
         },
-      },
-    ]);
+      ]
+    );
 
   return (
     <View className="gap-1 border-t border-border pt-4">
       <View className="flex-row items-center gap-4">
         <View className="min-w-0 flex-1">
-          <Text className="text-body-sm font-semibold text-foreground">{t('들은 기록으로 추천 고치기')}</Text>
+          <Text className="text-body-sm font-semibold text-foreground">
+            {t('들은 기록으로 추천 고치기')}
+          </Text>
           <Text variant="caption" className="mt-0.5">
-            {t('열어 본 곡, 끝까지 들은 곡, 금방 넘긴 곡을 추천에 써요. 끄면 관심 없음만 기억해요.')}
+            {t(
+              '열어 본 곡, 끝까지 들은 곡, 금방 넘긴 곡을 추천에 써요. 끄면 관심 없음만 기억해요.'
+            )}
           </Text>
         </View>
         <Switch
@@ -584,10 +715,17 @@ function ListeningHistory() {
           accessibilityLabel={t('들은 기록으로 추천 고치기')}
           trackColor={{ false: colors.surface3, true: colors.primary }}
           thumbColor={taste.historyEnabled ? colors.primaryForeground : colors.foregroundMuted}
-          {...(Platform.OS === 'web' ? ({ activeThumbColor: colors.primaryForeground } as object) : null)}
+          {...(Platform.OS === 'web'
+            ? ({ activeThumbColor: colors.primaryForeground } as object)
+            : null)}
         />
       </View>
-      <Pressable onPress={clear} disabled={clearing} accessibilityRole="button" className="mt-2 self-start" hitSlop={6}>
+      <Pressable
+        onPress={clear}
+        disabled={clearing}
+        accessibilityRole="button"
+        className="mt-2 self-start"
+        hitSlop={6}>
         <Text variant="label" className="text-destructive">
           {clearing ? t('지우는 중…') : t('들은 기록 지우기')}
         </Text>
@@ -612,7 +750,9 @@ function ThemeSelector() {
   const [choice, setChoice] = React.useState<'system' | 'light' | 'dark'>('system');
 
   return (
-    <View className="flex-row self-start rounded-full bg-surface-2 p-[3px]" accessibilityRole="radiogroup">
+    <View
+      className="flex-row self-start rounded-full bg-surface-2 p-[3px]"
+      accessibilityRole="radiogroup">
       {THEMES.map((item) => (
         <Pressable
           key={item.key}
@@ -622,8 +762,15 @@ function ThemeSelector() {
           }}
           accessibilityRole="radio"
           accessibilityState={{ checked: choice === item.key }}
-          className={cn('h-8 min-w-[84px] items-center justify-center rounded-full px-4', choice === item.key && 'bg-surface-3')}>
-          <Text className={cn('text-label font-semibold', choice === item.key ? 'text-foreground' : 'text-foreground-muted')}>
+          className={cn(
+            'h-8 min-w-[84px] items-center justify-center rounded-full px-4',
+            choice === item.key && 'bg-surface-3'
+          )}>
+          <Text
+            className={cn(
+              'text-label font-semibold',
+              choice === item.key ? 'text-foreground' : 'text-foreground-muted'
+            )}>
             {t(item.label)}
           </Text>
         </Pressable>
@@ -639,15 +786,24 @@ function LanguageSelector() {
   const { locale, setLocale } = useLocale();
 
   return (
-    <View className="flex-row self-start rounded-full bg-surface-2 p-[3px]" accessibilityRole="radiogroup">
+    <View
+      className="flex-row self-start rounded-full bg-surface-2 p-[3px]"
+      accessibilityRole="radiogroup">
       {LOCALES.map((key) => (
         <Pressable
           key={key}
           onPress={() => setLocale(key)}
           accessibilityRole="radio"
           accessibilityState={{ checked: locale === key }}
-          className={cn('h-8 min-w-[84px] items-center justify-center rounded-full px-4', locale === key && 'bg-surface-3')}>
-          <Text className={cn('text-label font-semibold', locale === key ? 'text-foreground' : 'text-foreground-muted')}>
+          className={cn(
+            'h-8 min-w-[84px] items-center justify-center rounded-full px-4',
+            locale === key && 'bg-surface-3'
+          )}>
+          <Text
+            className={cn(
+              'text-label font-semibold',
+              locale === key ? 'text-foreground' : 'text-foreground-muted'
+            )}>
             {LANGUAGE_NAMES[key]}
           </Text>
         </Pressable>
@@ -678,7 +834,9 @@ function LinkRow({
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       className="-mx-2 min-h-12 flex-row items-center gap-3 rounded-md px-2 web:hover:bg-surface-2">
-      <Text className={cn('text-body-sm', destructive ? 'text-destructive' : 'text-foreground')}>{label}</Text>
+      <Text className={cn('text-body-sm', destructive ? 'text-destructive' : 'text-foreground')}>
+        {label}
+      </Text>
       {value ? (
         <Text
           variant={mono ? 'mono' : 'caption'}

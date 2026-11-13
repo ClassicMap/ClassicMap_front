@@ -42,16 +42,7 @@ type ChipProps = Omit<React.ComponentProps<typeof Pressable>, 'children'> &
     trailing?: React.ReactNode;
   };
 
-function Chip({
-  label,
-  count,
-  leading,
-  trailing,
-  selected,
-  size,
-  className,
-  ...props
-}: ChipProps) {
+function Chip({ label, count, leading, trailing, selected, size, className, ...props }: ChipProps) {
   useLocale();
   const isSelected = selected === true;
   return (
@@ -63,10 +54,7 @@ function Chip({
       {leading}
       <Text
         numberOfLines={1}
-        className={cn(
-          'text-label',
-          isSelected ? 'text-foreground' : 'text-foreground-muted'
-        )}>
+        className={cn('text-label', isSelected ? 'text-foreground' : 'text-foreground-muted')}>
         {label}
       </Text>
       {count !== undefined && (

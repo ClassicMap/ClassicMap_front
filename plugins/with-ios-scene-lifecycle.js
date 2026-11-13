@@ -14,7 +14,8 @@ const MARKER = '// @classicmap/scene-lifecycle';
 const POD_MARKER = '# @classicmap/pod-deployment-target';
 const MIN_POD_DEPLOYMENT_TARGET = '15.1';
 
-const WINDOW_BLOCK = /#if os\(iOS\) \|\| os\(tvOS\)\n\s*window = UIWindow\(frame: UIScreen\.main\.bounds\)\n\s*factory\.startReactNative\(\n\s*withModuleName: "main",\n\s*in: window,\n\s*launchOptions: launchOptions\)\n#endif\n/;
+const WINDOW_BLOCK =
+  /#if os\(iOS\) \|\| os\(tvOS\)\n\s*window = UIWindow\(frame: UIScreen\.main\.bounds\)\n\s*factory\.startReactNative\(\n\s*withModuleName: "main",\n\s*in: window,\n\s*launchOptions: launchOptions\)\n#endif\n/;
 
 const FACTORY_PROPERTY = '  var reactNativeFactory: RCTReactNativeFactory?\n';
 
@@ -130,7 +131,9 @@ function withPodDeploymentTarget(config) {
     // react_native_post_install이 빌드 설정을 만진 뒤에 올려야 덮이지 않는다
     const anchor = contents.match(/\n\s*react_native_post_install\([\s\S]*?\n\s*\)\n/)?.[0];
     if (!anchor) {
-      throw new Error('with-ios-scene-lifecycle: Podfile에서 react_native_post_install 호출을 찾지 못했습니다.');
+      throw new Error(
+        'with-ios-scene-lifecycle: Podfile에서 react_native_post_install 호출을 찾지 못했습니다.'
+      );
     }
     const snippet = [
       `    ${POD_MARKER}`,

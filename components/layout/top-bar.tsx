@@ -2,7 +2,13 @@ import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/features/auth/components/user-menu';
 import { useRouter } from 'expo-router';
-import { ChevronLeftIcon, ChevronRightIcon, MoonStarIcon, SearchIcon, SunIcon } from 'lucide-react-native';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MoonStarIcon,
+  SearchIcon,
+  SunIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { t, useLocale } from '@/lib/i18n';
@@ -47,7 +53,9 @@ export function TopBar({ sidebarTrigger = false }: { sidebarTrigger?: boolean })
       className="shrink-0 flex-row items-center gap-2.5 px-5"
       style={{ height: SHELL.topBarHeight }}>
       {sidebarTrigger ? <SidebarTrigger className="-ml-2" /> : null}
-      <RoundButton label={t('뒤로')} onPress={() => (router.canGoBack() ? router.back() : router.push('/home'))}>
+      <RoundButton
+        label={t('뒤로')}
+        onPress={() => (router.canGoBack() ? router.back() : router.push('/home'))}>
         <Icon as={ChevronLeftIcon} size={18} className="text-foreground-muted" />
       </RoundButton>
       <RoundButton label={t('앞으로')} onPress={() => window.history.forward()}>
@@ -71,12 +79,18 @@ export function TopBar({ sidebarTrigger = false }: { sidebarTrigger?: boolean })
         <RoundButton
           label={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}
           onPress={() => setLocale(locale === 'ko' ? 'en' : 'ko')}>
-          <Text className="text-[11px] font-semibold text-foreground-muted">{locale === 'ko' ? 'EN' : '한'}</Text>
+          <Text className="text-[11px] font-semibold text-foreground-muted">
+            {locale === 'ko' ? 'EN' : '한'}
+          </Text>
         </RoundButton>
         <RoundButton
           label={colorScheme === 'dark' ? t('라이트 모드로 전환') : t('다크 모드로 전환')}
           onPress={toggleColorScheme}>
-          <Icon as={colorScheme === 'dark' ? SunIcon : MoonStarIcon} size={16} className="text-foreground-muted" />
+          <Icon
+            as={colorScheme === 'dark' ? SunIcon : MoonStarIcon}
+            size={16}
+            className="text-foreground-muted"
+          />
         </RoundButton>
         <UserMenu />
       </View>

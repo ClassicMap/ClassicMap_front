@@ -35,7 +35,9 @@ export default function LibraryScreen() {
         <EmptyState
           icon={LogInIcon}
           title={t('로그인하면 레퍼토리를 모을 수 있어요')}
-          description={t('작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
+          description={t(
+            '작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.'
+          )}
           action={{ label: t('로그인'), onPress: () => router.push('/(auth)/sign-in') }}
         />
       </View>
@@ -68,7 +70,9 @@ export default function LibraryScreen() {
         <EmptyState
           icon={BookmarkIcon}
           title={t('아직 레퍼토리가 비어 있어요')}
-          description={t('작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
+          description={t(
+            '작곡가·연주자·작품·앨범·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.'
+          )}
           action={{ label: t('비교할 수 있는 작품 보기'), onPress: () => router.push('/compare') }}
         />
       ) : (

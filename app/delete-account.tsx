@@ -50,7 +50,9 @@ export default function DeleteAccountScreen() {
     const body = t('계정 삭제를 요청합니다.\n\n이메일: {email}\n삭제 사유: ', { email });
     void Linking.openURL(
       `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    ).catch(() => setError(t('메일 앱을 열지 못했어요. {email}로 직접 보내 주세요.', { email: SUPPORT_EMAIL })));
+    ).catch(() =>
+      setError(t('메일 앱을 열지 못했어요. {email}로 직접 보내 주세요.', { email: SUPPORT_EMAIL }))
+    );
   };
 
   const remove = async () => {
@@ -65,9 +67,17 @@ export default function DeleteAccountScreen() {
       await user.delete();
     } catch (err) {
       if (dataDeleted) {
-        setError(t('기록은 지웠지만 로그인 계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.'));
+        setError(
+          t(
+            '기록은 지웠지만 로그인 계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.'
+          )
+        );
       } else if (isUnsupported(err)) {
-        setError(t('이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 {email}에 삭제를 요청해 주세요.', { email: SUPPORT_EMAIL }));
+        setError(
+          t('이 계정은 앱에서 바로 지울 수 없어요. 아래 버튼으로 {email}에 삭제를 요청해 주세요.', {
+            email: SUPPORT_EMAIL,
+          })
+        );
       } else {
         setError(t('계정을 지우지 못했어요. 잠시 뒤 다시 시도하거나 메일로 요청해 주세요.'));
       }
@@ -96,7 +106,11 @@ export default function DeleteAccountScreen() {
   }
 
   return (
-    <SubPage title={t('계정 삭제')} description={t('계정을 지우면 별점, 레퍼토리, 공개 프로필이 모두 사라지고 되돌릴 수 없어요.')}>
+    <SubPage
+      title={t('계정 삭제')}
+      description={t(
+        '계정을 지우면 별점, 레퍼토리, 공개 프로필이 모두 사라지고 되돌릴 수 없어요.'
+      )}>
       <View className="gap-4">
         <View className="gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
           <Text className="text-body-sm font-semibold text-destructive">{t('지워지는 것')}</Text>
@@ -107,8 +121,16 @@ export default function DeleteAccountScreen() {
           </Text>
         </View>
         <View className="gap-1.5">
-          <Label nativeID="confirmWord">{t('확인을 위해 "{word}"를 입력해 주세요', { word: confirmWord() })}</Label>
-          <Input aria-labelledby="confirmWord" value={typed} onChangeText={setTyped} editable={!deleting} autoCapitalize="none" />
+          <Label nativeID="confirmWord">
+            {t('확인을 위해 "{word}"를 입력해 주세요', { word: confirmWord() })}
+          </Label>
+          <Input
+            aria-labelledby="confirmWord"
+            value={typed}
+            onChangeText={setTyped}
+            editable={!deleting}
+            autoCapitalize="none"
+          />
         </View>
         <FieldMessage error={error} />
         <View className="flex-row flex-wrap gap-2">

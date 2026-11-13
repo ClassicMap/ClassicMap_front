@@ -116,22 +116,16 @@ test('자산 메타데이터에 해시와 파일 크기를 기록하고 경로�
       start: 1335,
       videoId: 'abcdefghijk',
     });
-    const metadata = await describeClipAsset(
-      clipPath,
-      identity,
-      async () =>
-        JSON.stringify({
-          format: { duration: '40' },
-          streams: [{ codec_name: 'h264', codec_type: 'video' }],
-        })
+    const metadata = await describeClipAsset(clipPath, identity, async () =>
+      JSON.stringify({
+        format: { duration: '40' },
+        streams: [{ codec_name: 'h264', codec_type: 'video' }],
+      })
     );
     const headers = metadataHeaders(metadata);
 
     assert.equal(metadata.fileSize, contents.byteLength);
-    assert.equal(
-      metadata.sha256,
-      createHash('sha256').update(contents).digest('hex')
-    );
+    assert.equal(metadata.sha256, createHash('sha256').update(contents).digest('hex'));
     assert.equal(headers['X-ClassicMap-Clip-Storage-Key'], identity.storageKey);
     assert.equal(headers['X-ClassicMap-Clip-File-Size'], String(contents.byteLength));
     assert.equal(JSON.stringify(headers).includes(directory), false);
@@ -158,12 +152,27 @@ test('영상 원본은 보관 시간이 지나면 오래된 것으로 본다', (
 });
 
 test('로컬 원본에서 자를 때는 편집 목록을 남겨 요청한 길이로 나오게 한다', () => {
-  const local = ffmpegCutArgs(['/cache/sources/a.mp4'], 1500, 30, '/tmp/out.mp4', { keepEditList: true });
+  const local = ffmpegCutArgs(['/cache/sources/a.mp4'], 1500, 30, '/tmp/out.mp4', {
+    keepEditList: true,
+  });
   assert.equal(local.includes('-avoid_negative_ts'), false);
-  assert.deepEqual(local.slice(local.indexOf('-ss'), local.indexOf('-ss') + 4), ['-ss', '1500', '-i', '/cache/sources/a.mp4']);
+  assert.deepEqual(local.slice(local.indexOf('-ss'), local.indexOf('-ss') + 4), [
+    '-ss',
+    '1500',
+    '-i',
+    '/cache/sources/a.mp4',
+  ]);
   assert.deepEqual(local.slice(local.indexOf('-t'), local.indexOf('-t') + 2), ['-t', '30']);
 
   const stream = ffmpegCutArgs(['https://v', 'https://a'], 10, 20, '/tmp/out.mp4');
-  assert.deepEqual(stream.slice(stream.indexOf('-avoid_negative_ts'), stream.indexOf('-avoid_negative_ts') + 2), ['-avoid_negative_ts', 'make_zero']);
-  assert.deepEqual(stream.slice(stream.indexOf('-map'), stream.indexOf('-map') + 4), ['-map', '0:v:0', '-map', '1:a:0']);
+  assert.deepEqual(
+    stream.slice(stream.indexOf('-avoid_negative_ts'), stream.indexOf('-avoid_negative_ts') + 2),
+    ['-avoid_negative_ts', 'make_zero']
+  );
+  assert.deepEqual(stream.slice(stream.indexOf('-map'), stream.indexOf('-map') + 4), [
+    '-map',
+    '0:v:0',
+    '-map',
+    '1:a:0',
+  ]);
 });

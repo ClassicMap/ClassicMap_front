@@ -77,7 +77,8 @@ export function useAlbumLabels() {
 export function useNewAlbumsForMe(enabled: boolean) {
   return useQuery({
     queryKey: RECORDING_QUERY_KEYS.newForMe,
-    queryFn: () => RecordingAPI.newForMe({ days: NEW_ALBUM_DAYS, offset: 0, limit: NEW_ALBUM_LIMIT }),
+    queryFn: () =>
+      RecordingAPI.newForMe({ days: NEW_ALBUM_DAYS, offset: 0, limit: NEW_ALBUM_LIMIT }),
     enabled,
     staleTime: 10 * 60_000,
     retry: retryUnlessUnavailable,
@@ -128,7 +129,11 @@ export function useMyRepertoire(enabled: boolean) {
  * 레퍼토리 연주자만: 서버에 연주자 여러 명을 한 번에 거는 조건이 없어 연주자마다 첫 페이지를 받아 합친다.
  * 연주자는 앞에서부터 12명까지만 묻는다.
  */
-export function useRepertoireArtistAlbums(artistIds: readonly number[], filters: AlbumBrowseFilters, enabled: boolean) {
+export function useRepertoireArtistAlbums(
+  artistIds: readonly number[],
+  filters: AlbumBrowseFilters,
+  enabled: boolean
+) {
   const targets = artistIds.slice(0, REPERTOIRE_ARTIST_LIMIT);
   const results = useQueries({
     queries: targets.map((artist) => ({

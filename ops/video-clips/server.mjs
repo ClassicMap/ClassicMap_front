@@ -1,7 +1,16 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { access, mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import {
+  access,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,8 +33,7 @@ const ytdlpCookiesPath = configuredCookiesPath
   ? join(process.env.CLIP_RUNTIME_DIR ?? '/tmp', 'yt-cookies.txt')
   : '';
 const ytdlpFormat =
-  process.env.YTDLP_FORMAT ??
-  'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4]';
+  process.env.YTDLP_FORMAT ?? 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4]';
 const port = Number.parseInt(process.env.CLIP_PORT ?? '3200', 10);
 // 컨테이너에서는 서비스가 붙을 수 있게 0.0.0.0 으로 열어야 한다.
 // 기본값은 로컬 개발을 생각해 loopback 으로 둔다.
@@ -64,9 +72,7 @@ async function prepareCookies() {
 function selectStream(video) {
   const candidates = (video.formatStreams ?? []).filter(
     (stream) =>
-      typeof stream.url === 'string' &&
-      stream.url.length > 0 &&
-      stream.type?.startsWith('video/')
+      typeof stream.url === 'string' && stream.url.length > 0 && stream.type?.startsWith('video/')
   );
 
   if (candidates.length === 0) {
@@ -342,7 +348,13 @@ function getSourceUrls(videoId) {
 // make_zero 를 주면 그 앞부분까지 재생 길이에 들어가, 30초 요청이 36.7초가 되어 자산
 // 검증에서 거부됐다. 빼면 편집 목록이 앞부분을 가려 요청한 길이로 나온다. 예전 yt-dlp
 // 구간 받기와 같은 구조다.
-export function ffmpegCutArgs(sourceUrls, start, duration, outputPath, { keepEditList = false } = {}) {
+export function ffmpegCutArgs(
+  sourceUrls,
+  start,
+  duration,
+  outputPath,
+  { keepEditList = false } = {}
+) {
   const inputs = [];
 
   // -ss 를 각 입력 앞에 둬야 입력 단계에서 탐색한다 (디코딩 없이 빠르다).
@@ -376,7 +388,10 @@ export function ffmpegCutArgs(sourceUrls, start, duration, outputPath, { keepEdi
 
 function runFfmpeg(sourceUrls, start, duration, outputPath, options) {
   return new Promise((resolvePromise, rejectPromise) => {
-    const process = spawn('ffmpeg', ffmpegCutArgs(sourceUrls, start, duration, outputPath, options));
+    const process = spawn(
+      'ffmpeg',
+      ffmpegCutArgs(sourceUrls, start, duration, outputPath, options)
+    );
     let stderr = '';
 
     process.stderr.on('data', (chunk) => {
@@ -461,7 +476,9 @@ export function parseProbeOutput(stdout, expectedDurationMs) {
     audioDurationMs > 0 &&
     videoDurationMs - audioDurationMs > AUDIO_GAP_TOLERANCE_MS
   ) {
-    throw new Error(`오디오가 영상보다 짧습니다. (영상 ${videoDurationMs}ms, 오디오 ${audioDurationMs}ms)`);
+    throw new Error(
+      `오디오가 영상보다 짧습니다. (영상 ${videoDurationMs}ms, 오디오 ${audioDurationMs}ms)`
+    );
   }
   if (!Number.isFinite(probedDurationMs) || probedDurationMs <= 0) {
     throw new Error('클립 재생시간을 확인하지 못했습니다.');
@@ -673,7 +690,7 @@ async function buildClip(clipRequest) {
 
 export function metadataHeaders(metadata) {
   return {
-    'ETag': `"${metadata.sha256}"`,
+    ETag: `"${metadata.sha256}"`,
     'X-ClassicMap-Clip-Asset-Validated-At': metadata.assetValidatedAt,
     'X-ClassicMap-Clip-Duration-Ms': String(metadata.probedDurationMs),
     'X-ClassicMap-Clip-Encoding-Profile': metadata.encodingProfileVersion,
@@ -743,8 +760,7 @@ export function createClipServer({ buildToken = clipBuildToken } = {}) {
       }
       await sendClip(request, response, asset);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '영상 구간을 준비하지 못했습니다.';
+      const message = error instanceof Error ? error.message : '영상 구간을 준비하지 못했습니다.';
       sendError(response, 502, message);
     }
   });

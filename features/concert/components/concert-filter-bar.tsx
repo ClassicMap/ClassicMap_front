@@ -69,7 +69,10 @@ export function ConcertSearchField({ value, onChange, className }: ConcertSearch
         className="min-w-0 flex-1 text-body-sm text-foreground web:outline-none"
       />
       {value ? (
-        <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => onChange('')}>
+        <Pressable
+          accessibilityLabel={t('검색어 지우기')}
+          hitSlop={10}
+          onPress={() => onChange('')}>
           <Icon as={XIcon} size={15} className="text-foreground-subtle" />
         </Pressable>
       ) : null}
@@ -124,10 +127,17 @@ export function FilterMenu({ label, value, leading, width, children }: FilterMen
           {leading}
           <Text
             numberOfLines={1}
-            className={cn('max-w-[180px] text-label', active ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+            className={cn(
+              'max-w-[180px] text-label',
+              active ? 'font-semibold text-foreground' : 'text-foreground-muted'
+            )}>
             {value ?? label}
           </Text>
-          <Icon as={ChevronDownIcon} size={14} className={active ? 'text-foreground' : 'text-foreground-subtle'} />
+          <Icon
+            as={ChevronDownIcon}
+            size={14}
+            className={active ? 'text-foreground' : 'text-foreground-subtle'}
+          />
         </>
       </PopoverTrigger>
       <PopoverContent align="start" side="bottom" sideOffset={8} className="p-3" style={{ width }}>
@@ -151,9 +161,11 @@ function periodValue(filter: ConcertFilter): string | undefined {
  */
 export function ConcertFilterBar(props: ConcertFilterBarProps) {
   useLocale();
-  const { filter, areas, artist, favoriteArtists, instrumentCounts, onChange, onArtistChange } = props;
+  const { filter, areas, artist, favoriteArtists, instrumentCounts, onChange, onArtistChange } =
+    props;
   const areaLabel =
-    areas.find((area) => area.value === filter.area)?.label ?? (filter.area ? areaName(filter.area) : undefined);
+    areas.find((area) => area.value === filter.area)?.label ??
+    (filter.area ? areaName(filter.area) : undefined);
   return (
     <View className="gap-3">
       <View className="flex-row flex-wrap items-center gap-2">
@@ -203,7 +215,9 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           label={t('편성')}
           value={filter.instrument ? instrumentLabel(filter.instrument) : undefined}
           leading={
-            filter.instrument ? <InstrumentIcon code={filter.instrument} size={14} className="text-foreground" /> : null
+            filter.instrument ? (
+              <InstrumentIcon code={filter.instrument} size={14} className="text-foreground" />
+            ) : null
           }
           width={456}>
           {(close) => (
@@ -219,7 +233,7 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
         </FilterMenu>
         <FilterMenu
           label={t('filter::연주자')}
-          value={filter.artist ? artist?.name ?? t('연주자 1명') : undefined}
+          value={filter.artist ? (artist?.name ?? t('연주자 1명')) : undefined}
           leading={
             artist ? (
               <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={18} />
@@ -243,8 +257,16 @@ export function ConcertFilterBar(props: ConcertFilterBarProps) {
           )}
         </FilterMenu>
         <View className="mx-1 h-5 w-px bg-border" />
-        <Chip label={t('내한')} selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
-        <Chip label={t('페스티벌')} selected={filter.festival} onPress={() => onChange({ festival: !filter.festival })} />
+        <Chip
+          label={t('내한')}
+          selected={filter.visit}
+          onPress={() => onChange({ visit: !filter.visit })}
+        />
+        <Chip
+          label={t('페스티벌')}
+          selected={filter.festival}
+          onPress={() => onChange({ festival: !filter.festival })}
+        />
       </View>
       <AppliedFilters {...props} />
     </View>
@@ -260,13 +282,27 @@ interface AppliedChip {
   clear: () => void;
 }
 
-function appliedChips({ filter, areas, artist, onChange, onArtistChange }: ConcertFilterBarProps): AppliedChip[] {
+function appliedChips({
+  filter,
+  areas,
+  artist,
+  onChange,
+  onArtistChange,
+}: ConcertFilterBarProps): AppliedChip[] {
   const chips: AppliedChip[] = [];
   if (filter.genre !== DEFAULT_CONCERT_FILTER.genre) {
-    chips.push({ key: 'genre', label: genreLabel(filter.genre), clear: () => onChange({ genre: DEFAULT_CONCERT_FILTER.genre }) });
+    chips.push({
+      key: 'genre',
+      label: genreLabel(filter.genre),
+      clear: () => onChange({ genre: DEFAULT_CONCERT_FILTER.genre }),
+    });
   }
   if (filter.period !== DEFAULT_CONCERT_FILTER.period) {
-    chips.push({ key: 'period', label: periodValue(filter) ?? '', clear: () => onChange({ period: 'all' }) });
+    chips.push({
+      key: 'period',
+      label: periodValue(filter) ?? '',
+      clear: () => onChange({ period: 'all' }),
+    });
   }
   if (filter.area) {
     const label = areas.find((area) => area.value === filter.area)?.label ?? areaName(filter.area);
@@ -285,12 +321,20 @@ function appliedChips({ filter, areas, artist, onChange, onArtistChange }: Conce
     chips.push({
       key: 'artist',
       label: artist?.name ?? t('filter::연주자'),
-      leading: artist ? <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={16} /> : undefined,
+      leading: artist ? (
+        <EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={16} />
+      ) : undefined,
       clear: () => onArtistChange(undefined),
     });
   }
-  if (filter.visit) chips.push({ key: 'visit', label: t('내한'), clear: () => onChange({ visit: false }) });
-  if (filter.festival) chips.push({ key: 'festival', label: t('페스티벌'), clear: () => onChange({ festival: false }) });
+  if (filter.visit)
+    chips.push({ key: 'visit', label: t('내한'), clear: () => onChange({ visit: false }) });
+  if (filter.festival)
+    chips.push({
+      key: 'festival',
+      label: t('페스티벌'),
+      clear: () => onChange({ festival: false }),
+    });
   return chips;
 }
 
@@ -300,7 +344,10 @@ function AppliedFilters(props: ConcertFilterBarProps) {
   const chips = appliedChips(props);
   if (chips.length === 0) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-1.5">
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerClassName="items-center gap-1.5">
       {chips.map((chip) => (
         <Pressable
           key={chip.key}
@@ -365,7 +412,10 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
           ) : null}
         </Pressable>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-2">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerClassName="items-center gap-2">
         <Chip
           size="sm"
           label={t('오늘')}
@@ -378,7 +428,12 @@ export function ConcertMobileFilter(props: MobileFilterProps) {
           selected={filter.period === 'weekend'}
           onPress={() => onChange({ period: filter.period === 'weekend' ? 'all' : 'weekend' })}
         />
-        <Chip size="sm" label={t('내한')} selected={filter.visit} onPress={() => onChange({ visit: !filter.visit })} />
+        <Chip
+          size="sm"
+          label={t('내한')}
+          selected={filter.visit}
+          onPress={() => onChange({ visit: !filter.visit })}
+        />
         <Chip
           size="sm"
           label={t('페스티벌')}
@@ -410,11 +465,17 @@ function FilterSheet({
   ...props
 }: MobileFilterProps & { visible: boolean; onClose: () => void }) {
   useLocale();
-  const { filter, areas, favoriteArtists, instrumentCounts, onChange, onArtistChange, onReset } = props;
+  const { filter, areas, favoriteArtists, instrumentCounts, onChange, onArtistChange, onReset } =
+    props;
   const insets = useSafeAreaInsets();
   const count = countActiveFilters(filter);
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent>
       <View className="flex-1 justify-end">
         <Pressable
           accessibilityRole="button"
@@ -422,7 +483,9 @@ function FilterSheet({
           onPress={onClose}
           className="absolute inset-0 bg-black/40"
         />
-        <View className="max-h-[88%] rounded-t-2xl bg-background" style={{ paddingBottom: insets.bottom }}>
+        <View
+          className="max-h-[88%] rounded-t-2xl bg-background"
+          style={{ paddingBottom: insets.bottom }}>
           <View className="items-center pt-2">
             <View className="h-1 w-10 rounded-full bg-border-strong" />
           </View>
@@ -430,7 +493,11 @@ function FilterSheet({
             <Text variant="headline">{t('필터')}</Text>
             <View className="flex-row items-center gap-1">
               {count > 0 ? (
-                <Pressable onPress={onReset} accessibilityRole="button" hitSlop={6} className="h-9 justify-center px-2">
+                <Pressable
+                  onPress={onReset}
+                  accessibilityRole="button"
+                  hitSlop={6}
+                  className="h-9 justify-center px-2">
                   <Text className="text-label text-foreground-muted">{t('초기화')}</Text>
                 </Pressable>
               ) : null}
@@ -447,7 +514,12 @@ function FilterSheet({
             <SheetSection title={t('장르')}>
               <View className="flex-row flex-wrap gap-2">
                 {(['classic', 'gugak', 'musical', 'all'] as const).map((key) => (
-                  <Chip key={key} label={genreLabel(key)} selected={filter.genre === key} onPress={() => onChange({ genre: key })} />
+                  <Chip
+                    key={key}
+                    label={genreLabel(key)}
+                    selected={filter.genre === key}
+                    onPress={() => onChange({ genre: key })}
+                  />
                 ))}
               </View>
             </SheetSection>
@@ -462,10 +534,18 @@ function FilterSheet({
               />
             </SheetSection>
             <SheetSection title={t('지역')}>
-              <AreaPanel areas={areas} value={filter.area} onSelect={(area) => onChange({ area })} />
+              <AreaPanel
+                areas={areas}
+                value={filter.area}
+                onSelect={(area) => onChange({ area })}
+              />
             </SheetSection>
             <SheetSection title={t('filter::연주자')}>
-              <ArtistPanel value={filter.artist} favorites={favoriteArtists} onSelect={onArtistChange} />
+              <ArtistPanel
+                value={filter.artist}
+                favorites={favoriteArtists}
+                onSelect={onArtistChange}
+              />
             </SheetSection>
             <View className="pt-2">
               <ToggleRow

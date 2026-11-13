@@ -37,7 +37,9 @@ export function useGenreShelves() {
   const shelves = React.useMemo<GenreShelf[]>(() => {
     const used = new Set<number>();
     return (summaries.data ?? []).map((summary) => {
-      const lead = summary.portraits.find((portrait) => !used.has(portrait.composerId)) ?? summary.portraits[0];
+      const lead =
+        summary.portraits.find((portrait) => !used.has(portrait.composerId)) ??
+        summary.portraits[0];
       if (lead) used.add(lead.composerId);
       return {
         genre: summary.genre,
@@ -77,10 +79,12 @@ export function GenreTile({
       {...prefetch}
       onPress={onPress}
       accessibilityRole="link"
-      accessibilityLabel={t('{genre}, 비교할 수 있는 작품 {count}곡', { genre: t(shelf.style.label), count: shelf.pieceCount })}
+      accessibilityLabel={t('{genre}, 비교할 수 있는 작품 {count}곡', {
+        genre: t(shelf.style.label),
+        count: shelf.pieceCount,
+      })}
       className={cn(Platform.OS === 'web' && 'cm-tile', 'overflow-hidden rounded-lg')}
       style={{ width, height, backgroundColor: shelf.style.color }}>
-
       {shelf.portrait ? (
         <View
           pointerEvents="none"
@@ -106,7 +110,9 @@ export function GenreTile({
         <Text numberOfLines={1} className="text-headline font-extrabold text-white">
           {t(shelf.style.label)}
         </Text>
-        <Text className="mt-0.5 text-caption font-semibold text-white/75">{t('{count}곡', { count: shelf.pieceCount })}</Text>
+        <Text className="mt-0.5 text-caption font-semibold text-white/75">
+          {t('{count}곡', { count: shelf.pieceCount })}
+        </Text>
       </View>
     </Pressable>
   );
@@ -132,7 +138,11 @@ export function GenreTiles({
   const [width, setWidth] = React.useState(0);
   const gap = wide ? 16 : 10;
   const count = Math.max(1, shelves.length);
-  const maxColumns = wide ? (width > 0 ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap))) : 0) : 2;
+  const maxColumns = wide
+    ? width > 0
+      ? Math.max(1, Math.floor((width + gap) / (minTileWidth + gap)))
+      : 0
+    : 2;
   const rows = maxColumns > 0 ? Math.ceil(count / maxColumns) : 1;
   const columns = wide ? Math.ceil(count / rows) : 2;
   const tileWidth = width > 0 ? Math.floor((width - gap * (columns - 1)) / columns) : 0;
@@ -144,7 +154,11 @@ export function GenreTiles({
       style={{ gap }}>
       {isLoading && shelves.length === 0
         ? Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="rounded-lg" style={{ width: tileWidth || '48%', height: tileHeight }} />
+            <Skeleton
+              key={index}
+              className="rounded-lg"
+              style={{ width: tileWidth || '48%', height: tileHeight }}
+            />
           ))
         : tileWidth > 0
           ? shelves.map((shelf) => (
@@ -195,7 +209,10 @@ export function CompareGenrePieces({
     <ScrollView
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      <Pressable onPress={onBack} accessibilityRole="link" className="mb-5 flex-row items-center gap-1 self-start">
+      <Pressable
+        onPress={onBack}
+        accessibilityRole="link"
+        className="mb-5 flex-row items-center gap-1 self-start">
         <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
         <Text variant="caption" className="text-foreground-muted">
           {t('비교')}

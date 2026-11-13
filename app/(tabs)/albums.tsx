@@ -23,9 +23,22 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, BookmarkIcon, CheckIcon, DiscIcon, SearchIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  BookmarkIcon,
+  CheckIcon,
+  DiscIcon,
+  SearchIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
-import { type NativeScrollEvent, type NativeSyntheticEvent, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  View,
+} from 'react-native';
 
 const FIRST_YEAR = 2000;
 
@@ -80,8 +93,9 @@ export default function AlbumsScreen() {
   const detail = opened ?? linkedAlbum.data ?? null;
 
   const setParams = React.useCallback(
-    (next: Partial<Record<'label' | 'year' | 'sort' | 'mine' | 'q' | 'album', string | undefined>>) =>
-      router.setParams(next),
+    (
+      next: Partial<Record<'label' | 'year' | 'sort' | 'mine' | 'q' | 'album', string | undefined>>
+    ) => router.setParams(next),
     [router]
   );
 
@@ -96,7 +110,10 @@ export default function AlbumsScreen() {
     [debounced, label, sort, year, locale]
   );
 
-  const repertoireArtists = React.useMemo(() => [...repertoire.artists], [repertoire.artists, locale]);
+  const repertoireArtists = React.useMemo(
+    () => [...repertoire.artists],
+    [repertoire.artists, locale]
+  );
   const browse = useAlbumBrowse(filters);
   const mineAlbums = useRepertoireArtistAlbums(repertoireArtists, filters, mine);
   const labels = useAlbumLabels();
@@ -126,11 +143,14 @@ export default function AlbumsScreen() {
   const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (mine) return;
     const nearEnd =
-      nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 600;
+      nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >=
+      nativeEvent.contentSize.height - 600;
     if (nearEnd && browse.hasNextPage && !browse.isFetchingNextPage) void browse.fetchNextPage();
   };
 
-  const activeFilters = [label, year, mine || undefined, debounced || undefined].filter(Boolean).length;
+  const activeFilters = [label, year, mine || undefined, debounced || undefined].filter(
+    Boolean
+  ).length;
   const resetFilters = () => {
     setQuery('');
     setParams({ label: undefined, year: undefined, mine: undefined, q: undefined });
@@ -161,7 +181,9 @@ export default function AlbumsScreen() {
           <View>
             <Text variant={wide ? 'display' : 'title1'}>{t('앨범')}</Text>
             <Text variant="bodySm" className="mt-1 text-foreground-muted">
-              {t('연주자들의 음반을 발매 순으로 모았어요. 앨범 정보는 Apple Music 카탈로그 기준이에요.')}
+              {t(
+                '연주자들의 음반을 발매 순으로 모았어요. 앨범 정보는 Apple Music 카탈로그 기준이에요.'
+              )}
             </Text>
           </View>
           <View className={cn('justify-center', wide && 'w-[380px]')}>
@@ -184,10 +206,17 @@ export default function AlbumsScreen() {
         {shelf.length > 0 && !debounced ? (
           <View className="mt-8">
             <View className="mb-3.5 flex-row items-baseline gap-2.5">
-              <Text className="text-[18px] font-bold text-foreground">{t('담은 연주자의 새 앨범')}</Text>
+              <Text className="text-[18px] font-bold text-foreground">
+                {t('담은 연주자의 새 앨범')}
+              </Text>
               <Text variant="caption">{t('최근 90일 · 발매 예정 포함')}</Text>
             </View>
-            <AlbumShelf albums={shelf} wide={wide} isInRepertoire={isInRepertoire} onOpen={openAlbum} />
+            <AlbumShelf
+              albums={shelf}
+              wide={wide}
+              isInRepertoire={isInRepertoire}
+              onOpen={openAlbum}
+            />
           </View>
         ) : null}
 
@@ -213,7 +242,10 @@ export default function AlbumsScreen() {
                 />
               )}
             </FilterMenu>
-            <FilterMenu label={t('발매 연도')} value={year ? t('{year}년', { year }) : undefined} width={280}>
+            <FilterMenu
+              label={t('발매 연도')}
+              value={year ? t('{year}년', { year }) : undefined}
+              width={280}>
               {(close) => (
                 <View className="flex-row flex-wrap gap-1.5">
                   <Chip
@@ -239,7 +271,10 @@ export default function AlbumsScreen() {
               )}
             </FilterMenu>
             {/* 기본(최신 발매)은 고른 값으로 강조하지 않는다 */}
-            <FilterMenu label={t('최신 발매 순')} value={sort === 'title' ? t('제목 순') : undefined} width={200}>
+            <FilterMenu
+              label={t('최신 발매 순')}
+              value={sort === 'title' ? t('제목 순') : undefined}
+              width={200}>
               {(close) => (
                 <View className="gap-0.5">
                   {SORT_OPTIONS.map((option) => (
@@ -260,13 +295,24 @@ export default function AlbumsScreen() {
               <Chip
                 label={t('레퍼토리 연주자만')}
                 selected={mine}
-                leading={<Icon as={BookmarkIcon} size={13} className={mine ? 'fill-primary text-primary' : 'text-foreground-subtle'} />}
+                leading={
+                  <Icon
+                    as={BookmarkIcon}
+                    size={13}
+                    className={mine ? 'fill-primary text-primary' : 'text-foreground-subtle'}
+                  />
+                }
                 onPress={() => setParams({ mine: mine ? undefined : '1' })}
               />
             ) : null}
             {activeFilters > 0 ? (
-              <Pressable onPress={resetFilters} accessibilityRole="button" className="h-9 justify-center rounded-full px-3 active:bg-surface-2 web:hover:bg-surface-2">
-                <Text className="text-label text-foreground-muted">{t('초기화 {count}', { count: activeFilters })}</Text>
+              <Pressable
+                onPress={resetFilters}
+                accessibilityRole="button"
+                className="h-9 justify-center rounded-full px-3 active:bg-surface-2 web:hover:bg-surface-2">
+                <Text className="text-label text-foreground-muted">
+                  {t('초기화 {count}', { count: activeFilters })}
+                </Text>
               </Pressable>
             ) : null}
           </ScrollView>
@@ -275,15 +321,25 @@ export default function AlbumsScreen() {
             <EmptyState
               icon={BookmarkIcon}
               title={t('레퍼토리에 담은 연주자가 없어요')}
-              description={t('연주자 화면에서 레퍼토리에 담으면 그 연주자의 앨범만 모아 볼 수 있어요.')}
-              action={{ label: t('연주자 둘러보기'), onPress: () => router.push('/artists?type=artist' as Href) }}
+              description={t(
+                '연주자 화면에서 레퍼토리에 담으면 그 연주자의 앨범만 모아 볼 수 있어요.'
+              )}
+              action={{
+                label: t('연주자 둘러보기'),
+                onPress: () => router.push('/artists?type=artist' as Href),
+              }}
             />
           ) : unavailable ? (
             <EmptyState
               icon={DiscIcon}
               title={t('앨범 목록을 준비하고 있어요')}
-              description={t('앨범 찾기가 곧 열려요. 그동안 연주자 화면에서 연주자별 음반을 볼 수 있어요.')}
-              action={{ label: t('연주자 둘러보기'), onPress: () => router.push('/artists?type=artist' as Href) }}
+              description={t(
+                '앨범 찾기가 곧 열려요. 그동안 연주자 화면에서 연주자별 음반을 볼 수 있어요.'
+              )}
+              action={{
+                label: t('연주자 둘러보기'),
+                onPress: () => router.push('/artists?type=artist' as Href),
+              }}
             />
           ) : error ? (
             <EmptyState
@@ -291,12 +347,19 @@ export default function AlbumsScreen() {
               tone="error"
               title={t('앨범을 불러오지 못했어요')}
               description={t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')}
-              action={{ label: t('다시 시도'), onPress: () => (mine ? mineAlbums.refetch() : void browse.refetch()) }}
+              action={{
+                label: t('다시 시도'),
+                onPress: () => (mine ? mineAlbums.refetch() : void browse.refetch()),
+              }}
             />
           ) : !loading && albums.length === 0 ? (
             <EmptyState
               icon={DiscIcon}
-              title={debounced ? t('‘{q}’에 맞는 앨범이 없어요', { q: debounced }) : t('이 조건에 맞는 앨범이 없어요')}
+              title={
+                debounced
+                  ? t('‘{q}’에 맞는 앨범이 없어요', { q: debounced })
+                  : t('이 조건에 맞는 앨범이 없어요')
+              }
               description={t('레이블이나 발매 연도를 바꿔 보세요.')}
               action={{ label: t('필터 초기화'), onPress: resetFilters }}
             />
@@ -307,7 +370,13 @@ export default function AlbumsScreen() {
                   {t('레퍼토리 연주자 중 최근에 담은 12명의 앨범이에요.')}
                 </Text>
               ) : null}
-              <AlbumGrid albums={albums} loading={loading} wide={wide} isInRepertoire={isInRepertoire} onOpen={openAlbum} />
+              <AlbumGrid
+                albums={albums}
+                loading={loading}
+                wide={wide}
+                isInRepertoire={isInRepertoire}
+                onOpen={openAlbum}
+              />
               {!mine && browse.isFetchingNextPage ? (
                 <Text variant="caption" className="mt-6 text-center">
                   {t('더 불러오는 중…')}
@@ -323,7 +392,15 @@ export default function AlbumsScreen() {
   );
 }
 
-function OptionRow({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+function OptionRow({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
   useLocale();
   return (
     <Pressable
@@ -334,7 +411,12 @@ function OptionRow({ label, selected, onPress }: { label: string; selected: bool
         'h-9 flex-row items-center justify-between gap-3 rounded-md px-2.5 active:bg-surface-2 web:hover:bg-surface-2',
         selected && 'bg-primary-muted'
       )}>
-      <Text numberOfLines={1} className={cn('min-w-0 flex-1 text-body-sm', selected ? 'font-semibold text-foreground' : 'text-foreground-muted')}>
+      <Text
+        numberOfLines={1}
+        className={cn(
+          'min-w-0 flex-1 text-body-sm',
+          selected ? 'font-semibold text-foreground' : 'text-foreground-muted'
+        )}>
         {label}
       </Text>
       {selected ? <Icon as={CheckIcon} size={15} className="text-primary" /> : null}
@@ -357,7 +439,11 @@ function LabelOptions({
 }) {
   useLocale();
   if (loading) {
-    return <Text variant="caption" className="px-1 py-2">{t('레이블을 불러오는 중이에요…')}</Text>;
+    return (
+      <Text variant="caption" className="px-1 py-2">
+        {t('레이블을 불러오는 중이에요…')}
+      </Text>
+    );
   }
   if (unavailable || labels.length === 0) {
     return (
@@ -368,7 +454,11 @@ function LabelOptions({
   }
   return (
     <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-      <OptionRow label={t('모든 레이블')} selected={current === undefined} onPress={() => onPick(undefined)} />
+      <OptionRow
+        label={t('모든 레이블')}
+        selected={current === undefined}
+        onPress={() => onPick(undefined)}
+      />
       {labels.map((item) => (
         <Pressable
           key={item.label}

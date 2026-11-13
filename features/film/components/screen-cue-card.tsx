@@ -20,7 +20,16 @@ import { useLeadPerformance } from '@/features/film/hooks/use-lead-performance';
 import { YoutubeThumb } from '@/features/film/components/youtube-thumb';
 import { tmdbImageUrl } from '@/features/film/lib/tmdb';
 import { type Href, useRouter } from 'expo-router';
-import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, ExternalLinkIcon, ImageIcon, PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
+  ImageIcon,
+  PauseIcon,
+  PlayIcon,
+  XIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -51,7 +60,9 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
   const router = useRouter();
   const [showEvidence, setShowEvidence] = React.useState(false);
   const [picking, setPicking] = React.useState(false);
-  const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)].filter(Boolean).join(' · ');
+  const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)]
+    .filter(Boolean)
+    .join(' · ');
   const still = tmdbImageUrl(cue.stillPath, 'w780');
   // 장면 그림은 사람이 확인한 공식 클립에만 사진으로 둔다(sceneFrame). 영상은 아래 'YouTube · 채널'로 연다
   const clip = cue.officialClip;
@@ -60,12 +71,19 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
   const openClip = () => clip && openExternal(youtubeClipUrl(clip.videoId, clip.startSec));
   const openCompare = (sectorId?: number) => {
     if (cue.composerId === null || cue.pieceId === null) return;
-    const params = new URLSearchParams({ composerId: String(cue.composerId), pieceId: String(cue.pieceId) });
+    const params = new URLSearchParams({
+      composerId: String(cue.composerId),
+      pieceId: String(cue.pieceId),
+    });
     if (sectorId) params.append('sectorId', String(sectorId));
     router.push(`/compare?${params.toString()}` as Href);
   };
 
-  const meta = [t(SCREEN_USAGE_LABELS[cue.usage]), cue.arranged ? t('cue::편곡') : null, when || null]
+  const meta = [
+    t(SCREEN_USAGE_LABELS[cue.usage]),
+    cue.arranged ? t('cue::편곡') : null,
+    when || null,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -110,7 +128,12 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
           ) : null}
         </View>
 
-        <ExpandableText text={cue.sceneNote} lines={2} variant="bodySm" className="text-foreground-muted" />
+        <ExpandableText
+          text={cue.sceneNote}
+          lines={2}
+          variant="bodySm"
+          className="text-foreground-muted"
+        />
 
         <ListenAction cue={cue} playlist={playlist} onOpenCompare={openCompare} />
 
@@ -121,11 +144,18 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
             accessibilityState={{ expanded: showEvidence }}
             className="flex-row items-center gap-1 py-1">
             <Text variant="micro">{t('근거 {count}개', { count: cue.evidence.length })}</Text>
-            <Icon as={showEvidence ? ChevronUpIcon : ChevronDownIcon} size={12} className="text-foreground-subtle" />
+            <Icon
+              as={showEvidence ? ChevronUpIcon : ChevronDownIcon}
+              size={12}
+              className="text-foreground-subtle"
+            />
           </Pressable>
           <View className="min-w-0 flex-row items-center gap-3">
             {canPickStill ? (
-              <Pressable onPress={() => setPicking(true)} accessibilityRole="button" className="flex-row items-center gap-1 py-1">
+              <Pressable
+                onPress={() => setPicking(true)}
+                accessibilityRole="button"
+                className="flex-row items-center gap-1 py-1">
                 <Icon as={ImageIcon} size={12} className="text-foreground-subtle" />
                 <Text variant="micro">{t('스틸 고르기')}</Text>
               </Pressable>
@@ -148,8 +178,14 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
         {showEvidence ? (
           <View className="gap-2">
             {cue.evidence.map((item) => (
-              <Pressable key={item.url} onPress={() => openExternal(item.url)} accessibilityRole="link" className="flex-row gap-2">
-                <Text variant="micro" className={cn('font-semibold', getLocale() === 'en' ? 'w-16' : 'w-8')}>
+              <Pressable
+                key={item.url}
+                onPress={() => openExternal(item.url)}
+                accessibilityRole="link"
+                className="flex-row gap-2">
+                <Text
+                  variant="micro"
+                  className={cn('font-semibold', getLocale() === 'en' ? 'w-16' : 'w-8')}>
                   {item.grade === '1' ? t('cue::1차') : t('cue::2차')}
                 </Text>
                 <View className="min-w-0 flex-1">
@@ -166,7 +202,12 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
         ) : null}
       </View>
       {canPickStill ? (
-        <StillPicker visible={picking} titleId={titleId} cue={cue} onClose={() => setPicking(false)} />
+        <StillPicker
+          visible={picking}
+          titleId={titleId}
+          cue={cue}
+          onClose={() => setPicking(false)}
+        />
       ) : null}
     </View>
   );
@@ -207,7 +248,9 @@ function ListenAction({
             accessibilityRole="link"
             className="flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 py-1.5 active:bg-surface-2 web:hover:bg-surface-2">
             <ServiceLogoFor label={link.label} size={14} />
-            <Text className="text-label font-semibold text-foreground">{t('{label}에서 듣기', { label: link.label })}</Text>
+            <Text className="text-label font-semibold text-foreground">
+              {t('{label}에서 듣기', { label: link.label })}
+            </Text>
             <Icon as={ExternalLinkIcon} size={12} className="text-foreground-subtle" />
           </Pressable>
         ))}
@@ -255,13 +298,20 @@ function QuickListen({
         onPress={lead.toggle}
         accessibilityLabel={playA11yLabel}>
         {lead.lead ? (
-          <Icon as={lead.playing ? PauseIcon : PlayIcon} size={16} className="fill-primary-foreground text-primary-foreground" />
+          <Icon
+            as={lead.playing ? PauseIcon : PlayIcon}
+            size={16}
+            className="fill-primary-foreground text-primary-foreground"
+          />
         ) : null}
         <Text className="font-bold text-primary-foreground" numberOfLines={1}>
           {playLabel}
         </Text>
       </Button>
-      <Button variant="outline" className="h-10 flex-row gap-1 rounded-full" onPress={() => onOpenCompare(lead.sectorId ?? sectorId)}>
+      <Button
+        variant="outline"
+        className="h-10 flex-row gap-1 rounded-full"
+        onPress={() => onOpenCompare(lead.sectorId ?? sectorId)}>
         <Text className="font-semibold text-foreground">
           {sameSector && lead.performanceCount > 1
             ? t('다른 연주와 비교 · {count}개', { count: lead.performanceCount })
@@ -311,17 +361,24 @@ function StillPicker({
             <Text variant="headline" numberOfLines={1} className="flex-1">
               {t('{work} 장면 스틸', { work: cue.workTitle })}
             </Text>
-            <Pressable onPress={onClose} accessibilityLabel={t('cue::닫기')} className="size-9 items-center justify-center">
+            <Pressable
+              onPress={onClose}
+              accessibilityLabel={t('cue::닫기')}
+              className="size-9 items-center justify-center">
               <Icon as={XIcon} size={18} className="text-foreground" />
             </Pressable>
           </View>
           <ScrollView contentContainerClassName="flex-row flex-wrap gap-2 p-4">
             {candidates.isLoading ? <Text variant="caption">{t('불러오는 중이에요.')}</Text> : null}
             {candidates.isError ? (
-              <Text variant="caption">{t('스틸 후보를 불러오지 못했어요. 창을 닫고 다시 열어 주세요.')}</Text>
+              <Text variant="caption">
+                {t('스틸 후보를 불러오지 못했어요. 창을 닫고 다시 열어 주세요.')}
+              </Text>
             ) : null}
             {!candidates.isLoading && !candidates.isError && paths.length === 0 ? (
-              <Text variant="caption">{t('TMDB 스틸 후보가 아직 없어요. 이미지 갱신 작업을 먼저 돌려 주세요.')}</Text>
+              <Text variant="caption">
+                {t('TMDB 스틸 후보가 아직 없어요. 이미지 갱신 작업을 먼저 돌려 주세요.')}
+              </Text>
             ) : null}
             {paths.map((path) => {
               const uri = tmdbImageUrl(path, 'w300');
@@ -336,7 +393,13 @@ function StillPicker({
                     'w-[48%] overflow-hidden rounded-md border-2',
                     cue.stillPath === path ? 'border-primary' : 'border-transparent'
                   )}>
-                  {uri ? <OptimizedImage uri={uri} resizeMode="cover" style={{ width: '100%', aspectRatio: 16 / 9 }} /> : null}
+                  {uri ? (
+                    <OptimizedImage
+                      uri={uri}
+                      resizeMode="cover"
+                      style={{ width: '100%', aspectRatio: 16 / 9 }}
+                    />
+                  ) : null}
                 </Pressable>
               );
             })}

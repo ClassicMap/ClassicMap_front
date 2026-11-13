@@ -9,7 +9,10 @@ export function isPlayablePerformance(performance: ComparisonPerformance): boole
 }
 
 /** 비교 연주를 재생 스토어의 트랙으로. 사진은 카탈로그·크레딧에서 아는 것만 넘긴다 */
-export function trackFromPerformance(performance: ComparisonPerformance, imageUrl: string | null): ComparePlayerTrack {
+export function trackFromPerformance(
+  performance: ComparisonPerformance,
+  imageUrl: string | null
+): ComparePlayerTrack {
   const credit = primaryCredit(performance);
   return {
     performanceId: performance.id,

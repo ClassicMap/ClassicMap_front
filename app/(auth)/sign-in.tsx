@@ -23,7 +23,8 @@ export default function SignInScreen() {
   }, [isSignedIn, router]);
 
   return (
-    <AuthShell onClose={() => (router.canGoBack() ? router.back() : router.replace('/home' as Href))}>
+    <AuthShell
+      onClose={() => (router.canGoBack() ? router.back() : router.replace('/home' as Href))}>
       <SignInForm />
     </AuthShell>
   );

@@ -1,6 +1,11 @@
 import { isTypingTarget } from '@/lib/utils/is-typing-target';
 import { FullscreenOverlay } from '@/features/compare/components/fullscreen-overlay';
-import { FeaturedPairLink, MomentChip, PerformanceNote, resolveFeaturedPair } from '@/features/compare/components/listening-note';
+import {
+  FeaturedPairLink,
+  MomentChip,
+  PerformanceNote,
+  resolveFeaturedPair,
+} from '@/features/compare/components/listening-note';
 import { PerformerMark, performerOf } from '@/features/compare/components/performer-mark';
 import { LoudnessSparkline, sharedFloorDb } from '@/features/compare/components/loudness-curve';
 import { SectionStaff } from '@/features/compare/components/section-staff';
@@ -39,7 +44,12 @@ import {
   supportingCredits,
   youtubeThumbnailUrl,
 } from '@/lib/data/comparison';
-import { comparePlayer, type ComparePlayerTrack, useComparePlayer, usePlayerOverlay } from '@/lib/player/compare-player-store';
+import {
+  comparePlayer,
+  type ComparePlayerTrack,
+  useComparePlayer,
+  usePlayerOverlay,
+} from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { repertoireFirst } from '@/features/library/lib/library';
 import type { ComparisonPerformance, ListeningMoment } from '@/types/models';
@@ -100,10 +110,16 @@ export function ComparePieceView({
   const { canEdit } = useAuth();
   const repertoire = useRepertoireIds();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
+  const sectors = React.useMemo(
+    () => sortComparisonSectors(sectorsQuery.data ?? []),
+    [sectorsQuery.data, locale]
+  );
+  const activeSector =
+    sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   // 같은 작품 안에서 구간을 바꾸면 새 연주가 올 때까지 이전 구간 연주를 흐리게 남긴다
-  const performancesQuery = useSectorComparisonPerformances(activeSector?.id, { keepPreviousForPiece: pieceId });
+  const performancesQuery = useSectorComparisonPerformances(activeSector?.id, {
+    keepPreviousForPiece: pieceId,
+  });
   const stale = performancesQuery.isPlaceholderData;
   const first = performancesQuery.data?.[0];
   // 앞 화면 목록에 있던 작품이면 요청을 기다리지 않고 바로 채워진다 (머리가 스켈레톤을 거치지 않는다)
@@ -116,7 +132,10 @@ export function ComparePieceView({
   const headerComposerId = first?.composerId ?? pieceInfo?.composerId;
   // 머리 줄에서 연주자·구간을 누르면 이 화면의 그 자리로 부드럽게 내려간다
   const scrollRef = React.useRef<ScrollView>(null);
-  const anchors = React.useRef<{ sectors: number; performances: number }>({ sectors: 0, performances: 0 });
+  const anchors = React.useRef<{ sectors: number; performances: number }>({
+    sectors: 0,
+    performances: 0,
+  });
   const scrollToAnchor = (anchor: 'sectors' | 'performances') =>
     scrollRef.current?.scrollTo({ y: Math.max(0, anchors.current[anchor] - 16), animated: true });
   const goBack = () => onBack(backComposerId);
@@ -131,7 +150,10 @@ export function ComparePieceView({
   );
 
   const images = React.useMemo(
-    () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
+    () =>
+      new Map(
+        (pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])
+      ),
     [pieceInfo?.performers, locale]
   );
   const imageOf = React.useCallback(
@@ -162,7 +184,16 @@ export function ComparePieceView({
         sectorName: activeSector.names?.sectorName,
       },
     });
-  }, [pieceId, first, activeSector, composerAvatar, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent, stale]);
+  }, [
+    pieceId,
+    first,
+    activeSector,
+    composerAvatar,
+    pieceInfo?.genre,
+    pieceInfo?.coverVideoId,
+    recordRecent,
+    stale,
+  ]);
 
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
@@ -173,13 +204,21 @@ export function ComparePieceView({
 
   // 지금 이 작품·구간의 연주를 골라 둔 경우에만 그 연주가 활성이다
   const activeId =
-    current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
+    current && current.pieceId === pieceId && current.sectorId === activeSector?.id
+      ? current.performanceId
+      : null;
   const active = performances.find((performance) => performance.id === activeId);
   const longest = Math.max(1, ...performances.map(clipDurationMs));
   // 이 구간의 곡선은 모두 같은 눈금으로 그린다
-  const curveFloor = React.useMemo(() => sharedFloorDb(performances.map((performance) => performance.loudness)), [performances, locale]);
+  const curveFloor = React.useMemo(
+    () => sharedFloorDb(performances.map((performance) => performance.loudness)),
+    [performances, locale]
+  );
   // 재생·전환은 클립이 준비된 연주 안에서만 돈다 (clipStatus !== 'ready'는 재생 UI를 두지 않는다)
-  const playable = React.useMemo(() => performances.filter(isPlayablePerformance), [performances, locale]);
+  const playable = React.useMemo(
+    () => performances.filter(isPlayablePerformance),
+    [performances, locale]
+  );
   // 크게 보기 무대: 고른 연주, 없으면 첫 재생 가능 연주의 포스터
   const staged = active ?? playable[0];
 
@@ -390,7 +429,9 @@ export function ComparePieceView({
                       </Text>
                     ) : null}
                     {pieceInfo?.opusNumber ? (
-                      <Text variant="bodySm" className="text-foreground-muted">{`  ·  ${pieceInfo.opusNumber}`}</Text>
+                      <Text
+                        variant="bodySm"
+                        className="text-foreground-muted">{`  ·  ${pieceInfo.opusNumber}`}</Text>
                     ) : null}
                     {pieceInfo || first ? (
                       <>
@@ -398,7 +439,9 @@ export function ComparePieceView({
                           {'  ·  '}
                         </Text>
                         <MetaLink
-                          label={t('연주자 {count}', { count: pieceInfo?.performerCount ?? first?.credits.length ?? 0 })}
+                          label={t('연주자 {count}', {
+                            count: pieceInfo?.performerCount ?? first?.credits.length ?? 0,
+                          })}
                           accessibilityLabel={t('연주 칸으로')}
                           onPress={() => scrollToAnchor('performances')}
                         />
@@ -408,7 +451,9 @@ export function ComparePieceView({
                       {'  ·  '}
                     </Text>
                     <MetaLink
-                      label={t('구간 {count}', { count: sectors.length || (pieceInfo?.sectorCount ?? 0) })}
+                      label={t('구간 {count}', {
+                        count: sectors.length || (pieceInfo?.sectorCount ?? 0),
+                      })}
                       accessibilityLabel={t('구간 고르는 곳으로')}
                       onPress={() => scrollToAnchor('sectors')}
                     />
@@ -416,7 +461,11 @@ export function ComparePieceView({
                   <FavoriteButton kind="pieces" id={pieceId} name={pieceTitle} />
                   {canEdit ? (
                     <Pressable
-                      onPress={() => router.push(`/compare-admin?composerId=${headerComposerId ?? ''}&pieceId=${pieceId}` as Href)}
+                      onPress={() =>
+                        router.push(
+                          `/compare-admin?composerId=${headerComposerId ?? ''}&pieceId=${pieceId}` as Href
+                        )
+                      }
                       accessibilityLabel={t('구간·연주 관리')}
                       className="h-9 flex-row items-center gap-1.5 rounded-full px-3 web:hover:bg-surface-3">
                       <Icon as={SettingsIcon} size={15} className="text-foreground-muted" />
@@ -446,7 +495,11 @@ export function ComparePieceView({
 
         {/* 구간 선택 + 보기 방식 */}
         <View className="mt-2 flex-row items-center gap-4">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="min-w-0 flex-1" contentContainerClassName="gap-2">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="min-w-0 flex-1"
+            contentContainerClassName="gap-2">
             {sectors.map((sector) => (
               <Chip
                 key={sector.id}
@@ -468,10 +521,16 @@ export function ComparePieceView({
             disabled={!canFocus}
             className={cn(
               'h-8 shrink-0 flex-row items-center gap-1.5 rounded-full border px-3',
-              picking ? 'border-primary bg-primary-muted' : 'border-border-strong web:hover:bg-surface-2',
+              picking
+                ? 'border-primary bg-primary-muted'
+                : 'border-border-strong web:hover:bg-surface-2',
               !canFocus && 'opacity-40'
             )}>
-            <Icon as={ColumnsIcon} size={14} className={picking ? 'text-primary' : 'text-foreground'} />
+            <Icon
+              as={ColumnsIcon}
+              size={14}
+              className={picking ? 'text-primary' : 'text-foreground'}
+            />
             <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
               {picking ? t('고르는 중') : t('1:1 비교')}
             </Text>
@@ -481,8 +540,14 @@ export function ComparePieceView({
             accessibilityRole="button"
             accessibilityLabel={theater ? t('모아 보기 (T)') : t('크게 보기 (T)')}
             className="h-8 flex-row items-center gap-1.5 rounded-full border border-border-strong px-3 web:hover:bg-surface-2">
-            <Icon as={theater ? LayoutGridIcon : RectangleHorizontalIcon} size={14} className="text-foreground" />
-            <Text className="text-label text-foreground">{theater ? t('mode::모아 보기') : t('mode::크게 보기')}</Text>
+            <Icon
+              as={theater ? LayoutGridIcon : RectangleHorizontalIcon}
+              size={14}
+              className="text-foreground"
+            />
+            <Text className="text-label text-foreground">
+              {theater ? t('mode::모아 보기') : t('mode::크게 보기')}
+            </Text>
           </Pressable>
           <ShortcutHelp />
         </View>
@@ -507,167 +572,218 @@ export function ComparePieceView({
 
         {picking ? (
           <View className="mt-5 flex-row items-center gap-3 rounded-lg border border-primary bg-primary-muted px-4 py-3">
-            {active ? <PerformerMark performer={performerOf(active, imageOf)} tone="a" size={24} /> : null}
+            {active ? (
+              <PerformerMark performer={performerOf(active, imageOf)} tone="a" size={24} />
+            ) : null}
             <Text className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
               {active
-                ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', { name: performerOf(active).name })
+                ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', {
+                    name: performerOf(active).name,
+                  })
                 : t('견줄 연주자를 두 명 고르세요')}
             </Text>
-            <Pressable onPress={() => setPicking(false)} accessibilityRole="button" className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
+            <Pressable
+              onPress={() => setPicking(false)}
+              accessibilityRole="button"
+              className="rounded-full px-3 py-1.5 web:hover:bg-surface-2">
               <Text className="text-label text-foreground-muted">{t('취소 (Esc)')}</Text>
             </Pressable>
           </View>
         ) : null}
 
         <View onLayout={(event) => (anchors.current.performances = event.nativeEvent.layout.y)}>
-        {sectorsQuery.isLoading || performancesQuery.isLoading ? (
-          <View className="mt-6 flex-row flex-wrap gap-5">
-            {Array.from({ length: 3 }, (_, index) => (
-              <View key={index} className="min-w-[280px] flex-1 gap-3">
-                <SkeletonMedia performers={0} className="aspect-video rounded-lg" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-4 w-1/2" />
-              </View>
-            ))}
-          </View>
-        ) : theater ? (
-          // 스켈레톤 뒤 처음 그릴 때는 나타나고, 구간을 바꾸는 동안은 이전 연주를 흐리게 둔다
-          <View className={cn('cm-fade-in cm-settle mt-6 flex-row items-start gap-6', stale && 'cm-stale')}>
-            <View className="min-w-0 flex-1">
-              <View className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
-                {staged && active && staged.id === active.id ? (
-                  <>
-                    <PlayerSlot performanceId={active.id} fit="contain" radius={14} />
-                    <Pressable
-                      onPress={() => start(active)}
-                      accessibilityRole="button"
-                      accessibilityLabel={t('{name} 재생·일시정지', { name: primaryCredit(active)?.artistName ?? t('fallback::연주') })}
-                      className="absolute inset-0"
-                    />
-                  </>
-                ) : staged ? (
-                  <Poster performance={staged} onPlay={() => start(staged)} large />
-                ) : (
-                  <View className="absolute inset-0 items-center justify-center">
-                    <Text variant="caption" className="text-white/70">
-                      {t('이 구간은 아직 재생할 영상이 없어요')}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {staged ? (
-                <StageCaption performance={staged} image={imageOf(staged)} active={staged.id === activeId} inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)} />
-              ) : null}
-              {staged?.note ? (
-                <PerformanceNote
-                  note={staged.note}
-                  curve={
-                    <PerformanceCurve
-                      performance={staged}
-                      active={staged.id === activeId}
-                      floorDb={curveFloor}
-                      onSeek={isPlayablePerformance(staged) ? (offsetMs) => playAt(staged, { offsetMs, label: '' }) : undefined}
-                    />
-                  }
-                  onMoment={(moment) => playAt(staged, moment)}
-                  className="mt-3 max-w-[72ch]"
-                />
-              ) : staged ? (
-                <PerformanceCurve
-                  performance={staged}
-                  active={staged.id === activeId}
-                  floorDb={curveFloor}
-                  onSeek={isPlayablePerformance(staged) ? (offsetMs) => playAt(staged, { offsetMs, label: '' }) : undefined}
-                  className="mt-3 max-w-[72ch]"
-                />
-              ) : null}
-            </View>
-            <View className="w-[300px] gap-1">
-              <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
-                {t('연주자 {count}', { count: performances.length })}
-              </Text>
-              {performances.map((performance) => (
-                <TheaterRow
-                  key={performance.id}
-                  performance={performance}
-                  image={imageOf(performance)}
-                  longest={longest}
-                  active={performance.id === activeId}
-                  playing={performance.id === activeId && playing}
-                  inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
-                  pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
-                  onPress={() => start(performance)}
-                />
+          {sectorsQuery.isLoading || performancesQuery.isLoading ? (
+            <View className="mt-6 flex-row flex-wrap gap-5">
+              {Array.from({ length: 3 }, (_, index) => (
+                <View key={index} className="min-w-[280px] flex-1 gap-3">
+                  <SkeletonMedia performers={0} className="aspect-video rounded-lg" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                </View>
               ))}
             </View>
-          </View>
-        ) : (
-          // 슬롯: 연주자 한 명 = 한 열
-          <SlotGrid count={performances.length} stale={stale}>
-            {(width) => performances.map((performance) => (
-              <Slot
-                key={performance.id}
-                width={width}
-                performance={performance}
-                image={imageOf(performance)}
-                active={performance.id === activeId}
-                inRepertoire={repertoire.artists.has(primaryCredit(performance)?.artistId ?? -1)}
-                pick={picking ? (performance.id === activeId ? 'anchor' : isPlayablePerformance(performance) ? 'candidate' : undefined) : undefined}
-                onPlay={() => start(performance)}
-                onMoment={(moment) => playAt(performance, moment)}
-                curveFloor={curveFloor}
-              />
-            ))}
-          </SlotGrid>
-        )}
+          ) : theater ? (
+            // 스켈레톤 뒤 처음 그릴 때는 나타나고, 구간을 바꾸는 동안은 이전 연주를 흐리게 둔다
+            <View
+              className={cn(
+                'cm-fade-in cm-settle mt-6 flex-row items-start gap-6',
+                stale && 'cm-stale'
+              )}>
+              <View className="min-w-0 flex-1">
+                <View className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+                  {staged && active && staged.id === active.id ? (
+                    <>
+                      <PlayerSlot performanceId={active.id} fit="contain" radius={14} />
+                      <Pressable
+                        onPress={() => start(active)}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('{name} 재생·일시정지', {
+                          name: primaryCredit(active)?.artistName ?? t('fallback::연주'),
+                        })}
+                        className="absolute inset-0"
+                      />
+                    </>
+                  ) : staged ? (
+                    <Poster performance={staged} onPlay={() => start(staged)} large />
+                  ) : (
+                    <View className="absolute inset-0 items-center justify-center">
+                      <Text variant="caption" className="text-white/70">
+                        {t('이 구간은 아직 재생할 영상이 없어요')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {staged ? (
+                  <StageCaption
+                    performance={staged}
+                    image={imageOf(staged)}
+                    active={staged.id === activeId}
+                    inRepertoire={repertoire.artists.has(primaryCredit(staged)?.artistId ?? -1)}
+                  />
+                ) : null}
+                {staged?.note ? (
+                  <PerformanceNote
+                    note={staged.note}
+                    curve={
+                      <PerformanceCurve
+                        performance={staged}
+                        active={staged.id === activeId}
+                        floorDb={curveFloor}
+                        onSeek={
+                          isPlayablePerformance(staged)
+                            ? (offsetMs) => playAt(staged, { offsetMs, label: '' })
+                            : undefined
+                        }
+                      />
+                    }
+                    onMoment={(moment) => playAt(staged, moment)}
+                    className="mt-3 max-w-[72ch]"
+                  />
+                ) : staged ? (
+                  <PerformanceCurve
+                    performance={staged}
+                    active={staged.id === activeId}
+                    floorDb={curveFloor}
+                    onSeek={
+                      isPlayablePerformance(staged)
+                        ? (offsetMs) => playAt(staged, { offsetMs, label: '' })
+                        : undefined
+                    }
+                    className="mt-3 max-w-[72ch]"
+                  />
+                ) : null}
+              </View>
+              <View className="w-[300px] gap-1">
+                <Text variant="caption" className="mb-1.5 font-semibold text-foreground-subtle">
+                  {t('연주자 {count}', { count: performances.length })}
+                </Text>
+                {performances.map((performance) => (
+                  <TheaterRow
+                    key={performance.id}
+                    performance={performance}
+                    image={imageOf(performance)}
+                    longest={longest}
+                    active={performance.id === activeId}
+                    playing={performance.id === activeId && playing}
+                    inRepertoire={repertoire.artists.has(
+                      primaryCredit(performance)?.artistId ?? -1
+                    )}
+                    pick={
+                      picking
+                        ? performance.id === activeId
+                          ? 'anchor'
+                          : isPlayablePerformance(performance)
+                            ? 'candidate'
+                            : undefined
+                        : undefined
+                    }
+                    onPress={() => start(performance)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : (
+            // 슬롯: 연주자 한 명 = 한 열
+            <SlotGrid count={performances.length} stale={stale}>
+              {(width) =>
+                performances.map((performance) => (
+                  <Slot
+                    key={performance.id}
+                    width={width}
+                    performance={performance}
+                    image={imageOf(performance)}
+                    active={performance.id === activeId}
+                    inRepertoire={repertoire.artists.has(
+                      primaryCredit(performance)?.artistId ?? -1
+                    )}
+                    pick={
+                      picking
+                        ? performance.id === activeId
+                          ? 'anchor'
+                          : isPlayablePerformance(performance)
+                            ? 'candidate'
+                            : undefined
+                        : undefined
+                    }
+                    onPlay={() => start(performance)}
+                    onMoment={(moment) => playAt(performance, moment)}
+                    curveFloor={curveFloor}
+                  />
+                ))
+              }
+            </SlotGrid>
+          )}
         </View>
 
-        <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-12 max-w-[880px]" />
+        <PieceScreenStrip
+          pieceId={pieceId}
+          activeSectorId={activeSector?.id}
+          className="mt-12 max-w-[880px]"
+        />
       </ScrollView>
 
-      {overlay && fullscreen ? (
-        createPortal(
-          <FullscreenOverlay
-            performances={playable}
-            active={active ?? null}
-            sectorName={activeSector?.sectorName ?? null}
-            activeId={activeId}
-            imageOf={imageOf}
-            onPick={start}
-            onTogglePlay={togglePlay}
-            playing={playing}
-            onExit={toggleFullscreen}
-          />,
-          overlay
-        )
-      ) : overlay && theater ? (
-        createPortal(
-          <button
-            type="button"
-            aria-label={t('전체 화면 (F)')}
-            title={t('전체 화면 (F)')}
-            onClick={toggleFullscreen}
-            style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              border: 'none',
-              background: 'rgba(0,0,0,0.55)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              pointerEvents: 'auto',
-            }}>
-            <Icon as={MaximizeIcon} size={16} className="text-white" />
-          </button>,
-          overlay
-        )
-      ) : null}
-
+      {overlay && fullscreen
+        ? createPortal(
+            <FullscreenOverlay
+              performances={playable}
+              active={active ?? null}
+              sectorName={activeSector?.sectorName ?? null}
+              activeId={activeId}
+              imageOf={imageOf}
+              onPick={start}
+              onTogglePlay={togglePlay}
+              playing={playing}
+              onExit={toggleFullscreen}
+            />,
+            overlay
+          )
+        : overlay && theater
+          ? createPortal(
+              <button
+                type="button"
+                aria-label={t('전체 화면 (F)')}
+                title={t('전체 화면 (F)')}
+                onClick={toggleFullscreen}
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 12,
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  border: 'none',
+                  background: 'rgba(0,0,0,0.55)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  pointerEvents: 'auto',
+                }}>
+                <Icon as={MaximizeIcon} size={16} className="text-white" />
+              </button>,
+              overlay
+            )
+          : null}
     </View>
   );
 }
@@ -693,24 +809,38 @@ function Poster({
       accessibilityLabel={t('{name} 재생', { name: credit?.artistName ?? t('fallback::연주') })}
       className="group absolute inset-0">
       {thumbnail ? (
-        <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <img
+          src={thumbnail}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
       ) : null}
       <View className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/75 to-transparent" />
       {canPlay ? (
         large ? (
           <View className="absolute inset-0 items-center justify-center">
             <View className="size-16 items-center justify-center rounded-full bg-primary">
-              <Icon as={PlayIcon} size={26} className="ml-1 fill-primary-foreground text-primary-foreground" />
+              <Icon
+                as={PlayIcon}
+                size={26}
+                className="ml-1 fill-primary-foreground text-primary-foreground"
+              />
             </View>
           </View>
         ) : (
           <View className="absolute bottom-3 right-3 size-11 items-center justify-center rounded-full bg-primary opacity-0 transition-opacity duration-fast group-hover:opacity-100 web:hover:opacity-100">
-            <Icon as={PlayIcon} size={18} className="fill-primary-foreground text-primary-foreground" />
+            <Icon
+              as={PlayIcon}
+              size={18}
+              className="fill-primary-foreground text-primary-foreground"
+            />
           </View>
         )
       ) : (
         <View className="absolute inset-0 items-center justify-center">
-          <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">{t('준비 중')}</Text>
+          <Text className="rounded-xs bg-black/60 px-1.5 py-0.5 text-micro text-white">
+            {t('준비 중')}
+          </Text>
         </View>
       )}
       <Text className="absolute bottom-3 left-3 font-mono text-caption text-white">
@@ -772,7 +902,8 @@ function SlotGrid({
   useLocale();
   const [width, setWidth] = React.useState(0);
   const columns = width > 0 ? slotColumns(count, width) : 0;
-  const slotWidth = columns > 0 ? Math.floor((width - SLOT_GAP * (columns - 1)) / columns) : undefined;
+  const slotWidth =
+    columns > 0 ? Math.floor((width - SLOT_GAP * (columns - 1)) / columns) : undefined;
   return (
     <View
       className={cn('cm-fade-in cm-settle mt-6 flex-row flex-wrap gap-5', stale && 'cm-stale')}
@@ -795,10 +926,22 @@ interface SlotProps {
   curveFloor: number;
 }
 
-function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, onMoment, curveFloor }: SlotProps) {
+function Slot({
+  performance,
+  width,
+  image,
+  active,
+  inRepertoire,
+  pick,
+  onPlay,
+  onMoment,
+  curveFloor,
+}: SlotProps) {
   useLocale();
   const credit = primaryCredit(performance);
-  const playing = useComparePlayer((state) => state.playing && state.current?.performanceId === performance.id);
+  const playing = useComparePlayer(
+    (state) => state.playing && state.current?.performanceId === performance.id
+  );
   const photo = useArtistImage(credit?.artistId, image);
   const duration = clipDurationMs(performance);
   const support = supportingCredits(performance);
@@ -806,7 +949,9 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
   const seekable = isPlayablePerformance(performance) && pick === undefined;
 
   return (
-    <View className={cn('flex-col', width === undefined && 'min-w-[280px] flex-1')} style={width === undefined ? undefined : { width }}>
+    <View
+      className={cn('flex-col', width === undefined && 'min-w-[280px] flex-1')}
+      style={width === undefined ? undefined : { width }}>
       <View
         className={cn(
           'relative aspect-video w-full overflow-hidden rounded-lg bg-surface-3',
@@ -819,7 +964,9 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
             <Pressable
               onPress={onPlay}
               accessibilityRole="button"
-              accessibilityLabel={t('{name} 재생·일시정지', { name: credit?.artistName ?? t('fallback::연주') })}
+              accessibilityLabel={t('{name} 재생·일시정지', {
+                name: credit?.artistName ?? t('fallback::연주'),
+              })}
               className="absolute inset-0"
             />
           </>
@@ -849,7 +996,7 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
                 )}>
                 {pick === 'anchor'
                   ? t('{name} · 지금 연주', { name: credit?.artistName ?? t('연주자 정보 없음') })
-                  : credit?.artistName ?? t('연주자 정보 없음')}
+                  : (credit?.artistName ?? t('연주자 정보 없음'))}
               </Text>
             </ArtistLink>
           </View>
@@ -869,7 +1016,9 @@ function Slot({ performance, width, image, active, inRepertoire, pick, onPlay, o
       </View>
 
       {/* 연주 노트: 확정된 노트가 없는 연주는 이름과 곡선만 둔다 */}
-      {performance.note ? <PerformanceNote note={performance.note} hideMoments className="mt-3" /> : null}
+      {performance.note ? (
+        <PerformanceNote note={performance.note} hideMoments className="mt-3" />
+      ) : null}
 
       {/* 곡선과 들을 곳은 슬롯 바닥에 붙여, 노트 길이가 달라도 한 줄의 곡선끼리 같은 높이에 둔다 */}
       <View className="mt-auto gap-1.5 pt-3">
@@ -918,8 +1067,14 @@ function PerformanceCurve({
   const saved = useComparePlayer((state) => state.positions[performance.id]);
   if (!performance.loudness) return null;
   const durationMs = clipDurationMs(performance);
-  const playhead = progress && progress.duration > 0 ? progress.current / progress.duration : active ? 0 : undefined;
-  const resumeAt = !active && saved !== undefined && durationMs > 0 ? (saved * 1000) / durationMs : undefined;
+  const playhead =
+    progress && progress.duration > 0
+      ? progress.current / progress.duration
+      : active
+        ? 0
+        : undefined;
+  const resumeAt =
+    !active && saved !== undefined && durationMs > 0 ? (saved * 1000) / durationMs : undefined;
   return (
     <LoudnessSparkline
       loudness={performance.loudness}
@@ -959,11 +1114,15 @@ function StageCaption({
         <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={44} />
       </RepertoireThumb>
       <View className="min-w-0 flex-1">
-        <Text numberOfLines={1} className={cn('text-body font-bold', active ? 'text-primary' : 'text-foreground')}>
+        <Text
+          numberOfLines={1}
+          className={cn('text-body font-bold', active ? 'text-primary' : 'text-foreground')}>
           {credit?.artistName ?? t('연주자 정보 없음')}
         </Text>
         <Text variant="caption" numberOfLines={1}>
-          {[support, `${performance.sectorName} · ${clipClock(clipDurationMs(performance))}`].filter(Boolean).join(' · ')}
+          {[support, `${performance.sectorName} · ${clipClock(clipDurationMs(performance))}`]
+            .filter(Boolean)
+            .join(' · ')}
         </Text>
       </View>
     </View>
@@ -1012,10 +1171,17 @@ function TheaterRow({
         active && 'bg-surface-2'
       )}>
       <View
-        className={cn('relative overflow-hidden rounded-md bg-surface-3', active && 'ring-2 ring-primary')}
+        className={cn(
+          'relative overflow-hidden rounded-md bg-surface-3',
+          active && 'ring-2 ring-primary'
+        )}
         style={{ width: 112, height: 63 }}>
         {thumbnail ? (
-          <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img
+            src={thumbnail}
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
         ) : null}
         {active ? (
           <View className="absolute inset-0 items-center justify-center bg-black/45">
@@ -1027,7 +1193,9 @@ function TheaterRow({
           </View>
         ) : null}
         {pick === 'candidate' ? (
-          <View pointerEvents="none" className="absolute left-1.5 top-1.5 size-6 items-center justify-center rounded-full border-2 border-white bg-black/40">
+          <View
+            pointerEvents="none"
+            className="absolute left-1.5 top-1.5 size-6 items-center justify-center rounded-full border-2 border-white bg-black/40">
             <Text className="text-micro font-bold text-white">B</Text>
           </View>
         ) : null}
@@ -1037,7 +1205,12 @@ function TheaterRow({
           <RepertoireThumb active={inRepertoire} badgeSize={12}>
             <EntityThumb name={credit?.artistName ?? '?'} image={photo} shape="circle" size={22} />
           </RepertoireThumb>
-          <Text numberOfLines={1} className={cn('min-w-0 flex-1 text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+          <Text
+            numberOfLines={1}
+            className={cn(
+              'min-w-0 flex-1 text-body-sm font-semibold',
+              active ? 'text-primary' : 'text-foreground'
+            )}>
             {credit?.artistName ?? t('연주자 정보 없음')}
           </Text>
         </View>
@@ -1084,7 +1257,9 @@ function MetaLink({
         variant="bodySm"
         className={cn(
           'web:underline-offset-4 web:group-hover:underline',
-          strong ? 'font-semibold text-foreground' : 'text-foreground-muted web:group-hover:text-foreground'
+          strong
+            ? 'font-semibold text-foreground'
+            : 'text-foreground-muted web:group-hover:text-foreground'
         )}>
         {label}
       </Text>
@@ -1132,12 +1307,17 @@ function SupportingCreditLinks({ performance }: { performance: ComparisonPerform
       {credits.map((credit, index) => (
         <React.Fragment key={`${credit.role}-${credit.artistId}`}>
           {index > 0 ? <Text variant="caption">{' · '}</Text> : null}
-          <ArtistLink artistId={credit.artistId} name={credit.artistName} className="min-w-0 shrink">
+          <ArtistLink
+            artistId={credit.artistId}
+            name={credit.artistName}
+            className="min-w-0 shrink">
             <Text
               variant="caption"
               numberOfLines={1}
               className="web:underline-offset-4 web:group-hover:text-foreground web:group-hover:underline">
-              {credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName}
+              {credit.role === 'conductor'
+                ? t('{name} 지휘', { name: credit.artistName })
+                : credit.artistName}
             </Text>
           </ArtistLink>
         </React.Fragment>

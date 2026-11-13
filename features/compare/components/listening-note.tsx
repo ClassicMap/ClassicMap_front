@@ -1,4 +1,8 @@
-import { type Performer, PerformerMark, performerOf } from '@/features/compare/components/performer-mark';
+import {
+  type Performer,
+  PerformerMark,
+  performerOf,
+} from '@/features/compare/components/performer-mark';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { clipClock } from '@/lib/data/comparison';
@@ -42,7 +46,11 @@ export function MomentChip({
       accessibilityRole="button"
       accessibilityLabel={
         performer
-          ? t('{name} {clock} {label}부터 듣기', { name: performer.name, clock, label: moment.label })
+          ? t('{name} {clock} {label}부터 듣기', {
+              name: performer.name,
+              clock,
+              label: moment.label,
+            })
           : t('{clock} {label}부터 듣기', { clock, label: moment.label })
       }
       className={cn(
@@ -51,7 +59,12 @@ export function MomentChip({
         onPress ? 'web:hover:bg-surface-2' : 'opacity-60'
       )}>
       {performer ? (
-        <PerformerMark performer={performer} tone="none" size={16} className="-ml-1.5 border-0 p-0" />
+        <PerformerMark
+          performer={performer}
+          tone="none"
+          size={16}
+          className="-ml-1.5 border-0 p-0"
+        />
       ) : (
         <Icon as={PlayIcon} size={9} className={cn(TONE_TEXT[tone], TONE_FILL[tone])} />
       )}
@@ -155,7 +168,11 @@ export function FeaturedPairLink({
     <Pressable
       onPress={onOpen}
       accessibilityRole="button"
-      accessibilityLabel={t('추천 비교 {a}와 {b}, {title}. 1:1로 듣기', { a: nameA, b: nameB, title: pair.title })}
+      accessibilityLabel={t('추천 비교 {a}와 {b}, {title}. 1:1로 듣기', {
+        a: nameA,
+        b: nameB,
+        title: pair.title,
+      })}
       className="group mt-2 flex-row flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-2.5">
       <Text className="text-micro text-primary">{t('추천 비교')}</Text>
       <View className="flex-row items-center gap-1.5">

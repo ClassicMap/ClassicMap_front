@@ -35,7 +35,13 @@ const RELEASE_KIND_OPTIONS: ReadonlyArray<ChoiceOption<ReleaseKind>> = [
 
 type RecordingField = 'title' | 'year';
 
-export function RecordingFormModal({ visible, artistId, recording, onClose, onSuccess }: RecordingFormModalProps) {
+export function RecordingFormModal({
+  visible,
+  artistId,
+  recording,
+  onClose,
+  onSuccess,
+}: RecordingFormModalProps) {
   useLocale();
   const [title, setTitle] = React.useState('');
   const [year, setYear] = React.useState('');
@@ -87,7 +93,10 @@ export function RecordingFormModal({ visible, artistId, recording, onClose, onSu
   const pickCover = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('사진 접근 권한이 필요해요'), t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.'));
+      Alert.alert(
+        t('사진 접근 권한이 필요해요'),
+        t('설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.')
+      );
       return;
     }
 

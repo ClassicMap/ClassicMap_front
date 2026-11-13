@@ -11,7 +11,12 @@ interface StarRatingProps {
   size?: number;
 }
 
-export function StarRating({ rating, onRatingChange, readonly = false, size = 32 }: StarRatingProps) {
+export function StarRating({
+  rating,
+  onRatingChange,
+  readonly = false,
+  size = 32,
+}: StarRatingProps) {
   useLocale();
   const [hoverRating, setHoverRating] = React.useState(0);
 
@@ -53,9 +58,8 @@ export function StarRating({ rating, onRatingChange, readonly = false, size = 32
             {/* Filled star overlay */}
             {fill !== 'empty' && (
               <View
-                className="absolute top-0 left-0 overflow-hidden"
-                style={{ width: fill === 'half' ? '50%' : '100%' }}
-              >
+                className="absolute left-0 top-0 overflow-hidden"
+                style={{ width: fill === 'half' ? '50%' : '100%' }}>
                 <Icon
                   as={StarIcon}
                   size={size}

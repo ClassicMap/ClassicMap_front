@@ -260,7 +260,9 @@ export function ComposerWorks(props: ComposerWorksProps) {
       </View>
 
       {/* 검색창과 갈래 칩: 웹에서는 화면 위에 붙는다 */}
-      <View className="gap-3 web:sticky web:top-0 web:z-raised web:bg-surface-1" style={STICKY_STYLE}>
+      <View
+        className="gap-3 web:sticky web:top-0 web:z-raised web:bg-surface-1"
+        style={STICKY_STYLE}>
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface-1 px-3 web:focus-within:border-ring">
           {text && pendingSearch ? (
             <ActivityIndicator

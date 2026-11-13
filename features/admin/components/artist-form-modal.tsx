@@ -84,14 +84,16 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
 
       // 기존 awards 로드
       if (artist.awards && artist.awards.length > 0) {
-        setAwards(artist.awards.map(award => ({
-          id: award.id,
-          year: award.year,
-          awardName: award.awardName,
-          displayOrder: award.displayOrder,
-          isNew: false,
-          isDeleted: false,
-        })));
+        setAwards(
+          artist.awards.map((award) => ({
+            id: award.id,
+            year: award.year,
+            awardName: award.awardName,
+            displayOrder: award.displayOrder,
+            isNew: false,
+            isDeleted: false,
+          }))
+        );
       } else {
         setAwards([]);
       }
@@ -153,7 +155,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
       setAwards(awards.filter((_, i) => i !== index));
     } else {
       // 기존 award는 삭제 플래그 설정
-      setAwards(awards.map((a, i) => i === index ? { ...a, isDeleted: true } : a));
+      setAwards(awards.map((a, i) => (i === index ? { ...a, isDeleted: true } : a)));
     }
   };
 
@@ -206,7 +208,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
 
       // Awards 처리
       // 1. 삭제할 awards
-      const awardsToDelete = awards.filter(a => a.isDeleted && a.id);
+      const awardsToDelete = awards.filter((a) => a.isDeleted && a.id);
       for (const award of awardsToDelete) {
         try {
           await AdminArtistAPI.deleteAward(artistId, award.id!);
@@ -216,7 +218,7 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
       }
 
       // 2. 추가할 awards
-      const awardsToAdd = awards.filter(a => a.isNew && !a.isDeleted);
+      const awardsToAdd = awards.filter((a) => a.isNew && !a.isDeleted);
       for (const award of awardsToAdd) {
         try {
           await AdminArtistAPI.createAward(artistId, {
@@ -354,7 +356,9 @@ export function ArtistFormModal({ visible, artist, onClose, onSuccess }: ArtistF
                 <Text numberOfLines={2} className="min-w-0 flex-1 text-body-sm text-foreground">
                   {award.awardName}
                 </Text>
-                {award.isNew ? <Badge tone="accent" label={t('새로 추가')} className="self-center" /> : null}
+                {award.isNew ? (
+                  <Badge tone="accent" label={t('새로 추가')} className="self-center" />
+                ) : null}
                 <Button
                   variant="ghost"
                   size="icon"

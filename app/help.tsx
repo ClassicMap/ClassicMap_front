@@ -34,7 +34,9 @@ const FAQS: { question: string; answer: string }[] = [
   },
   {
     question: msg('공연 정보는 어디서 오나요?'),
-    answer: msg('KOPIS 공연예술통합전산망의 공개 데이터를 매일 받아 와요. 예매는 각 예매처로 연결돼요.'),
+    answer: msg(
+      'KOPIS 공연예술통합전산망의 공개 데이터를 매일 받아 와요. 예매는 각 예매처로 연결돼요.'
+    ),
   },
   {
     question: msg('레퍼토리는 무엇인가요?'),
@@ -44,14 +46,19 @@ const FAQS: { question: string; answer: string }[] = [
   },
   {
     question: msg('계정은 어떻게 삭제하나요?'),
-    answer: msg('설정 > 계정 > 계정 삭제에서 지울 수 있어요. 지우면 별점과 레퍼토리가 모두 사라지고 되돌릴 수 없어요.'),
+    answer: msg(
+      '설정 > 계정 > 계정 삭제에서 지울 수 있어요. 지우면 별점과 레퍼토리가 모두 사라지고 되돌릴 수 없어요.'
+    ),
   },
 ];
 
 function openMail(subject: string, body = '') {
   const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   Linking.openURL(url).catch(() =>
-    Alert.alert(t('메일 앱을 열지 못했어요'), t('{email}로 직접 보내 주세요.', { email: SUPPORT_EMAIL }))
+    Alert.alert(
+      t('메일 앱을 열지 못했어요'),
+      t('{email}로 직접 보내 주세요.', { email: SUPPORT_EMAIL })
+    )
   );
 }
 
@@ -74,8 +81,14 @@ export default function HelpScreen() {
                 accessibilityRole="button"
                 accessibilityState={{ expanded }}
                 className="min-h-12 flex-row items-center gap-3 py-3">
-                <Text className="flex-1 text-body-sm font-semibold text-foreground">{t(faq.question)}</Text>
-                <Icon as={expanded ? ChevronUpIcon : ChevronDownIcon} size={16} className="text-foreground-subtle" />
+                <Text className="flex-1 text-body-sm font-semibold text-foreground">
+                  {t(faq.question)}
+                </Text>
+                <Icon
+                  as={expanded ? ChevronUpIcon : ChevronDownIcon}
+                  size={16}
+                  className="text-foreground-subtle"
+                />
               </Pressable>
               {expanded ? (
                 <Text variant="bodySm" className="pb-4 text-foreground-muted">
@@ -120,7 +133,10 @@ export default function HelpScreen() {
             key={item.href}
             onPress={() => router.push(item.href as Href)}
             accessibilityRole="link"
-            className={cn('min-h-12 flex-row items-center justify-between', index > 0 && 'border-t border-border')}>
+            className={cn(
+              'min-h-12 flex-row items-center justify-between',
+              index > 0 && 'border-t border-border'
+            )}>
             <Text className="text-body-sm text-foreground">{item.label}</Text>
             <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" />
           </Pressable>

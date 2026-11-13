@@ -1,8 +1,16 @@
 import { primaryCredit } from '@/lib/data/comparison';
-import { comparePlayer, type ComparePlayerTrack, type PlaylistItem, useComparePlayer } from '@/lib/player/compare-player-store';
+import {
+  comparePlayer,
+  type ComparePlayerTrack,
+  type PlaylistItem,
+  useComparePlayer,
+} from '@/lib/player/compare-player-store';
 import { isPlayablePerformance, trackFromPerformance } from '@/lib/player/compare-track';
 import { pickLead, pickSector } from '@/lib/player/playlist';
-import { usePieceComparisonSectors, useSectorComparisonPerformances } from '@/lib/query/hooks/use-comparison-performances';
+import {
+  usePieceComparisonSectors,
+  useSectorComparisonPerformances,
+} from '@/lib/query/hooks/use-comparison-performances';
 import * as React from 'react';
 
 /**
@@ -17,11 +25,20 @@ export function useLeadPerformance(
   list?: { items: readonly PlaylistItem[]; index: number; name?: string }
 ) {
   const sectors = usePieceComparisonSectors(pieceId ?? undefined);
-  const sector = React.useMemo(() => pickSector(sectors.data ?? [], sectorId) ?? null, [sectors.data, sectorId]);
+  const sector = React.useMemo(
+    () => pickSector(sectors.data ?? [], sectorId) ?? null,
+    [sectors.data, sectorId]
+  );
   const targetSectorId = sectorId ?? sector?.id;
   const performances = useSectorComparisonPerformances(targetSectorId);
-  const playable = React.useMemo(() => (performances.data ?? []).filter(isPlayablePerformance), [performances.data]);
-  const lead = React.useMemo(() => pickLead(sector ?? undefined, playable) ?? null, [playable, sector]);
+  const playable = React.useMemo(
+    () => (performances.data ?? []).filter(isPlayablePerformance),
+    [performances.data]
+  );
+  const lead = React.useMemo(
+    () => pickLead(sector ?? undefined, playable) ?? null,
+    [playable, sector]
+  );
 
   const current = useComparePlayer((state) => state.current);
   const playing = useComparePlayer((state) => state.playing);
@@ -30,13 +47,24 @@ export function useLeadPerformance(
   const toggle = React.useCallback(() => {
     if (!lead || pieceId === null) return;
     if (isCurrent && comparePlayer.togglePlay()) return;
-    const imageOf = (performance: (typeof playable)[number]) => primaryCredit(performance)?.imageUrl ?? null;
-    const queue: ComparePlayerTrack[] = playable.map((performance) => trackFromPerformance(performance, imageOf(performance)));
+    const imageOf = (performance: (typeof playable)[number]) =>
+      primaryCredit(performance)?.imageUrl ?? null;
+    const queue: ComparePlayerTrack[] = playable.map((performance) =>
+      trackFromPerformance(performance, imageOf(performance))
+    );
     const playlist =
       list && list.index >= 0
         ? { kind: 'list' as const, items: list.items, index: list.index, name: list.name }
-        : { kind: 'list' as const, items: [{ pieceId, sectorId: targetSectorId ?? null }], index: 0 };
-    comparePlayer.select(trackFromPerformance(lead, imageOf(lead)), { play: true, queue, playlist });
+        : {
+            kind: 'list' as const,
+            items: [{ pieceId, sectorId: targetSectorId ?? null }],
+            index: 0,
+          };
+    comparePlayer.select(trackFromPerformance(lead, imageOf(lead)), {
+      play: true,
+      queue,
+      playlist,
+    });
   }, [lead, isCurrent, playable, list, pieceId, targetSectorId]);
 
   return {

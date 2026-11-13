@@ -1,0 +1,45 @@
+name: Check
+
+# PR 마다 타입·문구·린트·서식을 본다. 이미지 빌드(build-image.yml)는 main 에 들어간 뒤에 돈다
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck · i18n · lint · format
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: i18n
+        run: npm run i18n:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check

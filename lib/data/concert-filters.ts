@@ -32,18 +32,45 @@ export type ConcertPeriodKey = (typeof CONCERT_PERIODS)[number]['key'];
  * 응답에 `instrumentation`이 없던 배포 전 백엔드에서는 제목 키워드로 화면에서 나눈다.
  */
 export const CONCERT_INSTRUMENTS = [
-  { key: 'piano', label: msg('피아노'), hint: msg('독주·듀오'), keywords: ['피아노', '피아니스트'] },
+  {
+    key: 'piano',
+    label: msg('피아노'),
+    hint: msg('독주·듀오'),
+    keywords: ['피아노', '피아니스트'],
+  },
   {
     key: 'strings',
     label: msg('현악'),
     hint: msg('바이올린·첼로·기타'),
-    keywords: ['바이올린', '비올라', '첼로', '현악', '기타', '하프', '바이올리니스트', '첼리스트', '콘트라베이스'],
+    keywords: [
+      '바이올린',
+      '비올라',
+      '첼로',
+      '현악',
+      '기타',
+      '하프',
+      '바이올리니스트',
+      '첼리스트',
+      '콘트라베이스',
+    ],
   },
   {
     key: 'winds',
     label: msg('관악'),
     hint: msg('플루트·클라리넷·호른'),
-    keywords: ['플루트', '오보에', '클라리넷', '바순', '호른', '트럼펫', '트롬본', '색소폰', '목관', '금관', '관악'],
+    keywords: [
+      '플루트',
+      '오보에',
+      '클라리넷',
+      '바순',
+      '호른',
+      '트럼펫',
+      '트롬본',
+      '색소폰',
+      '목관',
+      '금관',
+      '관악',
+    ],
   },
   {
     key: 'vocal',
@@ -51,7 +78,12 @@ export const CONCERT_INSTRUMENTS = [
     hint: msg('독창·가곡'),
     keywords: ['소프라노', '메조', '테너', '바리톤', '베이스 ', '카운터테너', '가곡', '성악'],
   },
-  { key: 'choir', label: msg('합창'), hint: msg('합창단·콰이어'), keywords: ['합창', '콰이어', '코랄'] },
+  {
+    key: 'choir',
+    label: msg('합창'),
+    hint: msg('합창단·콰이어'),
+    keywords: ['합창', '콰이어', '코랄'],
+  },
   {
     key: 'orchestra',
     label: msg('오케스트라'),
@@ -62,7 +94,17 @@ export const CONCERT_INSTRUMENTS = [
     key: 'chamber',
     label: msg('실내악'),
     hint: msg('트리오·콰르텟·앙상블'),
-    keywords: ['콰르텟', '사중주', '트리오', '삼중주', '오중주', '앙상블', '듀오', '실내악', '챔버'],
+    keywords: [
+      '콰르텟',
+      '사중주',
+      '트리오',
+      '삼중주',
+      '오중주',
+      '앙상블',
+      '듀오',
+      '실내악',
+      '챔버',
+    ],
   },
   { key: 'opera', label: msg('inst::오페라'), hint: msg('전막·갈라'), keywords: ['오페라'] },
   {
@@ -96,7 +138,9 @@ export function classifyInstrumentation(title: string): ConcertInstrumentKey[] {
  * 공연의 편성. 새 백엔드는 `instrumentation`(쉼표 구분 코드, 분류 못 하면 null)을 주고,
  * 배포 전 백엔드는 필드 자체가 없어(undefined) 제목으로 나눈다.
  */
-export function concertInstruments(concert: Pick<Concert, 'title' | 'instrumentation'>): ConcertInstrumentKey[] {
+export function concertInstruments(
+  concert: Pick<Concert, 'title' | 'instrumentation'>
+): ConcertInstrumentKey[] {
   if (concert.instrumentation === undefined) return classifyInstrumentation(concert.title);
   return (concert.instrumentation ?? '')
     .split(',')
@@ -175,7 +219,9 @@ function parseId(value: string | undefined): number | undefined {
 }
 
 /** 기본값은 주소에서 뺀다 (`undefined`면 setParams가 지운다) */
-export function toConcertFilterParams(filter: ConcertFilter): Record<keyof ConcertFilterParams, string | undefined> {
+export function toConcertFilterParams(
+  filter: ConcertFilter
+): Record<keyof ConcertFilterParams, string | undefined> {
   return {
     genre: filter.genre === DEFAULT_CONCERT_FILTER.genre ? undefined : filter.genre,
     period: filter.period === DEFAULT_CONCERT_FILTER.period ? undefined : filter.period,
@@ -278,7 +324,10 @@ export function periodRange(period: ConcertPeriodKey, now: Date = new Date()): D
 }
 
 /** 공연이 범위 안에 하루라도 열리는지. 날짜 문자열은 `YYYY-MM-DD`라 사전순 비교가 곧 날짜 비교다 */
-export function overlapsRange(concert: Pick<Concert, 'startDate' | 'endDate'>, range: DayRange): boolean {
+export function overlapsRange(
+  concert: Pick<Concert, 'startDate' | 'endDate'>,
+  range: DayRange
+): boolean {
   const start = concert.startDate.slice(0, 10);
   const end = (concert.endDate || concert.startDate).slice(0, 10);
   if (end < range.from) return false;
@@ -286,7 +335,11 @@ export function overlapsRange(concert: Pick<Concert, 'startDate' | 'endDate'>, r
   return true;
 }
 
-export function matchesConcertFilter(concert: Concert, filter: ConcertFilter, range: DayRange): boolean {
+export function matchesConcertFilter(
+  concert: Concert,
+  filter: ConcertFilter,
+  range: DayRange
+): boolean {
   if (!overlapsRange(concert, range)) return false;
   const genre = genreValue(filter.genre);
   if (genre && concert.genre && concert.genre !== genre) return false;

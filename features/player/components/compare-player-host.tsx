@@ -43,7 +43,8 @@ export function ComparePlayerHost() {
 
   const playerStyle = useAnimatedStyle(() => {
     const which = surfaceRects.kind.value;
-    const rect = which === 1 ? surfaceRects.slot.value : which === 2 ? surfaceRects.mini.value : null;
+    const rect =
+      which === 1 ? surfaceRects.slot.value : which === 2 ? surfaceRects.mini.value : null;
     if (!rect || rect.width <= 0) {
       return { opacity: 0, transform: [{ translateX: -10000 }, { translateY: 0 }, { scale: 1 }] };
     }
@@ -62,7 +63,10 @@ export function ComparePlayerHost() {
   return (
     <Animated.View
       pointerEvents="box-none"
-      style={[{ position: 'absolute', left: 0, right: 0, overflow: 'hidden', zIndex: LAYER.player }, bandStyle]}>
+      style={[
+        { position: 'absolute', left: 0, right: 0, overflow: 'hidden', zIndex: LAYER.player },
+        bandStyle,
+      ]}>
       <Animated.View
         // 미니 자리에서는 누르면 미니 플레이어가 받게 한다
         pointerEvents={kind === 'slot' ? 'auto' : 'none'}
@@ -75,7 +79,8 @@ export function ComparePlayerHost() {
             height: baseHeight,
             transformOrigin: 'top left',
             overflow: 'hidden',
-            borderRadius: (surface?.radius ?? 0) * (baseWidth / Math.max(1, windowWidth - SIDE_GUTTER)),
+            borderRadius:
+              (surface?.radius ?? 0) * (baseWidth / Math.max(1, windowWidth - SIDE_GUTTER)),
             backgroundColor: '#000000',
           },
           playerStyle,

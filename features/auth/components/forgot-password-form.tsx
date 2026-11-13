@@ -1,5 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthHeading, FieldError } from '@/features/auth/components/auth-shell';
+import {
+  AUTH_BUTTON_CLASS,
+  AUTH_INPUT_CLASS,
+  AuthHeading,
+  FieldError,
+} from '@/features/auth/components/auth-shell';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
@@ -56,7 +61,9 @@ export function ForgotPasswordForm() {
     <View>
       <AuthHeading
         title={t('비밀번호 찾기')}
-        description={t('가입한 이메일로 인증 코드를 보내 드려요. 코드를 넣으면 새 비밀번호를 정할 수 있어요.')}
+        description={t(
+          '가입한 이메일로 인증 코드를 보내 드려요. 코드를 넣으면 새 비밀번호를 정할 수 있어요.'
+        )}
       />
       <View className="gap-4">
         <View className="gap-1.5">

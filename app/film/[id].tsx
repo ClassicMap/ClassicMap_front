@@ -52,7 +52,8 @@ export default function FilmTitleScreen() {
   const listenable = React.useMemo(() => {
     const entries: { cueId: number; item: PlaylistItem }[] = [];
     for (const cue of title?.cues ?? []) {
-      if (cue.pieceId === null || (cue.listen.kind !== 'sector' && cue.listen.kind !== 'piece')) continue;
+      if (cue.pieceId === null || (cue.listen.kind !== 'sector' && cue.listen.kind !== 'piece'))
+        continue;
       entries.push({
         cueId: cue.id,
         item: {
@@ -67,7 +68,10 @@ export default function FilmTitleScreen() {
         },
       });
     }
-    return { items: entries.map((entry) => entry.item), indexOf: new Map(entries.map((entry, index) => [entry.cueId, index])) };
+    return {
+      items: entries.map((entry) => entry.item),
+      indexOf: new Map(entries.map((entry, index) => [entry.cueId, index])),
+    };
   }, [title?.cues]);
 
   const listName = t('『{title}』 속 클래식', { title: head?.titleKo ?? '' });
@@ -98,7 +102,10 @@ export default function FilmTitleScreen() {
             icon={ClapperboardIcon}
             title={t('찾는 작품이 없어요')}
             description={t('목록에서 다른 작품을 골라 주세요.')}
-            action={{ label: t('영화 속 클래식 보기'), onPress: () => router.push('/films' as Href) }}
+            action={{
+              label: t('영화 속 클래식 보기'),
+              onPress: () => router.push('/films' as Href),
+            }}
           />
         )}
       </View>
@@ -110,14 +117,21 @@ export default function FilmTitleScreen() {
   const tmdbBackdrop = tmdbImageUrl(head.backdropPath, wide ? 'w1280' : 'w780');
   const posterWidth = wide ? 152 : 112;
   const usesKmdb = cues.some((cue) => cue.evidence.some((item) => item.url.includes('kmdb.or.kr')));
-  const hasComparison = cues.some((cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece');
+  const hasComparison = cues.some(
+    (cue) => cue.listen.kind === 'sector' || cue.listen.kind === 'piece'
+  );
 
   return (
     <View className="flex-1 bg-background">
       {backButton}
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={isRefetching && !isLoading} onRefresh={() => void refetch()} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching && !isLoading}
+            onRefresh={() => void refetch()}
+          />
+        }
         contentContainerClassName="pb-24">
         {/* TMDB 스틸이 있을 때만 위에 넓게 깐다. YouTube 썸네일은 글자가 박혀 있어 넓게 자르면 지저분해서 아래에 온전히 둔다 */}
         {tmdbBackdrop ? (
@@ -176,7 +190,11 @@ export default function FilmTitleScreen() {
                     canPickStill={isAdmin}
                     playlist={
                       listenable.indexOf.has(cue.id)
-                        ? { items: listenable.items, index: listenable.indexOf.get(cue.id) ?? 0, name: listName }
+                        ? {
+                            items: listenable.items,
+                            index: listenable.indexOf.get(cue.id) ?? 0,
+                            name: listName,
+                          }
                         : undefined
                     }
                   />
@@ -187,7 +205,6 @@ export default function FilmTitleScreen() {
             <CueCardsSkeleton wide={wide} count={Math.min(head.cueCount, 4)} />
           )}
 
-
           <View className="mt-10 gap-2">
             {hasComparison ? (
               <Text variant="micro">{t('비교 연주는 영화에 쓰인 녹음과 다를 수 있어요.')}</Text>
@@ -195,10 +212,14 @@ export default function FilmTitleScreen() {
             {head.posterUrl ? (
               <Text variant="micro">{t('포스터는 한국영상자료원 KMDb에서 가져와요.')}</Text>
             ) : null}
-            {usesKmdb ? <Text variant="micro">{t('곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.')}</Text> : null}
+            {usesKmdb ? (
+              <Text variant="micro">{t('곡 정보 일부는 한국영상자료원 KMDb를 참고했어요.')}</Text>
+            ) : null}
             {head.coverVideoId || cues.some((cue) => cue.officialClip) ? (
               <Text variant="micro">
-                {t("장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요.")}
+                {t(
+                  "장면 그림은 권리자가 YouTube에 올린 공식 영상의 장면이에요. 'YouTube · 채널'을 누르면 그 영상이 열려요."
+                )}
               </Text>
             ) : null}
           </View>
@@ -221,7 +242,9 @@ function FilmTitleSkeleton({ wide }: { wide: boolean }) {
       <View style={{ height: insets.top + 60 }} />
       <View className={cn('px-4', wide && 'mx-auto w-full max-w-[880px] px-6')}>
         <View className="flex-row items-end gap-4">
-          <Skeleton style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }} />
+          <Skeleton
+            style={{ width: posterWidth, height: Math.round(posterWidth * POSTER_ASPECT) }}
+          />
           <View className="flex-1 gap-2.5 pb-1">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="h-7 w-3/5" />
@@ -243,7 +266,10 @@ function CueCardsSkeleton({ wide, count }: { wide: boolean; count: number }) {
       {Array.from({ length: Math.max(count, 1) }, (_, index) => (
         <View
           key={index}
-          className={cn('overflow-hidden rounded-xl border border-border bg-surface-1', wide && 'w-[calc(50%-6px)]')}>
+          className={cn(
+            'overflow-hidden rounded-xl border border-border bg-surface-1',
+            wide && 'w-[calc(50%-6px)]'
+          )}>
           <Skeleton className="w-full rounded-none" style={{ aspectRatio: 16 / 9 }} />
           <View className="gap-3 p-4">
             <View className="gap-2">

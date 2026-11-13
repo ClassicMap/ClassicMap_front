@@ -10,7 +10,12 @@ import {
 
 import { ComparisonAPI } from '@/lib/api/comparisons';
 import type { PieceGenre } from '@/lib/design/genre-palette';
-import type { ComparisonPerformance, ComparisonPiece, ComparisonPiecePerformer, HomeRecommendations } from '@/types/models';
+import type {
+  ComparisonPerformance,
+  ComparisonPiece,
+  ComparisonPiecePerformer,
+  HomeRecommendations,
+} from '@/types/models';
 
 const PAGE_SIZE = 10;
 
@@ -21,7 +26,8 @@ export const COMPARISON_QUERY_KEYS = {
   genrePieces: (genre: PieceGenre) => ['comparison-pieces', 'genre', genre] as const,
   genres: ['comparison-genres'] as const,
   pieceSectors: (pieceId: number) => ['pieces', pieceId, 'comparison-sectors'] as const,
-  sectorPerformances: (sectorId: number) => ['sectors', sectorId, 'comparison-performances'] as const,
+  sectorPerformances: (sectorId: number) =>
+    ['sectors', sectorId, 'comparison-performances'] as const,
 };
 
 const CATALOG_PAGE_SIZE = 24;
@@ -44,7 +50,8 @@ export function comparisonPiecesQueryOptions(composerId?: number) {
 export function genrePiecesQueryOptions(genre: PieceGenre) {
   return infiniteQueryOptions({
     queryKey: COMPARISON_QUERY_KEYS.genrePieces(genre),
-    queryFn: ({ pageParam }) => ComparisonAPI.getPieces({ genre, offset: pageParam, limit: CATALOG_PAGE_SIZE }),
+    queryFn: ({ pageParam }) =>
+      ComparisonAPI.getPieces({ genre, offset: pageParam, limit: CATALOG_PAGE_SIZE }),
     getNextPageParam: (lastPage, pages) =>
       lastPage.length < CATALOG_PAGE_SIZE ? undefined : pages.length * CATALOG_PAGE_SIZE,
     initialPageParam: 0,
@@ -102,7 +109,10 @@ interface SectorPerformancesOptions {
   keepPreviousForPiece?: number;
 }
 
-export function useSectorComparisonPerformances(sectorId: number | undefined, options: SectorPerformancesOptions = {}) {
+export function useSectorComparisonPerformances(
+  sectorId: number | undefined,
+  options: SectorPerformancesOptions = {}
+) {
   const keepFor = options.keepPreviousForPiece;
   return useQuery({
     ...sectorPerformancesQueryOptions(sectorId ?? 0),
@@ -111,7 +121,9 @@ export function useSectorComparisonPerformances(sectorId: number | undefined, op
       keepFor === undefined
         ? undefined
         : (previous: ComparisonPerformance[] | null | undefined) =>
-            previous && previous.length > 0 && previous[0].pieceId === keepFor ? previous : undefined,
+            previous && previous.length > 0 && previous[0].pieceId === keepFor
+              ? previous
+              : undefined,
   });
 }
 
@@ -161,7 +173,10 @@ interface CachedPiece {
  * 이미 받아 둔 목록(비교 카탈로그 페이지, 작곡가별 카탈로그, 홈 추천)에서 작품 한 개를 찾는다.
  * 작품 화면 머리를 요청을 기다리지 않고 바로 그리는 데 쓴다.
  */
-export function findCachedComparisonPiece(queryClient: QueryClient, pieceId: number): CachedPiece | undefined {
+export function findCachedComparisonPiece(
+  queryClient: QueryClient,
+  pieceId: number
+): CachedPiece | undefined {
   const cache = queryClient.getQueryCache();
   let best: CachedPiece | undefined;
   const consider = (piece: ComparisonPiece | null | undefined, updatedAt: number) => {
@@ -227,7 +242,8 @@ export function useComparisonPiece(pieceId: number | undefined, composerId: numb
     ...comparisonPieceQueryOptions(id, composerId),
     enabled: id > 0 && (composerId ?? 0) > 0,
     initialData: () => (id > 0 ? findCachedComparisonPiece(queryClient, id)?.piece : undefined),
-    initialDataUpdatedAt: () => (id > 0 ? findCachedComparisonPiece(queryClient, id)?.updatedAt : undefined),
+    initialDataUpdatedAt: () =>
+      id > 0 ? findCachedComparisonPiece(queryClient, id)?.updatedAt : undefined,
   });
 }
 
@@ -300,7 +316,11 @@ export function comparableComposersQueryOptions() {
             .slice(0, COMPOSER_FACES),
         }))
         .sort((a, b) => b.pieceCount - a.pieceCount || b.performanceCount - a.performanceCount);
-      return { composers, byId: new Map(composers.map((entry) => [entry.composerId, entry])), pieces };
+      return {
+        composers,
+        byId: new Map(composers.map((entry) => [entry.composerId, entry])),
+        pieces,
+      };
     },
     staleTime: 10 * 60_000,
   });

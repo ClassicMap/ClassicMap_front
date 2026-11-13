@@ -90,7 +90,8 @@ export function estimateLabelWidth(text: string, fontSize = 11): number {
     const code = char.codePointAt(0) ?? 0;
     if (code >= 0x1100) width += fontSize * 0.98;
     else if (char === ' ') width += fontSize * 0.28;
-    else if (char === '.' || char === ',' || char === "'" || char === 'i' || char === 'l') width += fontSize * 0.3;
+    else if (char === '.' || char === ',' || char === "'" || char === 'i' || char === 'l')
+      width += fontSize * 0.3;
     else if (char >= 'A' && char <= 'Z') width += fontSize * 0.66;
     else width += fontSize * 0.56;
   }
@@ -128,7 +129,12 @@ export function decadeDensity<T extends LifeSpan & { period: string }>(
 }
 
 /** 축 눈금: 눈금 사이가 minGapPx 이상 벌어지는 가장 촘촘한 간격을 고른다 */
-export function yearTicks(fromYear: number, toYear: number, pxPerYear: number, minGapPx = 64): number[] {
+export function yearTicks(
+  fromYear: number,
+  toYear: number,
+  pxPerYear: number,
+  minGapPx = 64
+): number[] {
   const step = [10, 25, 50, 100].find((candidate) => candidate * pxPerYear >= minGapPx) ?? 100;
   const ticks: number[] = [];
   for (let year = Math.ceil(fromYear / step) * step; year <= toYear; year += step) ticks.push(year);

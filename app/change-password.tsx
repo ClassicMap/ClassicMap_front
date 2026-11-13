@@ -59,11 +59,20 @@ export default function ChangePasswordScreen() {
   };
 
   return (
-    <SubPage title={t('비밀번호 변경')} description={t('이메일로 가입한 계정의 비밀번호를 바꿔요.')}>
+    <SubPage
+      title={t('비밀번호 변경')}
+      description={t('이메일로 가입한 계정의 비밀번호를 바꿔요.')}>
       <View className="gap-4">
         <View className="gap-1.5">
           <Label nativeID="current">{t('현재 비밀번호')}</Label>
-          <Input aria-labelledby="current" secureTextEntry autoComplete="current-password" value={current} onChangeText={setCurrent} editable={!saving} />
+          <Input
+            aria-labelledby="current"
+            secureTextEntry
+            autoComplete="current-password"
+            value={current}
+            onChangeText={setCurrent}
+            editable={!saving}
+          />
         </View>
         <View className="gap-1.5">
           <Label nativeID="next">{t('새 비밀번호')}</Label>
@@ -79,7 +88,14 @@ export default function ChangePasswordScreen() {
         </View>
         <View className="gap-1.5">
           <Label nativeID="confirm">{t('새 비밀번호 확인')}</Label>
-          <Input aria-labelledby="confirm" secureTextEntry autoComplete="new-password" value={confirm} onChangeText={setConfirm} editable={!saving} />
+          <Input
+            aria-labelledby="confirm"
+            secureTextEntry
+            autoComplete="new-password"
+            value={confirm}
+            onChangeText={setConfirm}
+            editable={!saving}
+          />
         </View>
         <FieldMessage error={error} success={saved ? t('비밀번호를 바꿨어요.') : null} />
         <Button className="self-start rounded-full px-6" onPress={save} disabled={saving}>

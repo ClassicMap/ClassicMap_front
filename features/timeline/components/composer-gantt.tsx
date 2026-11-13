@@ -95,7 +95,8 @@ export function ComposerGantt({
             pointerEvents: 'none',
             opacity: scheme === 'dark' ? 0.6 : 0.85,
             left: x(Math.max(focusEra.startYear, fromYear)),
-            width: x(Math.min(focusEra.endYear, toYear)) - x(Math.max(focusEra.startYear, fromYear)),
+            width:
+              x(Math.min(focusEra.endYear, toYear)) - x(Math.max(focusEra.startYear, fromYear)),
             top: ERA_ROW_TOP - 2,
             bottom: 0,
             backgroundColor: getEraFill(focusEra.name, scheme),
@@ -109,7 +110,9 @@ export function ComposerGantt({
           key={year}
           className="absolute bottom-0 w-px bg-border"
           style={{ pointerEvents: 'none', left: x(year), top: 14 }}>
-          <Text variant="mono" className="absolute -top-[15px] left-[-20px] w-10 text-center text-[10.5px] text-foreground-subtle">
+          <Text
+            variant="mono"
+            className="absolute -top-[15px] left-[-20px] w-10 text-center text-[10.5px] text-foreground-subtle">
             {year}
           </Text>
         </View>
@@ -133,10 +136,18 @@ export function ComposerGantt({
               height: ERA_ROW_HEIGHT,
               opacity: dimmed ? 0.4 : 1,
             }}>
-            <Text numberOfLines={1} className="text-micro" style={{ color, lineHeight: ERA_ROW_HEIGHT }}>
-              {focusEra?.id === era.id ? `${t(era.name)} ${era.startYear}–${era.endYear}` : t(era.name)}
+            <Text
+              numberOfLines={1}
+              className="text-micro"
+              style={{ color, lineHeight: ERA_ROW_HEIGHT }}>
+              {focusEra?.id === era.id
+                ? `${t(era.name)} ${era.startYear}–${era.endYear}`
+                : t(era.name)}
             </Text>
-            <View className="ml-1.5 h-0.5 min-w-0 flex-1 rounded-full" style={{ backgroundColor: color, opacity: 0.7 }} />
+            <View
+              className="ml-1.5 h-0.5 min-w-0 flex-1 rounded-full"
+              style={{ backgroundColor: color, opacity: 0.7 }}
+            />
           </View>
         );
       })}
@@ -159,7 +170,10 @@ export function ComposerGantt({
           <Pressable
             key={group.eraId}
             accessibilityRole="button"
-            accessibilityLabel={t('{era} 작곡가 {count}명 더 보기', { era: t(group.eraName), count: group.count })}
+            accessibilityLabel={t('{era} 작곡가 {count}명 더 보기', {
+              era: t(group.eraName),
+              count: group.count,
+            })}
             onPress={() => onOverflowPress(group)}
             className="absolute h-[22px] flex-row items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2 web:hover:bg-surface-3"
             style={{ left: group.left, top: overflowTop, width: group.width }}>
@@ -225,16 +239,32 @@ function GanttRowBase({
       {isStar ? (
         <View
           className="absolute overflow-hidden rounded-full border border-background"
-          style={{ left: labelX - left, top: 0, width: PORTRAIT_SIZE + 2, height: PORTRAIT_SIZE + 2 }}>
-          <EntityThumb name={item.name} image={item.avatarUrl} shape="circle" size={PORTRAIT_SIZE} />
+          style={{
+            left: labelX - left,
+            top: 0,
+            width: PORTRAIT_SIZE + 2,
+            height: PORTRAIT_SIZE + 2,
+          }}>
+          <EntityThumb
+            name={item.name}
+            image={item.avatarUrl}
+            shape="circle"
+            size={PORTRAIT_SIZE}
+          />
         </View>
       ) : null}
-      <View className="absolute flex-row items-center" style={{ left: textLeft, top: -1, height: LABEL_LINE + 1 }}>
+      <View
+        className="absolute flex-row items-center"
+        style={{ left: textLeft, top: -1, height: LABEL_LINE + 1 }}>
         <Text
           numberOfLines={1}
           className={cn(
             'text-micro',
-            selected ? 'text-primary' : isMajor ? 'text-foreground' : 'font-medium text-foreground-muted'
+            selected
+              ? 'text-primary'
+              : isMajor
+                ? 'text-foreground'
+                : 'font-medium text-foreground-muted'
           )}
           style={{ lineHeight: LABEL_LINE + 1 }}>
           {item.name}

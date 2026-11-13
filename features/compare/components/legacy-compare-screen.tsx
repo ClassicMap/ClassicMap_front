@@ -25,10 +25,22 @@ import {
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
-import { ComposerAPI, PieceAPI, PerformanceAPI, ArtistAPI, PerformanceSectorAPI } from '@/lib/api/client';
+import {
+  ComposerAPI,
+  PieceAPI,
+  PerformanceAPI,
+  ArtistAPI,
+  PerformanceSectorAPI,
+} from '@/lib/api/client';
 import { AdminPerformanceAPI } from '@/lib/api/admin';
 import { useAuth } from '@/hooks/use-auth';
-import type { Composer, Piece, Performance, Artist, PerformanceSectorWithCount } from '@/types/models';
+import type {
+  Composer,
+  Piece,
+  Performance,
+  Artist,
+  PerformanceSectorWithCount,
+} from '@/types/models';
 import { PerformanceFormModal } from '@/features/admin/components/performance-form-modal';
 import { SectorFormModal } from '@/features/admin/components/sector-form-modal';
 import { SectorChip, AddSectorChip } from '@/features/compare/components/sector-chip';
@@ -82,10 +94,14 @@ export function LegacyCompareScreen() {
 
   // 섹터 관련 state
   const [sectors, setSectors] = React.useState<PerformanceSectorWithCount[]>([]);
-  const [selectedSector, setSelectedSector] = React.useState<PerformanceSectorWithCount | null>(null);
+  const [selectedSector, setSelectedSector] = React.useState<PerformanceSectorWithCount | null>(
+    null
+  );
   const [loadingSectors, setLoadingSectors] = React.useState(false);
   const [sectorFormVisible, setSectorFormVisible] = React.useState(false);
-  const [selectedSectorForEdit, setSelectedSectorForEdit] = React.useState<PerformanceSectorWithCount | undefined>();
+  const [selectedSectorForEdit, setSelectedSectorForEdit] = React.useState<
+    PerformanceSectorWithCount | undefined
+  >();
 
   // 검색 및 필터 state
   const [composerSearchQuery, setComposerSearchQuery] = React.useState('');
@@ -130,95 +146,98 @@ export function LegacyCompareScreen() {
   }).current;
 
   // Memoize renderItem to prevent unnecessary re-renders
-  const renderPerformanceItem = React.useCallback(({ item: performance }: { item: Performance }) => {
-    const artist = artists[performance.artistId];
+  const renderPerformanceItem = React.useCallback(
+    ({ item: performance }: { item: Performance }) => {
+      const artist = artists[performance.artistId];
 
-    return (
-      <Card className="mr-4 overflow-hidden" style={{ width: 350 }}>
-        {/* Compact Artist Info */}
-        <TouchableOpacity
-          className="flex-row items-center gap-2 border-b border-border/30 bg-card px-3 py-2.5"
-          onPress={() => {
-            if (artist) {
-              try {
-                router.push(`/artist/${artist.id}`);
-              } catch (error) {
-                console.error('Navigation error:', error);
+      return (
+        <Card className="mr-4 overflow-hidden" style={{ width: 350 }}>
+          {/* Compact Artist Info */}
+          <TouchableOpacity
+            className="flex-row items-center gap-2 border-b border-border/30 bg-card px-3 py-2.5"
+            onPress={() => {
+              if (artist) {
+                try {
+                  router.push(`/artist/${artist.id}`);
+                } catch (error) {
+                  console.error('Navigation error:', error);
+                }
               }
-            }
-          }}
-          activeOpacity={0.7}>
-          {/* Small Avatar: 32px */}
-          {artist?.imageUrl ? (
-            <Image
-              source={{ uri: getImageUrl(artist.imageUrl) }}
-              className="h-8 w-8 rounded-full border border-primary/20"
-              resizeMode="cover"
+            }}
+            activeOpacity={0.7}>
+            {/* Small Avatar: 32px */}
+            {artist?.imageUrl ? (
+              <Image
+                source={{ uri: getImageUrl(artist.imageUrl) }}
+                className="h-8 w-8 rounded-full border border-primary/20"
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
+                <Text className="text-xs font-bold text-primary">{artist?.name?.[0] || '?'}</Text>
+              </View>
+            )}
+
+            {/* Artist Name & Metadata */}
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-sm font-semibold">{artist?.name || t('알 수 없음')}</Text>
+              </View>
+              <Text className="text-xs text-muted-foreground">
+                {formatTime(performance.startTime)} - {formatTime(performance.endTime)}
+              </Text>
+            </View>
+
+            {/* Admin Controls */}
+            {canEdit && (
+              <View className="flex-row gap-1">
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setSelectedPerformance(performance);
+                    setPerformanceFormVisible(true);
+                  }}
+                  className="rounded-md bg-primary/10 p-1.5"
+                  activeOpacity={0.7}>
+                  <Icon as={EditIcon} size={14} className="text-primary" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeletePerformance(performance.id);
+                  }}
+                  className="rounded-md bg-destructive/10 p-1.5"
+                  activeOpacity={0.7}>
+                  <Icon as={TrashIcon} size={14} className="text-destructive" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* 웹에서는 자체 Invidious 스트림으로 광고 없이 재생한다. */}
+          <View style={{ width: '100%', height: 196 }}>
+            <PerformanceVideoPlayer
+              videoId={performance.videoId}
+              startTime={performance.startTime}
+              endTime={performance.endTime}
             />
-          ) : (
-            <View className="h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-primary/10">
-              <Text className="text-xs font-bold text-primary">
-                {artist?.name?.[0] || '?'}
+          </View>
+
+          {/* Quote-style Characteristic */}
+          {performance.characteristic && (
+            <View className="border-l-4 border-primary/40 bg-muted/30 px-4 py-3">
+              <Text className="text-sm italic leading-relaxed text-muted-foreground">
+                {'"'}
+                {performance.characteristic}
+                {'"'}
               </Text>
             </View>
           )}
-
-          {/* Artist Name & Metadata */}
-          <View className="flex-1">
-            <View className="flex-row items-center gap-2">
-              <Text className="text-sm font-semibold">{artist?.name || t('알 수 없음')}</Text>
-            </View>
-            <Text className="text-xs text-muted-foreground">
-              {formatTime(performance.startTime)} - {formatTime(performance.endTime)}
-            </Text>
-          </View>
-
-          {/* Admin Controls */}
-          {canEdit && (
-            <View className="flex-row gap-1">
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setSelectedPerformance(performance);
-                  setPerformanceFormVisible(true);
-                }}
-                className="rounded-md bg-primary/10 p-1.5"
-                activeOpacity={0.7}>
-                <Icon as={EditIcon} size={14} className="text-primary" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeletePerformance(performance.id);
-                }}
-                className="rounded-md bg-destructive/10 p-1.5"
-                activeOpacity={0.7}>
-                <Icon as={TrashIcon} size={14} className="text-destructive" />
-              </TouchableOpacity>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* 웹에서는 자체 Invidious 스트림으로 광고 없이 재생한다. */}
-        <View style={{ width: '100%', height: 196 }}>
-          <PerformanceVideoPlayer
-            videoId={performance.videoId}
-            startTime={performance.startTime}
-            endTime={performance.endTime}
-          />
-        </View>
-
-        {/* Quote-style Characteristic */}
-        {performance.characteristic && (
-          <View className="border-l-4 border-primary/40 bg-muted/30 px-4 py-3">
-            <Text className="text-sm italic leading-relaxed text-muted-foreground">
-              "{performance.characteristic}"
-            </Text>
-          </View>
-        )}
-      </Card>
-    );
-  }, [artists, canEdit, router, locale]);
+        </Card>
+      );
+    },
+    [artists, canEdit, router, locale]
+  );
 
   // URL 파라미터로부터 곡이 선택되었는지 추적
   const isFromUrlParams = React.useRef(false);
@@ -273,11 +292,13 @@ export function LegacyCompareScreen() {
 
   // Update composers list with piece counts
   React.useEffect(() => {
-    setComposers(displayedComposers.map(c => ({
-      ...c,
-      // Don't override majorPieces if it exists, otherwise leave undefined to show pieceCount
-      majorPieces: (c as Partial<ComposerWithPieces>).majorPieces || undefined,
-    })));
+    setComposers(
+      displayedComposers.map((c) => ({
+        ...c,
+        // Don't override majorPieces if it exists, otherwise leave undefined to show pieceCount
+        majorPieces: (c as Partial<ComposerWithPieces>).majorPieces || undefined,
+      }))
+    );
 
     // Mark initial mount as complete once we have composers
     if (displayedComposers.length > 0) {
@@ -349,9 +370,7 @@ export function LegacyCompareScreen() {
 
       // composers 상태 업데이트
       const updatedComposer = { ...composer, majorPieces: pieces };
-      setComposers((prev) =>
-        prev.map((c) => (c.id === composer.id ? updatedComposer : c))
-      );
+      setComposers((prev) => prev.map((c) => (c.id === composer.id ? updatedComposer : c)));
 
       // selectedComposer도 업데이트
       setSelectedComposer(updatedComposer);
@@ -444,7 +463,7 @@ export function LegacyCompareScreen() {
         setSelectedSector(sectorData[sectorData.length - 1]);
       } else if (selectedSector) {
         // Keep current selection if it still exists
-        const stillExists = sectorData.find(s => s.id === selectedSector.id);
+        const stillExists = sectorData.find((s) => s.id === selectedSector.id);
         if (!stillExists) {
           setSelectedSector(null);
         }
@@ -491,7 +510,11 @@ export function LegacyCompareScreen() {
       setPerformances(performanceData);
 
       // 연주자 정보 로드
-      const artistIds = [...new Set(performanceData.map((p) => p.artistId).filter((id): id is number => Boolean(id)))];
+      const artistIds = [
+        ...new Set(
+          performanceData.map((p) => p.artistId).filter((id): id is number => Boolean(id))
+        ),
+      ];
       const artistData: { [key: number]: Artist } = {};
 
       if (artistIds.length > 0) {
@@ -560,9 +583,7 @@ export function LegacyCompareScreen() {
 
             if (piece) {
               const updatedComposer = { ...composer, majorPieces: pieces };
-              setComposers((prev) =>
-                prev.map((c) => (c.id === composerId ? updatedComposer : c))
-              );
+              setComposers((prev) => prev.map((c) => (c.id === composerId ? updatedComposer : c)));
               setSelectedComposer(updatedComposer);
               setSelectedPiece(piece);
               setNoPieceFound(false);
@@ -638,9 +659,7 @@ export function LegacyCompareScreen() {
             try {
               const pieces = await PieceAPI.getByComposer(composer.id);
               const updatedComposer = { ...composer, majorPieces: pieces };
-              setComposers((prev) =>
-                prev.map((c) => (c.id === composer.id ? updatedComposer : c))
-              );
+              setComposers((prev) => prev.map((c) => (c.id === composer.id ? updatedComposer : c)));
               setSelectedComposer(updatedComposer);
 
               if (pieces.length > 0) {
@@ -768,8 +787,7 @@ export function LegacyCompareScreen() {
 
     // Check if near bottom
     const isNearBottom =
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom;
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
 
     if (isNearBottom) {
       // If searching, load more search results
@@ -783,8 +801,8 @@ export function LegacyCompareScreen() {
           limit: 20,
         })
           .then((results) => {
-            setSearchResults(prev => [...prev, ...results]);
-            setSearchOffset(prev => prev + 20);
+            setSearchResults((prev) => [...prev, ...results]);
+            setSearchOffset((prev) => prev + 20);
             setHasMoreSearchResults(results.length === 20);
             setIsSearching(false);
             // Add delay before allowing next request
@@ -1061,14 +1079,17 @@ export function LegacyCompareScreen() {
                   <Card className="overflow-hidden p-3">
                     <View className="gap-3">
                       {/* Loading indicator for filter changes when composers exist */}
-                      {isFetching && !isFetchingNextPage && composers.length > 0 && !isSearching && (
-                        <View className="items-center py-3">
-                          <ActivityIndicator size="small" />
-                          <Text className="mt-2 text-xs text-muted-foreground">
-                            {t('필터 적용 중...')}
-                          </Text>
-                        </View>
-                      )}
+                      {isFetching &&
+                        !isFetchingNextPage &&
+                        composers.length > 0 &&
+                        !isSearching && (
+                          <View className="items-center py-3">
+                            <ActivityIndicator size="small" />
+                            <Text className="mt-2 text-xs text-muted-foreground">
+                              {t('필터 적용 중...')}
+                            </Text>
+                          </View>
+                        )}
 
                       {composers.length === 0 ? (
                         <View className="items-center p-4">
@@ -1127,10 +1148,12 @@ export function LegacyCompareScreen() {
                                 <Text className="text-xs text-muted-foreground">
                                   {t(composer.period)}
                                 </Text>
-                                {(composer.majorPieces?.length !== undefined || composer.pieceCount !== undefined) && (
+                                {(composer.majorPieces?.length !== undefined ||
+                                  composer.pieceCount !== undefined) && (
                                   <Text className="text-xs text-muted-foreground">
                                     {t('{count}곡', {
-                                      count: composer.majorPieces?.length ?? composer.pieceCount ?? 0,
+                                      count:
+                                        composer.majorPieces?.length ?? composer.pieceCount ?? 0,
                                     })}
                                   </Text>
                                 )}
@@ -1228,7 +1251,9 @@ export function LegacyCompareScreen() {
                   <Card className="gap-3 overflow-hidden p-3">
                     {filteredPieces.length === 0 ? (
                       <View className="items-center p-4">
-                        <Text className="text-sm text-muted-foreground">{t('검색 결과가 없습니다')}</Text>
+                        <Text className="text-sm text-muted-foreground">
+                          {t('검색 결과가 없습니다')}
+                        </Text>
                       </View>
                     ) : (
                       filteredPieces.map((piece) => (
@@ -1282,9 +1307,7 @@ export function LegacyCompareScreen() {
             <>
               <Card className="bg-primary/5 p-4">
                 <View className="gap-2">
-                  <Text className="text-2xl font-bold">
-                    {selectedPiece.title}
-                  </Text>
+                  <Text className="text-2xl font-bold">{selectedPiece.title}</Text>
                   <Text className="text-sm text-muted-foreground">
                     {selectedComposer.fullName} • {t(selectedComposer.period)}
                   </Text>
@@ -1315,9 +1338,13 @@ export function LegacyCompareScreen() {
                     <Card className="bg-muted/20 p-8">
                       <View className="items-center gap-3">
                         <Icon as={PlayCircleIcon} size={48} className="text-primary/60" />
-                        <Text className="text-center text-base font-medium">{t('섹터가 없습니다')}</Text>
+                        <Text className="text-center text-base font-medium">
+                          {t('섹터가 없습니다')}
+                        </Text>
                         <Text className="text-center text-sm text-muted-foreground">
-                          {canEdit ? t('섹터를 추가하여 연주를 분류하세요') : t('아직 섹터가 생성되지 않았습니다')}
+                          {canEdit
+                            ? t('섹터를 추가하여 연주를 분류하세요')
+                            : t('아직 섹터가 생성되지 않았습니다')}
                         </Text>
                         {canEdit && (
                           <Button size="sm" onPress={handleAddSector} className="mt-2">
@@ -1355,9 +1382,15 @@ export function LegacyCompareScreen() {
                       {performances.length === 0 ? (
                         <Card className="bg-muted/50 p-8">
                           <View className="items-center gap-4">
-                            <Icon as={PlayCircleIcon} size={64} className="text-muted-foreground/30" />
+                            <Icon
+                              as={PlayCircleIcon}
+                              size={64}
+                              className="text-muted-foreground/30"
+                            />
                             <View className="items-center gap-2">
-                              <Text className="text-center text-xl font-bold">{t('연주 영상 준비 중')}</Text>
+                              <Text className="text-center text-xl font-bold">
+                                {t('연주 영상 준비 중')}
+                              </Text>
                               <Text className="text-center text-sm text-muted-foreground">
                                 {t('이 섹터의 연주 비교 영상이 아직 준비되지 않았습니다.')}
                               </Text>
@@ -1374,19 +1407,19 @@ export function LegacyCompareScreen() {
                           </View>
                         </Card>
                       ) : (
-                    <FlatList
-                      data={performances}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      pagingEnabled
-                      snapToInterval={360}
-                      decelerationRate="fast"
-                      contentContainerStyle={{ paddingRight: 16 }}
-                      onViewableItemsChanged={onViewableItemsChanged}
-                      viewabilityConfig={viewabilityConfig}
-                      renderItem={renderPerformanceItem}
-                      keyExtractor={(item) => item.id.toString()}
-                      />
+                        <FlatList
+                          data={performances}
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          pagingEnabled
+                          snapToInterval={360}
+                          decelerationRate="fast"
+                          contentContainerStyle={{ paddingRight: 16 }}
+                          onViewableItemsChanged={onViewableItemsChanged}
+                          viewabilityConfig={viewabilityConfig}
+                          renderItem={renderPerformanceItem}
+                          keyExtractor={(item) => item.id.toString()}
+                        />
                       )}
 
                       {/* 페이지 인디케이터 */}
@@ -1396,7 +1429,9 @@ export function LegacyCompareScreen() {
                             <View
                               key={index}
                               className={`h-2 rounded-full ${
-                                index === currentPerformanceIndex ? 'w-6 bg-primary' : 'w-2 bg-muted'
+                                index === currentPerformanceIndex
+                                  ? 'w-6 bg-primary'
+                                  : 'w-2 bg-muted'
                               }`}
                             />
                           ))}

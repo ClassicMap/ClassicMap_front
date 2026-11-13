@@ -39,7 +39,7 @@ export function useAuth() {
         const response = await fetch(`${API_BASE_URL}/users/clerk/${user.id}`, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await getToken()}`,
+            Authorization: `Bearer ${await getToken()}`,
           },
         });
         if (response.ok) {

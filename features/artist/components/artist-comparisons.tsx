@@ -17,7 +17,6 @@ import { AlertCircleIcon, ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
 
-
 interface PieceGroup {
   pieceId: number;
   composerId: number;
@@ -36,8 +35,16 @@ function groupByPiece(items: ComparisonPerformance[], artistId: number): PieceGr
       continue;
     }
     const supporting = item.credits
-      .filter((credit) => credit.artistId !== artistId && (credit.role === 'conductor' || credit.role === 'orchestra'))
-      .map((credit) => (credit.role === 'conductor' ? t('{name} 지휘', { name: credit.artistName }) : credit.artistName))
+      .filter(
+        (credit) =>
+          credit.artistId !== artistId &&
+          (credit.role === 'conductor' || credit.role === 'orchestra')
+      )
+      .map((credit) =>
+        credit.role === 'conductor'
+          ? t('{name} 지휘', { name: credit.artistName })
+          : credit.artistName
+      )
       .join(' · ');
     groups.set(item.pieceId, {
       pieceId: item.pieceId,
@@ -62,7 +69,10 @@ function groupByPiece(items: ComparisonPerformance[], artistId: number): PieceGr
 export function ArtistComparisons({ artistId, wide }: { artistId: number; wide: boolean }) {
   const { locale } = useLocale();
   const query = useArtistComparisonPerformances(artistId);
-  const items = React.useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data, locale]);
+  const items = React.useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data, locale]
+  );
   const groups = React.useMemo(() => groupByPiece(items, artistId), [items, artistId, locale]);
   const sectorCount = items.length;
 
@@ -121,7 +131,12 @@ function GroupHeader({ group }: { group: PieceGroup }) {
   return (
     <View className="flex-row items-center gap-3 py-2">
       {/* 이 사람 화면이라 작품은 작곡가 초상으로 알아보게 한다 */}
-      <EntityThumb name={group.composerName} image={piece?.composerAvatarUrl} shape="square" size={40} />
+      <EntityThumb
+        name={group.composerName}
+        image={piece?.composerAvatarUrl}
+        shape="square"
+        size={40}
+      />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body font-bold text-foreground">
           {group.pieceTitle}
@@ -134,15 +149,30 @@ function GroupHeader({ group }: { group: PieceGroup }) {
   );
 }
 
-function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; artistId: number; wide: boolean }) {
+function SectorRow({
+  item,
+  artistId,
+  wide,
+}: {
+  item: ComparisonPerformance;
+  artistId: number;
+  wide: boolean;
+}) {
   useLocale();
   const router = useRouter();
   const peers = useSectorComparisonPerformances(item.sectorId);
   const others = (peers.data ?? [])
-    .filter((performance) => !performance.credits.some((credit) => credit.artistId === artistId && credit.isPrimary))
-    .map((performance) => performance.credits.find((credit) => credit.isPrimary) ?? performance.credits[0])
+    .filter(
+      (performance) =>
+        !performance.credits.some((credit) => credit.artistId === artistId && credit.isPrimary)
+    )
+    .map(
+      (performance) =>
+        performance.credits.find((credit) => credit.isPrimary) ?? performance.credits[0]
+    )
     .filter((credit): credit is NonNullable<typeof credit> => Boolean(credit));
-  const href = `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
+  const href =
+    `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
 
   return (
     <Pressable
@@ -156,7 +186,9 @@ function SectorRow({ item, artistId, wide }: { item: ComparisonPerformance; arti
         </Text>
         <Text variant="caption" numberOfLines={1}>
           {t('원본 영상')}{' '}
-          <Text variant="mono" className="text-foreground-muted">{`${clipClock(item.startMs)}–${clipClock(item.endMs)}`}</Text>
+          <Text
+            variant="mono"
+            className="text-foreground-muted">{`${clipClock(item.startMs)}–${clipClock(item.endMs)}`}</Text>
         </Text>
       </View>
       {wide ? (

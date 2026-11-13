@@ -37,7 +37,10 @@ export function PeopleGrid({
       onLayout={(event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width)}>
       {loading
         ? Array.from({ length: Math.max(columns, 3) * 2 }, (_, index) => (
-            <View key={index} style={{ width: itemWidth || minItem }} className="items-center gap-2">
+            <View
+              key={index}
+              style={{ width: itemWidth || minItem }}
+              className="items-center gap-2">
               <Skeleton className="aspect-square w-full rounded-full" />
               <Skeleton className="h-3 w-2/3" />
             </View>

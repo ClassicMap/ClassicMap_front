@@ -44,8 +44,12 @@
 ```bash
 npx tsc --noEmit
 npm run i18n:check
+npm run lint          # 경고는 막지 않고 오류만 막습니다
+npm run format:check  # 맞지 않으면 npm run format
 npx expo export --platform web
 ```
+
+PR 마다 `.github/workflows/check.yml` 이 타입·문구·린트·서식을 돌립니다.
 
 필요한 검증 스크립트가 없으면 `package.json`에 명시적인 script를 추가합니다.
 

@@ -2,7 +2,12 @@ import { Chip, ChipDot } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
-import { CompareIcon, ComposerKindIcon, EraIcon, PerformerKindIcon } from '@/components/shared/icons';
+import {
+  CompareIcon,
+  ComposerKindIcon,
+  EraIcon,
+  PerformerKindIcon,
+} from '@/components/shared/icons';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -12,13 +17,25 @@ import { getEraForeground } from '@/lib/design/era-palette';
 import { PERIODS } from '@/lib/data/periods';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
-import type { Artist, Composer, Concert, PieceSearchResult, ScreenTitleSummary } from '@/types/models';
+import type {
+  Artist,
+  Composer,
+  Concert,
+  PieceSearchResult,
+  ScreenTitleSummary,
+} from '@/types/models';
 import { titleMeta } from '@/features/film/lib/labels';
 import { ScreenPoster } from '@/features/film/components/screen-poster';
 import { msg, t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ClapperboardIcon, DiscIcon, SearchIcon, XIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ClapperboardIcon,
+  DiscIcon,
+  SearchIcon,
+  XIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { GenreTiles, useGenreShelves } from '@/features/compare/components/genre-browse';
 import * as React from 'react';
@@ -181,13 +198,19 @@ export default function SearchScreen() {
             className="flex-1 text-base text-foreground web:outline-none"
           />
           {query ? (
-            <Pressable accessibilityLabel={t('검색어 지우기')} hitSlop={10} onPress={() => setQuery('')}>
+            <Pressable
+              accessibilityLabel={t('검색어 지우기')}
+              hitSlop={10}
+              onPress={() => setQuery('')}>
               <Icon as={XIcon} size={16} className="text-foreground-subtle" />
             </Pressable>
           ) : null}
         </View>
         {result.query ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerClassName="gap-2">
             {TYPE_CHIPS.map((chip) => (
               <Chip
                 key={chip.key}
@@ -259,8 +282,17 @@ export default function SearchScreen() {
                   <ResultRow
                     key={composer.id}
                     title={composer.name}
-                    subtitle={[t(composer.period), formatLife(composer)].filter(Boolean).join(' · ')}
-                    thumb={<EntityThumb name={composer.name} image={composer.avatarUrl} shape="circle" size={44} />}
+                    subtitle={[t(composer.period), formatLife(composer)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                    thumb={
+                      <EntityThumb
+                        name={composer.name}
+                        image={composer.avatarUrl}
+                        shape="circle"
+                        size={44}
+                      />
+                    }
                     onPress={() => router.push(`/composer/${composer.id}`)}
                   />
                 ))}
@@ -290,7 +322,14 @@ export default function SearchScreen() {
                     key={artist.id}
                     title={artist.name}
                     subtitle={getArtistCategoryLabel(artist.category)}
-                    thumb={<EntityThumb name={artist.name} image={artist.imageUrl} shape="circle" size={44} />}
+                    thumb={
+                      <EntityThumb
+                        name={artist.name}
+                        image={artist.imageUrl}
+                        shape="circle"
+                        size={44}
+                      />
+                    }
                     onPress={() => router.push(`/artist/${artist.id}`)}
                   />
                 ))}
@@ -330,7 +369,13 @@ export default function SearchScreen() {
                       .filter(Boolean)
                       .join(' · ')}
                     thumb={
-                      <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={44} aspect={4 / 3} />
+                      <EntityThumb
+                        name={concert.title}
+                        image={concert.posterUrl}
+                        shape="square"
+                        size={44}
+                        aspect={4 / 3}
+                      />
                     }
                     onPress={() => router.push(`/concert/${concert.id}`)}
                   />
@@ -408,7 +453,9 @@ function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide
             'flex-row items-center gap-4 rounded-lg bg-surface-2 p-4 active:bg-surface-3 web:hover:bg-surface-3',
             isWide && 'w-[calc(50%-6px)]'
           )}>
-          <View className="size-11 items-center justify-center rounded-md bg-surface-3">{tile.renderIcon('text-primary')}</View>
+          <View className="size-11 items-center justify-center rounded-md bg-surface-3">
+            {tile.renderIcon('text-primary')}
+          </View>
           <View className="flex-1">
             <Text variant="headline">{t(tile.label)}</Text>
             <Text variant="caption" className="mt-0.5">
@@ -434,7 +481,10 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       {genres.isLoading || genres.shelves.length > 0 ? (
         <View className="gap-3">
           <Text variant="title3">{t('장르로 찾기')}</Text>
-          <GenreTiles wide={isWide} onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)} />
+          <GenreTiles
+            wide={isWide}
+            onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)}
+          />
         </View>
       ) : null}
 

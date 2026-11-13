@@ -150,7 +150,7 @@ export const PERFORMANCES: Performance[] = [
     viewCount: 1200000,
     rating: 4.8,
   },
-  
+
   // 바흐 골드베르크 변주곡 (piece_id: 3)
   {
     id: 4,
@@ -178,7 +178,7 @@ export const PERFORMANCES: Performance[] = [
     viewCount: 2500000,
     rating: 5.0,
   },
-  
+
   // 라흐마니노프 피아노 협주곡 2번 (piece_id: 33)
   {
     id: 6,
@@ -206,7 +206,7 @@ export const PERFORMANCES: Performance[] = [
     viewCount: 1500000,
     rating: 4.8,
   },
-  
+
   // 라흐마니노프 피아노 협주곡 3번 (piece_id: 34)
   {
     id: 8,
@@ -234,7 +234,7 @@ export const PERFORMANCES: Performance[] = [
     viewCount: 3500000,
     rating: 4.9,
   },
-  
+
   // 베토벤 피아노 소나타 "월광" (piece_id: 16)
   {
     id: 10,

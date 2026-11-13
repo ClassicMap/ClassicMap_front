@@ -43,7 +43,9 @@ export function approxTimeText(seconds: number | null): string | null {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (hours > 0) {
-    return minutes > 0 ? t('{hours}시간 {minutes}분쯤', { hours, minutes }) : t('{hours}시간쯤', { hours });
+    return minutes > 0
+      ? t('{hours}시간 {minutes}분쯤', { hours, minutes })
+      : t('{hours}시간쯤', { hours });
   }
   return t('{minutes}분쯤', { minutes: Math.max(1, minutes) });
 }
@@ -54,7 +56,9 @@ export function titleMeta(kind: ScreenTitleKind, year: number | null): string {
 
 /** 포스터 아래 한 줄: "드라마 · 2021" */
 export function shortTitleMeta(kind: ScreenTitleKind, year: number | null): string {
-  return [t(SCREEN_KIND_SHORT_LABELS[kind]), year ? String(year) : null].filter(Boolean).join(' · ');
+  return [t(SCREEN_KIND_SHORT_LABELS[kind]), year ? String(year) : null]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function youtubeClipUrl(videoId: string, startSec: number): string {

@@ -28,7 +28,8 @@ export const SEARCH: Readonly<Record<string, string>> = {
   '작곡가, 작품, 아티스트, 공연 검색': 'Search composers, works, artists, concerts',
   '“{q}”에 맞는 결과가 없어요. 다른 이름이나 영문 표기로 찾아보세요.':
     'No results for “{q}”. Try another name or spelling.',
-  '일부 검색이 실패했어요. 잠시 뒤 다시 입력해 보세요.': 'Some searches failed. Try typing again in a moment.',
+  '일부 검색이 실패했어요. 잠시 뒤 다시 입력해 보세요.':
+    'Some searches failed. Try typing again in a moment.',
   이동: 'Navigate',
   열기: 'Open',
 };

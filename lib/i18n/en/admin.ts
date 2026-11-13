@@ -1,7 +1,8 @@
 /** 영어 사전: 관리자 화면(구간·연주 관리, 작곡가·작품·연주자 편집). 키는 화면의 한국어 원문 그대로, 값은 영어. */
 export const ADMIN: Readonly<Record<string, string>> = {
   // 폼 공통(form-modal, form-image)
-  '표시된 항목을 채우거나 고친 뒤 다시 저장해 주세요.': 'Fix the highlighted fields, then save again.',
+  '표시된 항목을 채우거나 고친 뒤 다시 저장해 주세요.':
+    'Fix the highlighted fields, then save again.',
   '패널 닫기': 'Close panel',
   '이미지를 불러오지 못했어요. 주소가 맞는지 확인해 주세요.':
     "Couldn't load the image. Check that the URL is correct.",
@@ -11,7 +12,8 @@ export const ADMIN: Readonly<Record<string, string>> = {
   '이미지 고르기': 'Choose image',
   '저장하지 못했어요': "Couldn't save",
   '사진 접근 권한이 필요해요': 'Photo access is needed',
-  '설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.': 'Allow photo access in Settings, then try again.',
+  '설정에서 사진 접근을 허용한 뒤 다시 시도해 주세요.':
+    'Allow photo access in Settings, then try again.',
   '선택됨 · ID {id}': 'Selected · ID {id}',
   '찾는 중…': 'Searching…',
   // 여러 폼이 같이 쓰는 칸 이름
@@ -176,10 +178,12 @@ export const ADMIN: Readonly<Record<string, string>> = {
   '연주자를 골라 주세요': 'Choose a performer',
   영상: 'Video',
   'YouTube 주소': 'YouTube URL',
-  '예: https://www.youtube.com/watch?v=dQw4w9WgXcQ': 'e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  '예: https://www.youtube.com/watch?v=dQw4w9WgXcQ':
+    'e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ',
   '시작 시간 (분:초)': 'Start time (m:ss)',
   '종료 시간 (분:초)': 'End time (m:ss)',
-  '예: 0:30은 30초, 1:15는 1분 15초예요.': 'e.g. 0:30 is 30 seconds and 1:15 is 1 minute 15 seconds.',
+  '예: 0:30은 30초, 1:15는 1분 15초예요.':
+    'e.g. 0:30 is 30 seconds and 1:15 is 1 minute 15 seconds.',
   '부가 정보': 'Extra info',
   조회수: 'View count',
   '연주 특징': 'Performance notes',

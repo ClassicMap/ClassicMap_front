@@ -1,5 +1,8 @@
 import { PieceArt } from '@/features/piece/components/piece-art';
-import { compareHrefFor, useDesktopPlayerBarVisible } from '@/features/player/components/player-bar-helpers';
+import {
+  compareHrefFor,
+  useDesktopPlayerBarVisible,
+} from '@/features/player/components/player-bar-helpers';
 import { setPlayerBarOutlet } from '@/features/player/lib/player-bar-outlet';
 import { QueueButton, RepeatButton, ShuffleButton } from '@/features/player/components/queue-panel';
 import { PerformerStepper, useSongNav } from '@/features/player/components/song-nav';
@@ -323,7 +326,11 @@ function MoreMenu({ track }: { track: ComparePlayerTrack }) {
           />
         ) : null}
         <View className="my-1 h-px bg-border" />
-        <MenuRow icon={XIcon} label={t('플레이어 닫기')} onPress={run(() => comparePlayer.close())} />
+        <MenuRow
+          icon={XIcon}
+          label={t('플레이어 닫기')}
+          onPress={run(() => comparePlayer.close())}
+        />
       </PopoverContent>
     </Popover>
   );

@@ -1,9 +1,18 @@
 import { ConcertFormModal } from '@/features/admin/components/concert-form-modal';
 import { ConcertCard } from '@/features/concert/components/concert-card';
-import { ConcertFilterBar, ConcertMobileFilter, ConcertSearchField } from '@/features/concert/components/concert-filter-bar';
+import {
+  ConcertFilterBar,
+  ConcertMobileFilter,
+  ConcertSearchField,
+} from '@/features/concert/components/concert-filter-bar';
 import type { ArtistChoice } from '@/features/concert/components/concert-filter-panels';
 import { FavoriteArtistConcerts } from '@/features/concert/components/favorite-artist-concerts';
-import { monthLabel, OriginalLanguageNote, parseDay, shortVenue } from '@/features/concert/components/concert-parts';
+import {
+  monthLabel,
+  OriginalLanguageNote,
+  parseDay,
+  shortVenue,
+} from '@/features/concert/components/concert-parts';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { EntityThumb } from '@/components/shared/entity-thumb';
@@ -57,7 +66,8 @@ const WEEKDAYS = [
 ];
 
 /** `2026-10-03` → `10.03` */
-const monthDay = (day: string) => t('{month}.{day}', { month: day.slice(5, 7), day: day.slice(8, 10) });
+const monthDay = (day: string) =>
+  t('{month}.{day}', { month: day.slice(5, 7), day: day.slice(8, 10) });
 
 interface DateGroup {
   key: string;
@@ -132,10 +142,21 @@ export default function ConcertsScreen() {
         artist: params.artist,
         q: params.q,
       }),
-    [params.genre, params.period, params.visit, params.festival, params.area, params.instrument, params.artist, params.q, locale]
+    [
+      params.genre,
+      params.period,
+      params.visit,
+      params.festival,
+      params.area,
+      params.instrument,
+      params.artist,
+      params.q,
+      locale,
+    ]
   );
   const updateFilter = React.useCallback(
-    (next: Partial<ConcertFilter>) => router.setParams(toConcertFilterParams({ ...filter, ...next })),
+    (next: Partial<ConcertFilter>) =>
+      router.setParams(toConcertFilterParams({ ...filter, ...next })),
     [router, filter]
   );
 
@@ -157,7 +178,10 @@ export default function ConcertsScreen() {
   };
 
   const areasQuery = useAreas();
-  const areas = React.useMemo(() => normalizeAreas(areasQuery.data ?? []), [areasQuery.data, locale]);
+  const areas = React.useMemo(
+    () => normalizeAreas(areasQuery.data ?? []),
+    [areasQuery.data, locale]
+  );
   const area = areas.find((option) => option.value === filter.area) ?? null;
 
   const favorites = useMyFavorites(isSignedIn);
@@ -180,7 +204,11 @@ export default function ConcertsScreen() {
   const selectedArtist: ArtistChoice | undefined =
     knownArtist ??
     (artistDetail.data && filter.artist
-      ? { artistId: filter.artist, name: artistDetail.data.name, imageUrl: artistDetail.data.imageUrl }
+      ? {
+          artistId: filter.artist,
+          name: artistDetail.data.name,
+          imageUrl: artistDetail.data.imageUrl,
+        }
       : undefined);
   const changeArtist = (artist: ArtistChoice | undefined) => {
     setPickedArtist(artist);
@@ -188,16 +216,26 @@ export default function ConcertsScreen() {
   };
 
   const range = React.useMemo(() => periodRange(filter.period), [filter.period, locale]);
-  const { query: concertsQuery, localQuery, waiting } = useFilteredConcerts(filter, range, {
+  const {
+    query: concertsQuery,
+    localQuery,
+    waiting,
+  } = useFilteredConcerts(filter, range, {
     artistName: selectedArtist?.name,
   });
   const pageCount = concertsQuery.data?.pages.length ?? 0;
-  const loaded = React.useMemo(() => concertsQuery.data?.pages.flat() ?? [], [concertsQuery.data, locale]);
+  const loaded = React.useMemo(
+    () => concertsQuery.data?.pages.flat() ?? [],
+    [concertsQuery.data, locale]
+  );
   const concerts = React.useMemo(
     () => selectVisibleConcerts(loaded, filter, range, localQuery),
     [loaded, filter, range, localQuery, locale]
   );
-  const groups = React.useMemo(() => groupByDay(concerts, range.from), [concerts, range.from, locale]);
+  const groups = React.useMemo(
+    () => groupByDay(concerts, range.from),
+    [concerts, range.from, locale]
+  );
 
   // 서버가 아직 모르는 조건은 화면에서 걸러 한 페이지가 비어 보일 수 있다. 몇 페이지까지 더 채운다.
   React.useEffect(() => {
@@ -265,13 +303,21 @@ export default function ConcertsScreen() {
                   style={{ color: getRankForeground(item.ranking, scheme) }}>
                   {item.ranking}
                 </Text>
-                <EntityThumb name={item.title} image={item.posterUrl} shape="square" size={52} aspect={4 / 3} />
+                <EntityThumb
+                  name={item.title}
+                  image={item.posterUrl}
+                  shape="square"
+                  size={52}
+                  aspect={4 / 3}
+                />
                 <View className="min-w-0 flex-1">
                   <Text numberOfLines={2} className="text-body-sm font-semibold text-foreground">
                     {item.title}
                   </Text>
                   <Text variant="caption" numberOfLines={1} className="mt-1">
-                    {[monthDay(item.startDate), shortVenue(item.facilityName)].filter(Boolean).join(' · ')}
+                    {[monthDay(item.startDate), shortVenue(item.facilityName)]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </Text>
                 </View>
               </Pressable>
@@ -306,7 +352,9 @@ export default function ConcertsScreen() {
             </Text>
             <OriginalLanguageNote className="mt-1" />
           </View>
-          {wide ? <ConcertSearchField value={query} onChange={setQuery} className="w-[300px]" /> : null}
+          {wide ? (
+            <ConcertSearchField value={query} onChange={setQuery} className="w-[300px]" />
+          ) : null}
           {canEdit ? (
             <Button variant="outline" size="sm" onPress={() => setShowForm(true)}>
               <Icon as={PlusIcon} size={14} className="text-foreground" />
@@ -316,7 +364,11 @@ export default function ConcertsScreen() {
         </View>
 
         {isSignedIn && favoriteArtists.length > 0 && !filter.q.trim() && !filter.artist ? (
-          <FavoriteArtistConcerts artists={favoriteArtists} from={periodRange('all').from} cardWidth={wide ? 188 : 156} />
+          <FavoriteArtistConcerts
+            artists={favoriteArtists}
+            from={periodRange('all').from}
+            cardWidth={wide ? 188 : 156}
+          />
         ) : null}
 
         <View className={cn('border-b border-border pb-4', wide ? 'mt-6' : 'mt-4')}>
@@ -368,7 +420,8 @@ export default function ConcertsScreen() {
                 action={{ label: t('다시 시도'), onPress: () => concertsQuery.refetch() }}
               />
             ) : groups.length === 0 &&
-              (concertsQuery.isFetchingNextPage || (concertsQuery.hasNextPage && pageCount < AUTOFILL_PAGE_LIMIT)) ? (
+              (concertsQuery.isFetchingNextPage ||
+                (concertsQuery.hasNextPage && pageCount < AUTOFILL_PAGE_LIMIT)) ? (
               <View className="mt-8">
                 <Skeleton className="h-4 w-1/3" />
               </View>
@@ -384,7 +437,10 @@ export default function ConcertsScreen() {
                   }
                   action={
                     concertsQuery.hasNextPage
-                      ? { label: t('더 찾아보기'), onPress: () => void concertsQuery.fetchNextPage() }
+                      ? {
+                          label: t('더 찾아보기'),
+                          onPress: () => void concertsQuery.fetchNextPage(),
+                        }
                       : { label: t('필터 초기화'), onPress: resetFilter }
                   }
                 />

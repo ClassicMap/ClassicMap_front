@@ -1,4 +1,10 @@
-import { AUTH_BUTTON_CLASS, AUTH_INPUT_CLASS, AuthDivider, AuthHeading, FieldError } from '@/features/auth/components/auth-shell';
+import {
+  AUTH_BUTTON_CLASS,
+  AUTH_INPUT_CLASS,
+  AuthDivider,
+  AuthHeading,
+  FieldError,
+} from '@/features/auth/components/auth-shell';
 import { SocialConnections } from '@/features/auth/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +68,8 @@ export function SignInForm() {
         const message = err.message;
         const translatedMessage = translateClerkError(message);
         const lowerMessage = message.toLowerCase();
-        const isEmailMessage = lowerMessage.includes('identifier') || lowerMessage.includes('email');
+        const isEmailMessage =
+          lowerMessage.includes('identifier') || lowerMessage.includes('email');
 
         setError(isEmailMessage ? { email: translatedMessage } : { password: translatedMessage });
         return;
@@ -74,10 +81,12 @@ export function SignInForm() {
     passwordInputRef.current?.focus();
   }
 
-
   return (
     <View>
-      <AuthHeading title={t('로그인')} description={t('레퍼토리와 별점을 어느 기기에서든 이어서 봐요.')} />
+      <AuthHeading
+        title={t('로그인')}
+        description={t('레퍼토리와 별점을 어느 기기에서든 이어서 봐요.')}
+      />
       <SocialConnections />
       <AuthDivider label={t('또는 이메일로')} />
       <View className="gap-4">

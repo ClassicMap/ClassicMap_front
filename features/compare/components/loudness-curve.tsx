@@ -7,7 +7,13 @@ import type { LoudnessProfile } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
-import { type GestureResponderEvent, type LayoutChangeEvent, Platform, Pressable, View } from 'react-native';
+import {
+  type GestureResponderEvent,
+  type LayoutChangeEvent,
+  Platform,
+  Pressable,
+  View,
+} from 'react-native';
 import Svg, { Circle, ClipPath, Defs, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 /** 곡선 폭이 이보다 좁으면 평평한 곡선이다. 압축된 녹음일 수 있어 점과 잰 값을 그리지 않는다 */
@@ -143,15 +149,23 @@ function useGlide(ratio: number | undefined, playing: boolean, spanMs: number): 
  * 누른 자리의 가로 위치(요소 왼쪽 기준 px). 웹은 locationX 가 비어 올 때가 있어 화면 좌표에서 요소 위치를 뺀다
  */
 function pressX(event: GestureResponderEvent): number | null {
-  const native = event.nativeEvent as unknown as { locationX?: number; clientX?: number; pageX?: number };
+  const native = event.nativeEvent as unknown as {
+    locationX?: number;
+    clientX?: number;
+    pageX?: number;
+  };
   if (Platform.OS === 'web') {
-    const target = event.currentTarget as unknown as { getBoundingClientRect?: () => { left: number } };
+    const target = event.currentTarget as unknown as {
+      getBoundingClientRect?: () => { left: number };
+    };
     const clientX = native.clientX ?? native.pageX;
     if (typeof target?.getBoundingClientRect === 'function' && typeof clientX === 'number') {
       return clientX - target.getBoundingClientRect().left;
     }
   }
-  return typeof native.locationX === 'number' && Number.isFinite(native.locationX) ? native.locationX : null;
+  return typeof native.locationX === 'number' && Number.isFinite(native.locationX)
+    ? native.locationX
+    : null;
 }
 
 /** 0(바닥)~1(가장 센 곳). 재생 점의 빛 크기에 쓴다 */
@@ -221,13 +235,21 @@ export function LoudnessSparkline({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [loudness, width, height, plot.floor, locale]
   );
-  const describe = flat ? t('처음부터 끝까지 거의 평평해요') : t('가장 센 곳 {clock}', { clock: clipClock(loudness.peakMs) });
-  const head = shownHead !== undefined && Number.isFinite(shownHead) ? Math.min(1, Math.max(0, shownHead)) : undefined;
+  const describe = flat
+    ? t('처음부터 끝까지 거의 평평해요')
+    : t('가장 센 곳 {clock}', { clock: clipClock(loudness.peakMs) });
+  const head =
+    shownHead !== undefined && Number.isFinite(shownHead)
+      ? Math.min(1, Math.max(0, shownHead))
+      : undefined;
   const headX = head !== undefined ? plot.left + head * plot.width : 0;
   const headY = head !== undefined ? yOf(plot, valueAt(loudness, head * span)) : 0;
   const level = head !== undefined ? levelAt(loudness, head * span, plot.floor) : 0;
   const stroke = colors.stroke[tone === 'neutral' ? 'a' : tone];
-  const resume = resumeAt !== undefined && resumeAt > 0 && head === undefined ? Math.min(1, resumeAt) : undefined;
+  const resume =
+    resumeAt !== undefined && resumeAt > 0 && head === undefined
+      ? Math.min(1, resumeAt)
+      : undefined;
 
   const svg =
     width > 0 ? (
@@ -298,8 +320,21 @@ export function LoudnessSparkline({
         ) : null}
         {head !== undefined ? (
           <>
-            <Circle cx={headX} cy={headY} r={playing ? 4 + level * 6 : 5} fill={stroke} fillOpacity={0.22} />
-            <Circle cx={headX} cy={headY} r={4} fill={stroke} stroke={colors.theme.surface1} strokeWidth={2} />
+            <Circle
+              cx={headX}
+              cy={headY}
+              r={playing ? 4 + level * 6 : 5}
+              fill={stroke}
+              fillOpacity={0.22}
+            />
+            <Circle
+              cx={headX}
+              cy={headY}
+              r={4}
+              fill={stroke}
+              stroke={colors.theme.surface1}
+              strokeWidth={2}
+            />
           </>
         ) : null}
       </Svg>
@@ -311,7 +346,11 @@ export function LoudnessSparkline({
         onLayout={onLayout}
         accessible
         accessibilityRole="image"
-        accessibilityLabel={label ? t('{name} 음량 곡선. {describe}', { name: label, describe }) : t('음량 곡선. {describe}', { describe })}
+        accessibilityLabel={
+          label
+            ? t('{name} 음량 곡선. {describe}', { name: label, describe })
+            : t('음량 곡선. {describe}', { describe })
+        }
         className={cn('w-full', className)}
         style={{ height }}>
         {svg}
@@ -329,7 +368,10 @@ export function LoudnessSparkline({
       accessibilityRole="adjustable"
       accessibilityLabel={
         label
-          ? t('{name} 재생 위치. 음량 곡선, {describe}. 누른 자리부터 들어요', { name: label, describe })
+          ? t('{name} 재생 위치. 음량 곡선, {describe}. 누른 자리부터 들어요', {
+              name: label,
+              describe,
+            })
           : t('재생 위치. 음량 곡선, {describe}. 누른 자리부터 들어요', { describe })
       }
       accessibilityValue={head !== undefined ? { text: clipClock(head * span) } : undefined}
@@ -383,7 +425,9 @@ export function LoudnessOverlay({
   const glided = useGlide(positions[active], playing, activeSpan ? curveSpanMs(activeSpan) : 0);
   const ratioOf = (key: 'a' | 'b') => {
     const value = key === active ? glided : positions[key];
-    return value !== undefined && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : undefined;
+    return value !== undefined && Number.isFinite(value)
+      ? Math.min(1, Math.max(0, value))
+      : undefined;
   };
   // 안 듣는 쪽을 먼저 그려 듣는 쪽이 위에 오게 한다
   const order: ('a' | 'b')[] = active === 'a' ? ['b', 'a'] : ['a', 'b'];
@@ -394,7 +438,9 @@ export function LoudnessOverlay({
       onLayout={onLayout}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={t('두 연주의 음량 곡선을 같은 진행률 축에 겹친 그래프. 지금 듣는 연주가 진하게 보여요')}
+      accessibilityLabel={t(
+        '두 연주의 음량 곡선을 같은 진행률 축에 겹친 그래프. 지금 듣는 연주가 진하게 보여요'
+      )}
       className="w-full"
       style={{ height }}>
       {width > 0 ? (
@@ -404,7 +450,12 @@ export function LoudnessOverlay({
               const ratio = ratioOf(key);
               return (
                 <ClipPath key={key} id={`${clipBase}-${key}`}>
-                  <Rect x={0} y={0} width={ratio !== undefined ? plot.left + ratio * plot.width : 0} height={height} />
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={ratio !== undefined ? plot.left + ratio * plot.width : 0}
+                    height={height}
+                  />
                 </ClipPath>
               );
             })}
@@ -502,10 +553,25 @@ export function LoudnessOverlay({
                         fill={colors.stroke[key]}
                         fillOpacity={0.25}
                       />
-                      <Circle cx={x} cy={y} r={5} fill={colors.stroke[key]} stroke={colors.theme.surface1} strokeWidth={2} />
+                      <Circle
+                        cx={x}
+                        cy={y}
+                        r={5}
+                        fill={colors.stroke[key]}
+                        stroke={colors.theme.surface1}
+                        strokeWidth={2}
+                      />
                     </>
                   ) : (
-                    <Circle cx={x} cy={y} r={4} fill={colors.theme.surface1} stroke={colors.stroke[key]} strokeOpacity={0.6} strokeWidth={1.8} />
+                    <Circle
+                      cx={x}
+                      cy={y}
+                      r={4}
+                      fill={colors.theme.surface1}
+                      stroke={colors.stroke[key]}
+                      strokeOpacity={0.6}
+                      strokeWidth={1.8}
+                    />
                   )
                 ) : null}
               </React.Fragment>
@@ -524,7 +590,8 @@ function measuredCells(
   if (!loudness || isFlatLoudness(loudness)) return null;
   const start = loudness.startRelDb;
   return {
-    start: start >= -0.05 ? t('최고점과 같음') : t('최고점 −{db}dB', { db: Math.abs(start).toFixed(1) }),
+    start:
+      start >= -0.05 ? t('최고점과 같음') : t('최고점 −{db}dB', { db: Math.abs(start).toFixed(1) }),
     peak: clipClock(loudness.peakMs),
     peakRatio: `${Math.round(loudness.peakRatio * 100)}%`,
   };
@@ -585,8 +652,13 @@ export function LoudnessMeasures({
       ))}
       <Text variant="caption" className="mt-1 text-foreground-subtle">
         {flatNames.length > 0
-          ? t('{names} 연주는 곡선 폭이 2dB보다 좁아 잰 값을 비웠어요. 녹음이 압축됐을 수 있어요.', { names: flatNames.join('·') })
-          : t('각 연주에서 가장 센 곳을 0dB로 맞춘 값이에요. 녹음마다 크기가 달라 두 연주의 세기를 견주지는 않아요.')}
+          ? t(
+              '{names} 연주는 곡선 폭이 2dB보다 좁아 잰 값을 비웠어요. 녹음이 압축됐을 수 있어요.',
+              { names: flatNames.join('·') }
+            )
+          : t(
+              '각 연주에서 가장 센 곳을 0dB로 맞춘 값이에요. 녹음마다 크기가 달라 두 연주의 세기를 견주지는 않아요.'
+            )}
       </Text>
     </View>
   );

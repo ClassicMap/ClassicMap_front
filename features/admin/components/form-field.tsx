@@ -191,7 +191,10 @@ export function ChoiceField<T extends string>({
   const labelId = React.useId();
   return (
     <FormField {...chrome} labelId={labelId}>
-      <View className="flex-row flex-wrap gap-2" accessibilityRole="radiogroup" aria-labelledby={labelId}>
+      <View
+        className="flex-row flex-wrap gap-2"
+        accessibilityRole="radiogroup"
+        aria-labelledby={labelId}>
         {options.map((option) => (
           <Chip
             key={option.value}

@@ -92,7 +92,11 @@ export function QueueActionSheet() {
                 </View>
               ) : (
                 <>
-                  <SheetRow icon={ListStartIcon} label={t('menu::다음에 재생')} onPress={add('next')} />
+                  <SheetRow
+                    icon={ListStartIcon}
+                    label={t('menu::다음에 재생')}
+                    onPress={add('next')}
+                  />
                   <SheetRow icon={ListEndIcon} label={t('대기열에 추가')} onPress={add('last')} />
                 </>
               )}

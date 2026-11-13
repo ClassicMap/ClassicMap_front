@@ -80,14 +80,21 @@ export function PieceArt({
           }}
         />
       ) : fallbackImage ? (
-        <OptimizedImage uri={fallbackImage} fallbackComponent={fallback} resizeMode="cover" style={{ width: size, height: size }} />
+        <OptimizedImage
+          uri={fallbackImage}
+          fallbackComponent={fallback}
+          resizeMode="cover"
+          style={{ width: size, height: size }}
+        />
       ) : (
         fallback
       )}
       {faces.length > 0 ? (
         <>
           <Scrim from="bottom" opacity={0.55} extent={38} />
-          <View className="absolute flex-row" style={{ left: Math.round(size * 0.05), bottom: Math.round(size * 0.05) }}>
+          <View
+            className="absolute flex-row"
+            style={{ left: Math.round(size * 0.05), bottom: Math.round(size * 0.05) }}>
             {faces.map((performer, index) => (
               <FaceLink
                 key={performer.artistId}
@@ -107,7 +114,15 @@ export function PieceArt({
  * 표지 위 연주자 얼굴. 웹은 호버하면 위에 이름 말풍선이 뜨고 살짝 올라온다. 누르면 그 연주자 화면으로 간다.
  * 카드(작품으로 가는 누름) 안에 있지만 안쪽 누름이 먼저 받는다.
  */
-function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerformer; size: number; overlap: number }) {
+function FaceLink({
+  performer,
+  size,
+  overlap,
+}: {
+  performer: ComparisonPiecePerformer;
+  size: number;
+  overlap: number;
+}) {
   useLocale();
   const router = useRouter();
   const [hovered, setHovered] = React.useState(false);
@@ -132,13 +147,20 @@ function FaceLink({ performer, size, overlap }: { performer: ComparisonPiecePerf
         hovered && 'web:-translate-y-0.5'
       )}
       style={{ marginLeft: overlap, zIndex: hovered ? 2 : 1 }}>
-      <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={size} />
+      <EntityThumb
+        name={performer.artistName}
+        image={performer.imageUrl}
+        shape="circle"
+        size={size}
+      />
       {hovered ? (
         <View
           pointerEvents="none"
           className="absolute rounded-md bg-black/85 px-2 py-1"
           style={{ bottom: size + 8, left: -6 }}>
-          <Text numberOfLines={1} className="text-micro font-semibold text-white web:whitespace-nowrap">
+          <Text
+            numberOfLines={1}
+            className="text-micro font-semibold text-white web:whitespace-nowrap">
             {performer.artistName}
           </Text>
         </View>

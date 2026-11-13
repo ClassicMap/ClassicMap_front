@@ -48,16 +48,28 @@ export default function EditProfileScreen() {
   return (
     <SubPage
       title={t('계정 이름')}
-      description={t('로그인 계정에 쓰는 이름이에요. 공개 프로필에 보이는 이름은 설정 > 프로필에서 따로 바꿔요.')}>
+      description={t(
+        '로그인 계정에 쓰는 이름이에요. 공개 프로필에 보이는 이름은 설정 > 프로필에서 따로 바꿔요.'
+      )}>
       <View className="gap-4">
         <View className="flex-row gap-3">
           <View className="flex-1 gap-1.5">
             <Label nativeID="lastName">{t('family::성')}</Label>
-            <Input aria-labelledby="lastName" value={lastName} onChangeText={setLastName} editable={!saving} />
+            <Input
+              aria-labelledby="lastName"
+              value={lastName}
+              onChangeText={setLastName}
+              editable={!saving}
+            />
           </View>
           <View className="flex-1 gap-1.5">
             <Label nativeID="firstName">{t('given::이름')}</Label>
-            <Input aria-labelledby="firstName" value={firstName} onChangeText={setFirstName} editable={!saving} />
+            <Input
+              aria-labelledby="firstName"
+              value={firstName}
+              onChangeText={setFirstName}
+              editable={!saving}
+            />
           </View>
         </View>
         <FieldMessage error={error} success={saved ? t('이름을 바꿨어요.') : null} />

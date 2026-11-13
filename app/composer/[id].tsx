@@ -96,7 +96,9 @@ export default function ComposerDetailScreen() {
   const [starting, setStarting] = React.useState(false);
   // 이 작곡가 곡이 지금 플레이어에 있으면 큰 버튼이 재생·일시정지를 바꾼다
   const playerHere = useComparePlayer((state) => state.current?.composerId === composerId);
-  const playingHere = useComparePlayer((state) => state.playing && state.current?.composerId === composerId);
+  const playingHere = useComparePlayer(
+    (state) => state.playing && state.current?.composerId === composerId
+  );
   const pausedHere = playerHere && !playingHere;
   const { canEdit } = useAuth();
   const { layout } = useBreakpoint();
@@ -117,9 +119,13 @@ export default function ComposerDetailScreen() {
   const showInWorks = (highlight: ComposerHighlight) =>
     setWorksReveal((current) => ({ q: highlight.title, key: (current?.key ?? 0) + 1 }));
   const comparableQuery = useComparisonPieces(composerId, Boolean(composer));
-  const refreshPieces = () => queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
+  const refreshPieces = () =>
+    queryClient.invalidateQueries({ queryKey: PIECE_QUERY_KEYS.byComposer(composerId) });
 
-  const comparable = React.useMemo(() => comparableQuery.data?.pages.flat() ?? [], [comparableQuery.data, locale]);
+  const comparable = React.useMemo(
+    () => comparableQuery.data?.pages.flat() ?? [],
+    [comparableQuery.data, locale]
+  );
   const comparableFoldable =
     comparable.length > COMPARABLE_PREVIEW || Boolean(comparableQuery.hasNextPage);
   const shownComparable = comparableOpen ? comparable : comparable.slice(0, COMPARABLE_PREVIEW);
@@ -145,7 +151,10 @@ export default function ComposerDetailScreen() {
       });
     });
   };
-  const comparableIds = React.useMemo(() => new Set(comparable.map((piece) => piece.pieceId)), [comparable, locale]);
+  const comparableIds = React.useMemo(
+    () => new Set(comparable.map((piece) => piece.pieceId)),
+    [comparable, locale]
+  );
   const performers = React.useMemo(() => collectPerformers(comparable), [comparable, locale]);
 
   const refresh = () => {
@@ -159,21 +168,25 @@ export default function ComposerDetailScreen() {
 
   const handleDeleteComposer = () => {
     if (!composer) return;
-    Alert.alert(t('작곡가 삭제'), t('{name}을(를) 삭제할까요? 작품도 함께 삭제돼요.', { name: composer.name }), [
-      { text: t('취소'), style: 'cancel' },
-      {
-        text: t('삭제'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await AdminComposerAPI.delete(composer.id);
-            router.back();
-          } catch {
-            Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
-          }
+    Alert.alert(
+      t('작곡가 삭제'),
+      t('{name}을(를) 삭제할까요? 작품도 함께 삭제돼요.', { name: composer.name }),
+      [
+        { text: t('취소'), style: 'cancel' },
+        {
+          text: t('삭제'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AdminComposerAPI.delete(composer.id);
+              router.back();
+            } catch {
+              Alert.alert(t('삭제하지 못했어요'), t('잠시 뒤 다시 시도해 주세요.'));
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleEditPiece = async (piece: Piece) => {
@@ -237,7 +250,9 @@ export default function ComposerDetailScreen() {
   const meta = [
     years,
     composer.nationality ? t(composer.nationality) : null,
-    composer.pieceCount ? t('작품 {n}곡', { count: composer.pieceCount, n: formatNumber(composer.pieceCount) }) : null,
+    composer.pieceCount
+      ? t('작품 {n}곡', { count: composer.pieceCount, n: formatNumber(composer.pieceCount) })
+      : null,
     composer.englishName,
   ].filter(Boolean);
   const styleKeywords = (composer.style ?? '')
@@ -265,7 +280,12 @@ export default function ComposerDetailScreen() {
             <Text variant="headline" className="mb-2.5">
               {t('소개')}
             </Text>
-            <ExpandableText text={composer.bio} lines={5} variant="body" className="text-foreground" />
+            <ExpandableText
+              text={composer.bio}
+              lines={5}
+              variant="body"
+              className="text-foreground"
+            />
           </View>
         ) : null}
         {styleKeywords.length > 0 ? (
@@ -298,7 +318,9 @@ export default function ComposerDetailScreen() {
       <ScrollView
         ref={scrollRef}
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl refreshing={composerQuery.isRefetching} onRefresh={refresh} />
+        }
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
         {/* 배너 전용 가로 그림이 있으면 폭으로 깔고, 없으면 연주자처럼 초상을 오른쪽에 세운다
             (옛 사진·작은 초상을 폭으로 늘리면 이마와 눈만 크게 남아서) */}
@@ -309,7 +331,11 @@ export default function ComposerDetailScreen() {
           title={composer.name}
           meta={[composer.period ? t(composer.period) : '', ...meta].filter(Boolean)}
           wide={wide}
-          onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))}
+          onBack={
+            wide
+              ? undefined
+              : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))
+          }
         />
 
         {/* 행동: 재생(첫 비교 작품을 그 자리에서) → 담기 → 관리 */}
@@ -331,7 +357,12 @@ export default function ComposerDetailScreen() {
               <Icon as={ShuffleIcon} size={20} className="text-foreground" />
             </Pressable>
           ) : null}
-          <FavoriteButton kind="composers" id={composer.id} name={composer.name} variant="labeled" />
+          <FavoriteButton
+            kind="composers"
+            id={composer.id}
+            name={composer.name}
+            variant="labeled"
+          />
           {canEdit ? (
             <>
               <Button variant="outline" size="sm" onPress={() => setEditVisible(true)}>
@@ -346,9 +377,17 @@ export default function ComposerDetailScreen() {
           ) : null}
         </View>
         {composer.banner ? (
-          <PhotoCredit imageUrl={composer.banner.url} credit={composer.banner.credit} centered={false} />
+          <PhotoCredit
+            imageUrl={composer.banner.url}
+            credit={composer.banner.credit}
+            centered={false}
+          />
         ) : composer.avatarUrl ? (
-          <PhotoCredit imageUrl={composer.avatarUrl} credit={composer.avatarCredit} centered={false} />
+          <PhotoCredit
+            imageUrl={composer.avatarUrl}
+            credit={composer.avatarCredit}
+            centered={false}
+          />
         ) : null}
 
         <View className={cn('mt-10', wide ? 'flex-row gap-12' : 'gap-10')}>
@@ -363,7 +402,12 @@ export default function ComposerDetailScreen() {
 
             {/* 비교할 수 있는 작품 (1차 시안: 번호 행). 많으면 5곡만 보이고 펼친다 */}
             <View ref={comparableRef}>
-              <SectionTitle title={t('비교할 수 있는 작품')} meta={comparable.length > 0 ? t('{count}곡', { count: comparable.length }) : undefined} />
+              <SectionTitle
+                title={t('비교할 수 있는 작품')}
+                meta={
+                  comparable.length > 0 ? t('{count}곡', { count: comparable.length }) : undefined
+                }
+              />
               {comparableQuery.isLoading ? (
                 <View className="gap-2">
                   {Array.from({ length: 3 }, (_, index) => (
@@ -396,14 +440,19 @@ export default function ComposerDetailScreen() {
                         label={
                           comparableQuery.hasNextPage
                             ? t('더 보기')
-                            : t('{n}곡 모두 보기', { count: comparable.length, n: formatNumber(comparable.length) })
+                            : t('{n}곡 모두 보기', {
+                                count: comparable.length,
+                                n: formatNumber(comparable.length),
+                              })
                         }
                         onPress={() => setComparableOpen(true)}
                       />
                     ) : null}
                     {comparableOpen && comparableQuery.hasNextPage ? (
                       <MoreLink
-                        label={comparableQuery.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')}
+                        label={
+                          comparableQuery.isFetchingNextPage ? t('불러오는 중…') : t('더 보기')
+                        }
                         onPress={() => comparableQuery.fetchNextPage()}
                         disabled={comparableQuery.isFetchingNextPage}
                       />
@@ -419,7 +468,10 @@ export default function ComposerDetailScreen() {
             {/* 이 작품들을 연주한 사람: 넓은 화면은 오른쪽 칸, 좁은 화면은 가로 띠 */}
             {!wide && performers.length > 0 ? (
               <View>
-                <SectionTitle title={t('이 작품들을 연주한 사람')} meta={t('{count}명', { count: performers.length })} />
+                <SectionTitle
+                  title={t('이 작품들을 연주한 사람')}
+                  meta={t('{count}명', { count: performers.length })}
+                />
                 <ScrollShelf>
                   {performers.map((performer) => (
                     <PerformerTile
@@ -535,12 +587,21 @@ function ComparableRow({
       // 앱: 길게 누르면 대기열 동작 시트
       {...(Platform.OS === 'web'
         ? null
-        : queueLongPressProps(() => ({ piece, title: piece.pieceTitle, subtitle: piece.composerName })))}
+        : queueLongPressProps(() => ({
+            piece,
+            title: piece.pieceTitle,
+            subtitle: piece.composerName,
+          })))}
       accessibilityRole="link"
       accessibilityLabel={t('{title} 비교하기', { title: piece.pieceTitle })}
       className="group -mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2">
       <TrackIndex index={index + 1} pieceId={piece.pieceId} onPlay={onPlay} />
-      <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={40} />
+      <PieceArt
+        coverVideoId={piece.coverVideoId}
+        fallbackImage={piece.composerAvatarUrl}
+        fallbackName={piece.composerName}
+        size={40}
+      />
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-body-sm font-semibold text-foreground">
           {piece.pieceTitle}
@@ -565,7 +626,12 @@ function ComparableRow({
           {t('구간 {count}', { count: piece.sectorCount })}
         </Text>
       ) : null}
-      <QueueAddMenu piece={piece} title={piece.pieceTitle} subtitle={piece.composerName} hoverOnly />
+      <QueueAddMenu
+        piece={piece}
+        title={piece.pieceTitle}
+        subtitle={piece.composerName}
+        hoverOnly
+      />
       <FavoriteButton kind="pieces" id={piece.pieceId} name={piece.pieceTitle} />
       {/* 좁으면 ⋯ 가 그 자리를 쓴다 */}
       {wide ? <Icon as={ChevronRightIcon} size={16} className="text-foreground-faint" /> : null}
@@ -573,11 +639,20 @@ function ComparableRow({
   );
 }
 
-function PerformerTile({ performer, onPress }: { performer: PerformerSummary; onPress: () => void }) {
+function PerformerTile({
+  performer,
+  onPress,
+}: {
+  performer: PerformerSummary;
+  onPress: () => void;
+}) {
   useLocale();
   const caption =
     performer.pieces.length > 1
-      ? t('{title} 외 {count}곡', { title: performer.pieces[0], count: performer.pieces.length - 1 })
+      ? t('{title} 외 {count}곡', {
+          title: performer.pieces[0],
+          count: performer.pieces.length - 1,
+        })
       : performer.pieces[0];
   return (
     <Pressable
@@ -585,7 +660,12 @@ function PerformerTile({ performer, onPress }: { performer: PerformerSummary; on
       accessibilityRole="link"
       accessibilityLabel={performer.artistName}
       className="w-[104px] items-center web:transition-opacity web:hover:opacity-90">
-      <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={88} />
+      <EntityThumb
+        name={performer.artistName}
+        image={performer.imageUrl}
+        shape="circle"
+        size={88}
+      />
       <Text numberOfLines={1} className="mt-2 text-center text-label font-semibold text-foreground">
         {performer.artistName}
       </Text>
@@ -619,7 +699,10 @@ function PerformerSidebar({
         {shown.map((performer) => {
           const caption =
             performer.pieces.length > 1
-              ? t('{title} 외 {count}곡', { title: performer.pieces[0], count: performer.pieces.length - 1 })
+              ? t('{title} 외 {count}곡', {
+                  title: performer.pieces[0],
+                  count: performer.pieces.length - 1,
+                })
               : performer.pieces[0];
           return (
             <Pressable
@@ -628,7 +711,12 @@ function PerformerSidebar({
               accessibilityRole="link"
               accessibilityLabel={`${performer.artistName}, ${caption}`}
               className="flex-row items-center gap-3 rounded-lg px-1.5 py-1.5 active:bg-surface-2 web:transition-colors web:hover:bg-surface-2">
-              <EntityThumb name={performer.artistName} image={performer.imageUrl} shape="circle" size={40} />
+              <EntityThumb
+                name={performer.artistName}
+                image={performer.imageUrl}
+                shape="circle"
+                size={40}
+              />
               <View className="min-w-0 flex-1">
                 <Text numberOfLines={1} className="text-label font-semibold text-foreground">
                   {performer.artistName}
@@ -642,7 +730,10 @@ function PerformerSidebar({
         })}
       </View>
       {performers.length > SIDEBAR_PERFORMERS ? (
-        <Pressable onPress={() => setAll((value) => !value)} hitSlop={6} className="mt-2 self-start px-1.5 py-1">
+        <Pressable
+          onPress={() => setAll((value) => !value)}
+          hitSlop={6}
+          className="mt-2 self-start px-1.5 py-1">
           <Text variant="label" className="text-foreground-muted">
             {all ? t('접기') : t('{count}명 모두 보기', { count: performers.length })}
           </Text>

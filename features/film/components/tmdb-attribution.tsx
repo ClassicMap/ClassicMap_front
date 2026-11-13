@@ -14,7 +14,9 @@ export function TmdbAttribution({ className }: { className?: string }) {
     <View className={cn('gap-2', className)}>
       <SvgXml xml={TMDB_LOGO} width={96} height={12.5} accessibilityLabel="TMDB" />
       <Text variant="micro">
-        {t('포스터와 스틸은 TMDB에서 가져와요. 이 앱은 TMDB와 TMDB API를 쓰지만 TMDB의 보증·인증·승인을 받지는 않았어요.')}
+        {t(
+          '포스터와 스틸은 TMDB에서 가져와요. 이 앱은 TMDB와 TMDB API를 쓰지만 TMDB의 보증·인증·승인을 받지는 않았어요.'
+        )}
       </Text>
     </View>
   );

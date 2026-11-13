@@ -1,4 +1,10 @@
-import { queryOptions, useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { ArtistAPI } from '@/lib/api/client';
 import { AdminArtistAPI } from '@/lib/api/admin';
 import type { Artist } from '@/types/models';
@@ -86,7 +92,8 @@ export function useUpdateArtist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminArtistAPI.update>[1] }) => AdminArtistAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof AdminArtistAPI.update>[1] }) =>
+      AdminArtistAPI.update(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.detail(id) });
       queryClient.invalidateQueries({ queryKey: ARTIST_QUERY_KEYS.all });

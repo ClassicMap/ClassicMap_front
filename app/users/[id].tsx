@@ -1,5 +1,10 @@
 import { RepertoireList } from '@/features/library/components/repertoire-list';
-import { ProfileAvatar, RatingGrid, type RatingSortKey, StatTile } from '@/features/profile/components/profile-parts';
+import {
+  ProfileAvatar,
+  RatingGrid,
+  type RatingSortKey,
+  StatTile,
+} from '@/features/profile/components/profile-parts';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,7 +41,8 @@ export default function PublicProfileScreen() {
   const [sort, setSort] = React.useState<RatingSortKey>('recent');
 
   const profile = query.data;
-  const displayName = profile?.displayName || (userId ? t('사용자 #{id}', { id: userId }) : t('사용자'));
+  const displayName =
+    profile?.displayName || (userId ? t('사용자 #{id}', { id: userId }) : t('사용자'));
 
   const back = (
     <Pressable
@@ -70,9 +76,13 @@ export default function PublicProfileScreen() {
           tone={query.isError ? 'error' : 'empty'}
           title={query.isError ? t('프로필을 불러오지 못했어요') : t('프로필을 찾을 수 없어요')}
           description={
-            query.isError ? t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.') : t('주소가 맞는지 확인해 주세요.')
+            query.isError
+              ? t('연결이 잠시 끊겼을 수 있어요. 다시 시도해 주세요.')
+              : t('주소가 맞는지 확인해 주세요.')
           }
-          action={query.isError ? { label: t('다시 시도'), onPress: () => query.refetch() } : undefined}
+          action={
+            query.isError ? { label: t('다시 시도'), onPress: () => query.refetch() } : undefined
+          }
         />
       </View>
     );
@@ -80,7 +90,11 @@ export default function PublicProfileScreen() {
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'ratings', label: t('평가한 공연'), count: profile.ratings?.length },
-    { key: 'repertoire', label: t('레퍼토리'), count: profile.favorites ? getFavoriteCount(profile.favorites) : undefined },
+    {
+      key: 'repertoire',
+      label: t('레퍼토리'),
+      count: profile.favorites ? getFavoriteCount(profile.favorites) : undefined,
+    },
     { key: 'collections', label: t('컬렉션'), count: profile.collections?.length },
   ];
 
@@ -112,8 +126,12 @@ export default function PublicProfileScreen() {
     ) : (
       <View className="flex-row flex-wrap gap-2">
         {profile.collections.map((collection) => (
-          <View key={collection.id} className="min-w-[160px] grow rounded-lg bg-surface-2 px-4 py-3">
-            <Text className="text-[22px] font-bold tabular-nums text-foreground">{collection.count}</Text>
+          <View
+            key={collection.id}
+            className="min-w-[160px] grow rounded-lg bg-surface-2 px-4 py-3">
+            <Text className="text-[22px] font-bold tabular-nums text-foreground">
+              {collection.count}
+            </Text>
             <Text variant="caption">{t(collection.title)}</Text>
           </View>
         ))}
@@ -124,7 +142,9 @@ export default function PublicProfileScreen() {
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} />}
+        refreshControl={
+          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} />
+        }
         contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
         {!wide ? back : null}
         <View className={cn(wide ? 'flex-row gap-11' : 'mt-5 gap-5')}>
@@ -135,7 +155,11 @@ export default function PublicProfileScreen() {
                 <Text variant="micro" className="uppercase tracking-widest">
                   {t('공개 프로필')}
                 </Text>
-                <Text className={cn('mt-1 font-bold text-foreground', wide ? 'text-[28px] leading-9' : 'text-title-3')}>
+                <Text
+                  className={cn(
+                    'mt-1 font-bold text-foreground',
+                    wide ? 'text-[28px] leading-9' : 'text-title-3'
+                  )}>
                   {displayName}
                 </Text>
                 {profile.bio ? (
@@ -152,7 +176,11 @@ export default function PublicProfileScreen() {
                 </View>
                 <View className="w-[47%] grow">
                   <StatTile
-                    value={profile.summary.ratingsCount > 0 ? profile.summary.averageRating.toFixed(1) : '–'}
+                    value={
+                      profile.summary.ratingsCount > 0
+                        ? profile.summary.averageRating.toFixed(1)
+                        : '–'
+                    }
                     label={t('평균 별점')}
                     accent
                   />
@@ -183,7 +211,11 @@ export default function PublicProfileScreen() {
                     '-mb-px h-11 flex-row items-center gap-1.5 border-b-2',
                     tab === item.key ? 'border-primary' : 'border-transparent'
                   )}>
-                  <Text className={cn('text-body font-semibold', tab === item.key ? 'text-foreground' : 'text-foreground-muted')}>
+                  <Text
+                    className={cn(
+                      'text-body font-semibold',
+                      tab === item.key ? 'text-foreground' : 'text-foreground-muted'
+                    )}>
                     {item.label}
                   </Text>
                   {item.count !== undefined ? (

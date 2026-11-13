@@ -127,7 +127,10 @@ function WorkRow({ work }: { work: ScreenWork }) {
           <Pressable
             onPress={openCompare}
             accessibilityRole="link"
-            accessibilityLabel={t('{composer} {work} 비교해 듣기', { composer: work.composerName, work: work.workTitle })}
+            accessibilityLabel={t('{composer} {work} 비교해 듣기', {
+              composer: work.composerName,
+              work: work.workTitle,
+            })}
             hitSlop={6}
             className="flex-row items-center gap-0.5 rounded-full px-2 py-1 active:bg-surface-2 web:hover:bg-surface-2">
             <Text className="text-label font-semibold text-primary">{t('비교 듣기')}</Text>

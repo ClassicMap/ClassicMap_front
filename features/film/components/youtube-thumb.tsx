@@ -36,13 +36,15 @@ const FRAME_PREFIX: Record<Quality, string> = {
   hqdefault: 'hq',
   mqdefault: 'mq',
 };
-const fileName = (quality: Quality, frame: AutoFrame | undefined) => (frame ? `${FRAME_PREFIX[quality]}${frame}` : quality);
+const fileName = (quality: Quality, frame: AutoFrame | undefined) =>
+  frame ? `${FRAME_PREFIX[quality]}${frame}` : quality;
 const webpUrl = (videoId: string, quality: Quality, frame?: AutoFrame) =>
   `https://i.ytimg.com/vi_webp/${videoId}/${fileName(quality, frame)}.webp`;
 const jpgUrl = (videoId: string, quality: Quality, frame?: AutoFrame) =>
   `https://i.ytimg.com/vi/${videoId}/${fileName(quality, frame)}.jpg`;
 /** 영상·그림·화질마다 하나. 대표 썸네일은 'd' */
-const cacheKey = (videoId: string, frame: AutoFrame | undefined, quality: Quality) => `${videoId}:${frame ?? 'd'}:${quality}`;
+const cacheKey = (videoId: string, frame: AutoFrame | undefined, quality: Quality) =>
+  `${videoId}:${frame ?? 'd'}:${quality}`;
 
 /** 상자를 덮는 데 필요한 가장 낮은 화질 */
 function targetQuality(width: number, height: number): Quality {
@@ -87,7 +89,11 @@ const shown = new Set<string>();
  * webp 가 없는 영상이 있고(10편 중 2편꼴), maxres·sd 가 없는 영상도 있다.
  * 없는 화질은 YouTube 가 404 와 함께 120×90 회색 그림을 주는데 브라우저는 그걸 정상으로 그려서, 크기로 가린다.
  */
-function pickThumb(videoId: string, frame: AutoFrame | undefined, target: Quality): Promise<Pick | null> {
+function pickThumb(
+  videoId: string,
+  frame: AutoFrame | undefined,
+  target: Quality
+): Promise<Pick | null> {
   const key = cacheKey(videoId, frame, target);
   const known = pending.get(key);
   if (known) return known;
@@ -128,7 +134,11 @@ function knownPick(
 }
 
 /** 이미 받아 둔 다른 화질. 큰 그림을 받는 동안 흐린 미리보기로 깐다 */
-function settledPreview(videoId: string, frame: AutoFrame | undefined, except: Quality): Pick | null {
+function settledPreview(
+  videoId: string,
+  frame: AutoFrame | undefined,
+  except: Quality
+): Pick | null {
   for (const quality of LADDER) {
     if (quality === except) continue;
     const pick = settled.get(cacheKey(videoId, frame, quality));
@@ -168,7 +178,13 @@ interface YoutubeThumbProps {
  * 권리자 공식 클립의 썸네일로 부모 상자를 채운다(부모가 크기를 정한다).
  * 상자 크기에 맞는 화질만 받고, 받는 동안 쉬머를 보이다가 그림이 오면 서서히 드러낸다.
  */
-export function YoutubeThumb({ videoId, thumbs, frame, accessibilityLabel, fallback }: YoutubeThumbProps) {
+export function YoutubeThumb({
+  videoId,
+  thumbs,
+  frame,
+  accessibilityLabel,
+  fallback,
+}: YoutubeThumbProps) {
   useLocale();
   const [box, setBox] = React.useState<{ width: number; height: number } | null>(null);
   const target = box ? targetQuality(box.width, box.height) : null;
@@ -197,11 +213,14 @@ export function YoutubeThumb({ videoId, thumbs, frame, accessibilityLabel, fallb
 
   const onLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
-    if (width > 0 && height > 0 && (width !== box?.width || height !== box?.height)) setBox({ width, height });
+    if (width > 0 && height > 0 && (width !== box?.width || height !== box?.height))
+      setBox({ width, height });
   };
 
   const [revealed, setRevealed] = React.useState<string | null>(null);
-  const current = !key ? undefined : (known ?? (picked?.key === key ? picked.pick : settled.get(key)));
+  const current = !key
+    ? undefined
+    : (known ?? (picked?.key === key ? picked.pick : settled.get(key)));
   if (current === null) return <View className="flex-1">{fallback ?? null}</View>;
   // 그림이 다 드러나기 전까지 아래에 쉬머(이미 받아 둔 낮은 화질이 있으면 그 그림)를 깐다
   const covered = Boolean(current && (revealed === current.uri || shown.has(current.uri)));
@@ -210,7 +229,11 @@ export function YoutubeThumb({ videoId, thumbs, frame, accessibilityLabel, fallb
   return (
     <View className="flex-1 overflow-hidden" onLayout={onLayout}>
       {covered ? null : box && preview ? (
-        <Image source={{ uri: preview.uri }} resizeMode="stretch" style={coverStyle(box, preview.quality)} />
+        <Image
+          source={{ uri: preview.uri }}
+          resizeMode="stretch"
+          style={coverStyle(box, preview.quality)}
+        />
       ) : (
         <Skeleton className="absolute inset-0 rounded-none bg-surface-3" />
       )}
@@ -245,7 +268,11 @@ function FadeInImage({
     // 웹은 그릴 때마다 onLoad 가 다시 올 수 있어 한 번만 드러낸다
     if (started.current) return;
     started.current = true;
-    Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: Platform.OS !== 'web' }).start(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 220,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(() => {
       shown.add(pick.uri);
       onRevealed();
     });

@@ -36,10 +36,22 @@ export function HeroImage({
   if (layout === 'side') {
     const side = Math.min(height, width);
     return (
-      <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
-        <Image source={{ uri: src }} blurRadius={40} resizeMode="cover" style={{ position: 'absolute', width, height, opacity: 0.55 }} />
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
+        <Image
+          source={{ uri: src }}
+          blurRadius={40}
+          resizeMode="cover"
+          style={{ position: 'absolute', width, height, opacity: 0.55 }}
+        />
         <View style={{ position: 'absolute', right: 0, top: 0, width: side, height: side }}>
-          <Image source={{ uri: src }} resizeMode="cover" onError={onError} style={{ width: side, height: side }} />
+          <Image
+            source={{ uri: src }}
+            resizeMode="cover"
+            onError={onError}
+            style={{ width: side, height: side }}
+          />
           <Scrim from="left" color="#000" opacity={0.85} extent={45} />
         </View>
       </View>
@@ -54,7 +66,9 @@ export function HeroImage({
     ? { width: natural.width * scale, height: natural.height * scale }
     : { width, height: Math.max(height, width * 1.1) };
   return (
-    <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden' }}>
       <Image
         source={{ uri: src }}
         resizeMode="cover"

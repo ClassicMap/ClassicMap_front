@@ -73,9 +73,7 @@ export function SectorFormModal({
         ? t('구간 이름은 {max}자 이내로 적어 주세요.', { max: SECTOR_NAME_MAX })
         : undefined,
     displayOrder:
-      isNaN(orderNum) || orderNum < 0
-        ? t('표시 순서는 0 이상의 숫자로 적어 주세요.')
-        : undefined,
+      isNaN(orderNum) || orderNum < 0 ? t('표시 순서는 0 이상의 숫자로 적어 주세요.') : undefined,
   };
   const shown: FieldErrors<SectorField> = attempted ? errors : {};
 

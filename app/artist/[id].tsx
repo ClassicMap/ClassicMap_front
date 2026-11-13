@@ -27,12 +27,7 @@ import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useQuery } from '@tanstack/react-query';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  AlertCircleIcon,
-  EditIcon,
-  PlusIcon,
-  TrashIcon,
-} from 'lucide-react-native';
+import { AlertCircleIcon, EditIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -153,10 +148,16 @@ export default function ArtistDetailScreen() {
   });
 
   const recordings = React.useMemo(
-    () => [...(recordingsQuery.data ?? [])].sort((a, b) => recordingYear(b).localeCompare(recordingYear(a))),
+    () =>
+      [...(recordingsQuery.data ?? [])].sort((a, b) =>
+        recordingYear(b).localeCompare(recordingYear(a))
+      ),
     [recordingsQuery.data, locale]
   );
-  const concerts = React.useMemo(() => upcomingConcerts(concertsQuery.data ?? []), [concertsQuery.data, locale]);
+  const concerts = React.useMemo(
+    () => upcomingConcerts(concertsQuery.data ?? []),
+    [concertsQuery.data, locale]
+  );
   const awards = React.useMemo(
     () => [...(artist?.awards ?? [])].sort((a, b) => b.year.localeCompare(a.year)),
     [artist?.awards, locale]
@@ -267,12 +268,20 @@ export default function ArtistDetailScreen() {
                   key={concert.id}
                   onPress={() => router.push(`/concert/${concert.id}` as Href)}
                   className="-mx-3 flex-row gap-3.5 rounded-lg p-3 active:bg-surface-2 web:hover:bg-surface-2">
-                  <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={72} aspect={4 / 3} />
+                  <EntityThumb
+                    name={concert.title}
+                    image={concert.posterUrl}
+                    shape="square"
+                    size={72}
+                    aspect={4 / 3}
+                  />
                   <View className="min-w-0 flex-1">
                     {days !== null ? (
                       <Badge tone="accent" label={days === 0 ? t('오늘') : `D-${days}`} />
                     ) : null}
-                    <Text numberOfLines={2} className="mt-1.5 text-body-sm font-bold text-foreground">
+                    <Text
+                      numberOfLines={2}
+                      className="mt-1.5 text-body-sm font-bold text-foreground">
                       {concert.title}
                     </Text>
                     <Text variant="caption" numberOfLines={1} className="mt-1">
@@ -310,11 +319,18 @@ export default function ArtistDetailScreen() {
           <View className="gap-3.5">
             {awards.map((award, index) => (
               <View key={award.id} className="flex-row gap-3">
-                <Text variant="mono" className={cn('w-11 pt-0.5', index === 0 ? 'text-primary' : 'text-foreground-muted')}>
+                <Text
+                  variant="mono"
+                  className={cn(
+                    'w-11 pt-0.5',
+                    index === 0 ? 'text-primary' : 'text-foreground-muted'
+                  )}>
                   {award.year}
                 </Text>
                 <View className="min-w-0 flex-1">
-                  <Text className="text-body-sm font-semibold text-foreground">{award.awardName}</Text>
+                  <Text className="text-body-sm font-semibold text-foreground">
+                    {award.awardName}
+                  </Text>
                   {[award.ranking, award.category].filter(Boolean).length > 0 ? (
                     <Text variant="caption" className="mt-0.5">
                       {[award.ranking, award.category].filter(Boolean).join(' · ')}
@@ -329,12 +345,13 @@ export default function ArtistDetailScreen() {
     </View>
   );
 
-
   return (
     <View className="flex-1 bg-background web:bg-surface-1">
       <ScrollView
         className="flex-1"
-        refreshControl={<RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />}
+        refreshControl={
+          <RefreshControl refreshing={artistQuery.isRefetching} onRefresh={refresh} />
+        }
         contentContainerClassName={cn('pb-24', wide ? 'px-7' : 'px-4')}>
         {/* 배너 전용 가로 사진이 있으면 폭으로 깔고, 없으면 프로필 사진을 오른쪽에 세운다 */}
         <HeroBanner
@@ -344,7 +361,9 @@ export default function ArtistDetailScreen() {
           meta={[...meta, artist.englishName !== artist.name ? artist.englishName : null]}
           wide={wide}
           imageLayout={artist.banner ? 'cover' : 'side'}
-          onBack={wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))}
+          onBack={
+            wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))
+          }
         />
 
         {/* 행동: 담기 → 관리 */}
@@ -367,7 +386,10 @@ export default function ArtistDetailScreen() {
         {artist.bio || artist.style ? (
           <View className="mt-6 max-w-[720px]">
             {artist.bio ? (
-              <Text variant="bodySm" numberOfLines={bioExpanded ? undefined : 3} className="text-foreground-muted">
+              <Text
+                variant="bodySm"
+                numberOfLines={bioExpanded ? undefined : 3}
+                className="text-foreground-muted">
                 {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
                 {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
               </Text>
@@ -410,7 +432,9 @@ export default function ArtistDetailScreen() {
             <Text variant="title3">{t('음반')}</Text>
             <View className="flex-row items-center gap-3">
               {recordings.length > 0 ? (
-                <Text variant="caption">{t('{count}장 · 최신순', { count: recordings.length })}</Text>
+                <Text variant="caption">
+                  {t('{count}장 · 최신순', { count: recordings.length })}
+                </Text>
               ) : null}
               {canEdit ? (
                 <Pressable
@@ -435,7 +459,10 @@ export default function ArtistDetailScreen() {
               {t('등록된 음반이 없어요.')}
             </Text>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-5">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="gap-5">
               {recordings.map((recording) => {
                 return (
                   <View key={recording.id} className="w-[176px]">
@@ -467,7 +494,6 @@ export default function ArtistDetailScreen() {
             </ScrollView>
           )}
         </View>
-
       </ScrollView>
 
       <ArtistFormModal
@@ -488,9 +514,11 @@ export default function ArtistDetailScreen() {
           void recordingsQuery.refetch();
         }}
       />
-      <TicketVendorsModal visible={showVendorsModal} vendors={vendors} onClose={() => setShowVendorsModal(false)} />
+      <TicketVendorsModal
+        visible={showVendorsModal}
+        vendors={vendors}
+        onClose={() => setShowVendorsModal(false)}
+      />
     </View>
   );
 }
-
-

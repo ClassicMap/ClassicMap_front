@@ -62,7 +62,11 @@ function isShown(element: HTMLElement): boolean {
   if (!element.isConnected) return false;
   const rect = element.getBoundingClientRect();
   if (rect.width <= 1 || rect.height <= 1) return false;
-  for (let node: HTMLElement | null = element; node && node !== document.body; node = node.parentElement) {
+  for (
+    let node: HTMLElement | null = element;
+    node && node !== document.body;
+    node = node.parentElement
+  ) {
     if (node.getAttribute('aria-hidden') === 'true') return false;
   }
   return true;
@@ -162,7 +166,8 @@ export function ComparePlayerHost() {
       unlockOrientation();
       requestAnimationFrame(() => {
         const parent = stage.parentElement;
-        if (!parent || parent === parkingRef.current || parent === comparePlayer.getMiniTarget()) return;
+        if (!parent || parent === parkingRef.current || parent === comparePlayer.getMiniTarget())
+          return;
         parent.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       });
     };
@@ -205,7 +210,8 @@ export function ComparePlayerHost() {
       },
       exitFullscreen: () => {
         if (pseudoRef.current) leavePseudo();
-        else if (document.fullscreenElement === root) void document.exitFullscreen().catch(() => undefined);
+        else if (document.fullscreenElement === root)
+          void document.exitFullscreen().catch(() => undefined);
       },
     });
     const onChange = () => {
@@ -278,18 +284,27 @@ export function ComparePlayerHost() {
     let last = PARKED;
 
     const choose = (): { element: HTMLElement; placement: Placement } => {
-      if (performanceId === null || comparePlayer.getState().focus) return { element: parking, placement: PARKED };
+      if (performanceId === null || comparePlayer.getState().focus)
+        return { element: parking, placement: PARKED };
       for (const slot of comparePlayer.getSlots()) {
         if (slot.performanceId === performanceId && isShown(slot.element)) {
           return {
             element: slot.element,
-            placement: { kind: 'slot', fit: slot.fit, radius: slot.radius, controls: slot.controls },
+            placement: {
+              kind: 'slot',
+              fit: slot.fit,
+              radius: slot.radius,
+              controls: slot.controls,
+            },
           };
         }
       }
       const mini = comparePlayer.getMiniTarget();
       if (mini && isShown(mini)) {
-        return { element: mini, placement: { kind: 'mini', fit: 'cover', radius: 6, controls: false } };
+        return {
+          element: mini,
+          placement: { kind: 'mini', fit: 'cover', radius: 6, controls: false },
+        };
       }
       return { element: parking, placement: PARKED };
     };
@@ -298,7 +313,10 @@ export function ComparePlayerHost() {
       // 전체 화면(또는 청하는 중)이면 영상이 온전히 보이는 상태라 화면들이 조작부를 겹칠 수 있게 'slot'으로 둔다.
       // 전체 화면 자리에서 꺼내면 전체 화면이 풀리므로 그대로 둔다
       const root = fullscreenRootRef.current;
-      if (root && (enteringRef.current || pseudoRef.current || document.fullscreenElement === root)) {
+      if (
+        root &&
+        (enteringRef.current || pseudoRef.current || document.fullscreenElement === root)
+      ) {
         comparePlayer.reportSurface('slot');
         return;
       }
@@ -376,14 +394,22 @@ export function ComparePlayerHost() {
             }
           }}
           onPlay={() => performanceId !== null && comparePlayer.reportPlaying(performanceId, true)}
-          onPause={() => performanceId !== null && comparePlayer.reportPlaying(performanceId, false)}
+          onPause={() =>
+            performanceId !== null && comparePlayer.reportPlaying(performanceId, false)
+          }
           onEnded={() => performanceId !== null && comparePlayer.reportEnded(performanceId)}
           onTimeUpdate={(event) =>
             performanceId !== null &&
             readyFor.current === performanceId &&
-            comparePlayer.reportProgress(performanceId, event.currentTarget.currentTime, event.currentTarget.duration || 0)
+            comparePlayer.reportProgress(
+              performanceId,
+              event.currentTarget.currentTime,
+              event.currentTarget.duration || 0
+            )
           }
-          onVolumeChange={(event) => comparePlayer.syncVolume(event.currentTarget.volume, event.currentTarget.muted)}
+          onVolumeChange={(event) =>
+            comparePlayer.syncVolume(event.currentTarget.volume, event.currentTarget.muted)
+          }
           onError={() => setFailed(true)}
         />
       ) : null}

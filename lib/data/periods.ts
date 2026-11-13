@@ -31,7 +31,8 @@ export const PERIODS: Period[] = [
     startYear: 1400,
     endYear: 1600,
     color: '#0f766e',
-    description: '르네상스 음악은 성부 간 균형과 모방 대위법이 정교해지고 세속 성악곡이 널리 발전한 시대입니다.',
+    description:
+      '르네상스 음악은 성부 간 균형과 모방 대위법이 정교해지고 세속 성악곡이 널리 발전한 시대입니다.',
     characteristics: [
       '모방 대위법의 발달',
       '성부 간 균형과 부드러운 음향',
@@ -47,7 +48,8 @@ export const PERIODS: Period[] = [
     startYear: 1600,
     endYear: 1750,
     color: '#9333ea',
-    description: '바로크 음악은 화려한 장식과 극적인 대비가 특징입니다. 대위법이 발달했으며, 협주곡과 푸가 등의 형식이 완성되었습니다.',
+    description:
+      '바로크 음악은 화려한 장식과 극적인 대비가 특징입니다. 대위법이 발달했으며, 협주곡과 푸가 등의 형식이 완성되었습니다.',
     characteristics: [
       '정교한 대위법과 푸가',
       '통주저음(Basso Continuo) 사용',
@@ -63,7 +65,8 @@ export const PERIODS: Period[] = [
     startYear: 1730,
     endYear: 1820,
     color: '#3b82f6',
-    description: '고전주의 음악은 명료함과 균형미를 추구합니다. 소나타 형식이 확립되었으며, 교향곡과 현악 사중주가 발전했습니다.',
+    description:
+      '고전주의 음악은 명료함과 균형미를 추구합니다. 소나타 형식이 확립되었으며, 교향곡과 현악 사중주가 발전했습니다.',
     characteristics: [
       '명료한 형식과 균형미',
       '소나타 형식의 확립',
@@ -79,7 +82,8 @@ export const PERIODS: Period[] = [
     startYear: 1800,
     endYear: 1910,
     color: '#ec4899',
-    description: '낭만주의 음악은 개인의 감정과 상상력을 중시합니다. 형식의 자유로움과 화성의 확장, 민족주의 음악이 나타났습니다.',
+    description:
+      '낭만주의 음악은 개인의 감정과 상상력을 중시합니다. 형식의 자유로움과 화성의 확장, 민족주의 음악이 나타났습니다.',
     characteristics: [
       '개인의 감정과 상상력 강조',
       '화성의 확장과 불협화음 사용',
@@ -95,7 +99,8 @@ export const PERIODS: Period[] = [
     startYear: 1890,
     endYear: new Date().getFullYear(),
     color: '#22c55e',
-    description: '근현대 음악은 전통적 조성에서 벗어나 새로운 음악 언어를 탐구합니다. 인상주의, 표현주의, 신고전주의 등 다양한 사조가 나타났습니다.',
+    description:
+      '근현대 음악은 전통적 조성에서 벗어나 새로운 음악 언어를 탐구합니다. 인상주의, 표현주의, 신고전주의 등 다양한 사조가 나타났습니다.',
     characteristics: [
       '조성의 해체와 무조음악',
       '인상주의적 색채감',

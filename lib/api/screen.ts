@@ -23,7 +23,12 @@ import type {
 
 export const SCREEN_TITLE_KINDS: readonly ScreenTitleKind[] = ['MOVIE', 'SERIES', 'ANIME'];
 const USAGES: readonly ScreenCueUsage[] = ['SCORE', 'SOURCE', 'PERFORMED', 'TITLES'];
-const THUMB_QUALITIES: readonly ScreenThumbQuality[] = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault'];
+const THUMB_QUALITIES: readonly ScreenThumbQuality[] = [
+  'maxresdefault',
+  'sddefault',
+  'hqdefault',
+  'mqdefault',
+];
 const SCENE_FRAMES: readonly ScreenSceneFrame[] = ['default', '1', '2', '3'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,7 +48,9 @@ function optionalNumber(value: unknown): number | null {
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
 }
 
 function thumbQuality(value: unknown): ScreenThumbQuality | null {
@@ -59,7 +66,10 @@ function parseThumbs(jpg: unknown, webp: unknown): ScreenThumbs {
 }
 
 /** 포스터는 KMDb 파일 서버의 https 주소이고 출처가 같이 올 때만 쓴다 */
-function parsePoster(item: Record<string, unknown>): { posterUrl: string | null; posterCredit: string | null } {
+function parsePoster(item: Record<string, unknown>): {
+  posterUrl: string | null;
+  posterCredit: string | null;
+} {
   const url = optionalText(item.posterUrl);
   const credit = optionalText(item.posterCredit);
   return url && credit && url.startsWith('https://file.koreafilm.or.kr/')
@@ -106,7 +116,8 @@ function parseClip(value: unknown): ScreenOfficialClip | null {
     title: text(value.title),
     thumbs: parseThumbs(value.thumbJpg, value.thumbWebp),
     sceneFrame:
-      typeof value.sceneFrame === 'string' && (SCENE_FRAMES as readonly string[]).includes(value.sceneFrame)
+      typeof value.sceneFrame === 'string' &&
+      (SCENE_FRAMES as readonly string[]).includes(value.sceneFrame)
         ? (value.sceneFrame as ScreenSceneFrame)
         : null,
   };
@@ -183,7 +194,9 @@ async function get(path: string, failure: string): Promise<unknown> {
 }
 
 export const ScreenAPI = {
-  async getTitles(params: { kind?: ScreenTitleKind; offset?: number; limit?: number } = {}): Promise<ScreenTitlePage> {
+  async getTitles(
+    params: { kind?: ScreenTitleKind; offset?: number; limit?: number } = {}
+  ): Promise<ScreenTitlePage> {
     const query = new URLSearchParams();
     if (params.kind) query.append('kind', params.kind);
     if (params.offset) query.append('offset', String(params.offset));
@@ -192,12 +205,19 @@ export const ScreenAPI = {
     return parsePage(await get(`/screen-titles${suffix}`, '영화 목록을 불러오지 못했습니다.'));
   },
 
-  async search(params: { q: string; kind?: ScreenTitleKind; offset?: number; limit?: number }): Promise<ScreenTitlePage> {
+  async search(params: {
+    q: string;
+    kind?: ScreenTitleKind;
+    offset?: number;
+    limit?: number;
+  }): Promise<ScreenTitlePage> {
     const query = new URLSearchParams({ q: params.q });
     if (params.kind) query.append('kind', params.kind);
     if (params.offset) query.append('offset', String(params.offset));
     if (params.limit) query.append('limit', String(params.limit));
-    return parsePage(await get(`/screen-titles/search?${query.toString()}`, '영화를 찾지 못했습니다.'));
+    return parsePage(
+      await get(`/screen-titles/search?${query.toString()}`, '영화를 찾지 못했습니다.')
+    );
   },
 
   /** 없거나 공개되지 않은 작품이면 null */
@@ -213,7 +233,10 @@ export const ScreenAPI = {
   },
 
   async getPieceCues(pieceId: number): Promise<PieceScreenCue[]> {
-    const payload = await get(`/pieces/${pieceId}/screen-cues`, '이 곡이 나온 작품을 불러오지 못했습니다.');
+    const payload = await get(
+      `/pieces/${pieceId}/screen-cues`,
+      '이 곡이 나온 작품을 불러오지 못했습니다.'
+    );
     if (!Array.isArray(payload)) return [];
     return payload.filter(isRecord).map((item) => ({
       cueId: Number(item.cueId),
@@ -236,7 +259,10 @@ export const ScreenAPI = {
     const query = new URLSearchParams();
     if (params.offset) query.append('offset', String(params.offset));
     if (params.limit) query.append('limit', String(params.limit));
-    const payload = await get(`/screen-works?${query.toString()}`, '영화에 나온 곡을 불러오지 못했습니다.');
+    const payload = await get(
+      `/screen-works?${query.toString()}`,
+      '영화에 나온 곡을 불러오지 못했습니다.'
+    );
     if (!isRecord(payload) || !Array.isArray(payload.items)) {
       throw new Error('영화에 나온 곡 응답 형식이 올바르지 않습니다.');
     }
@@ -256,7 +282,10 @@ export const ScreenAPI = {
   },
 
   async getFeaturedCues(limit = 12): Promise<FeaturedScreenCue[]> {
-    const payload = await get(`/screen-cues/featured?limit=${limit}`, '바로 들을 대목을 불러오지 못했습니다.');
+    const payload = await get(
+      `/screen-cues/featured?limit=${limit}`,
+      '바로 들을 대목을 불러오지 못했습니다.'
+    );
     if (!Array.isArray(payload)) return [];
     return payload.filter(isRecord).map((item) => ({
       cueId: Number(item.cueId),
@@ -277,14 +306,18 @@ export const ScreenAPI = {
   },
 
   async getStillCandidates(titleId: number): Promise<ScreenStillCandidates> {
-    const response = await authenticatedFetch(`${API_BASE_URL}/admin/screen-titles/${titleId}/stills`);
+    const response = await authenticatedFetch(
+      `${API_BASE_URL}/admin/screen-titles/${titleId}/stills`
+    );
     if (!response.ok) throw new Error(`스틸 후보를 불러오지 못했습니다. (${response.status})`);
     const payload: unknown = await response.json();
     if (!isRecord(payload)) throw new Error('스틸 후보 응답 형식이 올바르지 않습니다.');
     return {
       titleId: Number(payload.titleId),
       backdropPath: optionalText(payload.backdropPath),
-      stillPaths: Array.isArray(payload.stillPaths) ? payload.stillPaths.filter((path): path is string => typeof path === 'string') : [],
+      stillPaths: Array.isArray(payload.stillPaths)
+        ? payload.stillPaths.filter((path): path is string => typeof path === 'string')
+        : [],
       cues: Array.isArray(payload.cues)
         ? payload.cues.filter(isRecord).map((cue) => ({
             id: Number(cue.id),

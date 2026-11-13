@@ -27,7 +27,9 @@ function daysSince(releaseDate: string | null | undefined): number | null {
 }
 
 /** 카드 위 상태 배지: 발매 예정, 최근 30일 안 발매. 값은 한국어 표시이니 그릴 때 t(badge) 로 옮긴다 */
-export function albumBadge(album: Pick<RecordingListItem, 'releaseDate' | 'isPreRelease'>): string | null {
+export function albumBadge(
+  album: Pick<RecordingListItem, 'releaseDate' | 'isPreRelease'>
+): string | null {
   const since = daysSince(album.releaseDate);
   if (album.isPreRelease || (since !== null && since < 0)) return msg('발매 예정');
   if (since !== null && since <= NEW_ALBUM_DAYS) return msg('새 앨범');
@@ -58,16 +60,25 @@ export function AlbumCard({ album, width, inRepertoire = false, onPress }: Album
       })}
       style={{ width }}
       className="rounded-md web:transition-opacity web:hover:opacity-90">
-      <RepertoireThumb active={inRepertoire} shape="square" badgeSize={Math.max(18, Math.round(width / 8))}>
+      <RepertoireThumb
+        active={inRepertoire}
+        shape="square"
+        badgeSize={Math.max(18, Math.round(width / 8))}>
         <View>
           <EntityThumb name={album.title} image={album.coverUrl} shape="square" size={width} />
           {badge ? (
-            <Badge tone={badge === '발매 예정' ? 'info' : 'accent'} label={t(badge)} className="absolute left-2 top-2 bg-background/90" />
+            <Badge
+              tone={badge === '발매 예정' ? 'info' : 'accent'}
+              label={t(badge)}
+              className="absolute left-2 top-2 bg-background/90"
+            />
           ) : null}
         </View>
       </RepertoireThumb>
       <View className="mt-2.5 flex-row items-start gap-1">
-        <Text numberOfLines={2} className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
+        <Text
+          numberOfLines={2}
+          className="min-w-0 flex-1 text-body-sm font-semibold text-foreground">
           {album.title}
         </Text>
         {inRepertoire ? <RepertoireMark className="mt-1" /> : null}

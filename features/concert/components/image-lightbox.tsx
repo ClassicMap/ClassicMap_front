@@ -23,7 +23,13 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDecay, withTiming } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDecay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ZOOM_STEPS = [1, 1.5, 2, 3, 4] as const;
@@ -92,7 +98,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const stepZoom = React.useCallback((direction: 1 | -1) => {
     setZoom((value) => {
       const steps = ZOOM_STEPS as readonly number[];
-      if (direction > 0) return steps.find((step) => step > value + 0.01) ?? steps[steps.length - 1];
+      if (direction > 0)
+        return steps.find((step) => step > value + 0.01) ?? steps[steps.length - 1];
       return [...steps].reverse().find((step) => step < value - 0.01) ?? 1;
     });
   }, []);
@@ -116,14 +123,19 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const topBar = 56 + insets.top;
   const viewportWidth = windowWidth;
   // 웹은 아래 조작 안내 한 줄 높이도 뺀다
-  const viewportHeight = windowHeight - topBar - insets.bottom - (Platform.OS === 'web' && windowWidth >= 768 ? 32 : 0);
+  const viewportHeight =
+    windowHeight - topBar - insets.bottom - (Platform.OS === 'web' && windowWidth >= 768 ? 32 : 0);
   const wide = windowWidth >= 768;
   const gutter = Platform.OS === 'web' ? (wide ? 48 : 12) : 0;
 
   // 기본 크기: 긴 이미지는 폭에 맞춤, 나머지는 화면 안에 다 들어오게
   let fitWidth = 0;
   if (ratio && natural) {
-    const maxWidth = Math.min(viewportWidth - gutter * 2, MAX_FIT_WIDTH, Platform.OS === 'web' ? natural.width : Infinity);
+    const maxWidth = Math.min(
+      viewportWidth - gutter * 2,
+      MAX_FIT_WIDTH,
+      Platform.OS === 'web' ? natural.width : Infinity
+    );
     const long = 1 / ratio > LONG_RATIO;
     fitWidth = long ? maxWidth : Math.min(maxWidth, (viewportHeight - gutter) * ratio);
   }
@@ -131,13 +143,20 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const imageHeight = ratio ? imageWidth / ratio : 0;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent>
       {/* 모달은 앱 루트 밖에 그려져서 제스처 루트를 따로 둔다 */}
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'rgba(6, 6, 6, 0.97)' }}>
         <View
           style={{ paddingTop: insets.top, height: topBar }}
           className="flex-row items-center justify-between gap-3 px-3">
-          <Text className="w-20 pl-2 text-body-sm font-semibold text-white/80" accessibilityLiveRegion="polite">
+          <Text
+            className="w-20 pl-2 text-body-sm font-semibold text-white/80"
+            accessibilityLiveRegion="polite">
             {count > 1 ? `${current + 1} / ${count}` : ''}
           </Text>
           <View className="flex-row items-center gap-1">
@@ -154,14 +173,19 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
                     {Math.round(zoom * 100)}%
                   </Text>
                 </Pressable>
-                <BarButton label={t('확대')} onPress={() => stepZoom(1)} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
+                <BarButton
+                  label={t('확대')}
+                  onPress={() => stepZoom(1)}
+                  disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
                   <Icon as={PlusIcon} size={18} className="text-white" />
                 </BarButton>
                 <View className="mx-1.5 h-5 w-px bg-white/20" />
               </>
             ) : null}
             {uri ? (
-              <BarButton label={t('원본 이미지 새 창으로 열기')} onPress={() => Linking.openURL(uri).catch(() => undefined)}>
+              <BarButton
+                label={t('원본 이미지 새 창으로 열기')}
+                onPress={() => Linking.openURL(uri).catch(() => undefined)}>
                 <Icon as={ExternalLinkIcon} size={17} className="text-white" />
               </BarButton>
             ) : null}
@@ -174,8 +198,12 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
         <View className="flex-1">
           {failed ? (
             <View className="flex-1 items-center justify-center gap-2 px-6">
-              <Text className="text-body font-semibold text-white">{t('이미지를 불러오지 못했어요')}</Text>
-              <Text className="text-center text-caption text-white/60">{t('원본 열기로 판매처 사이트의 이미지를 확인해 주세요.')}</Text>
+              <Text className="text-body font-semibold text-white">
+                {t('이미지를 불러오지 못했어요')}
+              </Text>
+              <Text className="text-center text-caption text-white/60">
+                {t('원본 열기로 판매처 사이트의 이미지를 확인해 주세요.')}
+              </Text>
             </View>
           ) : !ratio ? null : Platform.OS === 'web' ? (
             <WebZoomCanvas
@@ -255,7 +283,11 @@ function NavButton({ side, onPress }: { side: 'left' | 'right'; onPress: () => v
       accessibilityLabel={side === 'left' ? t('이전 이미지') : t('다음 이미지')}
       style={{ position: 'absolute', top: '50%', marginTop: -24, [side]: 12 }}
       className="size-12 items-center justify-center rounded-full bg-black/55 active:bg-black/75 web:hover:bg-black/75">
-      <Icon as={side === 'left' ? ChevronLeftIcon : ChevronRightIcon} size={24} className="text-white" />
+      <Icon
+        as={side === 'left' ? ChevronLeftIcon : ChevronRightIcon}
+        size={24}
+        className="text-white"
+      />
     </Pressable>
   );
 }
@@ -275,11 +307,25 @@ interface WebZoomCanvasProps {
  * 웹 확대 캔버스. 스크롤 영역 안에 확대한 크기로 이미지를 두고,
  * 누른 지점이 화면 가운데 오도록 스크롤을 맞춘다. 드래그는 스크롤 이동으로 바꾼다.
  */
-function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }: WebZoomCanvasProps) {
+function WebZoomCanvas({
+  uri,
+  width,
+  height,
+  zoom,
+  padding,
+  onZoom,
+  onBackdrop,
+}: WebZoomCanvasProps) {
   useLocale();
   const scrollRef = React.useRef<View>(null);
   const anchor = React.useRef<{ x: number; y: number; from: number } | null>(null);
-  const drag = React.useRef<{ x: number; y: number; left: number; top: number; moved: boolean } | null>(null);
+  const drag = React.useRef<{
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+    moved: boolean;
+  } | null>(null);
   const suppressClick = React.useRef(false);
 
   const element = () => scrollRef.current as unknown as HTMLElement | null;
@@ -346,7 +392,13 @@ function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }
           onPointerDown: (event: PointerEvent) => {
             const node = element();
             if (!node) return;
-            drag.current = { x: event.nativeEvent.clientX, y: event.nativeEvent.clientY, left: node.scrollLeft, top: node.scrollTop, moved: false };
+            drag.current = {
+              x: event.nativeEvent.clientX,
+              y: event.nativeEvent.clientY,
+              left: node.scrollLeft,
+              top: node.scrollTop,
+              moved: false,
+            };
           },
           onPointerMove: (event: PointerEvent) => {
             const node = element();
@@ -374,13 +426,21 @@ function WebZoomCanvas({ uri, width, height, zoom, padding, onZoom, onBackdrop }
       <Pressable
         onPress={onBackdrop}
         accessibilityLabel={t('닫기')}
-        style={{ minWidth: '100%', minHeight: '100%', alignItems: 'center', justifyContent: 'center', padding }}
+        style={{
+          minWidth: '100%',
+          minHeight: '100%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding,
+        }}
         className="web:cursor-default">
         <Pressable
           onPress={onImagePress}
           accessibilityRole="imagebutton"
           accessibilityLabel={zoom > 1 ? t('원래 크기로') : t('확대하기')}
-          className={cn(zoom > 1 ? 'web:cursor-grab web:active:cursor-grabbing' : 'web:cursor-zoom-in')}>
+          className={cn(
+            zoom > 1 ? 'web:cursor-grab web:active:cursor-grabbing' : 'web:cursor-zoom-in'
+          )}>
           <Image
             source={{ uri }}
             style={{ width, height }}
@@ -411,7 +471,14 @@ interface NativeZoomCanvasProps {
  * 네이티브 확대 캔버스. 확대·이동을 한 변환(이동 → 확대)으로 처리해 iOS와 Android가 같게 움직인다.
  * 이미지 중심이 화면 중심에 오는 좌표계라, 이동 한계는 넘치는 크기의 절반이다.
  */
-function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, onSwipe }: NativeZoomCanvasProps) {
+function NativeZoomCanvas({
+  uri,
+  width,
+  height,
+  viewportWidth,
+  viewportHeight,
+  onSwipe,
+}: NativeZoomCanvasProps) {
   useLocale();
   // 긴 이미지는 위쪽부터 보이게 시작한다
   const startY = Math.max(0, (height - viewportHeight) / 2);
@@ -432,8 +499,12 @@ function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, o
   };
   const settle = () => {
     'worklet';
-    tx.value = withTiming(clamp(tx.value, bound(width, viewportWidth, scale.value)), { duration: 180 });
-    ty.value = withTiming(clamp(ty.value, bound(height, viewportHeight, scale.value)), { duration: 180 });
+    tx.value = withTiming(clamp(tx.value, bound(width, viewportWidth, scale.value)), {
+      duration: 180,
+    });
+    ty.value = withTiming(clamp(ty.value, bound(height, viewportHeight, scale.value)), {
+      duration: 180,
+    });
   };
 
   const pinch = Gesture.Pinch()
@@ -468,11 +539,22 @@ function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, o
       const limitX = bound(width, viewportWidth, scale.value);
       const limitY = bound(height, viewportHeight, scale.value);
       const horizontal = Math.abs(event.translationX) > Math.abs(event.translationY);
-      if (scale.value <= 1.01 && limitX === 0 && horizontal && Math.abs(event.translationX) > SWIPE_DISTANCE) {
+      if (
+        scale.value <= 1.01 &&
+        limitX === 0 &&
+        horizontal &&
+        Math.abs(event.translationX) > SWIPE_DISTANCE
+      ) {
         runOnJS(onSwipe)(event.translationX < 0 ? 1 : -1);
       }
-      tx.value = limitX > 0 ? withDecay({ velocity: event.velocityX, clamp: [-limitX, limitX] }) : withTiming(0, { duration: 180 });
-      ty.value = limitY > 0 ? withDecay({ velocity: event.velocityY, clamp: [-limitY, limitY] }) : withTiming(0, { duration: 180 });
+      tx.value =
+        limitX > 0
+          ? withDecay({ velocity: event.velocityX, clamp: [-limitX, limitX] })
+          : withTiming(0, { duration: 180 });
+      ty.value =
+        limitY > 0
+          ? withDecay({ velocity: event.velocityY, clamp: [-limitY, limitY] })
+          : withTiming(0, { duration: 180 });
     });
 
   // 두 번 톡: numberOfTaps(2)는 탭 간격이 길면 실패해서, 한 번 탭을 시간·거리로 직접 묶는다
@@ -483,7 +565,9 @@ function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, o
       const now = Date.now();
       const prev = lastTap.value;
       const isDouble =
-        now - prev.at < DOUBLE_TAP_MS && Math.abs(event.x - prev.x) < 40 && Math.abs(event.y - prev.y) < 40;
+        now - prev.at < DOUBLE_TAP_MS &&
+        Math.abs(event.x - prev.x) < 40 &&
+        Math.abs(event.y - prev.y) < 40;
       lastTap.value = isDouble ? { at: 0, x: 0, y: 0 } : { at: now, x: event.x, y: event.y };
       if (!isDouble) return;
       if (scale.value > 1.01) {
@@ -514,7 +598,11 @@ function NativeZoomCanvas({ uri, width, height, viewportWidth, viewportHeight, o
         collapsable={false}
         style={{ flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}
         accessibilityHint={t('두 손가락으로 확대하고, 두 번 톡 치면 2배로 커져요')}>
-        <Animated.Image source={{ uri }} resizeMode="contain" style={[{ width, height }, imageStyle]} />
+        <Animated.Image
+          source={{ uri }}
+          resizeMode="contain"
+          style={[{ width, height }, imageStyle]}
+        />
       </View>
     </GestureDetector>
   );

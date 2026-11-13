@@ -155,7 +155,7 @@ export function FormModal({
         <View className="flex-1">
           {/* 패널을 스크림보다 먼저 두어 초점이 패널 안에서 시작하게 하고, 겹침은 z-raised 로 올린다 */}
           <View
-            className="absolute bottom-0 right-0 top-0 z-raised w-[480px] max-w-[100vw] border-l border-border bg-surface-1 animate-in slide-in-from-right duration-base ease-emphasized motion-reduce:animate-none"
+            className="absolute bottom-0 right-0 top-0 z-raised w-[480px] max-w-[100vw] border-l border-border bg-surface-1 duration-base ease-emphasized animate-in slide-in-from-right motion-reduce:animate-none"
             style={PANEL_SHADOW}>
             {header}
             {body}

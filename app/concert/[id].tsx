@@ -11,7 +11,11 @@ import {
 } from '@/features/concert/components/concert-parts';
 import { StarRating } from '@/features/concert/components/star-rating';
 import { FavoriteButton } from '@/features/library/components/favorite-button';
-import { TicketVendorsModal, openVendorUrl, vendorDomain } from '@/features/concert/components/ticket-vendors-modal';
+import {
+  TicketVendorsModal,
+  openVendorUrl,
+  vendorDomain,
+} from '@/features/concert/components/ticket-vendors-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,7 +34,13 @@ import type { TicketVendor } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertCircleIcon, ArrowLeftIcon, EditIcon, ExternalLinkIcon, TrashIcon } from 'lucide-react-native';
+import {
+  AlertCircleIcon,
+  ArrowLeftIcon,
+  EditIcon,
+  ExternalLinkIcon,
+  TrashIcon,
+} from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,9 +54,13 @@ export default function ConcertDetailScreen() {
   const { canEdit, isSignedIn } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
-  const { data: concert, isLoading, isError, refetch, isRefetching } = useConcert(
-    Number.isFinite(concertId) ? concertId : undefined
-  );
+  const {
+    data: concert,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useConcert(Number.isFinite(concertId) ? concertId : undefined);
 
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [userRating, setUserRating] = React.useState(0);
@@ -169,12 +183,16 @@ export default function ConcertDetailScreen() {
   const cast = concert.artists ?? [];
   const bookable = concert.status === 'upcoming' || concert.status === 'ongoing';
   const knownVendors = concert.ticketVendors ?? [];
-  const firstVendor = knownVendors[0]?.vendorName?.trim() || (knownVendors[0] ? vendorDomain(knownVendors[0].vendorUrl) : undefined);
+  const firstVendor =
+    knownVendors[0]?.vendorName?.trim() ||
+    (knownVendors[0] ? vendorDomain(knownVendors[0].vendorUrl) : undefined);
   const ranking = concert.boxofficeRanking;
   const time = concertClock(concert.concertTime);
   const multiDay = concert.endDate && concert.endDate !== concert.startDate;
   const sourceName =
-    concert.dataSource === 'KOPIS' || concert.kopisId ? t('KOPIS 공연예술통합전산망') : 'ClassicMap';
+    concert.dataSource === 'KOPIS' || concert.kopisId
+      ? t('KOPIS 공연예술통합전산망')
+      : 'ClassicMap';
 
   const facts: { label: string; value: string; sub?: string }[] = [
     {
@@ -193,7 +211,11 @@ export default function ConcertDetailScreen() {
 
   const bookButton = bookable ? (
     <View className="gap-1.5">
-      <Button size="lg" className="h-12 rounded-full" onPress={openTickets} disabled={loadingVendors}>
+      <Button
+        size="lg"
+        className="h-12 rounded-full"
+        onPress={openTickets}
+        disabled={loadingVendors}>
         <Text className="text-base font-bold text-primary-foreground">
           {loadingVendors ? t('불러오는 중…') : t('예매하기')}
         </Text>
@@ -201,7 +223,10 @@ export default function ConcertDetailScreen() {
       </Button>
       <Text variant="caption" className="text-center">
         {knownVendors.length > 1
-          ? t('{vendor} 등 예매처 {count}곳 중에서 골라요', { vendor: firstVendor ?? '', count: knownVendors.length })
+          ? t('{vendor} 등 예매처 {count}곳 중에서 골라요', {
+              vendor: firstVendor ?? '',
+              count: knownVendors.length,
+            })
           : firstVendor
             ? t('{vendor} 예매 페이지가 새 창으로 열려요', { vendor: firstVendor })
             : t('예매처로 이동해요')}
@@ -216,7 +241,10 @@ export default function ConcertDetailScreen() {
         <Badge
           label={
             ranking.areaName
-              ? t('{area} 예매 {rank}위', { area: areaName(ranking.areaName), rank: ranking.ranking })
+              ? t('{area} 예매 {rank}위', {
+                  area: areaName(ranking.areaName),
+                  rank: ranking.ranking,
+                })
               : t('예매 {rank}위', { rank: ranking.ranking })
           }
         />
@@ -235,7 +263,10 @@ export default function ConcertDetailScreen() {
             {prices.map((price, index) => (
               <View
                 key={`${price.seat}-${index}`}
-                className={cn('flex-row items-baseline justify-between py-2.5', index < prices.length - 1 && 'border-b border-border')}>
+                className={cn(
+                  'flex-row items-baseline justify-between py-2.5',
+                  index < prices.length - 1 && 'border-b border-border'
+                )}>
                 <Text className="text-body-sm font-semibold text-foreground">{price.seat}</Text>
                 <Text variant="mono" className="text-body-sm text-foreground">
                   {price.price}
@@ -283,8 +314,15 @@ export default function ConcertDetailScreen() {
                 })
               : t('아직 남긴 사람이 없어요.')}
           </Text>
-          <Pressable onPress={askWatched} disabled={hasWatched} className="flex-row items-center gap-3">
-            <StarRating rating={userRating} onRatingChange={hasWatched ? submitRating : undefined} size={24} />
+          <Pressable
+            onPress={askWatched}
+            disabled={hasWatched}
+            className="flex-row items-center gap-3">
+            <StarRating
+              rating={userRating}
+              onRatingChange={hasWatched ? submitRating : undefined}
+              size={24}
+            />
             <Text variant="caption">
               {!isSignedIn
                 ? t('로그인하면 별점을 남길 수 있어요')
@@ -311,7 +349,10 @@ export default function ConcertDetailScreen() {
 
       <Text variant="caption" className="text-foreground-subtle">
         {concert.kopisId
-          ? t('공연 정보 출처: {source} · 공연 ID {id}', { source: sourceName, id: concert.kopisId })
+          ? t('공연 정보 출처: {source} · 공연 ID {id}', {
+              source: sourceName,
+              id: concert.kopisId,
+            })
           : t('공연 정보 출처: {source}', { source: sourceName })}
       </Text>
     </View>
@@ -326,9 +367,21 @@ export default function ConcertDetailScreen() {
         {wide ? (
           <View className="flex-row gap-11">
             <View className="w-[320px] gap-4">
-              <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={320} aspect={4 / 3} />
+              <EntityThumb
+                name={concert.title}
+                image={concert.posterUrl}
+                shape="square"
+                size={320}
+                aspect={4 / 3}
+              />
               {bookButton}
-              <FavoriteButton kind="concerts" id={concert.id} name={concert.title} variant="labeled" className="justify-center" />
+              <FavoriteButton
+                kind="concerts"
+                id={concert.id}
+                name={concert.title}
+                variant="labeled"
+                className="justify-center"
+              />
             </View>
             <View className="min-w-0 flex-1">
               {headerBadges}
@@ -349,8 +402,14 @@ export default function ConcertDetailScreen() {
                     <Text variant="caption" className="font-semibold text-foreground-subtle">
                       {fact.label}
                     </Text>
-                    <Text className="mt-1 text-body font-semibold text-foreground">{fact.value}</Text>
-                    {fact.sub ? <Text variant="caption" className="mt-0.5">{fact.sub}</Text> : null}
+                    <Text className="mt-1 text-body font-semibold text-foreground">
+                      {fact.value}
+                    </Text>
+                    {fact.sub ? (
+                      <Text variant="caption" className="mt-0.5">
+                        {fact.sub}
+                      </Text>
+                    ) : null}
                   </View>
                 ))}
               </View>
@@ -368,13 +427,26 @@ export default function ConcertDetailScreen() {
             </Pressable>
             {/* 첫 화면에서 무엇·언제·어디·얼마가 다 보이게 */}
             <View className="flex-row gap-3.5">
-              <EntityThumb name={concert.title} image={concert.posterUrl} shape="square" size={120} aspect={4 / 3} />
+              <EntityThumb
+                name={concert.title}
+                image={concert.posterUrl}
+                shape="square"
+                size={120}
+                aspect={4 / 3}
+              />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-start justify-between gap-2">
                   {headerBadges}
-                  <FavoriteButton kind="concerts" id={concert.id} name={concert.title} className="-mr-2 -mt-2" />
+                  <FavoriteButton
+                    kind="concerts"
+                    id={concert.id}
+                    name={concert.title}
+                    className="-mr-2 -mt-2"
+                  />
                 </View>
-                <Text className="mt-2 text-[21px] font-extrabold leading-7 text-foreground">{concert.title}</Text>
+                <Text className="mt-2 text-[21px] font-extrabold leading-7 text-foreground">
+                  {concert.title}
+                </Text>
                 <OriginalLanguageNote className="mt-1.5" />
               </View>
             </View>
@@ -405,7 +477,9 @@ export default function ConcertDetailScreen() {
 
       {/* 모바일: 예매 버튼은 항상 엄지가 닿는 곳에 */}
       {!wide && bookButton ? (
-        <View className="border-t border-border bg-background px-4 pt-2.5" style={{ paddingBottom: insets.bottom + 10 }}>
+        <View
+          className="border-t border-border bg-background px-4 pt-2.5"
+          style={{ paddingBottom: insets.bottom + 10 }}>
           {bookButton}
         </View>
       ) : null}

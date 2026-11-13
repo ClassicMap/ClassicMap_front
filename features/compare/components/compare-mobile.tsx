@@ -1,12 +1,20 @@
 import { FavoriteButton } from '@/features/library/components/favorite-button';
 import { ScrollShelf } from '@/components/shared/shelf';
-import { FeaturedPairLink, PerformanceNote, resolveFeaturedPair } from '@/features/compare/components/listening-note';
+import {
+  FeaturedPairLink,
+  PerformanceNote,
+  resolveFeaturedPair,
+} from '@/features/compare/components/listening-note';
 import { LoudnessSparkline, sharedFloorDb } from '@/features/compare/components/loudness-curve';
 import { SectionStaff } from '@/features/compare/components/section-staff';
 import { SectorGuide, SectorTypeBadge } from '@/features/compare/components/sector-guide';
 import { PieceScreenStrip } from '@/features/film/components/piece-screen-strip';
 import { RepertoireMark, RepertoireThumb } from '@/features/library/components/repertoire-badge';
-import { countRepertoirePieces, Faces, sortComposersByRepertoire } from '@/features/compare/components/compare-catalog';
+import {
+  countRepertoirePieces,
+  Faces,
+  sortComposersByRepertoire,
+} from '@/features/compare/components/compare-catalog';
 import { useRepertoireIds } from '@/features/library/hooks/use-repertoire-ids';
 import { repertoireFirst } from '@/features/library/lib/library';
 import { MobileFullscreen } from '@/features/compare/components/mobile-fullscreen';
@@ -82,7 +90,11 @@ interface CompareMobileCatalogProps {
 }
 
 /** 모바일 비교 첫 화면: 비교할 수 있는 작품이 많은 작곡가부터 목록으로. 위 검색 칸으로 바로 찾는다 */
-export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece }: CompareMobileCatalogProps) {
+export function CompareMobileCatalog({
+  onOpenGenre,
+  onOpenComposer,
+  onOpenPiece,
+}: CompareMobileCatalogProps) {
   const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const genreCount = useGenreShelves().shelves.length;
@@ -93,7 +105,12 @@ export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece 
     [comparable.data?.pieces, repertoire.pieces, locale]
   );
   const composers = React.useMemo(
-    () => sortComposersByRepertoire(comparable.data?.composers ?? [], repertoire.composers, repertoirePieces),
+    () =>
+      sortComposersByRepertoire(
+        comparable.data?.composers ?? [],
+        repertoire.composers,
+        repertoirePieces
+      ),
     [comparable.data?.composers, repertoire.composers, repertoirePieces, locale]
   );
   const [query, setQuery] = React.useState('');
@@ -110,7 +127,12 @@ export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece 
       contentContainerClassName="px-4 pb-24 pt-2"
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      refreshControl={<RefreshControl refreshing={comparable.isRefetching} onRefresh={() => comparable.refetch()} />}>
+      refreshControl={
+        <RefreshControl
+          refreshing={comparable.isRefetching}
+          onRefresh={() => comparable.refetch()}
+        />
+      }>
       <Text variant="title1">{t('비교')}</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
         {t('같은 구간을 연주자마다 비교해요.')}
@@ -177,16 +199,29 @@ export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece 
                 accessibilityRole="link"
                 accessibilityLabel={
                   inRepertoire
-                    ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
-                    : t('{name}, 비교할 수 있는 작품 {count}곡', { name: composer.composerName, count: composer.pieceCount })
+                    ? t('{name}, 레퍼토리에 있어요, 비교할 수 있는 작품 {count}곡', {
+                        name: composer.composerName,
+                        count: composer.pieceCount,
+                      })
+                    : t('{name}, 비교할 수 있는 작품 {count}곡', {
+                        name: composer.composerName,
+                        count: composer.pieceCount,
+                      })
                 }
                 className="-mx-2 flex-row items-center gap-3.5 rounded-lg px-2 py-2.5 active:bg-surface-2">
                 <RepertoireThumb active={inRepertoire} badgeSize={18}>
-                  <EntityThumb name={composer.composerName} image={composer.composerAvatarUrl} shape="circle" size={56} />
+                  <EntityThumb
+                    name={composer.composerName}
+                    image={composer.composerAvatarUrl}
+                    shape="circle"
+                    size={56}
+                  />
                 </RepertoireThumb>
                 <View className="min-w-0 flex-1">
                   <View className="flex-row items-center gap-1">
-                    <Text numberOfLines={1} className="shrink text-body-sm font-semibold text-foreground">
+                    <Text
+                      numberOfLines={1}
+                      className="shrink text-body-sm font-semibold text-foreground">
                       {composer.composerName}
                     </Text>
                     {inRepertoire ? <RepertoireMark /> : null}
@@ -195,7 +230,10 @@ export function CompareMobileCatalog({ onOpenGenre, onOpenComposer, onOpenPiece 
                     {t('비교할 수 있는 작품 {count}곡', { count: composer.pieceCount })}
                   </Text>
                   {repertoirePieceCount > 0 ? (
-                    <Text variant="caption" numberOfLines={1} className="mt-0.5 font-semibold text-primary">
+                    <Text
+                      variant="caption"
+                      numberOfLines={1}
+                      className="mt-0.5 font-semibold text-primary">
                       {t('레퍼토리 작품 {count}곡', { count: repertoirePieceCount })}
                     </Text>
                   ) : null}
@@ -223,14 +261,21 @@ interface CompareMobileComposerPiecesProps {
 }
 
 /** 모바일 비교 둘째 단: 한 작곡가의 비교할 수 있는 작품 2열 */
-export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: CompareMobileComposerPiecesProps) {
+export function CompareMobileComposerPieces({
+  composerId,
+  onBack,
+  onOpen,
+}: CompareMobileComposerPiecesProps) {
   const { locale } = useLocale();
   const scrollInsets = useTabScrollInsets();
   const catalog = useComparisonPieces(composerId);
   const repertoire = useRepertoireIds();
   // 레퍼토리에 담은 작품을 위로. 나머지는 연주자 많은 순 그대로
   const pieces = React.useMemo(
-    () => repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) => repertoire.pieces.has(piece.pieceId)),
+    () =>
+      repertoireFirst(catalog.data?.pages.flat() ?? [], (piece) =>
+        repertoire.pieces.has(piece.pieceId)
+      ),
     [catalog.data, repertoire.pieces, locale]
   );
   const summary = useComparableComposers().data?.byId.get(composerId);
@@ -243,7 +288,9 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
       {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName="px-4 pb-24"
-      refreshControl={<RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />}>
+      refreshControl={
+        <RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />
+      }>
       <BackButton onPress={onBack} />
       <View className="mt-4 flex-row items-center gap-4">
         {name ? (
@@ -306,14 +353,27 @@ export function CompareMobileComposerPieces({ composerId, onBack, onOpen }: Comp
               accessibilityRole="link"
               accessibilityLabel={
                 repertoire.pieces.has(piece.pieceId)
-                  ? t('{name} {title}, 레퍼토리에 있어요 비교하기', { name: piece.composerName, title: piece.pieceTitle })
-                  : t('{name} {title} 비교하기', { name: piece.composerName, title: piece.pieceTitle })
+                  ? t('{name} {title}, 레퍼토리에 있어요 비교하기', {
+                      name: piece.composerName,
+                      title: piece.pieceTitle,
+                    })
+                  : t('{name} {title} 비교하기', {
+                      name: piece.composerName,
+                      title: piece.pieceTitle,
+                    })
               }
               className="-mx-2 flex-row items-center gap-3 border-b border-border px-2 py-3.5 active:bg-surface-2">
-              <PieceArt coverVideoId={piece.coverVideoId} fallbackImage={piece.composerAvatarUrl} fallbackName={piece.composerName} size={48} />
+              <PieceArt
+                coverVideoId={piece.coverVideoId}
+                fallbackImage={piece.composerAvatarUrl}
+                fallbackName={piece.composerName}
+                size={48}
+              />
               <View className="min-w-0 flex-1">
                 <View className="flex-row items-center gap-1.5">
-                  <Text numberOfLines={2} className="shrink text-body-sm font-semibold text-foreground">
+                  <Text
+                    numberOfLines={2}
+                    className="shrink text-body-sm font-semibold text-foreground">
                     {piece.pieceTitle}
                   </Text>
                   {repertoire.pieces.has(piece.pieceId) ? <RepertoireMark /> : null}
@@ -368,15 +428,26 @@ interface CompareMobilePieceProps {
  * 모바일 작품 비교 (1차 시안 모바일 비교): 구간 칩 → 영상 한 개 → 연주자 목록.
  * 영상은 고른 연주 하나만 불러온다. 웹은 잘라 둔 클립, 네이티브는 YouTube 원본의 그 구간.
  */
-export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSelectSector, onFocus }: CompareMobilePieceProps) {
+export function CompareMobilePiece({
+  pieceId,
+  composerId,
+  sectorId,
+  onBack,
+  onSelectSector,
+  onFocus,
+}: CompareMobilePieceProps) {
   const { locale } = useLocale();
   const router = useRouter();
   const headerInset = useTabHeaderInset();
   const scrollInsets = useTabScrollInsets();
   const { canEdit } = useAuth();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
-  const sectors = React.useMemo(() => sortComparisonSectors(sectorsQuery.data ?? []), [sectorsQuery.data, locale]);
-  const activeSector = sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
+  const sectors = React.useMemo(
+    () => sortComparisonSectors(sectorsQuery.data ?? []),
+    [sectorsQuery.data, locale]
+  );
+  const activeSector =
+    sectors.find((sector) => sector.id === sectorId) ?? defaultComparisonSector(sectors);
   const performancesQuery = useSectorComparisonPerformances(activeSector?.id);
   // 탭을 옮겨도 이 화면은 뒤에 살아 있다. 재생 바를 따라 구간을 옮기는 건 보일 때만
   const screenFocused = useIsFocused();
@@ -393,16 +464,23 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   const pieceInfo = useComparisonPiece(pieceId, composerId ?? first?.composerId).data;
   const goBack = () => onBack(composerId ?? first?.composerId);
   const images = React.useMemo(
-    () => new Map((pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])),
+    () =>
+      new Map(
+        (pieceInfo?.performers ?? []).map((performer) => [performer.artistId, performer.imageUrl])
+      ),
     [pieceInfo?.performers, locale]
   );
   const imageOf = (performance: ComparisonPerformance) =>
-    primaryCredit(performance)?.imageUrl ?? images.get(primaryCredit(performance)?.artistId ?? 0) ?? null;
+    primaryCredit(performance)?.imageUrl ??
+    images.get(primaryCredit(performance)?.artistId ?? 0) ??
+    null;
 
   // 고른 연주는 전역 재생 스토어에 둔다. 연주자를 오가도 각자 듣던 위치에서 이어진다
   const current = useComparePlayer((state) => state.current);
   const activeId =
-    current && current.pieceId === pieceId && current.sectorId === activeSector?.id ? current.performanceId : null;
+    current && current.pieceId === pieceId && current.sectorId === activeSector?.id
+      ? current.performanceId
+      : null;
   // 1:1 비교 고르기: 지금 연주(A)는 고정, 다른 연주 하나를 고르면 집중 비교로 간다
   const [picking, setPicking] = React.useState(false);
   const canFocus =
@@ -456,7 +534,10 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   // 재생 바(미니 플레이어)의 이전·다음 곡으로 이 작품의 다른 구간이 재생되면 화면도 그 구간으로 따라간다
   useFollowSongNav(pieceId, activeSector?.id, onSelectSector, screenFocused);
   // 추천 비교: 두 연주가 이 구간에서 모두 재생될 때만 보인다
-  const featured = resolveFeaturedPair(activeSector?.featuredPair ?? null, performances.filter(isPlayablePerformance));
+  const featured = resolveFeaturedPair(
+    activeSector?.featuredPair ?? null,
+    performances.filter(isPlayablePerformance)
+  );
 
   const recordRecent = useRecordRecentPiece();
   React.useEffect(() => {
@@ -477,7 +558,15 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         sectorName: activeSector.names?.sectorName,
       },
     });
-  }, [pieceId, first, activeSector, pieceInfo?.composerAvatarUrl, pieceInfo?.genre, pieceInfo?.coverVideoId, recordRecent]);
+  }, [
+    pieceId,
+    first,
+    activeSector,
+    pieceInfo?.composerAvatarUrl,
+    pieceInfo?.genre,
+    pieceInfo?.coverVideoId,
+    recordRecent,
+  ]);
 
   const active = performances.find((performance) => performance.id === activeId);
   const preview = active ?? performances.find((performance) => performance.clipStatus === 'ready');
@@ -509,19 +598,28 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
   }
 
   return (
-    <ScrollView {...scrollInsets} className="flex-1 bg-background" contentContainerClassName="px-4 pb-28">
+    <ScrollView
+      {...scrollInsets}
+      className="flex-1 bg-background"
+      contentContainerClassName="px-4 pb-28">
       <View className="flex-row items-center justify-between">
         <BackButton onPress={goBack} />
         <View className="mt-3 flex-row items-center gap-1">
           {canEdit ? (
             <Pressable
-              onPress={() => router.push(`/compare-admin?composerId=${composerId ?? first?.composerId ?? ''}&pieceId=${pieceId}` as Href)}
+              onPress={() =>
+                router.push(
+                  `/compare-admin?composerId=${composerId ?? first?.composerId ?? ''}&pieceId=${pieceId}` as Href
+                )
+              }
               accessibilityLabel={t('구간·연주 관리')}
               className="size-11 items-center justify-center rounded-full">
               <Icon as={SettingsIcon} size={18} className="text-foreground-muted" />
             </Pressable>
           ) : null}
-          {title ? <FavoriteButton kind="pieces" id={pieceId} name={title} className="size-11" /> : null}
+          {title ? (
+            <FavoriteButton kind="pieces" id={pieceId} name={title} className="size-11" />
+          ) : null}
         </View>
       </View>
 
@@ -548,16 +646,22 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
                   <Pressable
                     onPress={() => router.push(`/composer/${composerIdForLink}` as Href)}
                     accessibilityRole="link"
-                    accessibilityLabel={t('{name} 작곡가 화면으로', { name: first?.composerName ?? pieceInfo?.composerName ?? '' })}
+                    accessibilityLabel={t('{name} 작곡가 화면으로', {
+                      name: first?.composerName ?? pieceInfo?.composerName ?? '',
+                    })}
                     hitSlop={8}>
                     <Text variant="caption" className="font-semibold text-foreground underline">
                       {first?.composerName ?? pieceInfo?.composerName}
                     </Text>
                   </Pressable>
                 ) : (
-                  <Text variant="caption">{first?.composerName ?? pieceInfo?.composerName ?? ''}</Text>
+                  <Text variant="caption">
+                    {first?.composerName ?? pieceInfo?.composerName ?? ''}
+                  </Text>
                 )}
-                {pieceInfo ? <Text variant="caption">{` · ${t('연주자 {count}', { count: pieceInfo.performerCount })}`}</Text> : null}
+                {pieceInfo ? (
+                  <Text variant="caption">{` · ${t('연주자 {count}', { count: pieceInfo.performerCount })}`}</Text>
+                ) : null}
               </View>
             </>
           ) : (
@@ -579,7 +683,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {/* 구간: 줄바꿈하지 않고 가로로 흘린다 (부록 D-13) */}
       <ScrollShelf className="mt-1" gap={8}>
         {sectorsQuery.isLoading
-          ? Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-8 w-24 rounded-full" />)
+          ? Array.from({ length: 3 }, (_, index) => (
+              <Skeleton key={index} className="h-8 w-24 rounded-full" />
+            ))
           : sectors.map((sector) => (
               <Chip
                 key={sector.id}
@@ -621,15 +727,25 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
           <Pressable
             onPress={() => choose(preview)}
             accessibilityRole="button"
-            accessibilityLabel={t('{name} 재생', { name: primaryCredit(preview)?.artistName ?? t('fallback::연주') })}
+            accessibilityLabel={t('{name} 재생', {
+              name: primaryCredit(preview)?.artistName ?? t('fallback::연주'),
+            })}
             className="flex-1">
             {youtubeThumbnailUrl(preview) ? (
-              <OptimizedImage uri={youtubeThumbnailUrl(preview)} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+              <OptimizedImage
+                uri={youtubeThumbnailUrl(preview)}
+                resizeMode="cover"
+                style={{ width: '100%', height: '100%' }}
+              />
             ) : null}
             <Scrim from="bottom" opacity={0.75} extent={55} />
             <View className="absolute inset-0 items-center justify-center">
               <View className="size-14 items-center justify-center rounded-full bg-primary">
-                <Icon as={PlayIcon} size={22} className="ml-1 fill-primary-foreground text-primary-foreground" />
+                <Icon
+                  as={PlayIcon}
+                  size={22}
+                  className="ml-1 fill-primary-foreground text-primary-foreground"
+                />
               </View>
             </View>
             {activeSector ? (
@@ -666,7 +782,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
               picking ? 'border-primary bg-primary-muted' : 'border-border-strong',
               !canFocus && 'opacity-40'
             )}>
-            <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>{picking ? t('취소') : t('1:1 비교')}</Text>
+            <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
+              {picking ? t('취소') : t('1:1 비교')}
+            </Text>
           </Pressable>
         </View>
         {active && youtubeWatchUrl(active) ? (
@@ -684,7 +802,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
         <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
           <Text className="text-body-sm font-semibold text-foreground">
             {active
-              ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', { name: primaryCredit(active)?.artistName ?? t('fallback::지금 연주') })
+              ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', {
+                  name: primaryCredit(active)?.artistName ?? t('fallback::지금 연주'),
+                })
               : t('견줄 연주자를 두 명 고르세요')}
           </Text>
         </View>
@@ -693,7 +813,9 @@ export function CompareMobilePiece({ pieceId, composerId, sectorId, onBack, onSe
       {/* 연주자: 길이는 가장 긴 연주 대비 */}
       <View className="mt-4">
         {performancesQuery.isLoading
-          ? Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="mb-2 h-14 w-full rounded-lg" />)
+          ? Array.from({ length: 3 }, (_, index) => (
+              <Skeleton key={index} className="mb-2 h-14 w-full rounded-lg" />
+            ))
           : performances.map((performance) => (
               <PerformerRow
                 key={performance.id}
@@ -786,12 +908,20 @@ function PerformerRow({
             ? t('{name} 재생', { name: credit?.artistName ?? t('fallback::연주') })
             : t('{name} 준비 중', { name: credit?.artistName ?? t('fallback::연주') })
         }
-        className={cn('-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5', active && 'bg-surface-2')}>
+        className={cn(
+          '-mx-2 flex-row items-center gap-3 rounded-lg px-2 py-2.5',
+          active && 'bg-surface-2'
+        )}>
         <RepertoireThumb active={inRepertoire} badgeSize={16}>
           <EntityThumb name={credit?.artistName ?? '?'} image={image} shape="circle" size={40} />
         </RepertoireThumb>
         <View className="min-w-0 flex-1">
-          <Text numberOfLines={1} className={cn('text-body-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>
+          <Text
+            numberOfLines={1}
+            className={cn(
+              'text-body-sm font-semibold',
+              active ? 'text-primary' : 'text-foreground'
+            )}>
             {credit?.artistName ?? t('연주자 정보 없음')}
           </Text>
           {support ? (
@@ -811,7 +941,13 @@ function PerformerRow({
             loudness={performance.loudness}
             marks={note?.moments.map((moment) => moment.offsetMs)}
             tone={active ? 'a' : 'neutral'}
-            playhead={active ? (progress && progress.duration > 0 ? progress.current / progress.duration : 0) : undefined}
+            playhead={
+              active
+                ? progress && progress.duration > 0
+                  ? progress.current / progress.duration
+                  : 0
+                : undefined
+            }
             playing={playingNow}
             height={28}
             floorDb={curveFloor}

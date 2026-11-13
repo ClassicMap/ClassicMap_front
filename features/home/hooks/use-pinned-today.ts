@@ -65,7 +65,8 @@ export function usePinnedToday(
   // 조건이 마지막으로 바뀐 시각. 처음 그릴 때의 조건은 바뀐 것으로 치지 않는다
   const contextSince = React.useRef<{ context: string; since: number } | null>(null);
   if (contextSince.current === null) contextSince.current = { context, since: 0 };
-  else if (contextSince.current.context !== context) contextSince.current = { context, since: Date.now() };
+  else if (contextSince.current.context !== context)
+    contextSince.current = { context, since: Date.now() };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -86,7 +87,8 @@ export function usePinnedToday(
   const { locale } = useLocale();
   // 영어판 전에 고정한 곡은 두 언어 이름이 없어 영어로 못 보인다. 영어로 볼 때는 새 추천으로 다시 고정한다
   const legacy = Boolean(stored) && !stored?.piece.names && locale === 'en';
-  const pinned = stored && !legacy && stored.day === day && stored.context === context ? stored.piece : null;
+  const pinned =
+    stored && !legacy && stored.day === day && stored.context === context ? stored.piece : null;
   const freshSince = Math.max(startOfDay(now), contextSince.current.since);
   const pinnable = Boolean(candidate) && !source.placeholder && source.updatedAt >= freshSince;
 
@@ -99,7 +101,10 @@ export function usePinnedToday(
 
   const shown = pinned ?? candidate;
   // 고정해 둔 곡은 고를 때 언어로 이름이 저장돼 있다. 남겨 둔 두 언어 값으로 지금 언어를 다시 고른다
-  const localized = React.useMemo(() => (shown ? relocalizeRecommended(shown) : shown), [shown, locale]);
+  const localized = React.useMemo(
+    () => (shown ? relocalizeRecommended(shown) : shown),
+    [shown, locale]
+  );
   if (stored === undefined) return undefined;
   return localized;
 }
@@ -110,6 +115,10 @@ function relocalizeRecommended(piece: RecommendedPiece): RecommendedPiece {
   return {
     ...base,
     performers: base.performers.map((performer) => relocalize(performer)),
-    reasons: reasons ? (getLocale() === 'en' && reasons.en.length > 0 ? reasons.en : reasons.ko) : piece.reasons,
+    reasons: reasons
+      ? getLocale() === 'en' && reasons.en.length > 0
+        ? reasons.en
+        : reasons.ko
+      : piece.reasons,
   };
 }

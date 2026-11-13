@@ -21,7 +21,13 @@ interface PlayerSlotProps {
  * 형제로 둔 누름 자리(재생·일시정지)보다 위에 쌓아야 영상 위 조작부(전체 화면 버튼 등)를 누를 수 있다.
  * 자리 자체는 누름을 통과시키고, 조작부가 있는 자리에서만 안쪽 영상이 누름을 받는다.
  */
-export function PlayerSlot({ performanceId, fit = 'cover', radius = 0, controls = false, className }: PlayerSlotProps) {
+export function PlayerSlot({
+  performanceId,
+  fit = 'cover',
+  radius = 0,
+  controls = false,
+  className,
+}: PlayerSlotProps) {
   useLocale();
   const ref = React.useRef<View>(null);
 

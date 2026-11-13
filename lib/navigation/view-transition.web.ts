@@ -36,7 +36,8 @@ let pending: (() => void)[] | null = null;
 
 function startFunction(): StartViewTransition | null {
   if (typeof document === 'undefined') return null;
-  const start = (document as Document & { startViewTransition?: StartViewTransition }).startViewTransition;
+  const start = (document as Document & { startViewTransition?: StartViewTransition })
+    .startViewTransition;
   if (typeof start !== 'function') return null;
   if (document.visibilityState !== 'visible') return null;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
@@ -118,7 +119,12 @@ function changesPage(params: Record<string, unknown>): boolean {
   const info = store.getRouteInfo();
   const next: Record<string, string | string[] | undefined> = { ...info.params };
   for (const [key, value] of Object.entries(params)) {
-    next[key] = value === undefined || value === null ? undefined : Array.isArray(value) ? value.map(String) : String(value);
+    next[key] =
+      value === undefined || value === null
+        ? undefined
+        : Array.isArray(value)
+          ? value.map(String)
+          : String(value);
   }
   return routeSignature(info.pathname, info.params) !== routeSignature(info.pathname, next);
 }
@@ -151,7 +157,10 @@ export function installRouteTransitions(): void {
     prefetchHref(href);
     linkTo(href, options);
   };
-  const mutableNavigate = router as unknown as Record<'push' | 'navigate' | 'replace', NavigateFunction>;
+  const mutableNavigate = router as unknown as Record<
+    'push' | 'navigate' | 'replace',
+    NavigateFunction
+  >;
   for (const name of ['push', 'navigate', 'replace'] as const) {
     const navigate = mutableNavigate[name];
     mutableNavigate[name] = (href, options) => {
@@ -167,7 +176,9 @@ export function installRouteTransitions(): void {
     else runRouteTransition(() => add(action));
   };
 
-  const mutableRouter = router as unknown as { setParams: (params: Record<string, unknown>) => void };
+  const mutableRouter = router as unknown as {
+    setParams: (params: Record<string, unknown>) => void;
+  };
   const setParams = mutableRouter.setParams;
   mutableRouter.setParams = (params) => {
     const run = () => setParams(params);
@@ -175,7 +186,8 @@ export function installRouteTransitions(): void {
       const info = store.getRouteInfo();
       const query = new URLSearchParams();
       for (const [key, value] of Object.entries({ ...info.params, ...params })) {
-        if (value !== undefined && value !== null) query.set(key, String(Array.isArray(value) ? value[0] : value));
+        if (value !== undefined && value !== null)
+          query.set(key, String(Array.isArray(value) ? value[0] : value));
       }
       prefetchHref(`${info.pathname}?${query.toString()}` as Href);
       runRouteTransition(run);

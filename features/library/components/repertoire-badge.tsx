@@ -14,7 +14,10 @@ export function RepertoireBadge({ size = 18, className }: { size?: number; class
   return (
     <View
       accessibilityLabel={t('레퍼토리에 있어요')}
-      className={cn('items-center justify-center rounded-full border-2 border-background bg-primary web:border-surface-1', className)}
+      className={cn(
+        'items-center justify-center rounded-full border-2 border-background bg-primary web:border-surface-1',
+        className
+      )}
       style={{ width: size, height: size }}>
       <Icon
         as={BookmarkIcon}
@@ -36,7 +39,13 @@ interface RepertoireThumbProps {
 }
 
 /** 사진(EntityThumb 등)을 감싸 오른쪽 아래에 레퍼토리 배지를 얹는다. 담기지 않았으면 그대로 */
-export function RepertoireThumb({ active, children, badgeSize = 18, shape = 'circle', className }: RepertoireThumbProps) {
+export function RepertoireThumb({
+  active,
+  children,
+  badgeSize = 18,
+  shape = 'circle',
+  className,
+}: RepertoireThumbProps) {
   useLocale();
   if (!active) return <>{children}</>;
   const inset = shape === 'circle' ? -1 : -4;
