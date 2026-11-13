@@ -4,6 +4,7 @@ import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 import * as React from 'react';
 import { StyleSheet } from 'react-native';
 
+import { CloseContext, useCloseOnEscapeFromInput } from './escape';
 import { OVERLAY_CLASS } from './overlay';
 import type {
   DialogContentProps,
@@ -18,12 +19,15 @@ import type {
  */
 
 function Dialog({ open, defaultOpen, onOpenChange, children }: DialogProps) {
+  const actionsRef = React.useRef<DialogPrimitive.Root.Actions | null>(null);
+  const close = React.useCallback(() => actionsRef.current?.close(), []);
   return (
     <DialogPrimitive.Root
       open={open}
       defaultOpen={defaultOpen}
+      actionsRef={actionsRef}
       onOpenChange={(next) => onOpenChange?.(next)}>
-      {children}
+      <CloseContext.Provider value={close}>{children}</CloseContext.Provider>
     </DialogPrimitive.Root>
   );
 }
@@ -55,10 +59,13 @@ function DialogContent({
   style,
   children,
 }: DialogContentProps) {
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
+  useCloseOnEscapeFromInput(popupRef);
   if (fullscreen) {
     return (
       <DialogPrimitive.Portal>
         <DialogPrimitive.Popup
+          ref={popupRef}
           data-slot="dialog-content"
           data-fullscreen=""
           aria-label={ariaLabel}
@@ -77,6 +84,7 @@ function DialogContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={OVERLAY_CLASS} />
       <DialogPrimitive.Popup
+        ref={popupRef}
         data-slot="dialog-content"
         aria-label={ariaLabel}
         className={cn(
