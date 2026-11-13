@@ -218,6 +218,7 @@ export const CONCERT: Readonly<Record<string, string>> = {
   확대하기: 'Zoom in',
   '원래 크기로': 'Actual size',
   '원본 이미지 새 창으로 열기': 'Open original image in a new window',
+  '공연 이미지 크게 보기': 'Concert image viewer',
   '이미지를 불러오지 못했어요': "Couldn't load the image",
   '원본 열기로 판매처 사이트의 이미지를 확인해 주세요.':
     "Open the original to see the image on the seller's site.",

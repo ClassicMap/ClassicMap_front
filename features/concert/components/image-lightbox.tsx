@@ -1,3 +1,4 @@
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { t, useLocale } from '@/lib/i18n';
@@ -16,7 +17,6 @@ import {
   Image,
   type PointerEvent,
   Linking,
-  Modal,
   Platform,
   Pressable,
   useWindowDimensions,
@@ -107,8 +107,8 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   React.useEffect(() => {
     if (!visible || Platform.OS !== 'web' || typeof document === 'undefined') return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-      else if (event.key === 'ArrowRight') go(1);
+      // Esc 는 dialog 프리미티브가 닫는다
+      if (event.key === 'ArrowRight') go(1);
       else if (event.key === 'ArrowLeft') go(-1);
       else if (event.key === '+' || event.key === '=') stepZoom(1);
       else if (event.key === '-') stepZoom(-1);
@@ -118,7 +118,7 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [go, onClose, stepZoom, visible]);
+  }, [go, stepZoom, visible]);
 
   const topBar = 56 + insets.top;
   const viewportWidth = windowWidth;
@@ -143,106 +143,107 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const imageHeight = ratio ? imageWidth / ratio : 0;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent>
-      {/* 모달은 앱 루트 밖에 그려져서 제스처 루트를 따로 둔다 */}
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'rgba(6, 6, 6, 0.97)' }}>
-        <View
-          style={{ paddingTop: insets.top, height: topBar }}
-          className="flex-row items-center justify-between gap-3 px-3">
-          <Text
-            className="w-20 pl-2 text-body-sm font-semibold text-white/80"
-            accessibilityLiveRegion="polite">
-            {count > 1 ? `${current + 1} / ${count}` : ''}
-          </Text>
-          <View className="flex-row items-center gap-1">
-            {Platform.OS === 'web' ? (
-              <>
-                <BarButton label={t('축소')} onPress={() => stepZoom(-1)} disabled={zoom <= 1}>
-                  <Icon as={MinusIcon} size={18} className="text-white" />
-                </BarButton>
-                <Pressable
-                  onPress={() => setZoom(1)}
-                  accessibilityLabel={t('원래 크기로')}
-                  className="h-9 min-w-14 items-center justify-center rounded-full px-2 web:hover:bg-white/10">
-                  <Text variant="mono" className="text-caption text-white/80">
-                    {Math.round(zoom * 100)}%
-                  </Text>
-                </Pressable>
+    <Dialog
+      open={visible}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}>
+      <DialogContent fullscreen aria-label={t('공연 이미지 크게 보기')} closeLabel={t('닫기')}>
+        {/* 앱의 모달은 앱 루트 밖에 그려져서 제스처 루트를 따로 둔다 */}
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'rgba(6, 6, 6, 0.97)' }}>
+          <View
+            style={{ paddingTop: insets.top, height: topBar }}
+            className="flex-row items-center justify-between gap-3 px-3">
+            <Text
+              className="w-20 pl-2 text-body-sm font-semibold text-white/80"
+              accessibilityLiveRegion="polite">
+              {count > 1 ? `${current + 1} / ${count}` : ''}
+            </Text>
+            <View className="flex-row items-center gap-1">
+              {Platform.OS === 'web' ? (
+                <>
+                  <BarButton label={t('축소')} onPress={() => stepZoom(-1)} disabled={zoom <= 1}>
+                    <Icon as={MinusIcon} size={18} className="text-white" />
+                  </BarButton>
+                  <Pressable
+                    onPress={() => setZoom(1)}
+                    accessibilityLabel={t('원래 크기로')}
+                    className="h-9 min-w-14 items-center justify-center rounded-full px-2 web:hover:bg-white/10">
+                    <Text variant="mono" className="text-caption text-white/80">
+                      {Math.round(zoom * 100)}%
+                    </Text>
+                  </Pressable>
+                  <BarButton
+                    label={t('확대')}
+                    onPress={() => stepZoom(1)}
+                    disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
+                    <Icon as={PlusIcon} size={18} className="text-white" />
+                  </BarButton>
+                  <View className="mx-1.5 h-5 w-px bg-white/20" />
+                </>
+              ) : null}
+              {uri ? (
                 <BarButton
-                  label={t('확대')}
-                  onPress={() => stepZoom(1)}
-                  disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]}>
-                  <Icon as={PlusIcon} size={18} className="text-white" />
+                  label={t('원본 이미지 새 창으로 열기')}
+                  onPress={() => Linking.openURL(uri).catch(() => undefined)}>
+                  <Icon as={ExternalLinkIcon} size={17} className="text-white" />
                 </BarButton>
-                <View className="mx-1.5 h-5 w-px bg-white/20" />
+              ) : null}
+              <BarButton label={t('닫기')} onPress={onClose}>
+                <Icon as={XIcon} size={20} className="text-white" />
+              </BarButton>
+            </View>
+          </View>
+
+          <View className="flex-1">
+            {failed ? (
+              <View className="flex-1 items-center justify-center gap-2 px-6">
+                <Text className="text-body font-semibold text-white">
+                  {t('이미지를 불러오지 못했어요')}
+                </Text>
+                <Text className="text-center text-caption text-white/60">
+                  {t('원본 열기로 판매처 사이트의 이미지를 확인해 주세요.')}
+                </Text>
+              </View>
+            ) : !ratio ? null : Platform.OS === 'web' ? (
+              <WebZoomCanvas
+                key={uri}
+                uri={uri}
+                width={imageWidth}
+                height={imageHeight}
+                zoom={zoom}
+                padding={gutter / 2}
+                onZoom={setZoom}
+                onBackdrop={onClose}
+              />
+            ) : (
+              <NativeZoomCanvas
+                key={uri}
+                uri={uri}
+                width={fitWidth}
+                height={ratio ? fitWidth / ratio : 0}
+                viewportWidth={viewportWidth}
+                viewportHeight={viewportHeight + insets.bottom}
+                onSwipe={go}
+              />
+            )}
+
+            {count > 1 ? (
+              <>
+                <NavButton side="left" onPress={() => go(-1)} />
+                <NavButton side="right" onPress={() => go(1)} />
               </>
             ) : null}
-            {uri ? (
-              <BarButton
-                label={t('원본 이미지 새 창으로 열기')}
-                onPress={() => Linking.openURL(uri).catch(() => undefined)}>
-                <Icon as={ExternalLinkIcon} size={17} className="text-white" />
-              </BarButton>
-            ) : null}
-            <BarButton label={t('닫기')} onPress={onClose}>
-              <Icon as={XIcon} size={20} className="text-white" />
-            </BarButton>
           </View>
-        </View>
 
-        <View className="flex-1">
-          {failed ? (
-            <View className="flex-1 items-center justify-center gap-2 px-6">
-              <Text className="text-body font-semibold text-white">
-                {t('이미지를 불러오지 못했어요')}
-              </Text>
-              <Text className="text-center text-caption text-white/60">
-                {t('원본 열기로 판매처 사이트의 이미지를 확인해 주세요.')}
-              </Text>
-            </View>
-          ) : !ratio ? null : Platform.OS === 'web' ? (
-            <WebZoomCanvas
-              key={uri}
-              uri={uri}
-              width={imageWidth}
-              height={imageHeight}
-              zoom={zoom}
-              padding={gutter / 2}
-              onZoom={setZoom}
-              onBackdrop={onClose}
-            />
-          ) : (
-            <NativeZoomCanvas
-              key={uri}
-              uri={uri}
-              width={fitWidth}
-              height={ratio ? fitWidth / ratio : 0}
-              viewportWidth={viewportWidth}
-              viewportHeight={viewportHeight + insets.bottom}
-              onSwipe={go}
-            />
-          )}
-
-          {count > 1 ? (
-            <>
-              <NavButton side="left" onPress={() => go(-1)} />
-              <NavButton side="right" onPress={() => go(1)} />
-            </>
+          {Platform.OS === 'web' && wide ? (
+            <Text className="pb-3 text-center text-caption text-white/45">
+              {t('누르면 확대돼요 · 드래그해서 옮기고 ⌘/Ctrl+휠로 크기를 바꿔요 · Esc로 닫아요')}
+            </Text>
           ) : null}
-        </View>
-
-        {Platform.OS === 'web' && wide ? (
-          <Text className="pb-3 text-center text-caption text-white/45">
-            {t('누르면 확대돼요 · 드래그해서 옮기고 ⌘/Ctrl+휠로 크기를 바꿔요 · Esc로 닫아요')}
-          </Text>
-        ) : null}
-      </GestureHandlerRootView>
-    </Modal>
+        </GestureHandlerRootView>
+      </DialogContent>
+    </Dialog>
   );
 }
 
