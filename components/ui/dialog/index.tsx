@@ -43,11 +43,30 @@ function DialogClose({ render, children }: DialogTriggerProps) {
 function DialogContent({
   'aria-label': ariaLabel,
   closeLabel,
+  fullscreen,
   className,
   style,
   children,
 }: DialogContentProps) {
   const { open, setOpen } = useDialog();
+  if (fullscreen) {
+    return (
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setOpen(false)}>
+        <View
+          accessibilityViewIsModal
+          accessibilityLabel={ariaLabel}
+          className={cn('flex-1', className)}
+          style={style}>
+          {children}
+        </View>
+      </Modal>
+    );
+  }
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
       <View className="flex-1 items-center justify-center bg-black/50 p-4">

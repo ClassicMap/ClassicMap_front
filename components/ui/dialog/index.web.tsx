@@ -50,10 +50,29 @@ function DialogClose({ render, children }: DialogTriggerProps) {
 
 function DialogContent({
   'aria-label': ariaLabel,
+  fullscreen,
   className,
   style,
   children,
 }: DialogContentProps) {
+  if (fullscreen) {
+    return (
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Popup
+          data-slot="dialog-content"
+          data-fullscreen=""
+          aria-label={ariaLabel}
+          className={cn(
+            'fixed inset-0 z-overlay flex flex-col outline-none',
+            'transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 motion-reduce:transition-none',
+            className
+          )}
+          style={StyleSheet.flatten(style) as React.CSSProperties | undefined}>
+          {children}
+        </DialogPrimitive.Popup>
+      </DialogPrimitive.Portal>
+    );
+  }
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={OVERLAY_CLASS} />
