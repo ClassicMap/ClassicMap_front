@@ -209,7 +209,7 @@ AppShell (components/layout/app-shell.tsx)      영역에 무엇을 넣을지 �
 - 레이아웃 상태는 재생 상태(`lib/player`)와 나눕니다. `shell-state` 가 사이드바 접힘(`classicmap.sidebar-collapsed`), 넓은 창의 대기열 열림(`classicmap.player.queue-open`), 좁은 화면의 대기열 시트 열림(남기지 않음)을 가집니다. 재생바의 대기열 단추와 미니 플레이어가 이 값을 봅니다.
 - 재생바가 보일 조건은 `features/player/components/player-bar-helpers.ts` 의 `usePlayerBarVisible` 한곳입니다. 셸은 보일 때만 재생바 자리를 둡니다.
 - 사이드바는 shadcn Sidebar 의 파트(`Sidebar`, `SidebarLink`, `SidebarAction`, `SidebarRail`, `SidebarTooltip`, `SidebarTrigger`)를 따릅니다. ⌘/Ctrl+B 로 접고 펴고, ↑↓·Home·End 로 메뉴 사이를 옮기며, 지금 위치는 `aria-current="page"` 입니다.
-- 좁은 화면(1024px 미만)은 하단 탭 + 미니 플레이어를 유지합니다. 조사한 사례 다수는 서랍이지만, 이 작업은 화면 모양을 바꾸지 않는 리팩터링이라 그대로 둡니다(서랍 전환은 따로 정할 일입니다).
+- 좁은 화면(1024px 미만)은 하단 탭 + 미니 플레이어를 유지합니다. 조사한 사례 다수는 서랍이지만, 음악 앱(스포티파이·애플 뮤직·유튜브 뮤직)의 모바일 앱이 모두 하단 탭이라 서랍으로 바꾸지 않기로 했습니다(2026-11-13 결정).
 - 영상 요소(`ComparePlayerHost`)는 셸 밖 루트(`root-chrome`)에 같은 key 로 남깁니다. 창 폭이 바뀌거나 단독 화면을 오가도 재생이 끊기지 않게 하는 장치라 위치를 바꾸지 않습니다.
 - 화면 단축키가 글 쓰는 중인지 가릴 때는 `lib/utils/is-typing-target.ts` 를 씁니다. 태그 이름으로 직접 가리면 슬라이더(`<input type="range">`)에 포커스가 있을 때 단축키가 죽습니다.
 
@@ -243,13 +243,22 @@ AppShell (components/layout/app-shell.tsx)      영역에 무엇을 넣을지 �
 | 사이드바 | 링크 사이 화살표 이동 없음, 접힌 이름표가 마우스에만 뜸, landmark 없음 | 직접 구현 | shadcn Sidebar 의 파트·동작 |
 | export | `legacy-compare-screen` 만 `export default` | — | named export |
 
-## 8. 작업 순서
+## 8. 정한 것 (2026-11-13)
+
+| 항목 | 결정 |
+|---|---|
+| 좁은 화면 메뉴 | 하단 탭을 유지합니다. 서랍으로 바꾸지 않습니다. |
+| RN `Modal` 직접 쓰는 6곳·빠른 검색 | dialog·sheet 프리미티브로 한 번에 옮깁니다. 겉모양은 그대로 둡니다. |
+| `app/` 라우트 파일 | 그 화면을 고칠 때 `features/<기능>/` 로 옮기고 라우트 파일은 한 줄만 남깁니다. 한 번에 다 옮기는 PR 은 만들지 않습니다. |
+| 서식·린트 | prettier 를 코드 전체에 맞췄습니다(`npm run format`). ESLint 는 `eslint-config-expo` 로 넣고 처음엔 기존 경고를 그대로 둡니다. PR 마다 `check.yml` 이 타입·문구·린트·서식을 봅니다. |
+
+## 9. 작업 순서
 
 1. 이 문서 + 디렉토리 이동(동작 변경 없음)
 2. 셸(6절)
 3. ui 프리미티브(4절): Base UI 도입, popover·select 다시 쓰기, dialog·sheet·tooltip·slider 추가
 
-## 9. 프리미티브 현황 (2026-11-12)
+## 10. 프리미티브 현황 (2026-11-12)
 
 | 프리미티브 | 웹 | 앱 | 쓰는 곳 |
 |---|---|---|---|
