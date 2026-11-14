@@ -10,7 +10,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
-import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
@@ -185,12 +184,15 @@ export function CompareGenrePieces({
   genre,
   wide,
   onBack,
+  showBack = true,
   onOpen,
   onSelectGenre,
 }: {
   genre: PieceGenre;
   wide: boolean;
   onBack: () => void;
+  /** 뒤로 링크를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showBack?: boolean;
   onOpen: (piece: ComparisonPiece) => void;
   onSelectGenre: (genre: PieceGenre) => void;
 }) {
@@ -214,7 +216,7 @@ export function CompareGenrePieces({
       {...scrollInsets}
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      {BACK_BUTTON_ON_PLATFORM ? (
+      {showBack ? (
         <Pressable
           onPress={onBack}
           accessibilityRole="link"

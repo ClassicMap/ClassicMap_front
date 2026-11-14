@@ -142,7 +142,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         }}
       />
       <Tabs.Screen
-        name="compare"
+        name="(compare)"
         options={{
           title: t('비교'),
           tabBarIcon: ({ color }) => <CompareIcon color={color} size={24} />,

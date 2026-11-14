@@ -1,5 +1,4 @@
 import { isTypingTarget } from '@/lib/utils/is-typing-target';
-import { EdgeSwipeBack } from '@/features/compare/components/edge-swipe-back';
 import { FeaturedPairNote, PerformanceNote } from '@/features/compare/components/listening-note';
 import {
   type Performer,
@@ -12,7 +11,6 @@ import { PlayerSlot } from '@/features/player/components/player-slot';
 import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { VolumeControl } from '@/features/player/components/volume-control';
 import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
-import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
 import { TAB_CHROME_TRANSLUCENT, useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
@@ -57,6 +55,7 @@ import {
   XIcon,
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,6 +92,8 @@ export interface FocusCompareProps {
   focus: [number, number];
   /** 비교 화면으로 돌아간다 */
   onExit: () => void;
+  /** 나가기 링크를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showExit?: boolean;
   /** 구간을 바꾸면 같은 두 연주자의 그 구간 연주로 옮긴다 */
   onChangeSector: (sectorId: number, a: number, b: number) => void;
 }
@@ -116,17 +117,22 @@ function artistKey(performance: ComparisonPerformance): number {
  */
 export function FocusCompare(props: FocusCompareProps) {
   const { onExit } = props;
+  const navigation = useNavigation();
   const handOffRef = React.useRef<(() => void) | null>(null);
-  // 밀어서 나갈 때도 나가기 단추처럼 듣던 쪽을 앱 플레이어에 넘긴다
-  const swipeBack = React.useCallback(() => {
-    handOffRef.current?.();
+  // 나가기(단추·빈 화면 안내)는 나가기 전에 넘기므로, 그 뒤 화면이 빠질 때 또 넘기지 않는다
+  const exited = React.useRef(false);
+  const exit = React.useCallback(() => {
+    exited.current = true;
     onExit();
   }, [onExit]);
-  return (
-    <EdgeSwipeBack onBack={swipeBack}>
-      <FocusCompareContent {...props} handOffRef={handOffRef} />
-    </EdgeSwipeBack>
-  );
+  // 앱: 밀기·시스템 뒤로로 이 화면이 스택에서 빠질 때도 나가기 단추처럼 듣던 쪽을 앱 플레이어에 넘긴다
+  React.useEffect(() => {
+    if (Platform.OS === 'web') return;
+    return navigation.addListener('beforeRemove', () => {
+      if (!exited.current) handOffRef.current?.();
+    });
+  }, [navigation]);
+  return <FocusCompareContent {...props} onExit={exit} handOffRef={handOffRef} />;
 }
 
 function FocusCompareContent({
@@ -135,6 +141,7 @@ function FocusCompareContent({
   sectorId,
   focus,
   onExit,
+  showExit = true,
   onChangeSector,
   handOffRef,
 }: FocusCompareProps & { handOffRef: React.MutableRefObject<(() => void) | null> }) {
@@ -283,6 +290,7 @@ function FocusCompareContent({
       activeSectorId={activeSector?.id}
       rows={rows}
       onExit={onExit}
+      showExit={showExit}
       onChangeSector={onChangeSector}
       queue={performances.filter(isPlayablePerformance)}
     />
@@ -316,6 +324,7 @@ interface FocusStageProps {
   activeSectorId: number | undefined;
   rows: SectorRow[];
   onExit: () => void;
+  showExit: boolean;
   onChangeSector: (sectorId: number, a: number, b: number) => void;
   queue: ComparisonPerformance[];
   /** 두 연주가 이 구간의 추천 비교 쌍일 때만 */
@@ -361,6 +370,7 @@ function FocusStage(props: FocusStageProps) {
     activeSectorId,
     rows,
     onExit,
+    showExit,
     onChangeSector,
     queue,
     featuredPair,
@@ -543,7 +553,7 @@ function FocusStage(props: FocusStageProps) {
         {...scrollInsets}
         className="flex-1"
         contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
-        {BACK_BUTTON_ON_PLATFORM ? (
+        {showExit ? (
           <Pressable
             onPress={exit}
             accessibilityRole="button"
