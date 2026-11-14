@@ -3,7 +3,13 @@ import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
 import { registerNativeSurface, surfaceRects } from '@/lib/player/native-surface';
 import { cn } from '@/lib/utils';
 import { HeaderHeightContext } from '@react-navigation/elements';
-import { useIsFocused } from '@react-navigation/native';
+import {
+  type EventArg,
+  type NavigationProp,
+  type ParamListBase,
+  useIsFocused,
+  useNavigation,
+} from '@react-navigation/native';
 import * as React from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import Animated, { measure, useAnimatedRef, useFrameCallback } from 'react-native-reanimated';
@@ -25,7 +31,10 @@ interface PlayerSlotProps {
 export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotProps) {
   useLocale();
   const ref = useAnimatedRef<View>();
-  const focused = useIsFocused();
+  const isFocused = useIsFocused();
+  const leaving = useLeavingTransition();
+  // 밀어서 돌아가는 동안 화면은 옆으로 빠지는데 영상은 루트에서 제자리에 그려지므로, 빠지기 시작하면 자리를 거둔다
+  const focused = isFocused && !leaving;
   const headerHeight = React.useContext(HeaderHeightContext) ?? 0;
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -75,4 +84,34 @@ export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotP
       className={cn('absolute inset-0 bg-black', className)}
     />
   );
+}
+
+type TransitionEvent = EventArg<'transitionStart', false, { closing: boolean }>;
+
+/**
+ * 이 화면(또는 이 화면을 품은 탭 묶음)이 스택에서 빠지는 전환 중인지. 밀기가 시작되면 true,
+ * 밀다 취소하면 false 로 돌아온다. 스택 밖이면 늘 false
+ */
+function useLeavingTransition(): boolean {
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const [leaving, setLeaving] = React.useState(false);
+  React.useEffect(() => {
+    const unsubscribes: (() => void)[] = [];
+    let current: NavigationProp<ParamListBase> | undefined = navigation;
+    while (current) {
+      const target = current as unknown as {
+        addListener: (type: string, callback: (event: TransitionEvent) => void) => () => void;
+      };
+      unsubscribes.push(
+        target.addListener('transitionStart', (event) => setLeaving(event.data.closing)),
+        target.addListener('transitionEnd', (event) => {
+          if (!event.data.closing) setLeaving(false);
+        }),
+        target.addListener('gestureCancel', () => setLeaving(false))
+      );
+      current = current.getParent();
+    }
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
+  }, [navigation]);
+  return leaving;
 }
