@@ -101,7 +101,7 @@ function Routes() {
 
   return (
     <RootChrome>
-      <Stack>
+      <Stack screenOptions={STACK_SCREEN_OPTIONS}>
         {/* 로그인/회원가입 화면 */}
         <Stack.Screen name="(auth)/sign-in" options={SIGN_IN_SCREEN_OPTIONS} />
         <Stack.Screen name="(auth)/sign-up" options={SIGN_UP_SCREEN_OPTIONS} />
@@ -132,6 +132,12 @@ function Routes() {
     </RootChrome>
   );
 }
+
+// iOS 26 부터 기본 앱은 화면 어디서 밀어도 뒤로 간다. 지금 쓰는 react-native-screens 는 기본으로 꺼 두므로
+// 직접 켠다(iOS 만 쓰는 값). 앱은 뒤로 단추 대신 이 밀기로 돌아간다
+const STACK_SCREEN_OPTIONS = {
+  fullScreenGestureEnabled: true,
+};
 
 const SIGN_IN_SCREEN_OPTIONS = {
   headerShown: false,
