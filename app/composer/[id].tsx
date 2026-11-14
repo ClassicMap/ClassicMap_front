@@ -305,9 +305,12 @@ export default function ComposerDetailScreen() {
             <Text variant="headline" className="mb-2.5">
               {t('음악사적 영향')}
             </Text>
-            <Text variant="bodySm" className="text-foreground-muted">
-              {composer.influence}
-            </Text>
+            <ExpandableText
+              text={composer.influence}
+              lines={5}
+              variant="bodySm"
+              className="text-foreground-muted"
+            />
           </View>
         ) : null}
       </View>
