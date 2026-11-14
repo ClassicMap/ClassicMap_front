@@ -2,6 +2,7 @@ import { ArtistFormModal } from '@/features/admin/components/artist-form-modal';
 import { RecordingFormModal } from '@/features/admin/components/recording-form-modal';
 import { AlbumCard } from '@/features/album/components/album-card';
 import { AlbumDetailModal } from '@/features/album/components/album-detail-modal';
+import { ArtistBio } from '@/features/artist/components/artist-bio';
 import { ArtistComparisons } from '@/features/artist/components/artist-comparisons';
 import { FavoriteButton } from '@/features/library/components/favorite-button';
 import { TicketVendorsModal } from '@/features/concert/components/ticket-vendors-modal';
@@ -130,7 +131,6 @@ export default function ArtistDetailScreen() {
   const [selectedRecording, setSelectedRecording] = React.useState<Recording | undefined>();
   const [vendors, setVendors] = React.useState<TicketVendor[]>([]);
   const [showVendorsModal, setShowVendorsModal] = React.useState(false);
-  const [bioExpanded, setBioExpanded] = React.useState(false);
   const [openedAlbum, setOpenedAlbum] = React.useState<RecordingListItem | null>(null);
   const repertoire = useRepertoireIds();
 
@@ -383,34 +383,7 @@ export default function ArtistDetailScreen() {
           ) : null}
         </View>
 
-        {artist.bio || artist.style ? (
-          <View className="mt-6 max-w-[720px]">
-            {artist.bio ? (
-              <Text
-                variant="bodySm"
-                numberOfLines={bioExpanded ? undefined : 3}
-                className="text-foreground-muted">
-                {/* 접힌 미리보기는 문단 사이 빈 줄이 세 줄을 잡아먹지 않게 한 문단으로 */}
-                {bioExpanded ? artist.bio : artist.bio.replace(/\s*\n+\s*/g, ' ')}
-              </Text>
-            ) : null}
-            {artist.style && (bioExpanded || !artist.bio) ? (
-              <Text variant="bodySm" className={cn('text-foreground-muted', artist.bio && 'mt-3')}>
-                {artist.style}
-              </Text>
-            ) : null}
-            {(artist.bio && artist.bio.length > 120) || (artist.bio && artist.style) ? (
-              <Pressable
-                onPress={() => setBioExpanded((value) => !value)}
-                accessibilityRole="button"
-                className="mt-1.5 self-start">
-                <Text variant="label" className="text-foreground">
-                  {bioExpanded ? t('접기') : t('더 보기')}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
+        <ArtistBio bio={artist.bio} style={artist.style} />
 
         <PhotoCredit
           imageUrl={artist.banner?.url ?? artist.imageUrl}
