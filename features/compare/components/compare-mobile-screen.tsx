@@ -50,15 +50,8 @@ export function CompareMobileScreen() {
   const composerId = toId(params.composerId);
   const focus = parseFocusParam(params.focus);
 
-  // 위 단계로: 지금 화면의 파라미터를 걷어 낸다. 웹 단추와, 앱에서 돌아갈 화면이 없을 때 쓴다
-  const toParent = () => {
-    if (pieceId && focus) router.setParams({ focus: undefined });
-    else if (pieceId) router.setParams({ pieceId: undefined, sectorId: undefined });
-    else if (genre) router.setParams({ genre: undefined });
-    else router.setParams({ composerId: undefined });
-  };
   const isTopLevel = !pieceId && !genre && !composerId;
-  const { poppable, showBack } = useCompareStackBack(isTopLevel, toParent);
+  const { poppable, showBack } = useCompareStackBack(isTopLevel);
   // 앱에서 아래에 쌓인 화면이 있으면 그 화면으로, 없으면 위 단계로
   const back = (fallback: () => void) => (poppable ? router.back() : fallback());
 
