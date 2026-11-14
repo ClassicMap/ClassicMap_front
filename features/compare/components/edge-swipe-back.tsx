@@ -22,6 +22,8 @@ export function EdgeSwipeBack({ onBack, children }: EdgeSwipeBackProps) {
   const widthRef = React.useRef(width);
   widthRef.current = width;
   const dragX = React.useRef(new Animated.Value(0)).current;
+  // 손가락을 댄 자리. PanResponder 의 x0 은 응답자가 되기 전에는 0 이라 쓸 수 없다
+  const startX = React.useRef(Number.POSITIVE_INFINITY);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -45,8 +47,12 @@ export function EdgeSwipeBack({ onBack, children }: EdgeSwipeBackProps) {
     const settle = () =>
       Animated.spring(dragX, { toValue: 0, bounciness: 0, useNativeDriver: true }).start();
     return PanResponder.create({
+      onStartShouldSetPanResponderCapture: (event) => {
+        startX.current = event.nativeEvent.pageX;
+        return false;
+      },
       onMoveShouldSetPanResponderCapture: (_event, gesture) =>
-        gesture.x0 <= EDGE_WIDTH && gesture.dx > 10 && gesture.dx > Math.abs(gesture.dy) * 1.5,
+        startX.current <= EDGE_WIDTH && gesture.dx > 10 && gesture.dx > Math.abs(gesture.dy) * 1.5,
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (_event, gesture) => dragX.setValue(Math.max(0, gesture.dx)),
       onPanResponderRelease: (_event, gesture) => {
@@ -69,7 +75,11 @@ export function EdgeSwipeBack({ onBack, children }: EdgeSwipeBackProps) {
   if (Platform.OS !== 'ios') return <>{children}</>;
 
   return (
-    <Animated.View {...pan.panHandlers} style={{ flex: 1, transform: [{ translateX: dragX }] }}>
+    <Animated.View
+      {...pan.panHandlers}
+      // VoiceOver 의 두 손가락 Z(돌아가기) 동작
+      onAccessibilityEscape={() => latest.current()}
+      style={{ flex: 1, transform: [{ translateX: dragX }] }}>
       {children}
     </Animated.View>
   );

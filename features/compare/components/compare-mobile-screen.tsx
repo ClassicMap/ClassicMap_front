@@ -34,20 +34,17 @@ export function CompareMobileScreen() {
   const focus = parseFocusParam(params.focus);
 
   if (pieceId && focus) {
-    const exit = () => router.setParams({ focus: undefined });
     return (
-      <EdgeSwipeBack onBack={exit}>
-        <FocusCompare
-          pieceId={pieceId}
-          composerId={composerId}
-          sectorId={toId(params.sectorId)}
-          focus={focus}
-          onExit={exit}
-          onChangeSector={(id, a, b) =>
-            router.setParams({ sectorId: String(id), focus: `${a},${b}` })
-          }
-        />
-      </EdgeSwipeBack>
+      <FocusCompare
+        pieceId={pieceId}
+        composerId={composerId}
+        sectorId={toId(params.sectorId)}
+        focus={focus}
+        onExit={() => router.setParams({ focus: undefined })}
+        onChangeSector={(id, a, b) =>
+          router.setParams({ sectorId: String(id), focus: `${a},${b}` })
+        }
+      />
     );
   }
 
