@@ -13,7 +13,7 @@ import { VolumeControl } from '@/features/player/components/volume-control';
 import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
 import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
-import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
+import { TAB_CHROME_TRANSLUCENT, useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -334,6 +334,8 @@ interface SideProgress {
 
 function FocusStage(props: FocusStageProps) {
   useLocale();
+  // iOS 는 탭 헤더가 떠 있어서 그만큼 비운다(웹·안드로이드는 빈 값)
+  const scrollInsets = useTabScrollInsets();
   const {
     a,
     b,
@@ -522,6 +524,7 @@ function FocusStage(props: FocusStageProps) {
   return (
     <View className="flex-1">
       <ScrollView
+        {...scrollInsets}
         className="flex-1"
         contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
         {BACK_BUTTON_ON_PLATFORM ? (

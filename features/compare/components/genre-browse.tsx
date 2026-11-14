@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
 import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/use-comparison-performances';
@@ -194,6 +195,8 @@ export function CompareGenrePieces({
   onSelectGenre: (genre: PieceGenre) => void;
 }) {
   const { locale } = useLocale();
+  // iOS 는 탭 헤더가 떠 있어서 그만큼 비운다(웹·안드로이드는 빈 값)
+  const scrollInsets = useTabScrollInsets();
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
@@ -208,6 +211,7 @@ export function CompareGenrePieces({
 
   return (
     <ScrollView
+      {...scrollInsets}
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
       {BACK_BUTTON_ON_PLATFORM ? (
