@@ -1,4 +1,6 @@
 import { FavoriteButton } from '@/features/library/components/favorite-button';
+import { EdgeSwipeBack } from '@/features/compare/components/edge-swipe-back';
+import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { ScrollShelf } from '@/components/shared/shelf';
 import {
   FeaturedPairLink,
@@ -578,283 +580,295 @@ export function CompareMobilePiece({
 
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
-      <View className="flex-1 bg-background px-4" style={{ paddingTop: headerInset }}>
-        <BackButton onPress={goBack} />
-        <EmptyState
-          icon={AlertCircleIcon}
-          tone="error"
-          title={t('비교를 불러오지 못했어요')}
-          description={t('잠시 뒤 다시 시도해 주세요.')}
-          action={{
-            label: t('다시 시도'),
-            onPress: () => {
-              void sectorsQuery.refetch();
-              void performancesQuery.refetch();
-            },
-          }}
-        />
-      </View>
+      <EdgeSwipeBack onBack={goBack}>
+        <View className="flex-1 bg-background px-4" style={{ paddingTop: headerInset }}>
+          <BackButton onPress={goBack} />
+          <EmptyState
+            icon={AlertCircleIcon}
+            tone="error"
+            title={t('비교를 불러오지 못했어요')}
+            description={t('잠시 뒤 다시 시도해 주세요.')}
+            action={{
+              label: t('다시 시도'),
+              onPress: () => {
+                void sectorsQuery.refetch();
+                void performancesQuery.refetch();
+              },
+            }}
+          />
+        </View>
+      </EdgeSwipeBack>
     );
   }
 
   return (
-    <ScrollView
-      {...scrollInsets}
-      className="flex-1 bg-background"
-      contentContainerClassName="px-4 pb-28">
-      <View className="flex-row items-center justify-between">
-        <BackButton onPress={goBack} />
-        <View className="mt-3 flex-row items-center gap-1">
-          {canEdit ? (
-            <Pressable
-              onPress={() =>
-                router.push(
-                  `/compare-admin?composerId=${composerId ?? first?.composerId ?? ''}&pieceId=${pieceId}` as Href
-                )
-              }
-              accessibilityLabel={t('구간·연주 관리')}
-              className="size-11 items-center justify-center rounded-full">
-              <Icon as={SettingsIcon} size={18} className="text-foreground-muted" />
-            </Pressable>
-          ) : null}
-          {title ? (
-            <FavoriteButton kind="pieces" id={pieceId} name={title} className="size-11" />
-          ) : null}
+    <EdgeSwipeBack onBack={goBack}>
+      <ScrollView
+        {...scrollInsets}
+        className="flex-1 bg-background"
+        contentContainerClassName="px-4 pb-28">
+        <View
+          className={cn(
+            'flex-row items-center',
+            BACK_BUTTON_ON_PLATFORM ? 'justify-between' : 'justify-end'
+          )}>
+          <BackButton onPress={goBack} />
+          <View className="mt-3 flex-row items-center gap-1">
+            {canEdit ? (
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/compare-admin?composerId=${composerId ?? first?.composerId ?? ''}&pieceId=${pieceId}` as Href
+                  )
+                }
+                accessibilityLabel={t('구간·연주 관리')}
+                className="size-11 items-center justify-center rounded-full">
+                <Icon as={SettingsIcon} size={18} className="text-foreground-muted" />
+              </Pressable>
+            ) : null}
+            {title ? (
+              <FavoriteButton kind="pieces" id={pieceId} name={title} className="size-11" />
+            ) : null}
+          </View>
         </View>
-      </View>
 
-      {/* 머리: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다) */}
-      <View className="mt-3 flex-row items-end gap-4">
-        {title ? (
-          <PieceArt
-            coverVideoId={pieceInfo?.composerAvatarUrl ? null : pieceInfo?.coverVideoId}
-            fallbackImage={pieceInfo?.composerAvatarUrl}
-            fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
-            size={88}
-          />
-        ) : (
-          <Skeleton className="size-[88px] rounded-md" />
-        )}
-        <View className="min-w-0 flex-1">
+        {/* 머리: 작곡가 사진. 사진이 없으면 대표 연주의 음반 표지(영상 썸네일은 악보 화면일 때가 있다) */}
+        <View className="mt-3 flex-row items-end gap-4">
           {title ? (
-            <>
-              <GenreLink genre={pieceInfo?.genre} className="mb-1" />
-              <Text className="text-title-2 font-bold text-foreground">{title}</Text>
-              {/* 작곡가 이름을 누르면 작곡가 화면으로 간다 */}
-              <View className="mt-1 flex-row items-center">
-                {composerIdForLink && (first?.composerName ?? pieceInfo?.composerName) ? (
-                  <Pressable
-                    onPress={() => router.push(`/composer/${composerIdForLink}` as Href)}
-                    accessibilityRole="link"
-                    accessibilityLabel={t('{name} 작곡가 화면으로', {
-                      name: first?.composerName ?? pieceInfo?.composerName ?? '',
-                    })}
-                    hitSlop={8}>
-                    <Text variant="caption" className="font-semibold text-foreground underline">
-                      {first?.composerName ?? pieceInfo?.composerName}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Text variant="caption">
-                    {first?.composerName ?? pieceInfo?.composerName ?? ''}
-                  </Text>
-                )}
-                {pieceInfo ? (
-                  <Text variant="caption">{` · ${t('연주자 {count}', { count: pieceInfo.performerCount })}`}</Text>
-                ) : null}
-              </View>
-            </>
+            <PieceArt
+              coverVideoId={pieceInfo?.composerAvatarUrl ? null : pieceInfo?.coverVideoId}
+              fallbackImage={pieceInfo?.composerAvatarUrl}
+              fallbackName={first?.composerName ?? pieceInfo?.composerName ?? title}
+              size={88}
+            />
           ) : (
-            <Skeleton className="h-7 w-3/4" />
+            <Skeleton className="size-[88px] rounded-md" />
+          )}
+          <View className="min-w-0 flex-1">
+            {title ? (
+              <>
+                <GenreLink genre={pieceInfo?.genre} className="mb-1" />
+                <Text className="text-title-2 font-bold text-foreground">{title}</Text>
+                {/* 작곡가 이름을 누르면 작곡가 화면으로 간다 */}
+                <View className="mt-1 flex-row items-center">
+                  {composerIdForLink && (first?.composerName ?? pieceInfo?.composerName) ? (
+                    <Pressable
+                      onPress={() => router.push(`/composer/${composerIdForLink}` as Href)}
+                      accessibilityRole="link"
+                      accessibilityLabel={t('{name} 작곡가 화면으로', {
+                        name: first?.composerName ?? pieceInfo?.composerName ?? '',
+                      })}
+                      hitSlop={8}>
+                      <Text variant="caption" className="font-semibold text-foreground underline">
+                        {first?.composerName ?? pieceInfo?.composerName}
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Text variant="caption">
+                      {first?.composerName ?? pieceInfo?.composerName ?? ''}
+                    </Text>
+                  )}
+                  {pieceInfo ? (
+                    <Text variant="caption">{` · ${t('연주자 {count}', { count: pieceInfo.performerCount })}`}</Text>
+                  ) : null}
+                </View>
+              </>
+            ) : (
+              <Skeleton className="h-7 w-3/4" />
+            )}
+          </View>
+        </View>
+
+        <View className="mt-5">
+          <SectionStaff
+            sectors={sectors}
+            activeSectorId={activeSector?.id}
+            reference={active ?? preview}
+            labels="active"
+            onSelect={onSelectSector}
+          />
+        </View>
+
+        {/* 구간: 줄바꿈하지 않고 가로로 흘린다 (부록 D-13) */}
+        <ScrollShelf className="mt-1" gap={8}>
+          {sectorsQuery.isLoading
+            ? Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-8 w-24 rounded-full" />
+              ))
+            : sectors.map((sector) => (
+                <Chip
+                  key={sector.id}
+                  label={sector.sectorName}
+                  count={sector.readyPerformanceCount}
+                  trailing={<SectorTypeBadge sector={sector} />}
+                  selected={sector.id === activeSector?.id}
+                  onPress={() => onSelectSector(sector.id)}
+                />
+              ))}
+        </ScrollShelf>
+
+        {activeSector ? (
+          <SectorGuide
+            sector={activeSector}
+            collapsible
+            footer={
+              featured && activeSector.featuredPair && onFocus ? (
+                <FeaturedPairLink
+                  pair={activeSector.featuredPair}
+                  a={featured[0]}
+                  b={featured[1]}
+                  compact
+                  onOpen={() => onFocus(featured[0].id, featured[1].id)}
+                />
+              ) : null
+            }
+            className="mt-3"
+          />
+        ) : null}
+
+        {/* 영상: 고른 연주 하나만 */}
+        <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
+          {active && isPlayablePerformance(active) ? (
+            // 앱에 하나 둔 영상(웹은 셸의 video, 네이티브는 루트의 YouTube)이 이 자리에 뜬다.
+            // 다른 화면으로 가도 미니 플레이어로 옮겨 가며 이어진다
+            <PlayerSlot performanceId={active.id} fit="contain" radius={14} controls />
+          ) : preview ? (
+            <Pressable
+              onPress={() => choose(preview)}
+              accessibilityRole="button"
+              accessibilityLabel={t('{name} 재생', {
+                name: primaryCredit(preview)?.artistName ?? t('fallback::연주'),
+              })}
+              className="flex-1">
+              {youtubeThumbnailUrl(preview) ? (
+                <OptimizedImage
+                  uri={youtubeThumbnailUrl(preview)}
+                  resizeMode="cover"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              ) : null}
+              <Scrim from="bottom" opacity={0.75} extent={55} />
+              <View className="absolute inset-0 items-center justify-center">
+                <View className="size-14 items-center justify-center rounded-full bg-primary">
+                  <Icon
+                    as={PlayIcon}
+                    size={22}
+                    className="ml-1 fill-primary-foreground text-primary-foreground"
+                  />
+                </View>
+              </View>
+              {activeSector ? (
+                <View className="absolute left-3 top-3">
+                  <Badge tone="media" label={activeSector.sectorName} />
+                </View>
+              ) : null}
+              <Text className="absolute bottom-3 left-3 text-label font-semibold text-white">
+                {primaryCredit(preview)?.artistName ?? ''}
+              </Text>
+              <Text className="absolute bottom-3 right-3 rounded-xs bg-black/60 px-1.5 py-0.5 font-mono text-caption text-white">
+                {clipClock(clipDurationMs(preview))}
+              </Text>
+            </Pressable>
+          ) : performancesQuery.isLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : (
+            <View className="flex-1 items-center justify-center">
+              <Text variant="caption">{t('이 구간은 아직 재생할 영상이 없어요')}</Text>
+            </View>
           )}
         </View>
-      </View>
-
-      <View className="mt-5">
-        <SectionStaff
-          sectors={sectors}
-          activeSectorId={activeSector?.id}
-          reference={active ?? preview}
-          labels="active"
-          onSelect={onSelectSector}
-        />
-      </View>
-
-      {/* 구간: 줄바꿈하지 않고 가로로 흘린다 (부록 D-13) */}
-      <ScrollShelf className="mt-1" gap={8}>
-        {sectorsQuery.isLoading
-          ? Array.from({ length: 3 }, (_, index) => (
-              <Skeleton key={index} className="h-8 w-24 rounded-full" />
-            ))
-          : sectors.map((sector) => (
-              <Chip
-                key={sector.id}
-                label={sector.sectorName}
-                count={sector.readyPerformanceCount}
-                trailing={<SectorTypeBadge sector={sector} />}
-                selected={sector.id === activeSector?.id}
-                onPress={() => onSelectSector(sector.id)}
-              />
-            ))}
-      </ScrollShelf>
-
-      {activeSector ? (
-        <SectorGuide
-          sector={activeSector}
-          collapsible
-          footer={
-            featured && activeSector.featuredPair && onFocus ? (
-              <FeaturedPairLink
-                pair={activeSector.featuredPair}
-                a={featured[0]}
-                b={featured[1]}
-                compact
-                onOpen={() => onFocus(featured[0].id, featured[1].id)}
-              />
-            ) : null
-          }
-          className="mt-3"
-        />
-      ) : null}
-
-      {/* 영상: 고른 연주 하나만 */}
-      <View className="mt-4 aspect-video w-full overflow-hidden rounded-xl bg-surface-3">
-        {active && isPlayablePerformance(active) ? (
-          // 앱에 하나 둔 영상(웹은 셸의 video, 네이티브는 루트의 YouTube)이 이 자리에 뜬다.
-          // 다른 화면으로 가도 미니 플레이어로 옮겨 가며 이어진다
-          <PlayerSlot performanceId={active.id} fit="contain" radius={14} controls />
-        ) : preview ? (
-          <Pressable
-            onPress={() => choose(preview)}
-            accessibilityRole="button"
-            accessibilityLabel={t('{name} 재생', {
-              name: primaryCredit(preview)?.artistName ?? t('fallback::연주'),
-            })}
-            className="flex-1">
-            {youtubeThumbnailUrl(preview) ? (
-              <OptimizedImage
-                uri={youtubeThumbnailUrl(preview)}
-                resizeMode="cover"
-                style={{ width: '100%', height: '100%' }}
-              />
-            ) : null}
-            <Scrim from="bottom" opacity={0.75} extent={55} />
-            <View className="absolute inset-0 items-center justify-center">
-              <View className="size-14 items-center justify-center rounded-full bg-primary">
-                <Icon
-                  as={PlayIcon}
-                  size={22}
-                  className="ml-1 fill-primary-foreground text-primary-foreground"
-                />
-              </View>
-            </View>
-            {activeSector ? (
-              <View className="absolute left-3 top-3">
-                <Badge tone="media" label={activeSector.sectorName} />
-              </View>
-            ) : null}
-            <Text className="absolute bottom-3 left-3 text-label font-semibold text-white">
-              {primaryCredit(preview)?.artistName ?? ''}
-            </Text>
-            <Text className="absolute bottom-3 right-3 rounded-xs bg-black/60 px-1.5 py-0.5 font-mono text-caption text-white">
-              {clipClock(clipDurationMs(preview))}
-            </Text>
-          </Pressable>
-        ) : performancesQuery.isLoading ? (
-          <Skeleton className="h-full w-full" />
-        ) : (
-          <View className="flex-1 items-center justify-center">
-            <Text variant="caption">{t('이 구간은 아직 재생할 영상이 없어요')}</Text>
+        <View className="mt-2 flex-row items-center justify-between gap-3">
+          <View className="flex-row items-center gap-2">
+            <SwitchModeToggle compact />
+            <Pressable
+              onPress={() => setPicking((value) => !value)}
+              disabled={!canFocus}
+              accessibilityRole="button"
+              accessibilityState={{ selected: picking, disabled: !canFocus }}
+              accessibilityLabel={picking ? t('1:1 비교 고르기 취소') : t('1:1 비교')}
+              className={cn(
+                'h-8 items-center justify-center rounded-full border px-3',
+                picking ? 'border-primary bg-primary-muted' : 'border-border-strong',
+                !canFocus && 'opacity-40'
+              )}>
+              <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
+                {picking ? t('취소') : t('1:1 비교')}
+              </Text>
+            </Pressable>
           </View>
-        )}
-      </View>
-      <View className="mt-2 flex-row items-center justify-between gap-3">
-        <View className="flex-row items-center gap-2">
-          <SwitchModeToggle compact />
-          <Pressable
-            onPress={() => setPicking((value) => !value)}
-            disabled={!canFocus}
-            accessibilityRole="button"
-            accessibilityState={{ selected: picking, disabled: !canFocus }}
-            accessibilityLabel={picking ? t('1:1 비교 고르기 취소') : t('1:1 비교')}
-            className={cn(
-              'h-8 items-center justify-center rounded-full border px-3',
-              picking ? 'border-primary bg-primary-muted' : 'border-border-strong',
-              !canFocus && 'opacity-40'
-            )}>
-            <Text className={cn('text-label', picking ? 'text-primary' : 'text-foreground')}>
-              {picking ? t('취소') : t('1:1 비교')}
+          {active && youtubeWatchUrl(active) ? (
+            <Pressable
+              onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
+              accessibilityRole="link"
+              className="flex-row items-center gap-1.5">
+              <ServiceLogo service="youtube" size={14} />
+              <Text variant="caption">{t('YouTube 원본')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
+        {picking ? (
+          <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
+            <Text className="text-body-sm font-semibold text-foreground">
+              {active
+                ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', {
+                    name: primaryCredit(active)?.artistName ?? t('fallback::지금 연주'),
+                  })
+                : t('견줄 연주자를 두 명 고르세요')}
             </Text>
-          </Pressable>
-        </View>
-        {active && youtubeWatchUrl(active) ? (
-          <Pressable
-            onPress={() => Linking.openURL(youtubeWatchUrl(active) ?? '')}
-            accessibilityRole="link"
-            className="flex-row items-center gap-1.5">
-            <ServiceLogo service="youtube" size={14} />
-            <Text variant="caption">{t('YouTube 원본')}</Text>
-          </Pressable>
+          </View>
         ) : null}
-      </View>
 
-      {picking ? (
-        <View className="mt-3 rounded-lg border border-primary bg-primary-muted px-3 py-2.5">
-          <Text className="text-body-sm font-semibold text-foreground">
-            {active
-              ? t('{name} 연주와 견줄 연주자를 한 명 더 고르세요', {
-                  name: primaryCredit(active)?.artistName ?? t('fallback::지금 연주'),
-                })
-              : t('견줄 연주자를 두 명 고르세요')}
-          </Text>
+        {/* 연주자: 길이는 가장 긴 연주 대비 */}
+        <View className="mt-4">
+          {performancesQuery.isLoading
+            ? Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="mb-2 h-14 w-full rounded-lg" />
+              ))
+            : performances.map((performance) => (
+                <PerformerRow
+                  key={performance.id}
+                  performance={performance}
+                  image={imageOf(performance)}
+                  longest={longest}
+                  active={performance.id === activeId}
+                  inRepertoire={repertoireIds.artists.has(
+                    primaryCredit(performance)?.artistId ?? -1
+                  )}
+                  onPress={() => choose(performance)}
+                  queue={
+                    isPlayablePerformance(performance) && performance.id !== activeId
+                      ? () => ({
+                          track: trackFromPerformance(performance, imageOf(performance)),
+                          title: primaryCredit(performance)?.artistName ?? performance.pieceTitle,
+                          subtitle: `${performance.pieceTitle} · ${performance.sectorName}`,
+                        })
+                      : undefined
+                  }
+                  onMoment={(moment) => playAt(performance, moment)}
+                  curveFloor={curveFloor}
+                />
+              ))}
         </View>
-      ) : null}
 
-      {/* 연주자: 길이는 가장 긴 연주 대비 */}
-      <View className="mt-4">
-        {performancesQuery.isLoading
-          ? Array.from({ length: 3 }, (_, index) => (
-              <Skeleton key={index} className="mb-2 h-14 w-full rounded-lg" />
-            ))
-          : performances.map((performance) => (
-              <PerformerRow
-                key={performance.id}
-                performance={performance}
-                image={imageOf(performance)}
-                longest={longest}
-                active={performance.id === activeId}
-                inRepertoire={repertoireIds.artists.has(primaryCredit(performance)?.artistId ?? -1)}
-                onPress={() => choose(performance)}
-                queue={
-                  isPlayablePerformance(performance) && performance.id !== activeId
-                    ? () => ({
-                        track: trackFromPerformance(performance, imageOf(performance)),
-                        title: primaryCredit(performance)?.artistName ?? performance.pieceTitle,
-                        subtitle: `${performance.pieceTitle} · ${performance.sectorName}`,
-                      })
-                    : undefined
-                }
-                onMoment={(moment) => playAt(performance, moment)}
-                curveFloor={curveFloor}
-              />
-            ))}
-      </View>
-
-      <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-10" />
-      <MobileFullscreen
-        performances={performances.filter(isPlayablePerformance)}
-        active={active ?? null}
-        sectorName={activeSector?.sectorName ?? null}
-        activeId={activeId}
-        imageOf={imageOf}
-        onPick={pick}
-      />
-    </ScrollView>
+        <PieceScreenStrip pieceId={pieceId} activeSectorId={activeSector?.id} className="mt-10" />
+        <MobileFullscreen
+          performances={performances.filter(isPlayablePerformance)}
+          active={active ?? null}
+          sectorName={activeSector?.sectorName ?? null}
+          activeId={activeId}
+          imageOf={imageOf}
+          onPick={pick}
+        />
+      </ScrollView>
+    </EdgeSwipeBack>
   );
 }
 
+/** 웹에서만 보인다. 앱은 왼쪽 가장자리 밀기(iOS)·시스템 뒤로(안드로이드)로 돌아간다 */
 function BackButton({ onPress }: { onPress: () => void }) {
   useLocale();
+  if (!BACK_BUTTON_ON_PLATFORM) return null;
   return (
     <Pressable
       onPress={onPress}

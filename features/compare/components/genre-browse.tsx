@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { t, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/use-comparison-performances';
@@ -209,15 +210,17 @@ export function CompareGenrePieces({
     <ScrollView
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="link"
-        className="mb-5 flex-row items-center gap-1 self-start">
-        <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
-        <Text variant="caption" className="text-foreground-muted">
-          {t('비교')}
-        </Text>
-      </Pressable>
+      {BACK_BUTTON_ON_PLATFORM ? (
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="link"
+          className="mb-5 flex-row items-center gap-1 self-start">
+          <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
+          <Text variant="caption" className="text-foreground-muted">
+            {t('비교')}
+          </Text>
+        </Pressable>
+      ) : null}
       <Text
         className={cn(
           'font-extrabold tracking-tight text-foreground',

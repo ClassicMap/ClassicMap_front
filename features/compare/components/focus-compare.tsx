@@ -11,6 +11,7 @@ import { PlayerSlot } from '@/features/player/components/player-slot';
 import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggle';
 import { VolumeControl } from '@/features/player/components/volume-control';
 import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
+import { BACK_BUTTON_ON_PLATFORM } from '@/hooks/use-back-button';
 import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
 import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
@@ -523,15 +524,17 @@ function FocusStage(props: FocusStageProps) {
       <ScrollView
         className="flex-1"
         contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
-        <Pressable
-          onPress={exit}
-          accessibilityRole="button"
-          className="mb-3 flex-row items-center gap-1 self-start">
-          <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
-          <Text variant="caption" className="text-foreground-muted">
-            {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
-          </Text>
-        </Pressable>
+        {BACK_BUTTON_ON_PLATFORM ? (
+          <Pressable
+            onPress={exit}
+            accessibilityRole="button"
+            className="mb-3 flex-row items-center gap-1 self-start">
+            <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
+            <Text variant="caption" className="text-foreground-muted">
+              {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
+            </Text>
+          </Pressable>
+        ) : null}
         <View className={cn('gap-3', !narrow && 'flex-row items-end justify-between')}>
           <View className="min-w-0 flex-1">
             <Text variant="micro" className="uppercase tracking-widest text-primary">

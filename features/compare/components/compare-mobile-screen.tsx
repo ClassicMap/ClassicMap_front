@@ -4,6 +4,7 @@ import {
   CompareMobileComposerPieces,
   CompareMobilePiece,
 } from '@/features/compare/components/compare-mobile';
+import { EdgeSwipeBack } from '@/features/compare/components/edge-swipe-back';
 import { FocusCompare, parseFocusParam } from '@/features/compare/components/focus-compare';
 import { CompareGenrePieces } from '@/features/compare/components/genre-browse';
 import { isPieceGenre } from '@/lib/design/genre-palette';
@@ -33,17 +34,20 @@ export function CompareMobileScreen() {
   const focus = parseFocusParam(params.focus);
 
   if (pieceId && focus) {
+    const exit = () => router.setParams({ focus: undefined });
     return (
-      <FocusCompare
-        pieceId={pieceId}
-        composerId={composerId}
-        sectorId={toId(params.sectorId)}
-        focus={focus}
-        onExit={() => router.setParams({ focus: undefined })}
-        onChangeSector={(id, a, b) =>
-          router.setParams({ sectorId: String(id), focus: `${a},${b}` })
-        }
-      />
+      <EdgeSwipeBack onBack={exit}>
+        <FocusCompare
+          pieceId={pieceId}
+          composerId={composerId}
+          sectorId={toId(params.sectorId)}
+          focus={focus}
+          onExit={exit}
+          onChangeSector={(id, a, b) =>
+            router.setParams({ sectorId: String(id), focus: `${a},${b}` })
+          }
+        />
+      </EdgeSwipeBack>
     );
   }
 
@@ -68,28 +72,34 @@ export function CompareMobileScreen() {
   }
 
   if (genre) {
+    const back = () => router.setParams({ genre: undefined });
     return (
-      <CompareGenrePieces
-        genre={genre}
-        wide={false}
-        onBack={() => router.setParams({ genre: undefined })}
-        onSelectGenre={(key) => router.setParams({ genre: key })}
-        onOpen={(piece) =>
-          router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)
-        }
-      />
+      <EdgeSwipeBack onBack={back}>
+        <CompareGenrePieces
+          genre={genre}
+          wide={false}
+          onBack={back}
+          onSelectGenre={(key) => router.setParams({ genre: key })}
+          onOpen={(piece) =>
+            router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.pieceId}` as Href)
+          }
+        />
+      </EdgeSwipeBack>
     );
   }
 
   if (composerId) {
+    const back = () => router.setParams({ composerId: undefined });
     return (
-      <CompareMobileComposerPieces
-        composerId={composerId}
-        onBack={() => router.setParams({ composerId: undefined })}
-        onOpen={(piece) =>
-          router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })
-        }
-      />
+      <EdgeSwipeBack onBack={back}>
+        <CompareMobileComposerPieces
+          composerId={composerId}
+          onBack={back}
+          onOpen={(piece) =>
+            router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })
+          }
+        />
+      </EdgeSwipeBack>
     );
   }
 
