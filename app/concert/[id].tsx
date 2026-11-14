@@ -23,6 +23,7 @@ import { EntityThumb } from '@/components/shared/entity-thumb';
 import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { AdminConcertAPI } from '@/lib/api/admin';
 import { ConcertAPI } from '@/lib/api/client';
@@ -51,6 +52,7 @@ export default function ConcertDetailScreen() {
   const concertId = Number(id);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const showBack = useStackBackButtonVisible();
   const { canEdit, isSignedIn } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -418,13 +420,17 @@ export default function ConcertDetailScreen() {
           </View>
         ) : (
           <>
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.push('/concerts'))}
-              accessibilityLabel={t('뒤로')}
-              style={{ marginTop: insets.top + 4 }}
-              className="mb-2 size-11 items-center justify-center">
-              <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
-            </Pressable>
+            {showBack ? (
+              <Pressable
+                onPress={() => (router.canGoBack() ? router.back() : router.push('/concerts'))}
+                accessibilityLabel={t('뒤로')}
+                style={{ marginTop: insets.top + 4 }}
+                className="mb-2 size-11 items-center justify-center">
+                <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
+              </Pressable>
+            ) : (
+              <View style={{ height: insets.top + 12 }} />
+            )}
             {/* 첫 화면에서 무엇·언제·어디·얼마가 다 보이게 */}
             <View className="flex-row gap-3.5">
               <EntityThumb

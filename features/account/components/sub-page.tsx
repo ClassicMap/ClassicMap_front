@@ -1,5 +1,6 @@
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ export function SubPage({
 }: SubPageProps) {
   useLocale();
   const router = useRouter();
+  const showBack = useStackBackButtonVisible();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
 
@@ -34,7 +36,7 @@ export function SubPage({
       keyboardShouldPersistTaps="handled"
       contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
       <View className="w-full max-w-[640px]">
-        {!wide ? (
+        {!wide && showBack ? (
           <Pressable
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace(fallbackHref as Href)
@@ -44,7 +46,8 @@ export function SubPage({
             <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
           </Pressable>
         ) : null}
-        <Text variant={wide ? 'title1' : 'title2'} className="mt-4">
+        {/* 단추가 없으면 제목이 단추 자리(mt-12)에서 시작한다 */}
+        <Text variant={wide ? 'title1' : 'title2'} className={wide || showBack ? 'mt-4' : 'mt-12'}>
           {title}
         </Text>
         {description ? (

@@ -2,6 +2,7 @@ import { HeroImage, type HeroImageLayout } from '@/components/shared/hero-image'
 import { Icon } from '@/components/ui/icon';
 import { Scrim } from '@/components/ui/scrim';
 import { Text } from '@/components/ui/text';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { t, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { ArrowLeftIcon, PauseIcon, PlayIcon } from 'lucide-react-native';
@@ -16,7 +17,7 @@ interface HeroBannerProps {
   /** 이름 아래 한 줄 (시대·생몰년, 악기·국적 등) */
   meta?: readonly (string | null | undefined)[];
   wide: boolean;
-  /** 좁은 화면에서 배너 위 왼쪽에 뜨는 뒤로 버튼 */
+  /** 좁은 화면에서 배너 위 왼쪽에 뜨는 뒤로 버튼. 앱은 밀어서 돌아갈 곳이 있으면 숨긴다 */
   onBack?: () => void;
   /** cover: 초상을 폭으로 깐다(작곡가), side: 사진을 오른쪽에 세우고 뒤는 흐리게(연주자) */
   imageLayout?: HeroImageLayout;
@@ -38,6 +39,7 @@ export function HeroBanner({
   focalPoint,
 }: HeroBannerProps) {
   useLocale();
+  const showBack = useStackBackButtonVisible();
   const [width, setWidth] = React.useState(0);
   const insets = useSafeAreaInsets();
   const hasImage = Boolean(image);
@@ -64,7 +66,7 @@ export function HeroBanner({
           <Scrim from="top" opacity={0.3} extent={26} />
         </>
       ) : null}
-      {onBack ? (
+      {onBack && showBack ? (
         <Pressable
           onPress={onBack}
           accessibilityRole="button"

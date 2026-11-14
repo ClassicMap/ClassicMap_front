@@ -32,6 +32,7 @@ import {
   StarIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 type Tab = 'ratings' | 'repertoire';
@@ -40,6 +41,7 @@ type Tab = 'ratings' | 'repertoire';
 export default function MyPageScreen() {
   useLocale();
   const router = useRouter();
+  const showBack = useStackBackButtonVisible();
   const { user } = useUser();
   const { signOut } = useClerkAuth();
   const { profile: authProfile, loading: authLoading, isSignedIn } = useAuth();
@@ -246,12 +248,17 @@ export default function MyPageScreen() {
         contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
         {!wide ? (
           <View className="mt-12 flex-row items-center justify-between">
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
-              accessibilityLabel={t('뒤로')}
-              className="size-11 items-center justify-center rounded-full bg-surface-2">
-              <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-            </Pressable>
+            {showBack ? (
+              <Pressable
+                onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
+                accessibilityLabel={t('뒤로')}
+                className="size-11 items-center justify-center rounded-full bg-surface-2">
+                <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
+              </Pressable>
+            ) : (
+              // 제목이 가운데에 오게 단추 자리를 비워 둔다
+              <View className="size-11" />
+            )}
             <Text variant="headline">{t('마이페이지')}</Text>
             <Pressable
               onPress={() => router.push('/settings' as Href)}

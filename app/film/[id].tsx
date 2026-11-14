@@ -20,6 +20,7 @@ import { tmdbImageUrl } from '@/features/film/lib/tmdb';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, ClapperboardIcon } from 'lucide-react-native';
 import * as React from 'react';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,6 +30,7 @@ export default function FilmTitleScreen() {
   const titleId = Number(id);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const showBack = useStackBackButtonVisible();
   const { isAdmin } = useAuth();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
@@ -37,7 +39,7 @@ export default function FilmTitleScreen() {
   // 목록에서 온 경우 머리 부분은 이미 아는 값으로 바로 그리고, 곡 카드만 받는 동안 비워 둔다
   const cached = useCachedScreenTitleSummary(validId);
   const goBack = () => (router.canGoBack() ? router.back() : router.push('/films' as Href));
-  const backButton = (
+  const backButton = showBack ? (
     <Pressable
       onPress={goBack}
       accessibilityLabel={t('뒤로')}
@@ -45,7 +47,7 @@ export default function FilmTitleScreen() {
       className="absolute left-2 z-raised size-11 items-center justify-center rounded-full bg-background/70">
       <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
     </Pressable>
-  );
+  ) : null;
 
   const head = title ?? (isLoading ? cached : undefined);
   // 바로 들을 수 있는 곡들을 나온 순서대로. 한 곡을 틀면 이 목록이 재생 목록이 된다

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, ArrowLeftIcon, EyeOffIcon, UserXIcon } from 'lucide-react-native';
 import * as React from 'react';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 type Tab = 'ratings' | 'repertoire' | 'collections';
@@ -32,6 +33,7 @@ function parseUserId(id: string | string[] | undefined): number | undefined {
 export default function PublicProfileScreen() {
   useLocale();
   const router = useRouter();
+  const showBack = useStackBackButtonVisible();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
   const userId = parseUserId(id);
   const query = usePublicProfile(userId);
@@ -44,13 +46,15 @@ export default function PublicProfileScreen() {
   const displayName =
     profile?.displayName || (userId ? t('사용자 #{id}', { id: userId }) : t('사용자'));
 
-  const back = (
+  const back = showBack ? (
     <Pressable
       onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
       accessibilityLabel={t('뒤로')}
       className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
       <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
     </Pressable>
+  ) : (
+    <View className="mt-12" />
   );
 
   if (query.isLoading) {

@@ -30,6 +30,7 @@ import { type Href, Redirect, useRouter } from 'expo-router';
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { LOCALES, type Locale, msg, t, useLocale } from '@/lib/i18n';
 import {
   type LayoutChangeEvent,
@@ -84,6 +85,7 @@ const BIO_MAX = 80;
 export default function SettingsScreen() {
   useLocale();
   const router = useRouter();
+  const showBack = useStackBackButtonVisible();
   const { user } = useUser();
   const { signOut } = useClerkAuth();
   const { isSignedIn, loading } = useAuth();
@@ -135,12 +137,16 @@ export default function SettingsScreen() {
           <Text variant="display">{t('설정')}</Text>
         ) : (
           <View className="mt-12 flex-row items-center gap-3">
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.push('/my-page' as Href))}
-              accessibilityLabel={t('뒤로')}
-              className="size-11 items-center justify-center rounded-full bg-surface-2">
-              <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-            </Pressable>
+            {showBack ? (
+              <Pressable
+                onPress={() =>
+                  router.canGoBack() ? router.back() : router.push('/my-page' as Href)
+                }
+                accessibilityLabel={t('뒤로')}
+                className="size-11 items-center justify-center rounded-full bg-surface-2">
+                <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
+              </Pressable>
+            ) : null}
             <Text variant="title2">{t('설정')}</Text>
           </View>
         )}
