@@ -12,6 +12,7 @@ import {
 } from '@/lib/query/hooks/use-comparison-performances';
 import type { ComparisonPerformance, ComparisonPiece, ComparisonSector } from '@/types/models';
 import { pieceMeta } from '@/lib/player/autoplay';
+import { type Bilingual, pick } from '@/lib/i18n';
 
 /**
  * 재생 목록의 곡을 실제 연주로 정하는 규칙. 영화 카드의 「바로 듣기」, 홈·작곡가 카드의 재생,
@@ -108,41 +109,68 @@ export function listItems(list: readonly ListPiece[] | readonly PlaylistItem[]):
   );
 }
 
+/** 대기열 패널에 보일 목록 이름. 두 언어로 주면 언어를 바꿨을 때도 따라 바뀐다 */
+export type ListName = string | Bilingual;
+
+/** 목록 이름을 재생 목록 칸(name·names)으로 */
+export function playlistName(name?: ListName): Pick<Playlist, 'name' | 'names'> {
+  if (name === undefined || typeof name === 'string') return { name };
+  return { name: pick(name.ko, name.en), names: { name } };
+}
+
+/** 두 언어 값을 언어마다 이어 붙인다(구간 · 작품 제목). 영어가 없는 쪽은 한국어로 */
+function joinBilingual(parts: readonly Bilingual[], separator: string): Bilingual {
+  return {
+    ko: parts.map((part) => part.ko).join(separator),
+    en: parts.map((part) => part.en ?? part.ko).join(separator),
+  };
+}
+
 /** 작품 목록(홈 선반·작곡가 화면·비교 둘러보기)을 재생 목록으로. 이 작품이 목록에 없으면 이 곡 하나만 */
 export function pieceListPlaylist(
   pieceId: number,
   list?: readonly ListPiece[],
-  name?: string
+  name?: ListName
 ): Playlist {
   const items = list && list.length > 0 ? list.map(listItem) : [];
   const index = items.findIndex((item) => item.pieceId === pieceId);
-  if (index < 0) return { kind: 'list', items: [{ pieceId, sectorId: null }], index: 0, name };
-  return { kind: 'list', items, index, name };
+  const named = playlistName(name);
+  if (index < 0) return { kind: 'list', items: [{ pieceId, sectorId: null }], index: 0, ...named };
+  return { kind: 'list', items, index, ...named };
 }
 
 /** 한 작품의 비교 구간들을 재생 목록으로(비교 화면) */
 export function sectorPlaylist(
   pieceId: number,
-  sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName'>[],
+  sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName' | 'names'>[],
   sectorId: number,
-  piece?: { title: string; composer: string; image: string | null; composerId?: number }
+  piece?: {
+    title: Bilingual;
+    composer: Bilingual;
+    image: string | null;
+    composerId?: number;
+  }
 ): Playlist {
-  const items = sectors.map((sector) => ({
-    pieceId,
-    sectorId: sector.id,
-    meta: piece
-      ? {
-          title: `${sector.sectorName} · ${piece.title}`,
-          composer: piece.composer,
-          image: piece.image,
-          composerId: piece.composerId,
-        }
-      : undefined,
-  }));
+  const items = sectors.map((sector) => {
+    if (!piece) return { pieceId, sectorId: sector.id };
+    const sectorName = sector.names?.sectorName ?? { ko: sector.sectorName, en: null };
+    const title = joinBilingual([sectorName, piece.title], ' · ');
+    return {
+      pieceId,
+      sectorId: sector.id,
+      meta: {
+        title: pick(title.ko, title.en),
+        composer: pick(piece.composer.ko, piece.composer.en),
+        image: piece.image,
+        composerId: piece.composerId,
+        names: { title, composer: piece.composer },
+      },
+    };
+  });
   const index = items.findIndex((item) => item.sectorId === sectorId);
-  const name = piece ? piece.title : undefined;
-  if (index < 0) return { kind: 'compare', items: [{ pieceId, sectorId }], index: 0, name };
-  return { kind: 'compare', items, index, name };
+  const named = playlistName(piece?.title);
+  if (index < 0) return { kind: 'compare', items: [{ pieceId, sectorId }], index: 0, ...named };
+  return { kind: 'compare', items, index, ...named };
 }
 
 /** 한 구간의 재생 가능한 연주들(연주자 넘기기 차례). 새로고침 뒤 되살린 곡의 차례를 다시 채울 때 쓴다 */

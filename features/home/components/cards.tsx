@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Alert } from '@/lib/utils/alert';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
 import { playPiece } from '@/lib/player/play-piece';
+import { type ListName } from '@/lib/player/playlist';
 import { PauseIcon, PlayIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Platform, Pressable, View } from 'react-native';
@@ -50,8 +51,8 @@ export function PieceCard({
   hideGenre?: boolean;
   /** 이 카드가 놓인 목록(선반). 재생하면 이 목록이 재생 목록이 되어 다음 곡으로 이어진다 */
   list?: readonly ComparisonPiece[];
-  /** 대기열 패널에 보일 그 목록 이름(선반 제목) */
-  listName?: string;
+  /** 대기열 패널에 보일 그 목록 이름(선반 제목). 두 언어로 주면 언어를 바꿔도 따라 바뀐다 */
+  listName?: ListName;
 }) {
   useLocale();
   const confirmDismiss = onDismiss

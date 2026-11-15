@@ -27,7 +27,7 @@ import {
   useComparisonPieces,
 } from '@/lib/query/hooks/use-comparison-performances';
 import type { ComparisonPiece, ComparisonPiecePerformer } from '@/types/models';
-import { t, useLocale } from '@/lib/i18n';
+import { msg, t, tBoth, useLocale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronLeftIcon, ChevronRightIcon } from 'lucide-react-native';
@@ -442,7 +442,7 @@ function PieceRow({
 }) {
   useLocale();
   const playHere = () => {
-    playPiece({ pieceId: piece.pieceId }, list, t('비교할 수 있는 작품'))
+    playPiece({ pieceId: piece.pieceId }, list, tBoth(msg('비교할 수 있는 작품')))
       .then((played) => !played && onPress())
       .catch(() => onPress());
   };

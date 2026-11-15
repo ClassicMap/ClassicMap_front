@@ -1,4 +1,5 @@
 import { comparePlayer, type Playlist } from '@/lib/player/compare-player-store';
+import { bilingual } from '@/lib/i18n';
 import { sectorPlaylist } from '@/lib/player/playlist';
 import type { ComparisonPerformance, ComparisonSector } from '@/types/models';
 
@@ -11,11 +12,11 @@ import type { ComparisonPerformance, ComparisonSector } from '@/types/models';
  */
 export function compareQueueFor(
   pieceId: number,
-  sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName'>[],
+  sectors: readonly Pick<ComparisonSector, 'id' | 'sectorName' | 'names'>[],
   sectorId: number,
   performance?: Pick<
     ComparisonPerformance,
-    'pieceTitle' | 'composerName' | 'composerId' | 'videoId'
+    'pieceTitle' | 'composerName' | 'composerId' | 'videoId' | 'names'
   >
 ): { playlist?: Playlist; insert?: boolean } {
   const { current, playlist } = comparePlayer.getState();
@@ -29,8 +30,8 @@ export function compareQueueFor(
   }
   const piece = performance
     ? {
-        title: performance.pieceTitle,
-        composer: performance.composerName,
+        title: performance.names?.pieceTitle ?? bilingual(performance.pieceTitle, null),
+        composer: performance.names?.composerName ?? bilingual(performance.composerName, null),
         image: performance.videoId
           ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg`
           : null,

@@ -109,6 +109,8 @@ export interface Playlist {
   index: number;
   /** 대기열 패널에 보일 출처 이름 */
   name?: string;
+  /** name 의 한국어·영어. 그릴 때 relocalize 로 지금 언어를 고른다 */
+  names?: NameSidecar;
   /** 셔플했을 때 원래 순서. 셔플을 끄면 지금 곡 다음부터 이 순서로 돌아간다 */
   original?: readonly PlaylistItem[];
 }

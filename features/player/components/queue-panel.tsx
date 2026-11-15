@@ -395,7 +395,7 @@ export function QueuePanel({ onClose }: { onClose?: () => void }) {
   const remainingKeys = stableKeys(remaining, 's');
   const autoplayKeys = stableKeys(autoplayItems, 'a');
   const repeatAll = repeat === 'all' && Boolean(playlist?.items.length);
-  const sourceName = playlist?.name ?? t('재생 목록');
+  const sourceName = (playlist ? relocalize(playlist).name : undefined) ?? t('재생 목록');
 
   const forwardKeys = stableKeys(
     forward.map((entry) => ({ pieceId: entry.track.performanceId, sectorId: null })),
