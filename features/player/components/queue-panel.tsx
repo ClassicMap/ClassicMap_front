@@ -262,16 +262,15 @@ function useItemRow() {
   return React.useCallback(
     (item: PlaylistItem): Omit<RowProps, 'label'> & { label: string } => {
       if (item.meta) {
-        const subtitle = item.meta.reason
-          ? `${item.meta.composer} · ${item.meta.reason}`
-          : item.meta.composer;
+        const meta = relocalize(item.meta);
+        const subtitle = meta.reason ? `${meta.composer} · ${meta.reason}` : meta.composer;
         return {
-          title: item.meta.title,
+          title: meta.title,
           subtitle,
-          image: item.meta.image,
-          imageName: item.meta.composer || item.meta.title,
-          composerId: item.meta.composerId,
-          label: `${item.meta.title} ${subtitle}`,
+          image: meta.image,
+          imageName: meta.composer || meta.title,
+          composerId: meta.composerId,
+          label: `${meta.title} ${subtitle}`,
         };
       }
       const cached = findCachedComparisonPiece(queryClient, item.pieceId)?.piece;

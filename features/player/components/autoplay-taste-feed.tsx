@@ -1,4 +1,5 @@
 import { useTaste } from '@/hooks/use-taste';
+import { bilingual } from '@/lib/i18n';
 import { candidateFromPiece, tasteGenres } from '@/lib/player/autoplay';
 import { comparePlayer } from '@/lib/player/compare-player-store';
 import { useHomeRecommendations } from '@/lib/query/hooks/use-home-recommendations';
@@ -23,7 +24,12 @@ export function AutoplayTasteFeed() {
         seen.add(piece.pieceId);
         return true;
       })
-      .map((piece) => candidateFromPiece(piece, piece.sectorId, piece.reasons[0]));
+      .map((piece) => {
+        // 고른 까닭은 두 언어로 넘긴다. 대기열 줄이 그릴 때 지금 언어를 고른다
+        const ko = piece.reasonsByLocale?.ko[0] ?? piece.reasons[0];
+        const reason = ko ? bilingual(ko, piece.reasonsByLocale?.en[0]) : undefined;
+        return candidateFromPiece(piece, piece.sectorId, reason);
+      });
     comparePlayer.setTastePool(candidates, tasteGenres(sounds));
   }, [recommendations, sounds]);
   return null;

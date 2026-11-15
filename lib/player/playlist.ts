@@ -91,6 +91,7 @@ function listItem(piece: ListPiece): PlaylistItem {
           coverVideoId: piece.coverVideoId ?? null,
           opusNumber: null,
           composerId: piece.composerId ?? 0,
+          names: piece.names,
           sectorCount: 0,
           performerCount: 0,
           performers: [],

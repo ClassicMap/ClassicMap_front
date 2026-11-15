@@ -1,5 +1,5 @@
 import { type PieceGenre, genreStyle, isPieceGenre } from '@/lib/design/genre-palette';
-import { t } from '@/lib/i18n';
+import { type Bilingual, bilingual, msg, pick, tBoth } from '@/lib/i18n';
 import type {
   AutoplayPick,
   ComparePlayerTrack,
@@ -58,7 +58,7 @@ interface Scored {
   candidate: AutoplayCandidate;
   score: number;
   kind: ReasonKind;
-  reason: string;
+  reason: Bilingual;
 }
 
 function pieceImage(
@@ -70,19 +70,24 @@ function pieceImage(
 }
 
 /** 비교 작품 카드(홈·장르·작곡가 목록)를 대기열 줄 정보로 */
-export function pieceMeta(piece: ComparisonPiece, reason?: string): QueueItemMeta {
+export function pieceMeta(piece: ComparisonPiece, reason?: Bilingual): QueueItemMeta {
   return {
     title: piece.pieceTitle,
     composer: piece.composerName,
     image: pieceImage(piece),
-    reason,
+    reason: reason ? pick(reason.ko, reason.en) : undefined,
+    names: {
+      title: piece.names?.pieceTitle,
+      composer: piece.names?.composerName,
+      reason,
+    },
   };
 }
 
 export function candidateFromPiece(
   piece: ComparisonPiece,
   sectorId: number | null,
-  reason?: string
+  reason?: Bilingual
 ): AutoplayCandidate {
   return {
     pieceId: piece.pieceId,
@@ -105,8 +110,17 @@ function candidateFromPerformance(performance: ComparisonPerformance): AutoplayC
       image: performance.videoId
         ? `https://i.ytimg.com/vi/${performance.videoId}/hqdefault.jpg`
         : null,
+      names: {
+        title: performance.names?.pieceTitle,
+        composer: performance.names?.composerName,
+      },
     },
   };
+}
+
+/** 장르 이름의 두 언어 값 */
+function genreLabel(genre: PieceGenre): Bilingual {
+  return tBoth(genreStyle(genre)?.label ?? '');
 }
 
 /** 이름이 길면 성(마지막 낱말)만. 한 글자로 줄면(요요 마 → 마) 이름 전체 */
@@ -128,7 +142,7 @@ async function firstPage<T>(load: () => Promise<{ pages: readonly T[][] }>): Pro
 /** 자동 재생 목록을 이어 붙일 때 기준이 되는 곡. 장르를 알면 같이 준다(모르면 목록에서 찾는다) */
 export type AutoplayBasis = Pick<
   ComparePlayerTrack,
-  'pieceId' | 'composerId' | 'artistId' | 'artistName'
+  'pieceId' | 'composerId' | 'artistId' | 'artistName' | 'names'
 > & { genre?: PieceGenre | null };
 
 /**
@@ -174,7 +188,7 @@ export async function pickAutoplay(input: {
 
   // 비슷한 곡: 까닭이 여럿이면 점수를 더하고 가장 강한 까닭을 보인다
   const similar = new Map<number, Scored>();
-  const add = (candidate: AutoplayCandidate, kind: ReasonKind, reason: string) => {
+  const add = (candidate: AutoplayCandidate, kind: ReasonKind, reason: Bilingual) => {
     if (exclude.has(candidate.pieceId) || candidate.pieceId === basis.pieceId) return;
     const existing = similar.get(candidate.pieceId);
     if (!existing) {
@@ -190,28 +204,30 @@ export async function pickAutoplay(input: {
       existing.reason = reason;
     }
   };
+  const artistName = basis.names?.artistName ?? bilingual(basis.artistName, null);
+  const artistReason = tBoth(msg('같은 연주자 · {name}'), {
+    name: bilingual(
+      shortName(artistName.ko),
+      artistName.en === null ? null : shortName(artistName.en)
+    ),
+  });
   for (const performance of artistPerformances) {
     if (performance.clipStatus !== 'ready') continue;
-    add(
-      candidateFromPerformance(performance),
-      'artist',
-      t('같은 연주자 · {name}', { name: shortName(basis.artistName) })
-    );
+    add(candidateFromPerformance(performance), 'artist', artistReason);
   }
   for (const piece of composerPieces) {
     add(
       candidateFromPiece(piece, null),
       'composer',
-      t('같은 작곡가 · {name}', { name: piece.composerName })
+      tBoth(msg('같은 작곡가 · {name}'), {
+        name: piece.names?.composerName ?? bilingual(piece.composerName, null),
+      })
     );
   }
-  const genreLabel = genre ? t(genreStyle(genre)?.label ?? '') : '';
-  for (const piece of genrePieces)
-    add(
-      candidateFromPiece(piece, null),
-      'genre',
-      t('비슷한 편성 · {genre}', { genre: genreLabel })
-    );
+  if (genre) {
+    const genreReason = tBoth(msg('비슷한 편성 · {genre}'), { genre: genreLabel(genre) });
+    for (const piece of genrePieces) add(candidateFromPiece(piece, null), 'genre', genreReason);
+  }
   // 점수가 같으면 조금씩 흔들어 매번 같은 곡만 나오지 않게 한다
   const similarList = [...similar.values()]
     .map((entry) => ({ entry, rank: entry.score + Math.random() * 0.9 }))
@@ -229,7 +245,7 @@ export async function pickAutoplay(input: {
       candidateFromPiece(
         piece,
         null,
-        t('취향 · {genre}', { genre: t(genreStyle(genres[index])?.label ?? '') })
+        tBoth(msg('취향 · {genre}'), { genre: genreLabel(genres[index]) })
       )
     )
   );
@@ -239,7 +255,7 @@ export async function pickAutoplay(input: {
       candidate,
       score: WEIGHT.taste,
       kind: 'taste',
-      reason: candidate.meta.reason || t('취향 추천'),
+      reason: candidate.meta.names?.reason ?? tBoth(msg('취향 추천')),
     }));
 
   const used = new Set<number>();
@@ -257,7 +273,7 @@ export async function pickAutoplay(input: {
     }
     const next = otherGenres.shift();
     if (!next) return false;
-    const reason = t('다른 편성 · {genre}', { genre: t(genreStyle(next)?.label ?? '') });
+    const reason = tBoth(msg('다른 편성 · {genre}'), { genre: genreLabel(next) });
     const pieces = await firstPage(() =>
       queryClient.fetchInfiniteQuery(genrePiecesQueryOptions(next))
     );
@@ -300,7 +316,11 @@ export async function pickAutoplay(input: {
   return picks.map(({ candidate, reason, kind }) => ({
     pieceId: candidate.pieceId,
     sectorId: candidate.sectorId,
-    meta: { ...candidate.meta, reason },
+    meta: {
+      ...candidate.meta,
+      reason: pick(reason.ko, reason.en),
+      names: { ...candidate.meta.names, reason },
+    },
     picked: {
       composerId: candidate.composerId,
       genre: candidate.genre,
