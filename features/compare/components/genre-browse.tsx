@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
-import { t, useLocale } from '@/lib/i18n';
+import { t, tBoth, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/use-comparison-performances';
 import type { ComparisonPiece } from '@/types/models';
@@ -276,7 +276,7 @@ export function CompareGenrePieces({
                     width={itemWidth}
                     hideGenre
                     list={pieces}
-                    listName={t(style.label)}
+                    listName={tBoth(style.label)}
                     onPress={() => onOpen(piece)}
                   />
                 </View>

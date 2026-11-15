@@ -54,7 +54,7 @@ import {
   TrashIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
-import { formatNumber, t, useLocale } from '@/lib/i18n';
+import { bilingual, formatNumber, msg, pick, t, tBoth, useLocale } from '@/lib/i18n';
 import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
@@ -261,7 +261,10 @@ export default function ComposerDetailScreen() {
     .map((keyword) => keyword.trim())
     .filter(Boolean);
   const firstComparable = comparable[0];
-  const listName = t('{name} 작품', { name: composer.name });
+  // 대기열에 보일 목록 이름. 작곡가 이름의 두 언어 값은 비교 작품이 갖고 있다
+  const listName = tBoth(msg('{name} 작품'), {
+    name: firstComparable?.names?.composerName ?? bilingual(composer.name, null),
+  });
   // 머리 재생: 첫 비교 작품을 그 자리에서 튼다. 틀 연주가 없으면 비교 화면으로 간다
   const playFirst = () => {
     if (!firstComparable) return;
@@ -355,7 +358,7 @@ export default function ComposerDetailScreen() {
             <Pressable
               onPress={() => void playList(comparable, { shuffle: true, name: listName })}
               accessibilityRole="button"
-              accessibilityLabel={t('{name} 셔플로 듣기', { name: listName })}
+              accessibilityLabel={t('{name} 셔플로 듣기', { name: pick(listName.ko, listName.en) })}
               className="size-12 items-center justify-center rounded-full border border-border-strong web:hover:bg-surface-2">
               <Icon as={ShuffleIcon} size={20} className="text-foreground" />
             </Pressable>

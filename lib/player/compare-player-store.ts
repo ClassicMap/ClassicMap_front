@@ -59,6 +59,8 @@ export interface QueueItemMeta {
   reason?: string;
   /** 줄 그림으로 쓸 작곡가 사진을 찾는 데 쓴다 */
   composerId?: number;
+  /** title·composer·reason 의 한국어·영어. 세션에 저장한 줄도 그릴 때 relocalize 로 지금 언어를 고른다 */
+  names?: NameSidecar;
 }
 
 /**
@@ -107,6 +109,8 @@ export interface Playlist {
   index: number;
   /** 대기열 패널에 보일 출처 이름 */
   name?: string;
+  /** name 의 한국어·영어. 그릴 때 relocalize 로 지금 언어를 고른다 */
+  names?: NameSidecar;
   /** 셔플했을 때 원래 순서. 셔플을 끄면 지금 곡 다음부터 이 순서로 돌아간다 */
   original?: readonly PlaylistItem[];
 }
@@ -444,6 +448,10 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
   positionOrder = session.positions.map(([id]) => id);
   const current = session.current;
   const resumeAt = current ? (positions[current.performanceId] ?? 0) : 0;
+  // 두 언어 이름 없이 저장한 자동 재생 줄은 만들 때 언어로 굳어 있다. 버리고 다시 고른다(직접 넣은 곡은 남긴다)
+  const autoplayItems = (session.autoplayItems ?? []).filter(
+    (item) => item.pinned || item.meta?.names
+  );
   return {
     positions,
     current,
@@ -453,8 +461,8 @@ function sessionPatch(session: StoredSession | null): Partial<ComparePlayerState
     history: session.history ?? [],
     forward: session.forward ?? [],
     // 새로고침해도 만들어 둔 자동 재생 목록을 그대로 잇는다
-    autoplayItems: session.autoplayItems ?? [],
-    autoplayStatus: session.autoplayItems?.length ? 'ready' : 'idle',
+    autoplayItems,
+    autoplayStatus: autoplayItems.length ? 'ready' : 'idle',
     restored: current !== null,
     progress: { current: resumeAt, duration: current?.durationSec ?? 0 },
   };
@@ -1365,7 +1373,12 @@ export const comparePlayer = {
         pieceId: track.pieceId,
         sectorId: track.sectorId,
         performanceId: track.performanceId,
-        meta: { title: track.pieceTitle, composer: track.artistName, image: track.artistImageUrl },
+        meta: {
+          title: track.pieceTitle,
+          composer: track.artistName,
+          image: track.artistImageUrl,
+          names: { title: track.names?.pieceTitle, composer: track.names?.artistName },
+        },
       })
     ) {
       return;
