@@ -28,6 +28,14 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
+/**
+ * 앱: 링크로 상세 화면에 바로 들어와도 루트 스택 맨 아래에 탭 묶음을 깐다. 그래야 밀기·시스템 뒤로가
+ * 탭으로 돌아간다(없으면 그 화면 하나뿐이라 돌아갈 곳이 없었다, #82). expo-router 문서
+ * router/advanced/router-settings 의 initialRouteName("When deep linking to a route … back button").
+ * 웹은 주소로 바로 연 화면 아래에 탭을 그리지 않는다(브라우저 뒤로가 맡는다)
+ */
+export const unstable_settings = Platform.OS === 'web' ? undefined : { initialRouteName: '(tabs)' };
+
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 if (!publishableKey) {
@@ -111,7 +119,7 @@ function Routes() {
         <Stack.Screen name="(auth)/sign-up" options={SIGN_UP_SCREEN_OPTIONS} />
 
         {/* 모든 화면은 기본적으로 공개 (관리자 기능만 인증 필요) */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={INDEX_SCREEN_OPTIONS} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
@@ -143,6 +151,12 @@ function Routes() {
 // 직접 켠다(iOS 만 쓰는 값). 앱은 뒤로 단추 대신 이 밀기로 돌아간다
 const STACK_SCREEN_OPTIONS = {
   fullScreenGestureEnabled: true,
+};
+
+// 첫 진입 화면은 탭 묶음 위에 잠깐 열렸다 바로 빠진다. 빠지는 움직임이 보이지 않게 한다
+const INDEX_SCREEN_OPTIONS = {
+  headerShown: false,
+  animation: 'none' as const,
 };
 
 const SIGN_IN_SCREEN_OPTIONS = {
