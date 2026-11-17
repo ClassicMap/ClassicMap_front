@@ -14,7 +14,7 @@ import { runRouteTransition } from '@/lib/navigation/view-transition';
 
 /**
  * 모바일 탭 구성: 홈 · 둘러보기 · 비교 · 공연 · 레퍼토리.
- * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
+ * 아티스트·타임라인·앨범은 탭이 아니라 루트 스택 화면이다(app/artists.tsx …). 둘러보기·사이드바에서 들어간다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
   useLocale();
@@ -103,10 +103,6 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
           tabBarIcon: ({ color }) => <Icon as={BookmarkIcon} color={color} size={24} />,
         }}
       />
-      {/* 탭바에는 없고 둘러보기·사이드바에서 들어가는 화면 */}
-      <Tabs.Screen name="artists" options={{ href: null, title: t('아티스트') }} />
-      <Tabs.Screen name="timeline" options={{ href: null, title: t('타임라인') }} />
-      <Tabs.Screen name="albums" options={{ href: null, title: t('앨범') }} />
     </Tabs>
   );
 }
