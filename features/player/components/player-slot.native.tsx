@@ -86,11 +86,13 @@ export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotP
   );
 }
 
-type TransitionEvent = EventArg<'transitionStart', false, { closing: boolean }>;
+type TransitionEvent = EventArg<'transitionStart', false, { closing?: boolean } | undefined>;
 
 /**
  * 이 화면(또는 이 화면을 품은 탭 묶음)이 스택에서 빠지는 전환 중인지. 밀기가 시작되면 true,
- * 밀다 취소하면 false 로 돌아온다. 스택 밖이면 늘 false
+ * 밀다 취소하면 false 로 돌아온다. 스택 밖이면 늘 false.
+ * 스택 네비게이터의 전환만 본다. 하단 탭도 탭을 옮길 때 같은 이름(`transitionStart`)을 내는데
+ * `data` 없이 보내서, 읽으면 화면이 오류로 멈췄다
  */
 function useLeavingTransition(): boolean {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
@@ -99,16 +101,20 @@ function useLeavingTransition(): boolean {
     const unsubscribes: (() => void)[] = [];
     let current: NavigationProp<ParamListBase> | undefined = navigation;
     while (current) {
-      const target = current as unknown as {
-        addListener: (type: string, callback: (event: TransitionEvent) => void) => () => void;
-      };
-      unsubscribes.push(
-        target.addListener('transitionStart', (event) => setLeaving(event.data.closing)),
-        target.addListener('transitionEnd', (event) => {
-          if (!event.data.closing) setLeaving(false);
-        }),
-        target.addListener('gestureCancel', () => setLeaving(false))
-      );
+      if (current.getState()?.type === 'stack') {
+        const target = current as unknown as {
+          addListener: (type: string, callback: (event: TransitionEvent) => void) => () => void;
+        };
+        unsubscribes.push(
+          target.addListener('transitionStart', (event) =>
+            setLeaving(event.data?.closing === true)
+          ),
+          target.addListener('transitionEnd', (event) => {
+            if (event.data?.closing !== true) setLeaving(false);
+          }),
+          target.addListener('gestureCancel', () => setLeaving(false))
+        );
+      }
       current = current.getParent();
     }
     return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
