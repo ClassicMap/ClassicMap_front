@@ -40,6 +40,7 @@ import {
   Switch,
   View,
 } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 type SectionKey = 'profile' | 'visibility' | 'taste' | 'display' | 'account' | 'info';
 
@@ -120,7 +121,7 @@ export default function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/home' as Href);
+          go('/home', { web: 'replace' });
         },
       },
     ]);

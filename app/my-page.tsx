@@ -34,7 +34,7 @@ import {
 import * as React from 'react';
 import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { go } from '@/lib/navigation/go';
+import { go, goBackOr } from '@/lib/navigation/go';
 
 type Tab = 'ratings' | 'repertoire';
 
@@ -85,7 +85,7 @@ export default function MyPageScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/home' as Href);
+          go('/home', { web: 'replace' });
         },
       },
     ]);
@@ -200,7 +200,7 @@ export default function MyPageScreen() {
           icon={StarIcon}
           title={t('아직 평가한 공연이 없어요')}
           description={t('다녀온 공연의 상세 화면에서 별점을 남기면 여기에 모여요.')}
-          action={{ label: t('공연 보러 가기'), onPress: () => router.push('/concerts' as Href) }}
+          action={{ label: t('공연 보러 가기'), onPress: () => go('/concerts') }}
         />
       ) : (
         <View className="mt-5">
@@ -251,7 +251,7 @@ export default function MyPageScreen() {
           <View className="mt-12 flex-row items-center justify-between">
             {showBack ? (
               <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
+                onPress={() => goBackOr('/home')}
                 accessibilityLabel={t('뒤로')}
                 className="size-11 items-center justify-center rounded-full bg-surface-2">
                 <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />

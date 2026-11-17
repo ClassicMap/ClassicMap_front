@@ -11,9 +11,10 @@ import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/features/auth/lib/error-translator';
 import { t, useLocale } from '@/lib/i18n';
 import { useSignIn } from '@clerk/clerk-expo';
-import { type Href, router } from 'expo-router';
+import { router } from 'expo-router';
 import * as React from 'react';
-import { TextInput, View } from 'react-native';
+import { Platform, TextInput, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 export function ResetPasswordForm() {
   useLocale();
@@ -37,8 +38,9 @@ export function ResetPasswordForm() {
       if (result.status === 'complete') {
         // 새 비밀번호로 로그인된 상태가 된다. 찾기·재설정 화면을 닫고 홈으로
         await setActive({ session: result.createdSessionId });
-        if (router.canDismiss()) router.dismissAll();
-        router.replace('/home' as Href);
+        // 앱은 go 가 루트 스택을 탭 묶음까지 꺼낸다
+        if (Platform.OS === 'web' && router.canDismiss()) router.dismissAll();
+        go('/home', { web: 'replace' });
         return;
       }
       setError({

@@ -33,7 +33,7 @@ import {
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { go } from '@/lib/navigation/go';
+import { go, goBackOr } from '@/lib/navigation/go';
 
 type KindFilter = ScreenTitleKind | 'all';
 /** 작품에서 찾기(포스터 목록) · 곡에서 찾기(작곡가별 곡 목록) */
@@ -59,7 +59,6 @@ const GRID_GAP = 12;
 
 export default function FilmsScreen() {
   useLocale();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const showBack = useStackBackButtonVisible();
   const { layout } = useBreakpoint();
@@ -94,7 +93,7 @@ export default function FilmsScreen() {
       contentContainerClassName={cn('px-4 pb-24', wide && 'mx-auto w-full max-w-[880px] px-6')}>
       {showBack ? (
         <Pressable
-          onPress={() => (router.canGoBack() ? router.back() : router.push('/search' as Href))}
+          onPress={() => goBackOr('/search')}
           accessibilityLabel={t('뒤로')}
           style={{ marginTop: insets.top + 4 }}
           className="mb-1 size-11 items-center justify-center">

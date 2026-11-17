@@ -59,7 +59,7 @@ import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
 import { queueLongPressProps } from '@/features/player/lib/queue-actions';
-import { go } from '@/lib/navigation/go';
+import { go, goBackOr } from '@/lib/navigation/go';
 
 interface PerformerSummary {
   artistId: number;
@@ -338,11 +338,7 @@ export default function ComposerDetailScreen() {
           title={composer.name}
           meta={[composer.period ? t(composer.period) : '', ...meta].filter(Boolean)}
           wide={wide}
-          onBack={
-            wide
-              ? undefined
-              : () => (router.canGoBack() ? router.back() : router.push('/timeline' as Href))
-          }
+          onBack={wide ? undefined : () => goBackOr('/timeline')}
         />
 
         {/* 행동: 재생(첫 비교 작품을 그 자리에서) → 담기 → 관리 */}

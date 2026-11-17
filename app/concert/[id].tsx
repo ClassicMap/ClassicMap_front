@@ -45,6 +45,7 @@ import {
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { goBackOr } from '@/lib/navigation/go';
 
 export default function ConcertDetailScreen() {
   useLocale();
@@ -422,7 +423,7 @@ export default function ConcertDetailScreen() {
           <>
             {showBack ? (
               <Pressable
-                onPress={() => (router.canGoBack() ? router.back() : router.push('/concerts'))}
+                onPress={() => goBackOr('/concerts')}
                 accessibilityLabel={t('뒤로')}
                 style={{ marginTop: insets.top + 4 }}
                 className="mb-2 size-11 items-center justify-center">

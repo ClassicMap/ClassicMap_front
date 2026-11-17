@@ -10,10 +10,10 @@ import { MY_PAGE_QUERY_KEYS } from '@/lib/query/hooks/use-my-page';
 import type { OnboardingStatus } from '@/types/models';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
-import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { View } from 'react-native';
+import { goBackOr } from '@/lib/navigation/go';
 
 function unique(ids: number[]): number[] {
   return [...new Set(ids)];
@@ -22,11 +22,10 @@ function unique(ids: number[]): number[] {
 /** 취향 묻기. 가입 직후 홈이 한 번 열고, 설정의 '아는 곡부터 다시 고르기'로도 연다 */
 export default function OnboardingScreen() {
   useLocale();
-  const router = useRouter();
   const taste = useTaste();
   const queryClient = useQueryClient();
 
-  const leave = () => (router.canGoBack() ? router.back() : router.replace('/home' as Href));
+  const leave = () => goBackOr('/home', { web: 'replace' });
 
   const savePeople = async (people: OnboardingResult['people']) => {
     const artists = people.filter((person) => person.kind === 'artist').map((person) => person.id);

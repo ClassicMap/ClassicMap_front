@@ -19,6 +19,7 @@ import { AlertCircleIcon, ArrowLeftIcon, EyeOffIcon, UserXIcon } from 'lucide-re
 import * as React from 'react';
 import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { goBackOr } from '@/lib/navigation/go';
 
 type Tab = 'ratings' | 'repertoire' | 'collections';
 
@@ -48,7 +49,7 @@ export default function PublicProfileScreen() {
 
   const back = showBack ? (
     <Pressable
-      onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
+      onPress={() => goBackOr('/home')}
       accessibilityLabel={t('뒤로')}
       className="mt-12 size-11 items-center justify-center rounded-full bg-surface-2">
       <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />

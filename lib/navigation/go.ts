@@ -87,3 +87,12 @@ export function go(href: string, options: { web?: WebMethod } = {}): void {
   }
   router.push(target as Href);
 }
+
+/** 뒤에 화면이 있으면 돌아가고, 없으면 `fallback` 을 연다(탭 주소면 탭 묶음을 쌓지 않는다) */
+export function goBackOr(fallback: string, options: { web?: WebMethod } = {}): void {
+  if (router.canGoBack()) {
+    router.back();
+    return;
+  }
+  go(fallback, options);
+}

@@ -1,12 +1,12 @@
 import { EmptyState } from '@/components/ui/empty-state';
 import { t, useLocale } from '@/lib/i18n';
-import { type Href, Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { CompassIcon } from 'lucide-react-native';
 import { View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 export default function NotFoundScreen() {
   useLocale();
-  const router = useRouter();
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
@@ -15,7 +15,7 @@ export default function NotFoundScreen() {
           icon={CompassIcon}
           title={t('찾는 화면이 없어요')}
           description={t('주소가 바뀌었거나 없어진 화면이에요.')}
-          action={{ label: t('홈으로'), onPress: () => router.replace('/home' as Href) }}
+          action={{ label: t('홈으로'), onPress: () => go('/home', { web: 'replace' }) }}
         />
       </View>
     </>
