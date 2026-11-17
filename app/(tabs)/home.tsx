@@ -42,7 +42,7 @@ import type {
   RecommendationShelfKey,
   TasteSound,
 } from '@/types/models';
-import { msg, t, useLocale } from '@/lib/i18n';
+import { msg, t, tBoth, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -199,8 +199,8 @@ export default function HomeScreen() {
     [allShelfPieces, genreQuery.data, shelfGenre, locale]
   );
   const catalogName = shelfGenre
-    ? t('비교할 수 있는 작품 · {genre}', { genre: t(GENRE_STYLES[shelfGenre].label) })
-    : t('비교할 수 있는 작품');
+    ? tBoth(msg('비교할 수 있는 작품 · {genre}'), { genre: tBoth(GENRE_STYLES[shelfGenre].label) })
+    : tBoth(msg('비교할 수 있는 작품'));
 
   const favoriteArtistIds = React.useMemo(
     () =>
@@ -425,7 +425,7 @@ export default function HomeScreen() {
                   width={width}
                   reason={piece.reasons[0]}
                   list={shelf.items}
-                  listName={t(SHELF_TITLES[shelf.key])}
+                  listName={tBoth(SHELF_TITLES[shelf.key])}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />
@@ -443,7 +443,7 @@ export default function HomeScreen() {
                   width={width}
                   reason={piece.reasons[0]}
                   list={shelf.items.slice(0, 6)}
-                  listName={t(SHELF_TITLES[shelf.key])}
+                  listName={tBoth(SHELF_TITLES[shelf.key])}
                   onPress={() => openPiece(piece)}
                   onDismiss={shelf.key === 'known' ? undefined : () => dismissPiece(piece.pieceId)}
                 />

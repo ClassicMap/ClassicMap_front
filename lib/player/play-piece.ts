@@ -1,8 +1,10 @@
 import { comparePlayer, type PlaylistItem } from '@/lib/player/compare-player-store';
 import {
+  type ListName,
   type ListPiece,
   listItems,
   pieceListPlaylist,
+  playlistName,
   resolvePlaylistItem,
 } from '@/lib/player/playlist';
 
@@ -14,7 +16,7 @@ import {
 export async function playPiece(
   target: { pieceId: number; sectorId?: number | null },
   list?: readonly ListPiece[],
-  name?: string
+  name?: ListName
 ): Promise<boolean> {
   const resolved = await resolvePlaylistItem({
     pieceId: target.pieceId,
@@ -39,7 +41,7 @@ const MAX_TRIES = 5;
  */
 export async function playList(
   list: readonly ListPiece[] | readonly PlaylistItem[],
-  options: { shuffle: boolean; name?: string }
+  options: { shuffle: boolean; name?: ListName }
 ): Promise<boolean> {
   const items: PlaylistItem[] = listItems(list);
   if (items.length === 0) return false;
@@ -56,7 +58,7 @@ export async function playList(
         kind: 'list',
         items: order,
         index,
-        name: options.name,
+        ...playlistName(options.name),
         ...(options.shuffle ? { original: items } : null),
       },
     });

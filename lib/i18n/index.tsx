@@ -37,21 +37,25 @@ function fill(template: string, params?: Params): string {
   );
 }
 
+function translate(locale: Locale, text: string, params?: Params): string {
+  // 「문맥::원문」: 한국어 원문이 같아도 영어가 다를 때(작품 수 「12곡」= works, 세트 안 「12곡」= pieces)
+  const split = text.indexOf('::');
+  const korean = split >= 0 ? text.slice(split + 2) : text;
+  let template = locale === 'en' ? (EN[text] ?? EN[korean] ?? korean) : korean;
+  if (locale === 'en' && template.includes('|') && typeof params?.count === 'number') {
+    const [one, other] = template.split('|');
+    template = params.count === 1 ? one : (other ?? one);
+  }
+  return fill(template, params);
+}
+
 /**
  * 한국어 문구를 지금 언어로 옮긴다. `{name}` 자리는 params 로 채운다.
  * 원문 앞에 `문맥::` 을 붙이면 영어 사전은 그 키로 찾고, 한국어 화면에는 문맥을 떼고 보인다.
  * 영어 값이 「단수|복수」(예: `{count} work|{count} works`)이면 params.count 가 1일 때 앞의 것을 쓴다.
  */
 export function t(text: string, params?: Params): string {
-  // 「문맥::원문」: 한국어 원문이 같아도 영어가 다를 때(작품 수 「12곡」= works, 세트 안 「12곡」= pieces)
-  const split = text.indexOf('::');
-  const korean = split >= 0 ? text.slice(split + 2) : text;
-  let template = current === 'en' ? (EN[text] ?? EN[korean] ?? korean) : korean;
-  if (current === 'en' && template.includes('|') && typeof params?.count === 'number') {
-    const [one, other] = template.split('|');
-    template = params.count === 1 ? one : (other ?? one);
-  }
-  return fill(template, params);
+  return translate(current, text, params);
 }
 
 /** 한 칸의 두 언어 값. 영어가 없으면 null */
@@ -62,6 +66,25 @@ export type NameSidecar = Partial<Record<string, Bilingual>>;
 
 export function bilingual(ko: string, en: string | null | undefined): Bilingual {
   return { ko, en: en && en.trim() ? en : null };
+}
+
+/**
+ * 문구를 두 언어로 한 번에 옮긴다. 만들어 저장해 두고 그릴 때 relocalize 로 고르는 값(대기열 줄의 고른 까닭 등)에 쓴다.
+ * params 에 두 언어 값을 주면 언어마다 그쪽 값으로 채운다. 원문은 `msg('…')` 로 감싸 i18n:check 가 보게 한다
+ */
+export function tBoth(
+  text: string,
+  params?: Record<string, string | number | Bilingual>
+): Bilingual {
+  const side = (locale: Locale): Params | undefined =>
+    params &&
+    Object.fromEntries(
+      Object.entries(params).map(([key, value]) => [
+        key,
+        typeof value === 'object' ? (locale === 'en' ? (value.en ?? value.ko) : value.ko) : value,
+      ])
+    );
+  return { ko: translate('ko', text, side('ko')), en: translate('en', text, side('en')) };
 }
 
 /** names 에 남겨 둔 칸을 지금 언어로 다시 고른다(저장해 둔 오늘의 비교·최근 본 작품·재생 중인 곡) */
