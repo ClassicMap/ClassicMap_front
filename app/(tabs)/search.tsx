@@ -41,6 +41,7 @@ import { GenreTiles, useGenreShelves } from '@/features/compare/components/genre
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useTabHeaderInset } from '@/hooks/use-tab-chrome';
+import { go } from '@/lib/navigation/go';
 
 type ResultType = 'all' | 'composer' | 'piece' | 'artist' | 'concert' | 'screen';
 
@@ -60,7 +61,7 @@ const LIMIT_SINGLE = 20;
 interface BrowseTile {
   label: string;
   description: string;
-  href: Href;
+  href: string;
   renderIcon: (className: string) => React.ReactNode;
 }
 
@@ -101,7 +102,7 @@ const MORE_TILES: BrowseTile[] = [
   {
     label: msg('영화 속 클래식'),
     description: msg('영화·드라마·애니에서 들은 그 곡'),
-    href: '/films' as Href,
+    href: '/films',
     renderIcon: (className) => <Icon as={ClapperboardIcon} size={22} className={className} />,
   },
 ];
@@ -308,7 +309,7 @@ export default function SearchScreen() {
                     subtitle={[piece.composerName, piece.opusNumber].filter(Boolean).join(' · ')}
                     thumb={<PieceThumb piece={piece} />}
                     onPress={() =>
-                      router.push(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`)
+                      go(`/compare?composerId=${piece.composerId}&pieceId=${piece.id}`)
                     }
                   />
                 ))}
@@ -441,13 +442,12 @@ function PieceThumb({ piece }: { piece: PieceSearchResult }) {
 
 function BrowseTileRow({ tiles, isWide }: { tiles: readonly BrowseTile[]; isWide: boolean }) {
   useLocale();
-  const router = useRouter();
   return (
     <View className={cn('gap-3', isWide && 'flex-row flex-wrap')}>
       {tiles.map((tile) => (
         <Pressable
           key={tile.label}
-          onPress={() => router.push(tile.href)}
+          onPress={() => go(tile.href)}
           accessibilityRole="link"
           className={cn(
             'flex-row items-center gap-4 rounded-lg bg-surface-2 p-4 active:bg-surface-3 web:hover:bg-surface-3',
@@ -481,10 +481,7 @@ function BrowseLanding({ isWide }: { isWide: boolean }) {
       {genres.isLoading || genres.shelves.length > 0 ? (
         <View className="gap-3">
           <Text variant="title3">{t('장르로 찾기')}</Text>
-          <GenreTiles
-            wide={isWide}
-            onOpen={(genre) => router.push(`/compare?genre=${genre}` as Href)}
-          />
+          <GenreTiles wide={isWide} onOpen={(genre) => go(`/compare?genre=${genre}`)} />
         </View>
       ) : null}
 

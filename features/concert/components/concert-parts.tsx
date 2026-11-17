@@ -16,6 +16,7 @@ import { type Href, useRouter } from 'expo-router';
 import { LanguagesIcon, Maximize2Icon } from 'lucide-react-native';
 import * as React from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 const WEEKDAYS = [
   msg('weekday::일'),
@@ -254,13 +255,11 @@ export function CastComparisons({
 
 function ComparisonMiniCard({ item, compact }: { item: ComparisonPerformance; compact: boolean }) {
   useLocale();
-  const router = useRouter();
   const piece = useComparisonPiece(item.pieceId, item.composerId).data;
-  const href =
-    `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
+  const href = `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}`;
   return (
     <Pressable
-      onPress={() => router.push(href)}
+      onPress={() => go(href)}
       className={
         compact
           ? 'w-[150px] rounded-lg bg-surface-2 p-3 active:bg-surface-3'

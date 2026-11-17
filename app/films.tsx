@@ -33,6 +33,7 @@ import {
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { go } from '@/lib/navigation/go';
 
 type KindFilter = ScreenTitleKind | 'all';
 /** 작품에서 찾기(포스터 목록) · 곡에서 찾기(작곡가별 곡 목록) */
@@ -368,14 +369,13 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
 
 function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
   useLocale();
-  const router = useRouter();
   const open = () => {
     const params = new URLSearchParams({
       composerId: String(cue.composerId),
       pieceId: String(cue.pieceId),
       sectorId: String(cue.sectorId),
     });
-    router.push(`/compare?${params.toString()}` as Href);
+    go(`/compare?${params.toString()}`);
   };
   return (
     <Pressable

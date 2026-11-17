@@ -10,6 +10,7 @@ import {
   useIsFocused,
   useNavigation,
 } from '@react-navigation/native';
+import { useSegments } from 'expo-router';
 import * as React from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import Animated, { measure, useAnimatedRef, useFrameCallback } from 'react-native-reanimated';
@@ -66,15 +67,19 @@ export function PlayerSlot({ performanceId, radius = 0, className }: PlayerSlotP
     tracker.setActive(focused && laidOut);
   }, [focused, laidOut, tracker]);
 
+  // 탭 화면이면 탭바 위까지, 루트 스택 화면(앱의 비교 단계)이면 화면 아래 안전 영역 위까지 보인다
+  const inTabs = useSegments()[0] === '(tabs)';
+  const bottomChrome = inTabs ? tabBarHeight(insets.bottom) : insets.bottom;
+
   React.useEffect(() => {
     if (!focused) return;
     return registerNativeSurface({
       kind: 'slot',
       bandTop: headerHeight,
-      bandBottom: windowHeight - tabBarHeight(insets.bottom),
+      bandBottom: windowHeight - bottomChrome,
       radius,
     });
-  }, [focused, headerHeight, insets.bottom, performanceId, radius, windowHeight]);
+  }, [bottomChrome, focused, headerHeight, performanceId, radius, windowHeight]);
 
   return (
     <Animated.View

@@ -20,7 +20,6 @@ import { Alert } from '@/lib/utils/alert';
 import { useLeadPerformance } from '@/features/film/hooks/use-lead-performance';
 import { YoutubeThumb } from '@/features/film/components/youtube-thumb';
 import { tmdbImageUrl } from '@/features/film/lib/tmdb';
-import { type Href, useRouter } from 'expo-router';
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 function openExternal(url: string) {
   Linking.openURL(url).catch(() => {
@@ -58,7 +58,6 @@ interface ScreenCueCardProps {
 /** 작품 페이지의 장면 카드. 들을 길은 같은 대목 비교 → 같은 곡 비교 → 스트리밍 링크 순 */
 export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCueCardProps) {
   useLocale();
-  const router = useRouter();
   const [showEvidence, setShowEvidence] = React.useState(false);
   const [picking, setPicking] = React.useState(false);
   const when = [episodeText(cue.episodeLabel), approxTimeText(cue.approxAtSec)]
@@ -77,7 +76,7 @@ export function ScreenCueCard({ cue, titleId, canPickStill, playlist }: ScreenCu
       pieceId: String(cue.pieceId),
     });
     if (sectorId) params.append('sectorId', String(sectorId));
-    router.push(`/compare?${params.toString()}` as Href);
+    go(`/compare?${params.toString()}`);
   };
 
   const meta = [

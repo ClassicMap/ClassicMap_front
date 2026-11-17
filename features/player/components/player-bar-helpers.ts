@@ -1,11 +1,10 @@
 import { type ComparePlayerTrack, useComparePlayer } from '@/lib/player/compare-player-store';
-import type { Href } from 'expo-router';
 import * as React from 'react';
 import { Platform } from 'react-native';
 
 /** 이 트랙의 비교 화면. 돌아가면 같은 연주가 같은 자리에서 이어진다 */
-export function compareHrefFor(track: ComparePlayerTrack): Href {
-  return `/compare?composerId=${track.composerId}&pieceId=${track.pieceId}&sectorId=${track.sectorId}` as Href;
+export function compareHrefFor(track: ComparePlayerTrack): string {
+  return `/compare?composerId=${track.composerId}&pieceId=${track.pieceId}&sectorId=${track.sectorId}`;
 }
 
 /**

@@ -59,6 +59,7 @@ import { scrollInnerView } from '@/features/composer/lib/scroll-inner-view';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { QueueAddMenu } from '@/features/player/components/queue-add-menu';
 import { queueLongPressProps } from '@/features/player/lib/queue-actions';
+import { go } from '@/lib/navigation/go';
 
 interface PerformerSummary {
   artistId: number;
@@ -164,7 +165,7 @@ export default function ComposerDetailScreen() {
   };
 
   const openCompare = (pieceId: number) =>
-    router.push(`/compare?composerId=${composerId}&pieceId=${pieceId}` as Href);
+    go(`/compare?composerId=${composerId}&pieceId=${pieceId}`);
 
   const handleDeleteComposer = () => {
     if (!composer) return;

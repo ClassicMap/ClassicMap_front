@@ -1,16 +1,13 @@
 import { Tabs } from 'expo-router';
-import { BookmarkIcon, CompassIcon, HomeIcon, MoonStarIcon, SunIcon } from 'lucide-react-native';
+import { BookmarkIcon, CompassIcon, HomeIcon } from 'lucide-react-native';
+import { useChromeHeaderOptions } from '@/components/layout/chrome-header';
 import { Icon } from '@/components/ui/icon';
 import { CompareIcon, TicketIcon } from '@/components/shared/icons';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { UserMenu } from '@/features/auth/components/user-menu';
 import { THEME } from '@/lib/theme';
-import { withAlpha } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';
 import { useColorScheme } from 'nativewind';
 import { BlurView } from 'expo-blur';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
 import { runRouteTransition } from '@/lib/navigation/view-transition';
@@ -20,38 +17,15 @@ import { runRouteTransition } from '@/lib/navigation/view-transition';
  * 아티스트와 타임라인은 탭바에 두지 않고 둘러보기에서 들어간다. 데스크톱은 사이드바에 아티스트가 있다.
  */
 export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
-  const { locale, setLocale } = useLocale();
-  const { colorScheme, toggleColorScheme } = useColorScheme();
+  useLocale();
+  const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = THEME[scheme];
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === 'android' ? insets.bottom + 8 : 20;
   const translucent = TAB_CHROME_TRANSLUCENT;
   const blurTint = scheme === 'dark' ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
-
-  const ThemeToggle = () => (
-    <Button
-      onPress={toggleColorScheme}
-      size="icon"
-      variant="ghost"
-      className="rounded-full"
-      accessibilityLabel={scheme === 'dark' ? t('라이트 모드로 전환') : t('다크 모드로 전환')}>
-      <Icon as={scheme === 'dark' ? SunIcon : MoonStarIcon} className="size-6" />
-    </Button>
-  );
-  // 로그인하지 않아도 언어를 바꿀 수 있게(설정 화면은 로그인해야 열린다). 바꿀 언어의 이름을 보인다
-  const LanguageToggle = () => (
-    <Button
-      onPress={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
-      size="icon"
-      variant="ghost"
-      className="rounded-full"
-      accessibilityLabel={locale === 'ko' ? t('영어로 보기') : t('한국어로 보기')}>
-      <Text className="text-[13px] font-semibold text-foreground-muted">
-        {locale === 'ko' ? 'EN' : '한'}
-      </Text>
-    </Button>
-  );
+  const header = useChromeHeaderOptions();
 
   return (
     <Tabs
@@ -69,46 +43,13 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
             })
           : undefined
       }
+      // 앱: 뒤로(안드로이드)는 지나온 탭 순서대로 돌아간다. 가려진 탭은 다시 그리지 않는다
+      backBehavior="history"
       screenOptions={{
+        ...header,
         headerShown: !hideChrome,
         sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
-        // iOS 26: 헤더도 콘텐츠 위에 띄우고 뒤를 흐린다. 화면은 useTabScrollInsets로 헤더 높이만큼 비운다
-        headerTransparent: translucent,
-        headerStyle: { backgroundColor: translucent ? 'transparent' : colors.background },
-        // 배경색을 반쯤 깔아 맨 위에서는 화면과 이어지고, 스크롤하면 지나가는 콘텐츠만 흐리게 비친다
-        headerBackground: translucent
-          ? () => (
-              <BlurView tint={scheme} intensity={60} style={StyleSheet.absoluteFill}>
-                <View
-                  style={[
-                    StyleSheet.absoluteFill,
-                    {
-                      backgroundColor: withAlpha(
-                        scheme,
-                        'background',
-                        scheme === 'dark' ? 0.8 : 0.72
-                      ),
-                    },
-                  ]}
-                />
-              </BlurView>
-            )
-          : undefined,
-        headerLeft: () => (
-          <View className="mb-2 ml-4 flex-row items-center">
-            <ThemeToggle />
-            <LanguageToggle />
-          </View>
-        ),
-        headerRight: () => (
-          <View className="mb-2 mr-4">
-            <UserMenu />
-          </View>
-        ),
-        headerTitle: '',
-        headerShadowVisible: false,
-        // 웹에는 상태 표시줄이 없다. 네이티브 값을 그대로 쓰면 모바일 웹 맨 위가 52px 비어 보인다
-        headerStatusBarHeight: Platform.OS === 'web' ? 0 : 52,
+        freezeOnBlur: Platform.OS !== 'web',
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.foregroundSubtle,
         // iOS 26: 탭바를 콘텐츠 위에 띄우고 뒤를 흐린다. 안드로이드·웹은 불투명 + 윗선 (설계 5.4)
@@ -142,7 +83,7 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
         }}
       />
       <Tabs.Screen
-        name="(compare)"
+        name="compare"
         options={{
           title: t('비교'),
           tabBarIcon: ({ color }) => <CompareIcon color={color} size={24} />,

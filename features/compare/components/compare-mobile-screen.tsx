@@ -6,9 +6,9 @@ import {
 } from '@/features/compare/components/compare-mobile';
 import { FocusCompare, parseFocusParam } from '@/features/compare/components/focus-compare';
 import { CompareGenrePieces } from '@/features/compare/components/genre-browse';
-import { useCompareStackBack } from '@/features/compare/hooks/use-compare-stack-back';
 import { isPieceGenre } from '@/lib/design/genre-palette';
-import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { go } from '@/lib/navigation/go';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Platform } from 'react-native';
 
@@ -18,22 +18,28 @@ function toId(value: string | string[] | undefined): number | undefined {
   return Number.isInteger(id) && id > 0 ? id : undefined;
 }
 
-/** 앱은 다음 단계를 비교 스택에 새 화면으로 쌓고, 좁은 웹은 지금 주소의 파라미터만 바꾼다 */
+/**
+ * 앱은 다음 단계를 루트 스택에 새 화면(`/compare-step`)으로 쌓아 밀기·시스템 뒤로가 한 단계씩 돌아가고,
+ * 좁은 웹은 지금 주소의 파라미터만 바꾼다(뒤로 단추·브라우저 뒤로)
+ */
 const STACKED = Platform.OS !== 'web';
 
 type CompareParams = Partial<
   Record<'composerId' | 'pieceId' | 'sectorId' | 'focus' | 'genre', string | number>
 >;
 
-function compareHref(params: CompareParams): Href {
+function compareHref(params: CompareParams): string {
   const query = Object.entries(params)
     .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join('&');
-  return `/compare${query ? `?${query}` : ''}` as Href;
+  return `/compare${query ? `?${query}` : ''}`;
 }
 
-/** 네이티브와 좁은 웹의 비교 탭: 작곡가 → 작곡가의 작품 → 작품 비교 → 1:1. 주소 파라미터가 곧 상태다 */
+/**
+ * 네이티브와 좁은 웹의 비교: 작곡가 → 작곡가의 작품 → 작품 비교 → 1:1. 주소 파라미터가 곧 상태다.
+ * 앱은 비교 탭이 첫 화면(카탈로그)만 보이고, 그다음 단계는 루트 스택 화면 `/compare-step` 이 같은 컴포넌트로 그린다
+ */
 export function CompareMobileScreen() {
   useLocale();
   const router = useRouter();
@@ -51,9 +57,11 @@ export function CompareMobileScreen() {
   const focus = parseFocusParam(params.focus);
 
   const isTopLevel = !pieceId && !genre && !composerId;
-  const { poppable, showBack } = useCompareStackBack(isTopLevel);
+  // 뒤로 단추는 웹에서만 보인다. 앱은 밀기·시스템 뒤로로 돌아간다
+  const showBack = !STACKED && !isTopLevel;
   // 앱에서 아래에 쌓인 화면이 있으면 그 화면으로, 없으면 위 단계로
-  const back = (fallback: () => void) => (poppable ? router.back() : fallback());
+  const back = (fallback: () => void) =>
+    STACKED && router.canGoBack() ? router.back() : fallback();
 
   if (pieceId && focus) {
     return (
@@ -91,7 +99,7 @@ export function CompareMobileScreen() {
         onSelectSector={(id) => router.setParams({ sectorId: String(id) })}
         onFocus={(a, b) =>
           STACKED
-            ? router.push(compareHref({ composerId, pieceId, sectorId, focus: `${a},${b}` }))
+            ? go(compareHref({ composerId, pieceId, sectorId, focus: `${a},${b}` }))
             : router.setParams({ focus: `${a},${b}` })
         }
       />
@@ -107,7 +115,7 @@ export function CompareMobileScreen() {
         onBack={() => back(() => router.setParams({ genre: undefined }))}
         onSelectGenre={(key) => router.setParams({ genre: key })}
         onOpen={(piece) =>
-          router.push(compareHref({ composerId: piece.composerId, pieceId: piece.pieceId }))
+          go(compareHref({ composerId: piece.composerId, pieceId: piece.pieceId }))
         }
       />
     );
@@ -121,7 +129,7 @@ export function CompareMobileScreen() {
         onBack={() => back(() => router.setParams({ composerId: undefined }))}
         onOpen={(piece) =>
           STACKED
-            ? router.push(compareHref({ composerId, pieceId: piece.pieceId }))
+            ? go(compareHref({ composerId, pieceId: piece.pieceId }))
             : router.setParams({ pieceId: String(piece.pieceId), sectorId: undefined })
         }
       />
@@ -130,15 +138,13 @@ export function CompareMobileScreen() {
 
   return (
     <CompareMobileCatalog
-      onOpenGenre={(key) => router.push(compareHref({ genre: key }))}
+      onOpenGenre={(key) => go(compareHref({ genre: key }))}
       onOpenComposer={(id) =>
-        STACKED
-          ? router.push(compareHref({ composerId: id }))
-          : router.setParams({ composerId: String(id) })
+        STACKED ? go(compareHref({ composerId: id })) : router.setParams({ composerId: String(id) })
       }
       onOpenPiece={(piece) =>
         STACKED
-          ? router.push(compareHref({ composerId: piece.composerId, pieceId: piece.pieceId }))
+          ? go(compareHref({ composerId: piece.composerId, pieceId: piece.pieceId }))
           : router.setParams({
               composerId: String(piece.composerId),
               pieceId: String(piece.pieceId),

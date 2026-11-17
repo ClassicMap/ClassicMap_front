@@ -15,6 +15,7 @@ import * as React from 'react';
 import { Platform } from 'react-native';
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
+import { useChromeStackOptions } from '@/components/layout/chrome-header';
 import { RootChrome } from '@/components/layout/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
@@ -95,6 +96,9 @@ function Routes() {
     }
   }, [isLoaded]);
 
+  // 탭 밖으로 옮긴 탭 성격 화면(비교 단계)은 탭 화면과 같은 머리를 단다. 하단 탭바만 없다
+  const chromeOptions = useChromeStackOptions();
+
   if (!isLoaded) {
     return null;
   }
@@ -112,6 +116,8 @@ function Routes() {
         <Stack.Screen name="artist/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="composer/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="concert/[id]" options={{ headerShown: false }} />
+        {/* 앱의 비교 단계. 웹은 비교 탭 주소로 보낸다 (#82) */}
+        <Stack.Screen name="compare-step" options={chromeOptions} />
         {/* 모아 보기와 상세는 폴더를 나눈다. 정적 export 에 films/ 폴더가 생기면 nginx 가 /classicmap/films 를 접두사 없는 /films/ 로 돌려보낸다 */}
         <Stack.Screen name="films" options={{ headerShown: false }} />
         <Stack.Screen name="film/[id]" options={{ headerShown: false }} />

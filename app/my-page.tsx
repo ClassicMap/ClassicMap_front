@@ -34,6 +34,7 @@ import {
 import * as React from 'react';
 import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 type Tab = 'ratings' | 'repertoire';
 
@@ -231,7 +232,7 @@ export default function MyPageScreen() {
         description={t('작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
         action={{
           label: t('비교할 수 있는 작품 보기'),
-          onPress: () => router.push('/compare' as Href),
+          onPress: () => go('/compare'),
         }}
       />
     ) : (

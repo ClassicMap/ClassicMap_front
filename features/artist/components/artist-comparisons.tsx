@@ -12,10 +12,10 @@ import {
 } from '@/lib/query/hooks/use-comparison-performances';
 import type { ComparisonPerformance } from '@/types/models';
 import { cn } from '@/lib/utils';
-import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronRightIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 interface PieceGroup {
   pieceId: number;
@@ -159,7 +159,6 @@ function SectorRow({
   wide: boolean;
 }) {
   useLocale();
-  const router = useRouter();
   const peers = useSectorComparisonPerformances(item.sectorId);
   const others = (peers.data ?? [])
     .filter(
@@ -171,12 +170,11 @@ function SectorRow({
         performance.credits.find((credit) => credit.isPrimary) ?? performance.credits[0]
     )
     .filter((credit): credit is NonNullable<typeof credit> => Boolean(credit));
-  const href =
-    `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}` as Href;
+  const href = `/compare?composerId=${item.composerId}&pieceId=${item.pieceId}&sectorId=${item.sectorId}`;
 
   return (
     <Pressable
-      onPress={() => router.push(href)}
+      onPress={() => go(href)}
       accessibilityRole="link"
       accessibilityLabel={t('{title} 비교하기', { title: `${item.pieceTitle} ${item.sectorName}` })}
       className="-mx-3 min-h-14 flex-row items-center gap-4 rounded-md px-3 py-2 active:bg-surface-2 web:hover:bg-surface-2">

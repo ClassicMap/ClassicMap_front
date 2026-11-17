@@ -11,6 +11,7 @@ import { type Href, useRouter } from 'expo-router';
 import { AlertCircleIcon, ChevronRightIcon, MusicIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 /** 서버가 작곡가 순으로 주므로 이어진 곡끼리 작곡가 하나로 묶는다 */
 function groupByComposer(works: ScreenWork[]) {
@@ -115,7 +116,7 @@ function WorkRow({ work }: { work: ScreenWork }) {
       composerId: String(work.composerId),
       pieceId: String(work.pieceId),
     });
-    router.push(`/compare?${params.toString()}` as Href);
+    go(`/compare?${params.toString()}`);
   };
   return (
     <View className="gap-2 border-b border-border py-3">
