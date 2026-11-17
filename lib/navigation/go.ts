@@ -1,3 +1,4 @@
+import type { NavigationState } from '@react-navigation/native';
 import { type Href, router } from 'expo-router';
 import { Platform } from 'react-native';
 
@@ -59,6 +60,33 @@ export function appLinkPath(path: string): string {
   return `${match[1]}${COMPARE_STEP_PATH.slice(1)}?${match[2]}`;
 }
 
+/** 네비게이션 컨테이너에서 쓰는 부분만 */
+interface NavigationContainerLike {
+  isReady(): boolean;
+  getRootState(): NavigationState;
+}
+
+let navigationRef: NavigationContainerLike | null = null;
+
+/** 루트 레이아웃이 네비게이션 컨테이너를 알려 준다. 지금 루트 스택에 화면이 몇 개인지 읽는 데 쓴다 */
+export function setNavigationRef(ref: NavigationContainerLike): void {
+  navigationRef = ref;
+}
+
+/**
+ * 루트 스택에 탭 묶음 말고 다른 화면이 쌓여 있는가. `router.canDismiss()` 는 라우터가 따로 들고 있는
+ * 상태를 읽어서, 링크로 앱을 다시 열었을 때처럼 실제와 어긋날 때가 있었다. 컨테이너의 지금 상태를 읽는다
+ */
+function rootStackHasScreensAbove(): boolean {
+  if (!navigationRef?.isReady()) return router.canDismiss();
+  let state: NavigationState | undefined = navigationRef.getRootState();
+  // expo-router 는 루트 레이아웃을 `__root` 한 겹으로 감싼다
+  if (state?.routes.length === 1 && state.routes[0].name === '__root') {
+    state = state.routes[0].state as NavigationState | undefined;
+  }
+  return (state?.routes.length ?? 0) > 1;
+}
+
 /**
  * 앱: 루트 스택을 탭 묶음까지 비우고 그 탭으로 옮긴다. 탭 묶음이 쌓이지 않는다.
  * 루트 화면 위면 `dismissTo` 가 루트 스택에서 탭 묶음까지 꺼내고 그 탭을 고른다. `dismissAll` 은
@@ -66,7 +94,7 @@ export function appLinkPath(path: string): string {
  * 탭 화면 위면 꺼낼 스택이 없으니 탭만 옮긴다(탭 네비게이터는 dismissTo 를 받지 않는다)
  */
 function goTab(href: string): void {
-  if (router.canDismiss()) router.dismissTo(href as Href);
+  if (rootStackHasScreensAbove()) router.dismissTo(href as Href);
   else router.navigate(href as Href);
 }
 

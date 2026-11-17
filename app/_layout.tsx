@@ -6,7 +6,7 @@ import { tokenCache } from '@clerk/clerk-expo/token-cache';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +17,7 @@ import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/lib/query/client';
 import { useChromeStackOptions } from '@/components/layout/chrome-header';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { setNavigationRef } from '@/lib/navigation/go';
 import { RootChrome } from '@/components/layout/root-chrome';
 import { setAdminTokenProvider } from '@/lib/api/admin';
 import { setTokenProvider } from '@/lib/api/client';
@@ -104,6 +105,10 @@ function Routes() {
       SplashScreen.hideAsync();
     }
   }, [isLoaded]);
+
+  // 앱 안 이동 도우미(lib/navigation/go.ts)가 루트 스택의 지금 상태를 읽게 한다
+  const navigationRef = useNavigationContainerRef();
+  setNavigationRef(navigationRef);
 
   // 탭 밖으로 옮긴 탭 성격 화면(비교 단계, 아티스트·타임라인·앨범)은 탭 화면과 같은 머리를 단다.
   // 하단 탭바만 없다. 넓은 웹은 셸(사이드바·상단바)이 크롬을 맡으므로 머리를 숨긴다
