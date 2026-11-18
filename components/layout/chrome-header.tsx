@@ -1,15 +1,17 @@
 import { Header, type HeaderOptions } from '@react-navigation/elements';
 import { BlurView } from 'expo-blur';
-import { MoonStarIcon, SunIcon } from 'lucide-react-native';
+import { ArrowLeftIcon, MoonStarIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
 import { UserMenu } from '@/features/auth/components/user-menu';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
 import { withAlpha } from '@/lib/design/tokens';
 import { t, useLocale } from '@/lib/i18n';
+import { goBackOr } from '@/lib/navigation/go';
 import { THEME } from '@/lib/theme';
 
 function ThemeToggle() {
@@ -44,6 +46,25 @@ function LanguageToggle() {
   );
 }
 
+/**
+ * 탭 밖 화면의 뒤로 단추. 하단 탭바가 없으니 웹에서는 늘 보이고, 앱은 뒤에 화면이 없을 때만 보인다.
+ * 뒤에 화면이 없으면 `fallback` 으로 간다
+ */
+function HeaderBack({ fallback }: { fallback: string }) {
+  const visible = useStackBackButtonVisible();
+  if (!visible) return null;
+  return (
+    <Button
+      onPress={() => goBackOr(fallback)}
+      size="icon"
+      variant="ghost"
+      className="rounded-full"
+      accessibilityLabel={t('뒤로')}>
+      <Icon as={ArrowLeftIcon} className="size-6" />
+    </Button>
+  );
+}
+
 export type ChromeHeaderOptions = Pick<
   HeaderOptions,
   | 'headerTransparent'
@@ -57,9 +78,10 @@ export type ChromeHeaderOptions = Pick<
 >;
 
 /**
- * 탭 화면의 위쪽 크롬(테마·언어 전환, 사용자 메뉴). 하단 탭과, 탭 밖으로 옮긴 화면(비교 단계 …)이 같은 머리를 쓴다
+ * 탭 화면의 위쪽 크롬(테마·언어 전환, 사용자 메뉴). 하단 탭과, 탭 밖으로 옮긴 화면(비교 단계 …)이 같은 머리를 쓴다.
+ * `backFallback` 을 주면 맨 왼쪽에 뒤로 단추를 둔다
  */
-export function useChromeHeaderOptions(): ChromeHeaderOptions {
+export function useChromeHeaderOptions(backFallback?: string): ChromeHeaderOptions {
   useLocale();
   const { colorScheme } = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
@@ -86,6 +108,7 @@ export function useChromeHeaderOptions(): ChromeHeaderOptions {
       : undefined,
     headerLeft: () => (
       <View className="mb-2 ml-4 flex-row items-center">
+        {backFallback ? <HeaderBack fallback={backFallback} /> : null}
         <ThemeToggle />
         <LanguageToggle />
       </View>
@@ -104,10 +127,10 @@ export function useChromeHeaderOptions(): ChromeHeaderOptions {
 
 /**
  * 루트 스택 화면에 탭 화면과 같은 머리를 붙이는 옵션. 네이티브 스택의 기본 머리 대신 탭이 쓰는 머리를 그린다.
- * `hideChrome` 이면(데스크톱 웹 셸) 머리를 숨긴다
+ * `hideChrome` 이면(데스크톱 웹 셸) 머리를 숨긴다. `backFallback` 은 뒤로 단추가 뒤에 화면이 없을 때 갈 곳이다
  */
-export function useChromeStackOptions(hideChrome = false) {
-  const header = useChromeHeaderOptions();
+export function useChromeStackOptions(hideChrome = false, backFallback?: string) {
+  const header = useChromeHeaderOptions(backFallback);
   return {
     headerShown: !hideChrome,
     headerTransparent: header.headerTransparent,

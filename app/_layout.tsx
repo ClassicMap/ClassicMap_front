@@ -113,7 +113,10 @@ function Routes() {
   // 탭 밖으로 옮긴 탭 성격 화면(비교 단계, 아티스트·타임라인·앨범)은 탭 화면과 같은 머리를 단다.
   // 하단 탭바만 없다. 넓은 웹은 셸(사이드바·상단바)이 크롬을 맡으므로 머리를 숨긴다
   const { nav } = useBreakpoint();
-  const chromeOptions = useChromeStackOptions(Platform.OS === 'web' && nav !== 'tabs');
+  const hideChrome = Platform.OS === 'web' && nav !== 'tabs';
+  const chromeOptions = useChromeStackOptions(hideChrome);
+  // 둘러보기에서 여는 화면: 탭바가 없으니 머리에 뒤로 단추를 둔다(주소로 바로 들어오면 둘러보기로)
+  const browseOptions = useChromeStackOptions(hideChrome, '/search');
 
   if (!isLoaded) {
     return null;
@@ -135,9 +138,9 @@ function Routes() {
         {/* 앱의 비교 단계. 웹은 비교 탭 주소로 보낸다 (#82) */}
         <Stack.Screen name="compare-step" options={chromeOptions} />
         {/* 둘러보기·사이드바에서 들어가는 모아 보기. 탭바에는 없어서 루트 스택에 쌓는다 (#82) */}
-        <Stack.Screen name="artists" options={{ ...chromeOptions, title: t('아티스트') }} />
-        <Stack.Screen name="timeline" options={{ ...chromeOptions, title: t('타임라인') }} />
-        <Stack.Screen name="albums" options={{ ...chromeOptions, title: t('앨범') }} />
+        <Stack.Screen name="artists" options={{ ...browseOptions, title: t('아티스트') }} />
+        <Stack.Screen name="timeline" options={{ ...browseOptions, title: t('타임라인') }} />
+        <Stack.Screen name="albums" options={{ ...browseOptions, title: t('앨범') }} />
         {/* 모아 보기와 상세는 폴더를 나눈다. 정적 export 에 films/ 폴더가 생기면 nginx 가 /classicmap/films 를 접두사 없는 /films/ 로 돌려보낸다 */}
         <Stack.Screen name="films" options={{ headerShown: false }} />
         <Stack.Screen name="film/[id]" options={{ headerShown: false }} />
