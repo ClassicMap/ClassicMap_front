@@ -15,11 +15,12 @@ import { relocalize, t, useLocale } from '@/lib/i18n';
 import { shell, useShell } from '@/lib/layout/shell-state';
 import { cn } from '@/lib/utils';
 import { comparePlayer, useComparePlayer } from '@/lib/player/compare-player-store';
-import { useRouter, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { ListMusicIcon, PauseIcon, PlayIcon, SkipForwardIcon, XIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Animated, PanResponder, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { go } from '@/lib/navigation/go';
 
 /** 미니 플레이어를 이만큼(px) 밀면 이전·다음 곡으로 넘어간다 */
 const SWIPE_DISTANCE = 56;
@@ -32,7 +33,6 @@ const SWIPE_DISTANCE = 56;
  */
 export function MiniPlayerBar() {
   const { locale } = useLocale();
-  const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const stored = useComparePlayer((state) => state.current);
@@ -77,7 +77,7 @@ export function MiniPlayerBar() {
   const inTabs = segments[0] === '(tabs)';
   const bottom = (inTabs ? tabBarHeight(insets.bottom) : insets.bottom) + 8;
   const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
-  const goToCompare = () => router.navigate(compareHrefFor(current));
+  const goToCompare = () => go(compareHrefFor(current), { web: 'navigate' });
   // 네이티브에서 비교 화면이 사라져 미디어가 없으면 누르면 비교 화면으로 가서 이어 듣는다
   const canToggle = Platform.OS === 'web' || hasMedia;
 

@@ -51,6 +51,7 @@ import { AlertCircleIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
+import { go } from '@/lib/navigation/go';
 
 /** 이번 실행에서 취향 묻기를 이미 열었는지. 뒤로 나가도 같은 실행 안에서는 다시 열지 않는다 */
 let onboardingOpened = false;
@@ -272,7 +273,7 @@ export default function HomeScreen() {
       pieceId: String(target.pieceId),
     });
     if (target.sectorId) params.append('sectorId', String(target.sectorId));
-    router.push(`/compare?${params.toString()}` as Href);
+    go(`/compare?${params.toString()}`);
   };
   const openToday = (target: TodayComparisonTarget) => openPiece(target);
 
@@ -456,9 +457,7 @@ export default function HomeScreen() {
       <Section
         wide={wide}
         title={t('비교할 수 있는 작품')}
-        onAction={() =>
-          router.push((shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare') as Href)
-        }>
+        onAction={() => go(shelfGenre ? `/compare?genre=${shelfGenre}` : '/compare')}>
         {/* 장르 칩: 이 줄만 그 장르로 걸러 본다 (스포티파이 홈 칩) */}
         {genreShelves.shelves.length > 0 ? (
           <ScrollShelf gap={8} className="mb-4">

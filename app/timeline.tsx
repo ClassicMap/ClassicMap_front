@@ -56,6 +56,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 type Scope = 'major' | 'comparable' | 'all';
 
@@ -694,7 +695,6 @@ function SelectedComposer({
   onClose: () => void;
 }) {
   useLocale();
-  const router = useRouter();
   const pieces = useComparisonPieces(composer.id, comparableCount > 0);
   const firstPiece = comparableCount > 0 ? pieces.data?.pages[0]?.[0] : undefined;
 
@@ -734,9 +734,7 @@ function SelectedComposer({
             size="sm"
             className="rounded-full"
             onPress={() =>
-              router.push(
-                `/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}` as Href
-              )
+              go(`/compare?composerId=${firstPiece.composerId}&pieceId=${firstPiece.pieceId}`)
             }>
             <Text className="text-primary-foreground">{t('비교 보기')}</Text>
           </Button>

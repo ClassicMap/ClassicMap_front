@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { Chip } from '@/components/ui/chip';
 import { GENRE_STYLES, type GenreStyle, type PieceGenre } from '@/lib/design/genre-palette';
+import { useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { t, tBoth, useLocale } from '@/lib/i18n';
 import { usePrefetchOnHover } from '@/lib/navigation/prefetch';
 import { useGenrePieces, useGenreSummaries } from '@/lib/query/hooks/use-comparison-performances';
@@ -183,16 +184,21 @@ export function CompareGenrePieces({
   genre,
   wide,
   onBack,
+  showBack = true,
   onOpen,
   onSelectGenre,
 }: {
   genre: PieceGenre;
   wide: boolean;
   onBack: () => void;
+  /** 뒤로 링크를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showBack?: boolean;
   onOpen: (piece: ComparisonPiece) => void;
   onSelectGenre: (genre: PieceGenre) => void;
 }) {
   const { locale } = useLocale();
+  // iOS 는 탭 헤더가 떠 있어서 그만큼 비운다(웹·안드로이드는 빈 값)
+  const scrollInsets = useTabScrollInsets();
   const { shelves } = useGenreShelves();
   const style = GENRE_STYLES[genre];
   const count = shelves.find((item) => item.genre === genre)?.pieceCount;
@@ -207,17 +213,20 @@ export function CompareGenrePieces({
 
   return (
     <ScrollView
+      {...scrollInsets}
       className="flex-1"
       contentContainerClassName={cn('pb-16', wide ? 'px-7 pt-2' : 'px-4 pt-2')}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="link"
-        className="mb-5 flex-row items-center gap-1 self-start">
-        <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
-        <Text variant="caption" className="text-foreground-muted">
-          {t('비교')}
-        </Text>
-      </Pressable>
+      {showBack ? (
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="link"
+          className="mb-5 flex-row items-center gap-1 self-start">
+          <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
+          <Text variant="caption" className="text-foreground-muted">
+            {t('비교')}
+          </Text>
+        </Pressable>
+      ) : null}
       <Text
         className={cn(
           'font-extrabold tracking-tight text-foreground',

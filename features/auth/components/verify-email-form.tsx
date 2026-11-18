@@ -11,9 +11,10 @@ import { Text } from '@/components/ui/text';
 import { translateClerkError } from '@/features/auth/lib/error-translator';
 import { t, useLocale } from '@/lib/i18n';
 import { useSignUp } from '@clerk/clerk-expo';
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
-import { type TextStyle, View } from 'react-native';
+import { Platform, type TextStyle, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 const RESEND_CODE_INTERVAL_SECONDS = 30;
 
@@ -40,9 +41,10 @@ export function VerifyEmailForm() {
       // and redirect the user
       if (signUpAttempt.status === 'complete') {
         await setActive({ session: signUpAttempt.createdSessionId });
-        // 가입·인증 화면을 모두 닫고 홈으로 (아래 화면들이 하나씩만 닫혀 가입 폼이 남던 문제)
-        if (router.canDismiss()) router.dismissAll();
-        router.replace('/home' as Href);
+        // 가입·인증 화면을 모두 닫고 홈으로 (아래 화면들이 하나씩만 닫혀 가입 폼이 남던 문제).
+        // 앱은 go 가 루트 스택을 탭 묶음까지 꺼낸다(dismissAll 은 가입 스택 안만 닫아 탭 묶음이 쌓였다)
+        if (Platform.OS === 'web' && router.canDismiss()) router.dismissAll();
+        go('/home', { web: 'replace' });
         return;
       }
       setError(t('인증을 마치지 못했어요. 코드를 다시 받아 입력해 주세요.'));

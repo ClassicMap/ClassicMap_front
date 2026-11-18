@@ -12,7 +12,7 @@ import { SELECTED_SHADOW } from '@/features/compare/components/switch-mode-toggl
 import { VolumeControl } from '@/features/player/components/volume-control';
 import { PlayerBarPortal } from '@/features/player/components/player-bar-portal';
 import { tabBarHeight } from '@/features/player/components/player-bar-helpers';
-import { TAB_CHROME_TRANSLUCENT } from '@/hooks/use-tab-chrome';
+import { TAB_CHROME_TRANSLUCENT, useTabScrollInsets } from '@/hooks/use-tab-chrome';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
@@ -55,6 +55,7 @@ import {
   XIcon,
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useNavigation } from 'expo-router';
 import * as React from 'react';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -91,6 +92,8 @@ export interface FocusCompareProps {
   focus: [number, number];
   /** 비교 화면으로 돌아간다 */
   onExit: () => void;
+  /** 나가기 링크를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showExit?: boolean;
   /** 구간을 바꾸면 같은 두 연주자의 그 구간 연주로 옮긴다 */
   onChangeSector: (sectorId: number, a: number, b: number) => void;
 }
@@ -112,14 +115,36 @@ function artistKey(performance: ComparisonPerformance): number {
  * 두 연주자 집중 비교 (기획 A). 두 영상을 나란히 크게 두고 같은 대목을 바로 넘나든다.
  * 웹은 두 클립만 미리 불러 두고 소리 나는 쪽만 튼다. 네이티브는 플레이어 하나로 전환한다.
  */
-export function FocusCompare({
+export function FocusCompare(props: FocusCompareProps) {
+  const { onExit } = props;
+  const navigation = useNavigation();
+  const handOffRef = React.useRef<(() => void) | null>(null);
+  // 나가기(단추·빈 화면 안내)는 나가기 전에 넘기므로, 그 뒤 화면이 빠질 때 또 넘기지 않는다
+  const exited = React.useRef(false);
+  const exit = React.useCallback(() => {
+    exited.current = true;
+    onExit();
+  }, [onExit]);
+  // 앱: 밀기·시스템 뒤로로 이 화면이 스택에서 빠질 때도 나가기 단추처럼 듣던 쪽을 앱 플레이어에 넘긴다
+  React.useEffect(() => {
+    if (Platform.OS === 'web') return;
+    return navigation.addListener('beforeRemove', () => {
+      if (!exited.current) handOffRef.current?.();
+    });
+  }, [navigation]);
+  return <FocusCompareContent {...props} onExit={exit} handOffRef={handOffRef} />;
+}
+
+function FocusCompareContent({
   pieceId,
   composerId,
   sectorId,
   focus,
   onExit,
+  showExit = true,
   onChangeSector,
-}: FocusCompareProps) {
+  handOffRef,
+}: FocusCompareProps & { handOffRef: React.MutableRefObject<(() => void) | null> }) {
   const { locale } = useLocale();
   const sectorsQuery = usePieceComparisonSectors(pieceId);
   const sectors = React.useMemo(
@@ -177,12 +202,11 @@ export function FocusCompare({
   const carry = React.useRef<FocusStart | null>(null);
   // 뒤로 가기·다른 화면 링크처럼 나가기 버튼을 거치지 않고 이 화면이 사라져도 듣던 쪽을 앱 플레이어에 넘긴다.
   // 레이아웃 정리 단계라 아직 두 영상이 문서에 붙어 있어 위치를 읽을 수 있다. 구간을 바꿀 때(무대만 바뀜)는 넘기지 않는다
-  const handOffRef = React.useRef<(() => void) | null>(null);
   React.useLayoutEffect(
     () => () => {
       if (Platform.OS === 'web') handOffRef.current?.();
     },
-    []
+    [handOffRef]
   );
 
   // 이 구간을 듣다가 들어왔으면 연주자마다 듣던 자리에서 잇고, 다른 곡을 듣다가(또는 아무것도 안 듣다가)
@@ -266,6 +290,7 @@ export function FocusCompare({
       activeSectorId={activeSector?.id}
       rows={rows}
       onExit={onExit}
+      showExit={showExit}
       onChangeSector={onChangeSector}
       queue={performances.filter(isPlayablePerformance)}
     />
@@ -299,6 +324,7 @@ interface FocusStageProps {
   activeSectorId: number | undefined;
   rows: SectorRow[];
   onExit: () => void;
+  showExit: boolean;
   onChangeSector: (sectorId: number, a: number, b: number) => void;
   queue: ComparisonPerformance[];
   /** 두 연주가 이 구간의 추천 비교 쌍일 때만 */
@@ -333,6 +359,8 @@ interface SideProgress {
 
 function FocusStage(props: FocusStageProps) {
   useLocale();
+  // iOS 는 탭 헤더가 떠 있어서 그만큼 비운다(웹·안드로이드는 빈 값)
+  const scrollInsets = useTabScrollInsets();
   const {
     a,
     b,
@@ -342,6 +370,7 @@ function FocusStage(props: FocusStageProps) {
     activeSectorId,
     rows,
     onExit,
+    showExit,
     onChangeSector,
     queue,
     featuredPair,
@@ -521,17 +550,20 @@ function FocusStage(props: FocusStageProps) {
   return (
     <View className="flex-1">
       <ScrollView
+        {...scrollInsets}
         className="flex-1"
         contentContainerClassName={cn(narrow ? 'px-4 pb-10 pt-3' : 'px-7 pb-10')}>
-        <Pressable
-          onPress={exit}
-          accessibilityRole="button"
-          className="mb-3 flex-row items-center gap-1 self-start">
-          <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
-          <Text variant="caption" className="text-foreground-muted">
-            {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
-          </Text>
-        </Pressable>
+        {showExit ? (
+          <Pressable
+            onPress={exit}
+            accessibilityRole="button"
+            className="mb-3 flex-row items-center gap-1 self-start">
+            <Icon as={ChevronLeftIcon} size={16} className="text-foreground-muted" />
+            <Text variant="caption" className="text-foreground-muted">
+              {t('{title} 비교로 돌아가기', { title: a.pieceTitle })}
+            </Text>
+          </Pressable>
+        ) : null}
         <View className={cn('gap-3', !narrow && 'flex-row items-end justify-between')}>
           <View className="min-w-0 flex-1">
             <Text variant="micro" className="uppercase tracking-widest text-primary">

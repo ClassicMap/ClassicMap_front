@@ -31,6 +31,7 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { AlertCircleIcon, EditIcon, PlusIcon, TrashIcon } from 'lucide-react-native';
 import * as React from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { goBackOr } from '@/lib/navigation/go';
 
 const WEEKDAYS = [
   msg('weekday::일'),
@@ -361,9 +362,7 @@ export default function ArtistDetailScreen() {
           meta={[...meta, artist.englishName !== artist.name ? artist.englishName : null]}
           wide={wide}
           imageLayout={artist.banner ? 'cover' : 'side'}
-          onBack={
-            wide ? undefined : () => (router.canGoBack() ? router.back() : router.push('/search'))
-          }
+          onBack={wide ? undefined : () => goBackOr('/search')}
         />
 
         {/* 행동: 담기 → 관리 */}

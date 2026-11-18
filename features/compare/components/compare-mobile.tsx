@@ -257,6 +257,8 @@ export function CompareMobileCatalog({
 interface CompareMobileComposerPiecesProps {
   composerId: number;
   onBack: () => void;
+  /** 뒤로 단추를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showBack?: boolean;
   onOpen: (piece: ComparisonPiece) => void;
 }
 
@@ -264,6 +266,7 @@ interface CompareMobileComposerPiecesProps {
 export function CompareMobileComposerPieces({
   composerId,
   onBack,
+  showBack = true,
   onOpen,
 }: CompareMobileComposerPiecesProps) {
   const { locale } = useLocale();
@@ -291,7 +294,7 @@ export function CompareMobileComposerPieces({
       refreshControl={
         <RefreshControl refreshing={catalog.isRefetching} onRefresh={() => catalog.refetch()} />
       }>
-      <BackButton onPress={onBack} />
+      {showBack ? <BackButton onPress={onBack} /> : null}
       <View className="mt-4 flex-row items-center gap-4">
         {name ? (
           <RepertoireThumb active={repertoire.composers.has(composerId)} badgeSize={22}>
@@ -419,6 +422,8 @@ interface CompareMobilePieceProps {
   sectorId?: number;
   /** 돌아갈 작곡가. 주소에 작곡가가 없던 딥링크면 연주에서 알아낸 작곡가를 넘긴다 */
   onBack: (composerId?: number) => void;
+  /** 뒤로 단추를 보일지. 앱은 밀기·시스템 뒤로로 돌아가 돌아갈 화면이 없을 때만 보인다 */
+  showBack?: boolean;
   onSelectSector: (sectorId: number) => void;
   /** 두 연주자 집중 비교로 (A = 듣던 연주, B = 고른 연주) */
   onFocus?: (a: number, b: number) => void;
@@ -433,6 +438,7 @@ export function CompareMobilePiece({
   composerId,
   sectorId,
   onBack,
+  showBack = true,
   onSelectSector,
   onFocus,
 }: CompareMobilePieceProps) {
@@ -579,7 +585,7 @@ export function CompareMobilePiece({
   if (sectorsQuery.isError || performancesQuery.isError) {
     return (
       <View className="flex-1 bg-background px-4" style={{ paddingTop: headerInset }}>
-        <BackButton onPress={goBack} />
+        {showBack ? <BackButton onPress={goBack} /> : null}
         <EmptyState
           icon={AlertCircleIcon}
           tone="error"
@@ -602,8 +608,8 @@ export function CompareMobilePiece({
       {...scrollInsets}
       className="flex-1 bg-background"
       contentContainerClassName="px-4 pb-28">
-      <View className="flex-row items-center justify-between">
-        <BackButton onPress={goBack} />
+      <View className={cn('flex-row items-center', showBack ? 'justify-between' : 'justify-end')}>
+        {showBack ? <BackButton onPress={goBack} /> : null}
         <View className="mt-3 flex-row items-center gap-1">
           {canEdit ? (
             <Pressable

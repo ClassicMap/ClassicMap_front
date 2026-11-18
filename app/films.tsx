@@ -11,6 +11,7 @@ import { Icon } from '@/components/ui/icon';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { useDebounce } from '@/hooks/use-debounce';
 import { msg, t, useLocale } from '@/lib/i18n';
 import {
@@ -32,6 +33,7 @@ import {
 import * as React from 'react';
 import { Pressable, ScrollView, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { go, goBackOr } from '@/lib/navigation/go';
 
 type KindFilter = ScreenTitleKind | 'all';
 /** 작품에서 찾기(포스터 목록) · 곡에서 찾기(작곡가별 곡 목록) */
@@ -57,8 +59,8 @@ const GRID_GAP = 12;
 
 export default function FilmsScreen() {
   useLocale();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const showBack = useStackBackButtonVisible();
   const { layout } = useBreakpoint();
   const wide = layout === 'desktop' || layout === 'wide';
   const { width: windowWidth } = useWindowDimensions();
@@ -89,13 +91,17 @@ export default function FilmsScreen() {
       className="flex-1 bg-background"
       keyboardShouldPersistTaps="handled"
       contentContainerClassName={cn('px-4 pb-24', wide && 'mx-auto w-full max-w-[880px] px-6')}>
-      <Pressable
-        onPress={() => (router.canGoBack() ? router.back() : router.push('/search' as Href))}
-        accessibilityLabel={t('뒤로')}
-        style={{ marginTop: insets.top + 4 }}
-        className="mb-1 size-11 items-center justify-center">
-        <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
-      </Pressable>
+      {showBack ? (
+        <Pressable
+          onPress={() => goBackOr('/search')}
+          accessibilityLabel={t('뒤로')}
+          style={{ marginTop: insets.top + 4 }}
+          className="mb-1 size-11 items-center justify-center">
+          <Icon as={ArrowLeftIcon} size={22} className="text-foreground" />
+        </Pressable>
+      ) : (
+        <View style={{ height: insets.top + 12 }} />
+      )}
 
       <Text variant="title1">{t('영화 속 클래식')}</Text>
       <Text variant="bodySm" className="mt-1 text-foreground-muted">
@@ -362,14 +368,13 @@ function TitleTile({ item, width }: { item: ScreenTitleSummary; width: number })
 
 function FeaturedCueCard({ cue }: { cue: FeaturedScreenCue }) {
   useLocale();
-  const router = useRouter();
   const open = () => {
     const params = new URLSearchParams({
       composerId: String(cue.composerId),
       pieceId: String(cue.pieceId),
       sectorId: String(cue.sectorId),
     });
-    router.push(`/compare?${params.toString()}` as Href);
+    go(`/compare?${params.toString()}`);
   };
   return (
     <Pressable

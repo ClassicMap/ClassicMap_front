@@ -12,9 +12,9 @@ import {
 } from '@/features/library/lib/library';
 import { getLocale, msg, t, useLocale } from '@/lib/i18n';
 import { useComposerAvatar } from '@/lib/query/hooks/use-composers';
-import { type Href, useRouter } from 'expo-router';
 import * as React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 type Filter = 'all' | LibraryKind;
 
@@ -70,7 +70,6 @@ export function RepertoireList({
   initialFilter,
 }: RepertoireListProps) {
   const { locale } = useLocale();
-  const router = useRouter();
   const [filter, setFilter] = React.useState<Filter>(initialFilter ?? 'all');
   React.useEffect(() => {
     if (initialFilter) setFilter(initialFilter);
@@ -126,7 +125,7 @@ export function RepertoireList({
                 entry={entry}
                 grouped
                 editable={editable}
-                onPress={() => router.push(entry.href as Href)}
+                onPress={() => go(entry.href)}
               />
             ))}
           </View>
@@ -138,7 +137,7 @@ export function RepertoireList({
               key={entry.key}
               entry={entry}
               editable={editable}
-              onPress={() => router.push(entry.href as Href)}
+              onPress={() => go(entry.href)}
             />
           ))}
         </View>

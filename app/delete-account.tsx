@@ -9,9 +9,10 @@ import { t, useLocale } from '@/lib/i18n';
 import { Alert } from '@/lib/utils/alert';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useAuth as useAppAuth } from '@/hooks/use-auth';
-import { type Href, Redirect, useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import * as React from 'react';
 import { Linking, View } from 'react-native';
+import { go } from '@/lib/navigation/go';
 
 const SUPPORT_EMAIL = 'kang3171611@naver.com';
 
@@ -36,7 +37,6 @@ function isUnsupported(error: unknown): boolean {
  */
 export default function DeleteAccountScreen() {
   useLocale();
-  const router = useRouter();
   const { user } = useUser();
   const { signOut } = useAuth();
   const [typed, setTyped] = React.useState('');
@@ -92,7 +92,7 @@ export default function DeleteAccountScreen() {
       // 로컬 정리에 실패해도 계정 삭제 결과는 그대로다
     }
     setDeleting(false);
-    router.replace('/home' as Href);
+    go('/home', { web: 'replace' });
   };
 
   const confirmRemove = () =>

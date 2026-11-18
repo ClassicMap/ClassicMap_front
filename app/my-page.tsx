@@ -32,7 +32,9 @@ import {
   StarIcon,
 } from 'lucide-react-native';
 import * as React from 'react';
+import { useStackBackButtonVisible } from '@/hooks/use-back-button';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { go, goBackOr } from '@/lib/navigation/go';
 
 type Tab = 'ratings' | 'repertoire';
 
@@ -40,6 +42,7 @@ type Tab = 'ratings' | 'repertoire';
 export default function MyPageScreen() {
   useLocale();
   const router = useRouter();
+  const showBack = useStackBackButtonVisible();
   const { user } = useUser();
   const { signOut } = useClerkAuth();
   const { profile: authProfile, loading: authLoading, isSignedIn } = useAuth();
@@ -82,7 +85,7 @@ export default function MyPageScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
-          router.replace('/home' as Href);
+          go('/home', { web: 'replace' });
         },
       },
     ]);
@@ -197,7 +200,7 @@ export default function MyPageScreen() {
           icon={StarIcon}
           title={t('아직 평가한 공연이 없어요')}
           description={t('다녀온 공연의 상세 화면에서 별점을 남기면 여기에 모여요.')}
-          action={{ label: t('공연 보러 가기'), onPress: () => router.push('/concerts' as Href) }}
+          action={{ label: t('공연 보러 가기'), onPress: () => go('/concerts') }}
         />
       ) : (
         <View className="mt-5">
@@ -229,7 +232,7 @@ export default function MyPageScreen() {
         description={t('작곡가·연주자·작품·공연에서 레퍼토리에 담기를 누르면 여기에 모여요.')}
         action={{
           label: t('비교할 수 있는 작품 보기'),
-          onPress: () => router.push('/compare' as Href),
+          onPress: () => go('/compare'),
         }}
       />
     ) : (
@@ -246,12 +249,17 @@ export default function MyPageScreen() {
         contentContainerClassName={cn('pb-24', wide ? 'px-7 pt-3' : 'px-4')}>
         {!wide ? (
           <View className="mt-12 flex-row items-center justify-between">
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.push('/home' as Href))}
-              accessibilityLabel={t('뒤로')}
-              className="size-11 items-center justify-center rounded-full bg-surface-2">
-              <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
-            </Pressable>
+            {showBack ? (
+              <Pressable
+                onPress={() => goBackOr('/home')}
+                accessibilityLabel={t('뒤로')}
+                className="size-11 items-center justify-center rounded-full bg-surface-2">
+                <Icon as={ArrowLeftIcon} size={20} className="text-foreground" />
+              </Pressable>
+            ) : (
+              // 제목이 가운데에 오게 단추 자리를 비워 둔다
+              <View className="size-11" />
+            )}
             <Text variant="headline">{t('마이페이지')}</Text>
             <Pressable
               onPress={() => router.push('/settings' as Href)}

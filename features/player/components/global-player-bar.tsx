@@ -21,7 +21,7 @@ import {
 } from '@/lib/player/compare-player-store';
 import { SHELL } from '@/lib/layout/shell-layout';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import {
   ExternalLinkIcon,
   MaximizeIcon,
@@ -149,7 +149,7 @@ export function GlobalPlayerBar() {
   if (!current || !visible) return null;
   const duration = progress.duration || current.durationSec;
   const shownSeconds = scrub !== null ? scrub * duration : progress.current;
-  const goToCompare = () => router.navigate(compareHrefFor(current));
+  const goToCompare = () => router.navigate(compareHrefFor(current) as Href);
 
   return (
     <View
