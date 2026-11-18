@@ -43,12 +43,11 @@ export function TabsLayout({ hideChrome = false }: { hideChrome?: boolean }) {
             })
           : undefined
       }
-      // 앱: 뒤로(안드로이드)는 지나온 탭 순서대로 돌아간다. 가려진 탭은 다시 그리지 않는다
-      backBehavior="history"
       screenOptions={{
         ...header,
         headerShown: !hideChrome,
         sceneStyle: hideChrome ? { backgroundColor: 'transparent' } : undefined,
+        // 앱: 가려진 탭은 다시 그리지 않는다
         freezeOnBlur: Platform.OS !== 'web',
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.foregroundSubtle,
