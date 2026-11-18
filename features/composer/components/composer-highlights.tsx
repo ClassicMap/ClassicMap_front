@@ -116,7 +116,8 @@ function HighlightCard({
           : t('{title} 작품 목록에서 보기', { title: highlight.title })
       }
       className={cn(
-        'flex-1 flex-row gap-3 rounded-xl border border-border bg-surface-1 px-3.5 py-3',
+        // grow: 옆 카드와 높이를 맞춘다. flex-1 은 앱에서 높이가 0 으로 접혀 내용이 안 보였다
+        'grow flex-row gap-3 rounded-xl border border-border bg-surface-1 px-3.5 py-3',
         'active:bg-surface-2 web:transition-colors web:duration-instant web:hover:bg-surface-2'
       )}>
       <GenreMark genre={highlight.genre} size={32} />
